@@ -2,8 +2,22 @@
 
 This project contains the [Microsoft SQL Server][m] implementation of the [R2DBC SPI][r].  This implementation is not inteded to be used directly, but rather to be used as the backing implementation for a humane client library to delegate to
 
-[p]: http://microsoft.com/sqlserver
+[m]: http://microsoft.com/sqlserver
 [r]: https://github.com/r2dbc/r2dbc-spi
+
+Current state of this project is:
+
+* Establish transport connection
+* PRELOGIN exchange
+* PRELOGIN SSL Handshake
+* Login
+* LOGINACK processing
+
+Next steps:
+
+* Error handling for failed logins
+* Execution of SQL statements
+* Transaction control (begin/rollback/commit, disable auto-commit)
 
 ## Maven
 Both milestone and snapshot artifacts (library, source, and javadoc) can be found in Maven repositories.
