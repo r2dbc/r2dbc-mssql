@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 final class MssqlConnectionFactoryIntegrationTests {
 
 	@Test
-	//@Disabled("Requires running SQL server")
+	@Disabled("Requires running SQL server")
 	void shouldConnectToSqlServer() {
 
 		Hooks.onOperatorDebug();

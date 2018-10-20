@@ -17,7 +17,7 @@ package io.r2dbc.mssql.client;
 
 import static io.r2dbc.mssql.util.PredicateUtils.or;
 
-import io.r2dbc.mssql.client.ssl.SSLState;
+import io.r2dbc.mssql.client.ssl.SslState;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TDSVersion;
@@ -59,7 +59,7 @@ public final class LoginFlow {
 		Prelogin request = builder.build();
 
 		return client.exchange(requestProcessor.startWith(request)) //
-				.filter(or(Prelogin.class::isInstance, SSLState.class::isInstance)) //
+				.filter(or(Prelogin.class::isInstance, SslState.class::isInstance)) //
 				.handle((message, sink) -> {
 
 					try {
@@ -78,7 +78,7 @@ public final class LoginFlow {
 							return;
 						}
 
-						if (message instanceof SSLState && message == SSLState.NEGOTIATED) {
+						if (message instanceof SslState && message == SslState.NEGOTIATED) {
 
 							Prelogin prelogin = preloginResponse.get();
 							requests.next(createLoginMessage(login, prelogin));

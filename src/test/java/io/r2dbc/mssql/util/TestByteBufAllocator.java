@@ -13,25 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.r2dbc.mssql.client;
+package io.r2dbc.mssql.util;
 
-import io.r2dbc.mssql.message.Message;
-import io.r2dbc.mssql.message.token.Tabular;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.util.internal.PlatformDependent;
 
 /**
- * Synthetic message indicates the connection is ready for query.
- * 
- * @author Mark Paluch
+ * {@link ByteBufAllocator} used for tests.
  */
-class ReadyForQuery implements Message {
+public final class TestByteBufAllocator {
 
-	private final Tabular loginack;
+	public static final ByteBufAllocator TEST = new UnpooledByteBufAllocator(PlatformDependent.directBufferPreferred(),
+			true);
 
-	public ReadyForQuery(Tabular loginack) {
-		this.loginack = loginack;
-	}
+	private TestByteBufAllocator() {}
 
-	public Tabular getLoginack() {
-		return loginack;
-	}
 }

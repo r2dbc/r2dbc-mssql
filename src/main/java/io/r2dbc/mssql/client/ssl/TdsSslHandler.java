@@ -16,12 +16,17 @@
 package io.r2dbc.mssql.client.ssl;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.ssl.SslHandler;
 import io.r2dbc.mssql.client.ConnectionState;
+import io.r2dbc.mssql.client.tds.ContextualTdsFragment;
+import io.r2dbc.mssql.client.tds.TdsEncoder;
+import io.r2dbc.mssql.client.tds.TdsFragment;
 import io.r2dbc.mssql.message.header.Header;
+import io.r2dbc.mssql.message.header.HeaderOptions;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
@@ -30,7 +35,6 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.EnumSet;
 import java.util.Objects;
 
 import javax.net.ssl.SSLContext;
@@ -41,7 +45,7 @@ import javax.net.ssl.X509TrustManager;
 /**
  * SSL handling for TDS connections.
  * <p/>
- * This handler wraps or passes thru read and write data depending on the {@link SSLState}. Because TDS requires header
+ * This handler wraps or passes thru read and write data depending on the {@link SslState}. Because TDS requires header
  * wrapping, we're not mounting the {@link SslHandler} directly into the pipeline but delegating read and write events
  * to it.
  * 
@@ -59,7 +63,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
 	private volatile ByteBuf outputBuffer;
 
-	private volatile SSLState state = SSLState.OFF;
+	private volatile SslState state = SslState.OFF;
 
 	private volatile boolean handshakeDone;
 
@@ -120,19 +124,23 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 	@Override
 	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
 
-		if (evt == SSLState.LOGIN_ONLY) {
+		if (evt == SslState.LOGIN_ONLY) {
 
-			this.state = SSLState.LOGIN_ONLY;
+			this.state = SslState.LOGIN_ONLY;
 			this.sslHandler = createSslHandler();
 
 			ctx.pipeline().addAfter(getClass().getName(), ContextProxy.class.getName(), new ContextProxy());
 			ctx.pipeline().addAfter(ContextProxy.class.getName(), SslEventHandler.class.getName(), new SslEventHandler());
 
 			this.context = ctx.channel().pipeline().context(ContextProxy.class.getName());
+
+			ctx.write(HeaderOptions.create(Type.PRE_LOGIN, Status.empty()));
+
 			this.sslHandler.handlerAdded(this.context);
 		}
 
-		if (evt == SSLState.NEGOTIATED) {
+		if (evt == SslState.NEGOTIATED) {
+			ctx.write(TdsEncoder.ResetHeader.INSTANCE, ctx.voidPromise());
 			this.handshakeDone = true;
 		}
 
@@ -157,8 +165,8 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
 	/**
 	 * Write data either directly (SSL disabled), to an intermediate buffer for {@link Header} wrapping, or via
-	 * {@link SslHandler} for entire packet encryption without prepending a header. Note that {@link SSLState#LOGIN_ONLY}
-	 * is swapped to {@link SSLState#AFTER_LOGIN_ONLY} once login payload is written. We don't check actually whether the
+	 * {@link SslHandler} for entire packet encryption without prepending a header. Note that {@link SslState#LOGIN_ONLY}
+	 * is swapped to {@link SslState#AFTER_LOGIN_ONLY} once login payload is written. We don't check actually whether the
 	 * payload is a login packet but rely on higher level layers to send the appropriate data.
 	 * 
 	 * @param ctx
@@ -169,19 +177,21 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 	@Override
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
 
-		if (this.handshakeDone && (this.state == SSLState.NEGOTIATED || this.state == SSLState.LOGIN_ONLY)) {
+		if (this.handshakeDone && (this.state == SslState.NEGOTIATED || this.state == SslState.LOGIN_ONLY)) {
+
+			msg = unwrap(ctx.alloc(), msg);
 
 			this.sslHandler.write(ctx, msg, promise);
 			this.sslHandler.flush(ctx);
 
-			if (this.state == SSLState.LOGIN_ONLY) {
-				this.state = SSLState.AFTER_LOGIN_ONLY;
+			if (this.state == SslState.LOGIN_ONLY) {
+				this.state = SslState.AFTER_LOGIN_ONLY;
 			}
 
 			return;
 		}
 
-		if (requiresHeaderWrapping()) {
+		if (requiresWrapping()) {
 			ByteBuf sslPayload = (ByteBuf) msg;
 
 			this.outputBuffer.writeBytes(sslPayload);
@@ -190,6 +200,34 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 		} else {
 			super.write(ctx, msg, promise);
 		}
+	}
+
+	private Object unwrap(ByteBufAllocator allocator, Object msg) {
+
+		if (msg instanceof ContextualTdsFragment) {
+
+			ContextualTdsFragment tdsFragment = (ContextualTdsFragment) msg;
+
+			HeaderOptions headerOptions = tdsFragment.getHeaderOptions();
+			Status eom = headerOptions.getStatus().and(Status.StatusBit.EOM);
+			Header header = new Header(headerOptions.getType(), eom, Header.SIZE + tdsFragment.getByteBuf().readableBytes(),
+					0, this.packetIdProvider.nextPacketId(), 0);
+
+			ByteBuf buffer = allocator.buffer(header.getLength());
+			header.encode(buffer);
+			buffer.writeBytes(tdsFragment.getByteBuf());
+			tdsFragment.getByteBuf().release();
+
+			// unwrap ByteBuffer so we can write it using SSL.
+			return buffer;
+		}
+
+		if (msg instanceof TdsFragment) {
+			// unwrap ByteBuffer so we can write it using SSL.
+			return ((TdsFragment) msg).getByteBuf();
+		}
+
+		return msg;
 	}
 
 	/**
@@ -202,16 +240,12 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 	@Override
 	public void flush(ChannelHandlerContext ctx) throws Exception {
 
-		if (requiresHeaderWrapping()) {
+		if (requiresWrapping()) {
 
-			Header header = new Header(Type.PRE_LOGIN, EnumSet.of(Status.EOM), this.outputBuffer.readableBytes() + Header.SIZE, 0);
+			ByteBuf message = this.outputBuffer;
+			this.outputBuffer = ctx.alloc().buffer();
 
-			ByteBuf messageWithHeader = ctx.alloc().buffer(header.getLength());
-			header.encode(messageWithHeader, this.packetIdProvider);
-			messageWithHeader.writeBytes(this.outputBuffer);
-			this.outputBuffer.discardReadBytes();
-
-			ctx.writeAndFlush(messageWithHeader);
+			ctx.writeAndFlush(message);
 		} else {
 			super.flush(ctx);
 		}
@@ -259,7 +293,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 					this.sslHandler.channelRead(this.context, buffer);
 				}
 
-				if (decode.is(Status.IGNORE)) {
+				if (decode.is(Status.StatusBit.IGNORE)) {
 					return;
 				}
 			}
@@ -270,10 +304,10 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 	}
 
 	private boolean isInHandshake() {
-		return requiresHeaderWrapping() && !this.handshakeDone;
+		return requiresWrapping() && !this.handshakeDone;
 	}
 
-	private boolean requiresHeaderWrapping() {
-		return this.state == SSLState.LOGIN_ONLY;
+	private boolean requiresWrapping() {
+		return this.state == SslState.LOGIN_ONLY;
 	}
 }

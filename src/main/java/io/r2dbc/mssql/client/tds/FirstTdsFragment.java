@@ -13,35 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.r2dbc.mssql.client.ssl;
+package io.r2dbc.mssql.client.tds;
 
-import io.r2dbc.mssql.message.Message;
-import io.r2dbc.mssql.message.token.Login7;
+import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.message.header.HeaderOptions;
 
 /**
- * Represents the SSL state aspect of a connection.
+ * First chunk of a TDS message. This message type signals the encoder to associate subsequent messages with the
+ * attached {@link HeaderOptions}.
  * 
  * @author Mark Paluch
+ * @see ContextualTdsFragment
+ * @see LastTdsFragment
  */
-public enum SSLState implements Message {
+public final class FirstTdsFragment extends ContextualTdsFragment {
 
 	/**
-	 * SSL not enabled (default).
+	 * Creates a new {@link FirstTdsFragment}.
+	 *
+	 * @param headerOptions header options.
+	 * @param byteBuf the buffer.
 	 */
-	OFF,
-
-	/**
-	 * SSL handshake negotiated.
-	 */
-	NEGOTIATED,
-
-	/**
-	 * SSL requested during the {@link Login7} message only.
-	 */
-	LOGIN_ONLY,
-
-	/**
-	 * SSL disabled once it was used for the login message.
-	 */
-	AFTER_LOGIN_ONLY;
+	FirstTdsFragment(HeaderOptions headerOptions, ByteBuf byteBuf) {
+		super(headerOptions, byteBuf);
+	}
 }

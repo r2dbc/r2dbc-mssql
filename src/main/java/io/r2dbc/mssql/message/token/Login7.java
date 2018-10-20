@@ -17,10 +17,12 @@ package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.r2dbc.mssql.client.tds.TdsFragment;
+import io.r2dbc.mssql.client.tds.TdsPackets;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.TDSVersion;
 import io.r2dbc.mssql.message.header.Header;
-import io.r2dbc.mssql.message.header.PacketIdProvider;
+import io.r2dbc.mssql.message.header.HeaderOptions;
 import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.util.Assert;
@@ -48,9 +50,11 @@ public final class Login7 implements TokenStream, ClientMessage {
 
 	private static final short TDS_LOGIN_REQUEST_BASE_LEN = 94;
 
-	private final int baseLength;
+	private static final HeaderOptions header = HeaderOptions.create(Type.TDS7_LOGIN, Status.empty());
 
-	private final Header header;
+	private final int estimatedPacketLength;
+
+	private final int baseLength;
 
 	/**
 	 * The highest TDS version being used by the client (for example, 0x00000071 for TDS 7.1).
@@ -133,8 +137,7 @@ public final class Login7 implements TokenStream, ClientMessage {
 
 		this.passwordChange = passwordChange;
 		this.baseLength = baseLength + 4 /* AE */;
-		this.header = new Header(Type.TDS7_LOGIN, EnumSet.of(Status.EOM),
-				baseLength + Header.SIZE + 2 + passwordChange.length() + 1, 0);
+		this.estimatedPacketLength = this.baseLength + Header.SIZE + 2 + passwordChange.length() + 1;
 	}
 
 	/**
@@ -150,20 +153,18 @@ public final class Login7 implements TokenStream, ClientMessage {
 	}
 
 	@Override
-	public Publisher<ByteBuf> encode(ByteBufAllocator allocator, PacketIdProvider packetIdProvider) {
+	public Publisher<TdsFragment> encode(ByteBufAllocator allocator) {
 
 		return Mono.fromSupplier(() -> {
 
-			ByteBuf buffer = allocator.buffer(this.header.getLength());
+			ByteBuf buffer = allocator.buffer(estimatedPacketLength);
 
-			encode(buffer, packetIdProvider);
-			return buffer;
+			encode(buffer);
+			return TdsPackets.create(header, buffer);
 		});
 	}
 
-	void encode(ByteBuf buffer, PacketIdProvider packetIdProvider) {
-
-		this.header.encode(buffer, packetIdProvider);
+	void encode(ByteBuf buffer) {
 
 		int len = this.baseLength;
 		int aeoffset = len;
@@ -278,7 +279,7 @@ public final class Login7 implements TokenStream, ClientMessage {
 	public String toString() {
 		final StringBuffer sb = new StringBuffer();
 		sb.append(getClass().getSimpleName());
-		sb.append(" [header=").append(this.header);
+		sb.append(" [header=").append(header);
 		sb.append(", tdsVersion=").append(this.tdsVersion);
 		sb.append(", packetSize=").append(this.packetSize);
 		sb.append(", clientPid=").append(this.clientPid);

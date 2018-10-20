@@ -15,7 +15,9 @@
  */
 package io.r2dbc.mssql.message.header;
 
+import java.util.Collection;
 import java.util.EnumSet;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -23,51 +25,162 @@ import java.util.Set;
  * <p/>
  * Status is a bit field used to indicate the message state. Status is a 1-byte unsigned char. The following Status bit
  * flags are defined.
+ * 
+ * @author Mark Paluch
+ * @see StatusBit
  */
-public enum Status {
+public class Status {
 
-	NORMAL(0x00), EOM(0x01), IGNORE(0x02),
+	private static final Status EMPTY = new Status(EnumSet.noneOf(StatusBit.class));
 
-	/**
-	 * RESETCONNECTION
-	 * 
-	 * @since TDS 7.1
-	 */
-	RESET_CONNECTION(0x08),
+	private final Set<StatusBit> statusBits;
+	private final byte value;
 
-	/**
-	 * RESETCONNECTIONSKIPTRAN
-	 * 
-	 * @since TDS 7.3
-	 */
-	RESET_CONNECTION_SKIP_TRAN(0x10);
-
-	Status(int bits) {
-		this.bits = Integer.valueOf(bits).byteValue();
+	private Status(Set<StatusBit> statusBits) {
+		this.statusBits = statusBits;
+		this.value = getStatusValue(statusBits);
 	}
 
-	private final byte bits;
+	/**
+	 * Return an empty {@link Status}.
+	 * 
+	 * @return the empty {@link Status}.
+	 */
+	public static Status empty() {
+		return EMPTY;
+	}
 
 	/**
-	 * Create {@link Status} {@link Set} from the given {@code bitmask}.
+	 * Create {@link StatusBit} {@link Set} from the given {@code bitmask}.
 	 * 
 	 * @param bitmask
 	 * @return
 	 */
-	public static Set<Status> fromBitmask(byte bitmask) {
+	public static Status fromBitmask(byte bitmask) {
 
-		EnumSet<Status> result = EnumSet.noneOf(Status.class);
+		EnumSet<StatusBit> result = EnumSet.noneOf(StatusBit.class);
 
-		for (Status status : values()) {
+		for (StatusBit status : StatusBit.values()) {
 			if ((bitmask & status.getBits()) != 0) {
 				result.add(status);
 			}
 		}
 
+		return new Status(result);
+	}
+
+	/**
+	 * Create a {@link Status} from the given {@link StatusBit}.
+	 * 
+	 * @param bit the status bit.
+	 * @return the {@link Status} from the given {@link StatusBit}.
+	 */
+	public static Status of(StatusBit bit) {
+
+		Objects.requireNonNull(bit, "StatusBit must not be null");
+
+		return new Status(EnumSet.of(bit));
+	}
+
+	/**
+	 * Create a {@link Status} from the given {@link StatusBit}s.
+	 * 
+	 * @param bit the status bit.
+	 * @param other the status bits.
+	 * @return the {@link Status} from the given {@link StatusBit}.
+	 */
+	public static Status of(StatusBit bit, StatusBit... other) {
+
+		Objects.requireNonNull(bit, "StatusBit must not be null");
+		Objects.requireNonNull(other, "StatusBits must not be null");
+
+		return new Status(EnumSet.of(bit, other));
+	}
+
+	/**
+	 * Create a {@link Status} the current state and add the {@link StatusBit}s.
+	 * 
+	 * @param bit the status bit.
+	 * @return the {@link Status} from the given {@link StatusBit}.
+	 */
+	public Status and(StatusBit bit) {
+
+		Objects.requireNonNull(bit, "StatusBit must not be null");
+
+		EnumSet<StatusBit> statusBits = EnumSet.copyOf(this.statusBits);
+		statusBits.add(bit);
+
+		return new Status(statusBits);
+	}
+
+	/**
+	 * Check if the header status has set the {@link Status.StatusBit}.
+	 * 
+	 * @param bit the status bit.
+	 * @return {@literal true} of the bit is set; {@literal false} otherwise.
+	 */
+	public boolean is(Status.StatusBit bit) {
+
+		Objects.requireNonNull(bit, "StatusBit must not be null");
+
+		return this.statusBits.contains(bit);
+	}
+
+	/**
+	 * @return the status byte.
+	 */
+	public byte getValue() {
+		return value;
+	}
+
+	private static byte getStatusValue(Collection<StatusBit> statusBits) {
+
+		byte result = 0;
+
+		for (Status.StatusBit s : statusBits) {
+			result |= s.getBits();
+		}
+
 		return result;
 	}
 
-	public int getBits() {
-		return this.bits;
+	@Override
+	public String toString() {
+		return Integer.toHexString(value);
+	}
+
+	/**
+	 * Packet header status bits as defined in ch {@literal 2.2.3.1.2 Status} of the TDS v20180912 spec.
+	 * <p/>
+	 * Status is a bit field used to indicate the message state. Status is a 1-byte unsigned char. The following Status
+	 * bit flags are defined.
+	 */
+	public enum StatusBit {
+
+		NORMAL(0x00), EOM(0x01), IGNORE(0x02),
+
+		/**
+		 * RESETCONNECTION
+		 * 
+		 * @since TDS 7.1
+		 */
+		RESET_CONNECTION(0x08),
+
+		/**
+		 * RESETCONNECTIONSKIPTRAN
+		 * 
+		 * @since TDS 7.3
+		 */
+		RESET_CONNECTION_SKIP_TRAN(0x10);
+
+		StatusBit(int bits) {
+			this.bits = Integer.valueOf(bits).byteValue();
+		}
+
+		private final byte bits;
+
+		public int getBits() {
+			return this.bits;
+		}
 	}
 }

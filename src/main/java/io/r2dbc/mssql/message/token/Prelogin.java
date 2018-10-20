@@ -17,11 +17,12 @@ package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.r2dbc.mssql.client.tds.ContextualTdsFragment;
+import io.r2dbc.mssql.client.tds.TdsFragment;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.ServerMessage;
 import io.r2dbc.mssql.message.header.Header;
-import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.util.Assert;
@@ -30,7 +31,6 @@ import reactor.util.annotation.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -62,7 +62,7 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 		Objects.requireNonNull(tokens, "Tokens must not be null");
 
 		this.size = getSize(tokens);
-		this.header = new Header(Type.PRE_LOGIN, EnumSet.of(Status.EOM), this.size, 0, 0, 0);
+		this.header = new Header(Type.PRE_LOGIN, Status.of(Status.StatusBit.EOM), this.size, 0, 0, 0);
 		this.tokens = tokens;
 	}
 
@@ -181,18 +181,17 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 	}
 
 	@Override
-	public Publisher<ByteBuf> encode(ByteBufAllocator allocator, PacketIdProvider packetIdProvider) {
+	public Publisher<TdsFragment> encode(ByteBufAllocator allocator) {
 
 		Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
-		Objects.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
 
 		return Mono.fromSupplier(() -> {
 
 			ByteBuf buffer = allocator.buffer(this.size);
 
-			encode(buffer, packetIdProvider);
+			encode(buffer);
 
-			return buffer;
+			return new ContextualTdsFragment(header, buffer);
 		});
 	}
 
@@ -200,11 +199,8 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 	 * Encode the {@link Prelogin} request message.
 	 * 
 	 * @param buffer
-	 * @param packetIdProvider
 	 */
-	void encode(ByteBuf buffer, PacketIdProvider packetIdProvider) {
-
-        this.header.encode(buffer, packetIdProvider);
+	void encode(ByteBuf buffer) {
 
 		int tokenHeaderLength = 0;
 

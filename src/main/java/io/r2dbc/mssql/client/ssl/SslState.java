@@ -13,25 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.r2dbc.mssql.client;
+package io.r2dbc.mssql.client.ssl;
 
 import io.r2dbc.mssql.message.Message;
-import io.r2dbc.mssql.message.token.Tabular;
+import io.r2dbc.mssql.message.token.Login7;
 
 /**
- * Synthetic message indicates the connection is ready for query.
+ * Represents the SSL state aspect of a connection.
  * 
  * @author Mark Paluch
  */
-class ReadyForQuery implements Message {
+public enum SslState implements Message {
 
-	private final Tabular loginack;
+	/**
+	 * SSL not enabled (default).
+	 */
+	OFF,
 
-	public ReadyForQuery(Tabular loginack) {
-		this.loginack = loginack;
-	}
+	/**
+	 * SSL handshake negotiated.
+	 */
+	NEGOTIATED,
 
-	public Tabular getLoginack() {
-		return loginack;
-	}
+	/**
+	 * SSL requested during the {@link Login7} message only.
+	 */
+	LOGIN_ONLY,
+
+	/**
+	 * SSL disabled once it was used for the login message.
+	 */
+	AFTER_LOGIN_ONLY;
 }

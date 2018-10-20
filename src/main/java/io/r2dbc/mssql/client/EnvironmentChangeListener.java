@@ -15,23 +15,19 @@
  */
 package io.r2dbc.mssql.client;
 
-import io.r2dbc.mssql.message.Message;
-import io.r2dbc.mssql.message.token.Tabular;
-
 /**
- * Synthetic message indicates the connection is ready for query.
+ * Listener interface for {@link EnvironmentChangeEvent}s. This interface is intended for objects that want to be
+ * notified about environment changes such as a changed database or packet size.
  * 
  * @author Mark Paluch
  */
-class ReadyForQuery implements Message {
+@FunctionalInterface
+public interface EnvironmentChangeListener {
 
-	private final Tabular loginack;
-
-	public ReadyForQuery(Tabular loginack) {
-		this.loginack = loginack;
-	}
-
-	public Tabular getLoginack() {
-		return loginack;
-	}
+	/**
+	 * Event listener callback for environment change events.
+	 * 
+	 * @param event environment change event
+	 */
+	void onEnvironmentChange(EnvironmentChangeEvent event);
 }

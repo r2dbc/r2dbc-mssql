@@ -30,11 +30,11 @@ class SslEventHandler extends ChannelDuplexHandler {
 	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
 
 		if (evt == SslHandshakeCompletionEvent.SUCCESS) {
-			ctx.channel().pipeline().fireUserEventTriggered(SSLState.NEGOTIATED);
+			ctx.channel().pipeline().fireUserEventTriggered(SslState.NEGOTIATED);
 		}
 
-		if (evt == SSLState.NEGOTIATED) {
-			ctx.fireChannelRead(SSLState.NEGOTIATED);
+		if (evt == SslState.NEGOTIATED) {
+			ctx.fireChannelRead(SslState.NEGOTIATED);
 		}
 
 		super.userEventTriggered(ctx, evt);

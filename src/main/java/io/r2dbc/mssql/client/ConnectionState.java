@@ -18,7 +18,7 @@ package io.r2dbc.mssql.client;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.handler.ssl.SslHandler;
-import io.r2dbc.mssql.client.ssl.SSLState;
+import io.r2dbc.mssql.client.ssl.SslState;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.header.Header;
 import io.r2dbc.mssql.message.header.Status;
@@ -58,7 +58,7 @@ public enum ConnectionState {
 			return (header, byteBuf) -> {
 
 				assert header.getType() == Type.TABULAR_RESULT;
-				assert header.is(Status.EOM);
+				assert header.is(Status.StatusBit.EOM);
 
 				return Prelogin.decode(header, byteBuf);
 			};
@@ -87,7 +87,7 @@ public enum ConnectionState {
 			if (encryption.requiresLoginSslHanshake()) {
 
 				Channel channel = connection.channel();
-				channel.pipeline().fireUserEventTriggered(SSLState.LOGIN_ONLY);
+				channel.pipeline().fireUserEventTriggered(SslState.LOGIN_ONLY);
 
 				return PRELOGIN_SSL_NEGOTIATION;
 			}
@@ -105,7 +105,7 @@ public enum ConnectionState {
 
 		@Override
 		public boolean canAdvance(Message message) {
-			return message == SSLState.NEGOTIATED;
+			return message == SslState.NEGOTIATED;
 		}
 
 		@Override
@@ -152,7 +152,7 @@ public enum ConnectionState {
 
 				// Expect Tabular message here!
 				assert header.getType() == Type.TABULAR_RESULT;
-				assert header.is(Status.EOM);
+				assert header.is(Status.StatusBit.EOM);
 
 				return Tabular.decode(header, byteBuf);
 			};

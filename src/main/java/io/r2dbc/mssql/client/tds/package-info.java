@@ -13,25 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.r2dbc.mssql.client;
-
-import io.r2dbc.mssql.message.Message;
-import io.r2dbc.mssql.message.token.Tabular;
 
 /**
- * Synthetic message indicates the connection is ready for query.
- * 
- * @author Mark Paluch
+ * The infrastructure for exchanging messages with the server.
  */
-class ReadyForQuery implements Message {
 
-	private final Tabular loginack;
+/**
+ * Infrastructure for TDS packet handling and chunking.
+ */
+@NonNullApi
+package io.r2dbc.mssql.client.tds;
 
-	public ReadyForQuery(Tabular loginack) {
-		this.loginack = loginack;
-	}
-
-	public Tabular getLoginack() {
-		return loginack;
-	}
-}
+import reactor.util.annotation.NonNullApi;

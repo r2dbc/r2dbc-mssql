@@ -26,9 +26,11 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.r2dbc.mssql.client.ssl.TdsSslHandler;
+import io.r2dbc.mssql.client.tds.TdsEncoder;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
+import io.r2dbc.mssql.message.token.EnvChangeToken;
 import io.r2dbc.mssql.message.token.InfoToken;
 import io.r2dbc.mssql.message.token.StreamDecoder;
 import io.r2dbc.mssql.message.token.Tabular;
@@ -41,6 +43,8 @@ import reactor.netty.Connection;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +55,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.reactivestreams.Publisher;
@@ -80,8 +85,9 @@ public final class ReactorNettyClient implements Client {
 	    (message, sink) -> this.logger.warn("Notice: {}", toString(message.getFields())));
 	              */
 
-	private final BiConsumer<Message, SynchronousSink<Message>> handleInfoToken = handleBackendMessage(Tabular.class,
-			(message, sink) -> {
+	private final List<EnvironmentChangeListener> envChangeListeners = new ArrayList<>();
+
+	private final Consumer<Message> handleInfoToken = handleMessage(Tabular.class, (message) -> {
 
 				List<InfoToken> tokens = message.getTokens(InfoToken.class);
 
@@ -94,7 +100,21 @@ public final class ReactorNettyClient implements Client {
 				}
 			});
 
-	private final BiConsumer<Message, SynchronousSink<Message>> handleStateChange = handleBackendMessage(Message.class,
+	private final Consumer<Message> handleEnvChange = handleMessage(Tabular.class, (message) -> {
+
+		List<EnvChangeToken> tokens = message.getTokens(EnvChangeToken.class);
+
+		for (EnvChangeToken token : tokens) {
+
+			EnvironmentChangeEvent event = new EnvironmentChangeEvent(token);
+
+			for (EnvironmentChangeListener listener : envChangeListeners) {
+				listener.onEnvironmentChange(event);
+			}
+		}
+	});
+
+	private final BiConsumer<Message, SynchronousSink<Message>> handleStateChange = handleMessage(Message.class,
 			(message, sink) -> {
 
 				ConnectionState connectionState = this.state.get();
@@ -113,14 +133,16 @@ public final class ReactorNettyClient implements Client {
 
 				sink.next(message);
 			});
+	
+	private final Consumer<Message> handleReadyForQuery = handleMessage(ReadyForQuery.class, (message) -> {
+		handleEnvChange.accept(message.getLoginack());
+		handleInfoToken.accept(message.getLoginack());
+	});
 
 	private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
 	private final ConcurrentMap<String, String> parameterStatus = new ConcurrentHashMap<>();
-	/*
-	private final BiConsumer<Message, SynchronousSink<Message>> handleParameterStatus = handleBackendMessage(ParameterStatus.class,
-	   (message, sink) -> this.parameterStatus.put(message.getName(), message.getValue()));
-	  */
+
 	private final AtomicReference<Integer> processId = new AtomicReference<>();
 
 	private final EmitterProcessor<ClientMessage> requestProcessor = EmitterProcessor.create(false);
@@ -131,16 +153,13 @@ public final class ReactorNettyClient implements Client {
 
 	private final AtomicReference<ConnectionState> state = new AtomicReference<>(ConnectionState.PRELOGIN);
 
-	private final PacketIdProvider packetIdProvider;
-
 	/**
 	 * Creates a new frame processor connected to a given TCP connection.
 	 *
 	 * @param connection the TCP connection
 	 */
-	private ReactorNettyClient(Connection connection, PacketIdProvider packetIdProvider) {
+	private ReactorNettyClient(Connection connection, List<EnvironmentChangeListener> envChangeListeners) {
 		Objects.requireNonNull(connection, "Connection must not be null");
-		Objects.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
 
 		FluxSink<Flux<Message>> responses = this.responseProcessor.sink();
 
@@ -148,7 +167,7 @@ public final class ReactorNettyClient implements Client {
 
 		this.byteBufAllocator.set(connection.outbound().alloc());
 		this.connection.set(connection);
-		this.packetIdProvider = packetIdProvider;
+		this.envChangeListeners.addAll(envChangeListeners);
 
 		connection.inbound().receiveObject() //
 				.concatMap(it -> {
@@ -168,7 +187,10 @@ public final class ReactorNettyClient implements Client {
 				}) //
 				.doOnNext(message -> this.logger.debug("Response: {}", message)) //
 				.doOnError(message -> this.logger.warn("Error: {}", message)) //
-				.handle(this.handleStateChange).handle(this.handleInfoToken)
+				.handle(this.handleStateChange) //
+				.doOnNext(this.handleReadyForQuery) //
+				.doOnNext(this.handleEnvChange) //
+				.doOnNext(this.handleInfoToken)
 				/*.handle(this.handleNoticeResponse)
 				.handle(this.handleErrorResponse) */
 				// .handle(this.handleBackendKeyData)
@@ -186,7 +208,7 @@ public final class ReactorNettyClient implements Client {
 			connection.channel().close();
 		}).doOnNext(message -> this.logger.debug("Request:  {}", message))
 				.concatMap(
-						message -> connection.outbound().send(message.encode(connection.outbound().alloc(), packetIdProvider)))
+						message -> connection.outbound().sendObject(message.encode(connection.outbound().alloc())))
 				.subscribe();
 	}
 
@@ -217,25 +239,26 @@ public final class ReactorNettyClient implements Client {
 
 		PacketIdProvider packetIdProvider = PacketIdProvider.atomic();
 
+		TdsEncoder tdsEncoder = new TdsEncoder(packetIdProvider);
+
 		Mono<? extends Connection> connection = TcpClient.create(connectionProvider).host(host).port(port).connect()
 				.doOnNext(it -> {
 
 					ChannelPipeline pipeline = it.channel().pipeline();
 					InternalLogger logger = InternalLoggerFactory.getInstance(ReactorNettyClient.class);
 
-					TdsSslHandler handler = new TdsSslHandler(packetIdProvider);
-					if (logger.isDebugEnabled()) {
+					pipeline.addFirst(tdsEncoder.getClass().getName(), tdsEncoder);
 
+					TdsSslHandler handler = new TdsSslHandler(packetIdProvider);
+					pipeline.addAfter(tdsEncoder.getClass().getName(), handler.getClass().getName(), handler);
+
+					if (logger.isDebugEnabled()) {
 						pipeline.addFirst(LoggingHandler.class.getSimpleName(),
 								new LoggingHandler(ReactorNettyClient.class, LogLevel.DEBUG));
-
-						pipeline.addAfter(LoggingHandler.class.getSimpleName(), handler.getClass().getName(), handler);
-					} else {
-						pipeline.addFirst(handler.getClass().getName(), handler);
 					}
 				});
 
-		return connection.map(it -> new ReactorNettyClient(it, packetIdProvider));
+		return connection.map(it -> new ReactorNettyClient(it, Collections.singletonList(tdsEncoder)));
 	}
 
 	@Override
@@ -282,13 +305,22 @@ public final class ReactorNettyClient implements Client {
 	}
 
 	@SuppressWarnings("unchecked")
-	private static <T extends Message> BiConsumer<Message, SynchronousSink<Message>> handleBackendMessage(Class<T> type,
+	private static <T extends Message> BiConsumer<Message, SynchronousSink<Message>> handleMessage(Class<T> type,
 			BiConsumer<T, SynchronousSink<Message>> consumer) {
 		return (message, sink) -> {
 			if (type.isInstance(message)) {
 				consumer.accept((T) message, sink);
 			} else {
 				sink.next(message);
+			}
+		};
+	}
+
+	@SuppressWarnings("unchecked")
+	private static <T extends Message> Consumer<Message> handleMessage(Class<T> type, Consumer<T> consumer) {
+		return (message) -> {
+			if (type.isInstance(message)) {
+				consumer.accept((T) message);
 			}
 		};
 	}

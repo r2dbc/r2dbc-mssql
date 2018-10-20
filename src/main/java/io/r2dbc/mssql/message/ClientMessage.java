@@ -18,7 +18,7 @@ package io.r2dbc.mssql.message;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.r2dbc.mssql.message.Message;
+import io.r2dbc.mssql.client.tds.TdsFragment;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
 
 import org.reactivestreams.Publisher;
@@ -35,6 +35,6 @@ public interface ClientMessage extends Message {
 	 * @param packetIdProvider the {@link PacketIdProvider} to generate the packet id header
 	 * @return a {@link Publisher} that produces the {@link ByteBuf} containing the encoded message
 	 */
-	Publisher<ByteBuf> encode(ByteBufAllocator allocator, PacketIdProvider packetIdProvider);
+	Publisher<TdsFragment> encode(ByteBufAllocator allocator);
 
 }

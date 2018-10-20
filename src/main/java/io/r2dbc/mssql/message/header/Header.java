@@ -18,17 +18,17 @@ package io.r2dbc.mssql.message.header;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.r2dbc.mssql.util.Assert;
 import reactor.core.publisher.Mono;
 
 import java.util.Objects;
-import java.util.Set;
 
 import org.reactivestreams.Publisher;
 
 /**
  * A header exchanged between client and server.
  */
-public class Header {
+public class Header implements HeaderOptions {
 
 	/**
 	 * Number of bytes required to represent the header.
@@ -43,7 +43,7 @@ public class Header {
 	/**
 	 * Status is a bit field used to indicate the message state. 1-byte.
 	 */
-	private final Set<Status> status;
+	private final Status status;
 
 	/**
 	 * Length is the size of the packet including the 8 bytes in the packet header. It is the number of bytes from the
@@ -79,18 +79,19 @@ public class Header {
 	 */
 	private final byte window;
 
-	public Header(Type type, Set<Status> status, int length, int spid) {
+	public Header(Type type, Status status, int length, int spid) {
 		this(type, status, (short) length, (short) spid, (byte) 0, (byte) 0);
 	}
 
-	public Header(Type type, Set<Status> status, int length, int spid, int packetId, int window) {
+	public Header(Type type, Status status, int length, int spid, int packetId, int window) {
 		this(type, status, (short) length, (short) spid, (byte) packetId, (byte) window);
 	}
 
-	public Header(Type type, Set<Status> status, short length, short spid, byte packetId, byte window) {
+	public Header(Type type, Status status, short length, short spid, byte packetId, byte window) {
 
-		Objects.requireNonNull(type, "type must not be null");
-		Objects.requireNonNull(status, "status must not be null");
+		Objects.requireNonNull(type, "Type must not be null");
+		Objects.requireNonNull(status, "sStatus must not be null");
+		Assert.isTrue(length >= 8, "Header length must be greater or equal to 8");
 
 		this.type = type;
 		this.status = status;
@@ -100,16 +101,32 @@ public class Header {
 		this.window = window;
 	}
 
+	/**
+	 * Create a {@link Header} given {@link HeaderOptions}, packet {@code length}, and {@link PacketIdProvider}.
+	 * 
+	 * @param options the {@link HeaderOptions}.
+	 * @param length
+	 * @param packetIdProvider the {@link PacketIdProvider}.
+	 * @return the {@link Header}.
+	 */
+	public static Header create(HeaderOptions options, int length, PacketIdProvider packetIdProvider) {
+
+		Objects.requireNonNull(options, "HeaderOptions must not be null");
+		Objects.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
+
+		return new Header(options.getType(), options.getStatus(), length, 0, packetIdProvider.nextPacketId(), 0);
+	}
+
 	public Type getType() {
 		return this.type;
 	}
 
-	public Set<Status> getStatus() {
+	public Status getStatus() {
 		return this.status;
 	}
 
-	public boolean is(Status status) {
-		return this.status.contains(status);
+	public boolean is(Status.StatusBit bit) {
+		return this.status.is(bit);
 	}
 
 	public short getSpid() {
@@ -166,7 +183,7 @@ public class Header {
 		buffer.ensureWritable(8);
 
 		buffer.writeByte(this.type.getValue());
-		buffer.writeByte(getStatusValue());
+		buffer.writeByte(this.status.getValue());
 		buffer.writeShort(this.length);
 		buffer.writeShort(this.spid);
 		buffer.writeByte(packetIdProvider.nextPacketId());
@@ -186,25 +203,15 @@ public class Header {
 	public static Header decode(ByteBuf buffer) {
 
 		Type type = Type.valueOf(buffer.readByte());
-		Set<Status> statuses = Status.fromBitmask(buffer.readByte());
+		Status status = Status.fromBitmask(buffer.readByte());
 		short length = buffer.readShort();
 		short spid = buffer.readShort();
 		byte packetId = buffer.readByte();
 		byte window = buffer.readByte();
 
-		return new Header(type, statuses, length, spid, packetId, window);
+		return new Header(type, status, length, spid, packetId, window);
 	}
 
-	private byte getStatusValue() {
-
-		byte result = 0;
-
-		for (Status s : this.status) {
-			result |= s.getBits();
-		}
-
-		return result;
-	}
 
 	@Override
 	public String toString() {

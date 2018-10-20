@@ -15,23 +15,32 @@
  */
 package io.r2dbc.mssql.client;
 
-import io.r2dbc.mssql.message.Message;
-import io.r2dbc.mssql.message.token.Tabular;
+import io.r2dbc.mssql.message.token.EnvChangeToken;
+
+import java.util.Objects;
 
 /**
- * Synthetic message indicates the connection is ready for query.
+ * Environment change event based on a {@link EnvChangeToken}.
  * 
  * @author Mark Paluch
  */
-class ReadyForQuery implements Message {
+public class EnvironmentChangeEvent {
 
-	private final Tabular loginack;
+	private final EnvChangeToken token;
 
-	public ReadyForQuery(Tabular loginack) {
-		this.loginack = loginack;
+	/**
+	 * Create a new {@link EnvironmentChangeEvent}.
+	 * 
+	 * @param token the environment change token.
+	 */
+	public EnvironmentChangeEvent(EnvChangeToken token) {
+		this.token = Objects.requireNonNull(token);
 	}
 
-	public Tabular getLoginack() {
-		return loginack;
+	/**
+	 * @return the environment change token.
+	 */
+	public EnvChangeToken getToken() {
+		return token;
 	}
 }

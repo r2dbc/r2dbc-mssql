@@ -21,8 +21,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 
-import java.util.EnumSet;
-
 import org.junit.jupiter.api.Test;
 
 /**
@@ -33,7 +31,7 @@ final class HeaderUnitTests {
 	@Test
 	void shouldEncodePreLoginHeader() {
 
-		Header header = new Header(Type.PRE_LOGIN, EnumSet.of(Status.EOM), (short) 0x002F, (short) 0, (byte) 1, (byte) 0);
+		Header header = new Header(Type.PRE_LOGIN, Status.of(Status.StatusBit.EOM), (short) 0x002F, (short) 0, (byte) 1, (byte) 0);
 
 		ByteBuf buffer = Unpooled.buffer(8);
 
@@ -46,7 +44,7 @@ final class HeaderUnitTests {
 	@Test
 	void shouldDecodeLoginHeader() {
 
-		Header header = new Header(Type.PRE_LOGIN, EnumSet.of(Status.EOM), (short) 0x002F, (short) 0, (byte) 1, (byte) 0);
+		Header header = new Header(Type.PRE_LOGIN, Status.of(Status.StatusBit.EOM), (short) 0x002F, (short) 0, (byte) 1, (byte) 0);
 
 		ByteBuf buffer = Unpooled.buffer(8);
 
@@ -57,7 +55,7 @@ final class HeaderUnitTests {
 		Header decoded = Header.decode(buffer);
 
 		assertThat(decoded.getType()).isEqualTo(Type.PRE_LOGIN);
-		assertThat(decoded.getStatus()).containsOnly(Status.EOM);
+        assertThat(decoded.getStatus().is(Status.StatusBit.EOM)).isTrue();
 		assertThat(decoded.getLength()).isEqualTo((short) 0x002F);
 		assertThat(decoded.getSpid()).isEqualTo((short) 0);
 		assertThat(decoded.getPacketId()).isEqualTo((byte) 1);

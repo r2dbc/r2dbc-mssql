@@ -13,25 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.r2dbc.mssql.client;
+package io.r2dbc.mssql.client.tds;
 
-import io.r2dbc.mssql.message.Message;
-import io.r2dbc.mssql.message.token.Tabular;
+import io.netty.buffer.ByteBuf;
+
+import java.util.Objects;
 
 /**
- * Synthetic message indicates the connection is ready for query.
+ * Fragment of a TDS message. Can be a partial or complete TDS message. Headers are supplied during encoding.
  * 
  * @author Mark Paluch
  */
-class ReadyForQuery implements Message {
+public class TdsFragment {
 
-	private final Tabular loginack;
+	private final ByteBuf byteBuf;
 
-	public ReadyForQuery(Tabular loginack) {
-		this.loginack = loginack;
+	/**
+	 * Create a TDS fragment.
+	 * 
+	 * @param byteBuf
+	 */
+	TdsFragment(ByteBuf byteBuf) {
+		this.byteBuf = Objects.requireNonNull(byteBuf, "ByteBuf must not be null");
 	}
 
-	public Tabular getLoginack() {
-		return loginack;
+	/**
+	 * @return the byte buffer.
+	 */
+	public ByteBuf getByteBuf() {
+		return byteBuf;
 	}
 }

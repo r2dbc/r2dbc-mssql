@@ -20,10 +20,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.r2dbc.mssql.client.tds.ContextualTdsFragment;
 import io.r2dbc.mssql.message.header.Header;
-import io.r2dbc.mssql.message.header.PacketIdProvider;
+import io.r2dbc.mssql.message.header.Type;
+import io.r2dbc.mssql.util.TestByteBufAllocator;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
-import io.r2dbc.mssql.message.token.Prelogin;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -34,17 +37,27 @@ import org.junit.jupiter.api.Test;
 final class PreloginUnitTests {
 
 	@Test
+	void shouldUsePreloginHeader() {
+
+		Prelogin prelogin = Prelogin.builder().build();
+
+		Mono.from(prelogin.encode(TestByteBufAllocator.TEST))
+			.cast(ContextualTdsFragment.class)
+			.as(StepVerifier::create)
+			.consumeNextWith(actual -> {
+				assertThat(actual.getHeaderOptions().getType()).isEqualTo(Type.PRE_LOGIN);
+			}).verifyComplete();
+	}
+	
+	@Test
 	void shouldEncodePrelogin() {
 
 		Prelogin prelogin = Prelogin.builder().build();
 		ByteBuf buffer = Unpooled.buffer(32);
 
-		prelogin.encode(buffer, PacketIdProvider.just(0));
+		prelogin.encode(buffer);
 
 		String result = ByteBufUtil.prettyHexDump(buffer);
-
-		// Prelogin Header 12 + EOM
-		assertThat(result).containsSequence("00| 12 01 00");
 
 		// Version header at offset 10, length 6
 		assertThat(result).containsSequence("00 00 10 00 06");
