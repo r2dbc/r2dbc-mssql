@@ -14,14 +14,26 @@
  * limitations under the License.
  */
 
-/**
- * The infrastructure for exchanging messages with the server.
- */
+package io.r2dbc.mssql.codec;
+
+import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.message.token.Column;
+import reactor.util.annotation.Nullable;
 
 /**
- * Infrastructure for TDS packet handling and chunking.
+ * Registry for {@link Codec}s to encodes and decodes values.
  */
-@NonNullApi
-package io.r2dbc.mssql.client.tds;
+public interface Codecs {
 
-import reactor.util.annotation.NonNullApi;
+    /**
+     * Decode a data to a value.
+     *
+     * @param buffer the {@link ByteBuf} to decode
+     * @param type   the type to decode to
+     * @param <T>    the type of item being returned
+     * @return the decoded value
+     */
+    @Nullable
+    <T> T decode(@Nullable ByteBuf buffer, Column column, Class<? extends T> type);
+
+}
