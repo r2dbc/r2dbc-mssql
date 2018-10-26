@@ -20,25 +20,25 @@ import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Decode;
 
 /**
- * Info token.
+ * Error token.
  *
  * @author Mark Paluch
  */
-public final class InfoToken extends AbstractInfoToken {
+public final class ErrorToken extends AbstractInfoToken {
 
-    public static final byte TYPE = (byte) 0xAB;
+    public static final byte TYPE = (byte) 0xAA;
 
-    public InfoToken(long length, long number, byte state, byte infoClass, String message, String serverName, String procName, long lineNumber) {
+    public ErrorToken(long length, long number, byte state, byte infoClass, String message, String serverName, String procName, long lineNumber) {
         super(TYPE, length, number, state, infoClass, message, serverName, procName, lineNumber);
     }
 
     /**
-     * Decode the {@link InfoToken}.
+     * Decode the {@link ErrorToken}.
      *
      * @param buffer
      * @return
      */
-    public static InfoToken decode(ByteBuf buffer) {
+    public static ErrorToken decode(ByteBuf buffer) {
 
         int length = Decode.uShort(buffer);
         long number = Decode.asLong(buffer);
@@ -51,11 +51,11 @@ public final class InfoToken extends AbstractInfoToken {
 
         long lineNumber = buffer.readUnsignedInt();
 
-        return new InfoToken(length, number, state, infoClass, msgText, serverName, procName, lineNumber);
+        return new ErrorToken(length, number, state, infoClass, msgText, serverName, procName, lineNumber);
     }
 
     @Override
     public String getName() {
-        return "INFO";
+        return "ERROR";
     }
 }
