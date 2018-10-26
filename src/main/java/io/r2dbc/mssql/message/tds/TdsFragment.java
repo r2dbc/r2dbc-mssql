@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.r2dbc.mssql.client.tds;
+
+package io.r2dbc.mssql.message.tds;
 
 import io.netty.buffer.ByteBuf;
 
@@ -21,26 +22,26 @@ import java.util.Objects;
 
 /**
  * Fragment of a TDS message. Can be a partial or complete TDS message. Headers are supplied during encoding.
- * 
+ *
  * @author Mark Paluch
  */
 public class TdsFragment {
 
-	private final ByteBuf byteBuf;
+    private final ByteBuf byteBuf;
 
-	/**
-	 * Create a TDS fragment.
-	 * 
-	 * @param byteBuf
-	 */
-	TdsFragment(ByteBuf byteBuf) {
-		this.byteBuf = Objects.requireNonNull(byteBuf, "ByteBuf must not be null");
-	}
+    /**
+     * Create a TDS fragment.
+     *
+     * @param buffer the data buffer.
+     */
+    TdsFragment(ByteBuf buffer) {
+        this.byteBuf = Objects.requireNonNull(buffer, "Data buffer must not be null");
+    }
 
-	/**
-	 * @return the byte buffer.
-	 */
-	public ByteBuf getByteBuf() {
-		return byteBuf;
-	}
+    /**
+     * @return the data buffer.
+     */
+    public ByteBuf getByteBuf() {
+        return byteBuf;
+    }
 }

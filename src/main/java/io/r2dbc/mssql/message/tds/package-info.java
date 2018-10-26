@@ -13,27 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.r2dbc.mssql.client.tds;
 
-import io.netty.buffer.ByteBuf;
-import io.r2dbc.mssql.message.header.HeaderOptions;
 
 /**
- * Last chunk of a TDS message. This message type signals the encoder send this fragment with the previously associated
- * {@link HeaderOptions} and clear these after sending this message.
- * 
- * @author Mark Paluch
- * @see FirstTdsFragment
+ * TDS protocol support, message envelopes and encoding/decoding helpers.
  */
-public final class LastTdsFragment extends TdsFragment {
 
-	/**
-	 * Creates a new {@link LastTdsFragment}.
-	 * 
-	 * @param byteBuf the buffer.
-	 * @param headerOptions header options.
-	 */
-	LastTdsFragment(ByteBuf byteBuf) {
-		super(byteBuf);
-	}
-}
+@NonNullApi
+package io.r2dbc.mssql.message.tds;
+
+import reactor.util.annotation.NonNullApi;

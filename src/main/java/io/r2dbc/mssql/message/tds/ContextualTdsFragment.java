@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.r2dbc.mssql.client.tds;
+
+package io.r2dbc.mssql.message.tds;
 
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.header.HeaderOptions;
@@ -23,29 +24,29 @@ import java.util.Objects;
 /**
  * Represents a TDS message with associated {@link HeaderOptions}. The encoder may split this packet into multiple
  * packets if the packet size exceeds the negotiated packet size.
- * 
+ *
  * @author Mark Paluch
  */
 public class ContextualTdsFragment extends TdsFragment {
 
-	private final HeaderOptions headerOptions;
+    private final HeaderOptions headerOptions;
 
-	/**
-	 * Creates a new {@link ContextualTdsFragment}.
-	 *
-	 * @param headerOptions header options.
-	 * @param byteBuf the buffer.
-	 */
-	public ContextualTdsFragment(HeaderOptions headerOptions, ByteBuf byteBuf) {
+    /**
+     * Creates a new {@link ContextualTdsFragment}.
+     *
+     * @param headerOptions header options.
+     * @param byteBuf       the buffer.
+     */
+    public ContextualTdsFragment(HeaderOptions headerOptions, ByteBuf byteBuf) {
 
-		super(byteBuf);
-		this.headerOptions = Objects.requireNonNull(headerOptions, "HeaderOptions must not be null");
-	}
+        super(byteBuf);
+        this.headerOptions = Objects.requireNonNull(headerOptions, "HeaderOptions must not be null");
+    }
 
-	/**
-	 * @return the header options.
-	 */
-	public HeaderOptions getHeaderOptions() {
-		return headerOptions;
-	}
+    /**
+     * @return the header options.
+     */
+    public HeaderOptions getHeaderOptions() {
+        return headerOptions;
+    }
 }

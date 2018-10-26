@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.r2dbc.mssql.client.tds;
+
+package io.r2dbc.mssql.message.tds;
 
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.header.HeaderOptions;
@@ -21,20 +22,20 @@ import io.r2dbc.mssql.message.header.HeaderOptions;
 /**
  * First chunk of a TDS message. This message type signals the encoder to associate subsequent messages with the
  * attached {@link HeaderOptions}.
- * 
+ *
  * @author Mark Paluch
  * @see ContextualTdsFragment
  * @see LastTdsFragment
  */
 public final class FirstTdsFragment extends ContextualTdsFragment {
 
-	/**
-	 * Creates a new {@link FirstTdsFragment}.
-	 *
-	 * @param headerOptions header options.
-	 * @param byteBuf the buffer.
-	 */
-	FirstTdsFragment(HeaderOptions headerOptions, ByteBuf byteBuf) {
-		super(headerOptions, byteBuf);
-	}
+    /**
+     * Creates a new {@link FirstTdsFragment}.
+     *
+     * @param headerOptions header options.
+     * @param byteBuf       the buffer.
+     */
+    FirstTdsFragment(HeaderOptions headerOptions, ByteBuf byteBuf) {
+        super(headerOptions, byteBuf);
+    }
 }

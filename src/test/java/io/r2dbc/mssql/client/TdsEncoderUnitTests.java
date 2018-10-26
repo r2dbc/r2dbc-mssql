@@ -13,10 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.r2dbc.mssql.client.tds;
 
-import static io.r2dbc.mssql.util.EmbeddedChannelAssert.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+package io.r2dbc.mssql.client;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -25,8 +23,14 @@ import io.r2dbc.mssql.message.header.HeaderOptions;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
-
+import io.r2dbc.mssql.message.tds.ContextualTdsFragment;
+import io.r2dbc.mssql.message.tds.TdsFragment;
+import io.r2dbc.mssql.message.tds.TdsPacket;
+import io.r2dbc.mssql.message.tds.TdsPackets;
 import org.junit.jupiter.api.Test;
+
+import static io.r2dbc.mssql.util.EmbeddedChannelAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Unit tests for {@link TdsEncoder}.
