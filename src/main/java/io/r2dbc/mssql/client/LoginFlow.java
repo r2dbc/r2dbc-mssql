@@ -15,12 +15,11 @@
  */
 package io.r2dbc.mssql.client;
 
-import static io.r2dbc.mssql.util.PredicateUtils.or;
-
 import io.r2dbc.mssql.client.ssl.SslState;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TDSVersion;
+import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.Login7;
 import io.r2dbc.mssql.message.token.Prelogin;
 import reactor.core.publisher.EmitterProcessor;
@@ -29,6 +28,8 @@ import reactor.core.publisher.FluxSink;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static io.r2dbc.mssql.util.PredicateUtils.or;
 
 /**
  * A utility class that encapsulates the Login message flow.
@@ -59,11 +60,12 @@ public final class LoginFlow {
 		Prelogin request = builder.build();
 
 		return client.exchange(requestProcessor.startWith(request)) //
-				.filter(or(Prelogin.class::isInstance, SslState.class::isInstance)) //
+            .filter(or(Prelogin.class::isInstance, SslState.class::isInstance, DoneToken.class::isInstance)) //
 				.handle((message, sink) -> {
 
 					try {
 
+                        System.out.println(message);
 						if (message instanceof Prelogin) {
 
 							Prelogin response = (Prelogin) message;

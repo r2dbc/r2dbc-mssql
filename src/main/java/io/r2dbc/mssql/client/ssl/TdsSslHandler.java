@@ -22,25 +22,24 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.ssl.SslHandler;
 import io.r2dbc.mssql.client.ConnectionState;
-import io.r2dbc.mssql.client.tds.ContextualTdsFragment;
-import io.r2dbc.mssql.client.tds.TdsEncoder;
-import io.r2dbc.mssql.client.tds.TdsFragment;
+import io.r2dbc.mssql.client.TdsEncoder;
 import io.r2dbc.mssql.message.header.Header;
 import io.r2dbc.mssql.message.header.HeaderOptions;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
-
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.util.Objects;
+import io.r2dbc.mssql.message.tds.ContextualTdsFragment;
+import io.r2dbc.mssql.message.tds.TdsFragment;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.Objects;
 
 /**
  * SSL handling for TDS connections.

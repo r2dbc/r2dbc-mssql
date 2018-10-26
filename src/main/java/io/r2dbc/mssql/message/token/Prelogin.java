@@ -17,15 +17,18 @@ package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.r2dbc.mssql.client.tds.ContextualTdsFragment;
-import io.r2dbc.mssql.client.tds.TdsFragment;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.ServerMessage;
 import io.r2dbc.mssql.message.header.Header;
 import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
+import io.r2dbc.mssql.message.tds.ContextualTdsFragment;
+import io.r2dbc.mssql.message.tds.Decode;
+import io.r2dbc.mssql.message.tds.Encode;
+import io.r2dbc.mssql.message.tds.TdsFragment;
 import io.r2dbc.mssql.util.Assert;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
@@ -35,8 +38,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-
-import org.reactivestreams.Publisher;
 
 /**
  * Stream structure for {@code PRELOGIN}.
@@ -362,14 +363,14 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 			return this.length;
 		}
 
-		public void encodeToken(ByteBuf byteBuf, int position) {
+        public void encodeToken(ByteBuf buffer, int position) {
 
-			byteBuf.writeByte(this.type);
-			byteBuf.writeShort(position);
-			byteBuf.writeShort(this.length);
+            Encode.asByte(buffer, this.type);
+            Encode.uShortBE(buffer, position);
+            Encode.uShortBE(buffer, this.length);
 		}
 
-		public abstract void encodeStream(ByteBuf byteBuf);
+        public abstract void encodeStream(ByteBuf buffer);
 
 		/**
 		 * @return total length in bytes (including token header).
@@ -440,8 +441,8 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 		}
 
 		@Override
-		public void encodeToken(ByteBuf byteBuf, int position) {
-			byteBuf.writeByte(getType());
+        public void encodeToken(ByteBuf buffer, int position) {
+            buffer.writeByte(getType());
 		}
 
 		@Override
@@ -450,7 +451,8 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 		}
 
 		@Override
-		public void encodeStream(ByteBuf byteBuf) {}
+        public void encodeStream(ByteBuf buffer) {
+        }
 
 		@Override
 		public String toString() {
@@ -516,10 +518,10 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 		}
 
 		@Override
-		public void encodeStream(ByteBuf byteBuf) {
+        public void encodeStream(ByteBuf buffer) {
 
-			byteBuf.writeIntLE(this.version);
-			byteBuf.writeShort(this.subbuild);
+            Encode.dword(buffer, this.version);
+            Encode.shortBE(buffer, this.subbuild);
 		}
 
 		@Override
@@ -572,8 +574,8 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 		}
 
 		@Override
-		public void encodeStream(ByteBuf byteBuf) {
-			byteBuf.writeBytes(this.instanceName);
+        public void encodeStream(ByteBuf buffer) {
+            buffer.writeBytes(this.instanceName);
 		}
 
 		@Override
@@ -637,8 +639,8 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 		}
 
 		@Override
-		public void encodeStream(ByteBuf byteBuf) {
-			byteBuf.writeByte(this.encryption);
+        public void encodeStream(ByteBuf buffer) {
+            Encode.asByte(buffer, this.encryption);
 		}
 
 		public boolean requiresSslHanshake() {
@@ -677,8 +679,8 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 		}
 
 		@Override
-		public void encodeStream(ByteBuf byteBuf) {
-			byteBuf.writeInt(this.threadId);
+        public void encodeStream(ByteBuf buffer) {
+            buffer.writeInt(this.threadId);
 		}
 
 		@Override
@@ -718,25 +720,25 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 		}
 
 		@Override
-		public void encodeStream(ByteBuf byteBuf) {
+        public void encodeStream(ByteBuf buffer) {
 
 			if (this.connectionId != null) {
-				byteBuf.writeLong(this.connectionId.getMostSignificantBits());
-				byteBuf.writeLong(this.connectionId.getLeastSignificantBits());
+                buffer.writeLong(this.connectionId.getMostSignificantBits());
+                buffer.writeLong(this.connectionId.getLeastSignificantBits());
 			} else {
-				byteBuf.writeLong(0);
-				byteBuf.writeLong(0);
+                buffer.writeLong(0);
+                buffer.writeLong(0);
 			}
 
 			if (this.activityId != null) {
-				byteBuf.writeLong(this.activityId.getMostSignificantBits());
-				byteBuf.writeLong(this.activityId.getLeastSignificantBits());
+                buffer.writeLong(this.activityId.getMostSignificantBits());
+                buffer.writeLong(this.activityId.getLeastSignificantBits());
 			} else {
-				byteBuf.writeLong(0);
-				byteBuf.writeLong(0);
+                buffer.writeLong(0);
+                buffer.writeLong(0);
 			}
 
-			byteBuf.writeInt(this.activitySequence);
+            buffer.writeInt(this.activitySequence);
 		}
 
 		@Override
@@ -771,7 +773,8 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 		}
 
 		@Override
-		public void encodeStream(ByteBuf byteBuf) {}
+        public void encodeStream(ByteBuf buffer) {
+        }
 
 		@Override
 		public String toString() {
@@ -807,7 +810,7 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 	}
 
 	/**
-	 * Decoding state for Token Stream decoding using positional data lenght and positional index data reading.
+     * Decoding state for Token Stream decoding using positional data length and positional index data reading.
 	 */
 	static class TokenDecodingState {
 

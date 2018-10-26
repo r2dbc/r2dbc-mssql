@@ -15,20 +15,19 @@
  */
 package io.r2dbc.mssql.message.token;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.r2dbc.mssql.client.tds.ContextualTdsFragment;
 import io.r2dbc.mssql.message.TDSVersion;
 import io.r2dbc.mssql.message.header.Type;
+import io.r2dbc.mssql.message.tds.ContextualTdsFragment;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import io.r2dbc.mssql.util.Version;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link Login7}.

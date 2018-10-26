@@ -17,17 +17,18 @@ package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.r2dbc.mssql.client.tds.TdsFragment;
-import io.r2dbc.mssql.client.tds.TdsPackets;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.TDSVersion;
 import io.r2dbc.mssql.message.header.Header;
 import io.r2dbc.mssql.message.header.HeaderOptions;
 import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
+import io.r2dbc.mssql.message.tds.TdsFragment;
+import io.r2dbc.mssql.message.tds.TdsPackets;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.DriverVersion;
 import io.r2dbc.mssql.util.Version;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
@@ -38,8 +39,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
-
-import org.reactivestreams.Publisher;
 
 /**
  * Login 7 message.

@@ -16,11 +16,8 @@
 
 package io.r2dbc.mssql.message;
 
-import io.r2dbc.mssql.message.Message;
-
 /**
- * A message sent from a backend server to a frontend client.
+ * A message sent from a server to a client.
  */
 public interface ServerMessage extends Message {
-
 }

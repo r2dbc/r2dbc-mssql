@@ -16,6 +16,7 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.util.Version;
 
 /**
@@ -23,7 +24,7 @@ import io.r2dbc.mssql.util.Version;
  * 
  * @author Mark Paluch
  */
-public class LoginAckToken extends DataToken {
+public class LoginAckToken extends AbstractDataToken {
 
 	public static final byte TYPE = (byte) 0xAD;
 
@@ -120,7 +121,7 @@ public class LoginAckToken extends DataToken {
 		sb.append(getClass().getSimpleName());
 		sb.append(" [clientInterface=").append(this.clientInterface);
 		sb.append(", tdsVersion=").append(this.tdsVersion);
-		sb.append(", progrName='").append(this.progrName).append('\'');
+        sb.append(", progrName='").append(this.progrName).append('\"');
 		sb.append(", version=").append(this.version);
 		sb.append(']');
 		return sb.toString();

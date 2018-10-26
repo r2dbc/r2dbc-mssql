@@ -22,28 +22,16 @@ import io.r2dbc.mssql.message.Message;
  * 
  * @author Mark Paluch
  */
-public abstract class DataToken implements Message {
-
-	private final byte type;
-
-	/**
-	 * Creates a new {@link DataToken}.
-	 * 
-	 * @param type token type.
-	 */
-	protected DataToken(byte type) {
-		this.type = type;
-	}
+public interface DataToken extends Message {
 
 	/**
 	 * @return the token type.
 	 */
-	public byte getType() {
-		return this.type;
-	}
+	byte getType();
+		
 
 	/**
 	 * @return symbolic name of the {@link DataToken}.
 	 */
-	public abstract String getName();
+	String getName();
 }

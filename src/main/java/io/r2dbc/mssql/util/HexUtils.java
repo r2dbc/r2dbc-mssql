@@ -25,9 +25,10 @@ import java.util.Objects;
 /**
  * Utilities for working with {@link ByteBuf}s.
  */
-public final class ByteBufUtils {
+public final class HexUtils {
 
-	private ByteBufUtils() {}
+    private HexUtils() {
+    }
 
 	/**
 	 * Decode a {@link String} containing Hex-encoded bytes into a {@link ByteBuf}.
@@ -35,10 +36,10 @@ public final class ByteBufUtils {
 	 * @param sequence the {@link String} to decode
 	 * @return the {@link ByteBuf} decoded from the {@link String}
 	 */
-	public static ByteBuf decodeHex(CharSequence sequence) {
+    public static ByteBuf decodeToByteBuf(String chars) {
 
-		Objects.requireNonNull(sequence, "CharSequence must not be null");
+        Objects.requireNonNull(chars, "String must not be null");
 
-		return Unpooled.wrappedBuffer(ByteBufUtil.decodeHexDump(sequence));
+        return Unpooled.wrappedBuffer(ByteBufUtil.decodeHexDump(chars.replaceAll(" ", "")));
 	}
 }

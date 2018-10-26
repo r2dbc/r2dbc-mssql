@@ -29,6 +29,8 @@ import io.r2dbc.mssql.message.token.Prelogin;
 import io.r2dbc.mssql.message.token.Tabular;
 import reactor.netty.Connection;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.function.BiFunction;
 
 /**
@@ -53,14 +55,14 @@ public enum ConnectionState {
 	 */
 	PRELOGIN {
 		@Override
-		BiFunction<Header, ByteBuf, Message> decoder() {
+        BiFunction<Header, ByteBuf, List<? extends Message>> decoder(Client client) {
 
 			return (header, byteBuf) -> {
 
 				assert header.getType() == Type.TABULAR_RESULT;
 				assert header.is(Status.StatusBit.EOM);
 
-				return Prelogin.decode(header, byteBuf);
+                return Collections.singletonList(Prelogin.decode(header, byteBuf));
 			};
 		}
 
@@ -114,7 +116,7 @@ public enum ConnectionState {
 		}
 
 		@Override
-		BiFunction<Header, ByteBuf, Message> decoder() {
+        BiFunction<Header, ByteBuf, List<? extends Message>> decoder(Client client) {
 			return (header, byteBuf) -> {
 
 				throw new ProtocolException("Nothing to decode during SSL negotiation");
@@ -132,14 +134,7 @@ public enum ConnectionState {
 		@Override
 		public ConnectionState next(Message message, Connection connection) {
 
-			if (message instanceof Tabular) {
-
-				Tabular tabular = (Tabular) message;
-
-				if (tabular.getToken(LoginAckToken.class).isPresent()) {
-					return POST_LOGIN;
-				}
-
+            if (message instanceof LoginAckToken) {
 				return LOGIN_FAILED;
 			}
 
@@ -147,14 +142,16 @@ public enum ConnectionState {
 		}
 
 		@Override
-		BiFunction<Header, ByteBuf, Message> decoder() {
+        BiFunction<Header, ByteBuf, List<? extends Message>> decoder(Client client) {
+			
 			return (header, byteBuf) -> {
 
 				// Expect Tabular message here!
 				assert header.getType() == Type.TABULAR_RESULT;
 				assert header.is(Status.StatusBit.EOM);
 
-				return Tabular.decode(header, byteBuf);
+                Tabular tabular = Tabular.decode(byteBuf, client.isColumnEncryptionSupported());
+                return tabular.getTokens();
 			};
 		}
 	},
@@ -170,10 +167,19 @@ public enum ConnectionState {
 			return null;
 		}
 
-		@Override
-		BiFunction<Header, ByteBuf, Message> decoder() {
-			return null;
-		}
+        @SuppressWarnings("unchecked")
+        @Override
+        BiFunction<Header, ByteBuf, List<? extends Message>> decoder(Client client) {
+
+            return (header, byteBuf) -> {
+
+                // Expect Tabular message here!
+                assert header.getType() == Type.TABULAR_RESULT;
+
+                Tabular tabular = Tabular.decode(byteBuf, client.isColumnEncryptionSupported());
+                return tabular.getTokens();
+            };
+        }
 	},
 
 	LOGIN_FAILED {
@@ -189,7 +195,7 @@ public enum ConnectionState {
 		}
 
 		@Override
-		BiFunction<Header, ByteBuf, Message> decoder() {
+        BiFunction<Header, ByteBuf, List<? extends Message>> decoder(Client client) {
 			return null;
 		}
 	};
@@ -198,5 +204,5 @@ public enum ConnectionState {
 
 	public abstract ConnectionState next(Message message, Connection connection);
 
-	abstract BiFunction<Header, ByteBuf, Message> decoder();
+    abstract BiFunction<Header, ByteBuf, List<? extends Message>> decoder(Client client);
 }

@@ -16,8 +16,6 @@
 
 package io.r2dbc.mssql.client;
 
-import static io.r2dbc.mssql.util.PredicateUtils.not;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelPipeline;
@@ -26,14 +24,18 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.r2dbc.mssql.client.ssl.TdsSslHandler;
-import io.r2dbc.mssql.client.tds.TdsEncoder;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
+import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
+import io.r2dbc.mssql.message.token.AbstractInfoToken;
+import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.EnvChangeToken;
-import io.r2dbc.mssql.message.token.InfoToken;
+import io.r2dbc.mssql.message.token.FeatureExtAckToken;
 import io.r2dbc.mssql.message.token.StreamDecoder;
-import io.r2dbc.mssql.message.token.Tabular;
+import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
@@ -44,23 +46,17 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import org.reactivestreams.Publisher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static io.r2dbc.mssql.util.PredicateUtils.not;
 
 /**
  * An implementation of a TDS client based on the Reactor Netty project.
@@ -69,259 +65,271 @@ import org.slf4j.LoggerFactory;
  */
 public final class ReactorNettyClient implements Client {
 
-	private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-	private final AtomicReference<ByteBufAllocator> byteBufAllocator = new AtomicReference<>();
+    private final AtomicReference<ByteBufAllocator> byteBufAllocator = new AtomicReference<>();
 
-	private final AtomicReference<Connection> connection = new AtomicReference<>();
-	/*
-	private final BiConsumer<Message, SynchronousSink<Message>> handleErrorResponse = handleBackendMessage(ErrorResponse.class,
-	    (message, sink) -> {
-	        this.logger.error("Error: {}", toString(message.getFields()));
-	        sink.next(message);
-	    });
-	
-	private final BiConsumer<Message, SynchronousSink<Message>> handleNoticeResponse = handleBackendMessage(NoticeResponse.class,
-	    (message, sink) -> this.logger.warn("Notice: {}", toString(message.getFields())));
-	              */
+    private final AtomicReference<Connection> connection = new AtomicReference<>();
 
-	private final List<EnvironmentChangeListener> envChangeListeners = new ArrayList<>();
+    private final AtomicReference<byte[]> transactionState = new AtomicReference<>(new byte[8]);
 
-	private final Consumer<Message> handleInfoToken = handleMessage(Tabular.class, (message) -> {
+    private final AtomicBoolean encryptionSupported = new AtomicBoolean();
 
-				List<InfoToken> tokens = message.getTokens(InfoToken.class);
+    private final List<EnvironmentChangeListener> envChangeListeners = new ArrayList<>();
 
-				for (InfoToken token : tokens) {
+    private final Consumer<Message> handleInfoToken = handleMessage(AbstractInfoToken.class, (token) -> {
 
-					if (token.getInfoClass() < 9) {
-						this.logger.debug("Info: Code {} Severity {}: {}", token.getNumber(), token.getInfoClass(),
-								token.getMessage());
-					}
-				}
-			});
+        if (token.getClassification() == AbstractInfoToken.Classification.INFORMATIONAL) {
+            this.logger.debug("Info: Code {} Severity {}: {}", token.getNumber(), token.getClassification(),
+                token.getMessage());
+        } else {
+            this.logger.debug("Warning: Code {} Severity {}: {}", token.getNumber(), token.getClassification(),
+                token.getMessage());
+        }
+    });
 
-	private final Consumer<Message> handleEnvChange = handleMessage(Tabular.class, (message) -> {
+    private final Consumer<Message> handleEnvChange = handleMessage(EnvChangeToken.class, (token) -> {
 
-		List<EnvChangeToken> tokens = message.getTokens(EnvChangeToken.class);
+        EnvironmentChangeEvent event = new EnvironmentChangeEvent(token);
 
-		for (EnvChangeToken token : tokens) {
+        for (EnvironmentChangeListener listener : envChangeListeners) {
+            listener.onEnvironmentChange(event);
+        }
+    });
 
-			EnvironmentChangeEvent event = new EnvironmentChangeEvent(token);
+    private final Consumer<Message> featureAckChange = handleMessage(FeatureExtAckToken.class, (token) -> {
 
-			for (EnvironmentChangeListener listener : envChangeListeners) {
-				listener.onEnvironmentChange(event);
-			}
-		}
-	});
+        for (FeatureExtAckToken.FeatureToken featureToken : token.getFeatureTokens()) {
 
-	private final BiConsumer<Message, SynchronousSink<Message>> handleStateChange = handleMessage(Message.class,
-			(message, sink) -> {
+            if (featureToken instanceof FeatureExtAckToken.ColumnEncryption) {
+                this.encryptionSupported.set(true);
+            }
+        }
+    });
 
-				ConnectionState connectionState = this.state.get();
+    private final BiConsumer<Message, SynchronousSink<Message>> handleStateChange = handleMessage(Message.class,
+        (message, sink) -> {
 
-				if (connectionState.canAdvance(message)) {
-					ConnectionState nextState = connectionState.next(message, this.connection.get());
-					if (!this.state.compareAndSet(connectionState, nextState)) {
-						sink.error(new ProtocolException(String.format("Cannot advance state from %s", connectionState)));
-					}
+            ConnectionState connectionState = this.state.get();
 
-					if (connectionState == ConnectionState.LOGIN && nextState == ConnectionState.POST_LOGIN && message instanceof Tabular) {
-						sink.next(new ReadyForQuery((Tabular) message));
-						return;
-					}
-				}
+            if (connectionState.canAdvance(message)) {
+                ConnectionState nextState = connectionState.next(message, this.connection.get());
+                if (!this.state.compareAndSet(connectionState, nextState)) {
+                    sink.error(new ProtocolException(String.format("Cannot advance state from %s", connectionState)));
+                }
+            }
 
-				sink.next(message);
-			});
-	
-	private final Consumer<Message> handleReadyForQuery = handleMessage(ReadyForQuery.class, (message) -> {
-		handleEnvChange.accept(message.getLoginack());
-		handleInfoToken.accept(message.getLoginack());
-	});
+            sink.next(message);
+        });
 
-	private final AtomicBoolean isClosed = new AtomicBoolean(false);
+    private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
-	private final ConcurrentMap<String, String> parameterStatus = new ConcurrentHashMap<>();
+    private final EmitterProcessor<ClientMessage> requestProcessor = EmitterProcessor.create(false);
 
-	private final AtomicReference<Integer> processId = new AtomicReference<>();
+    private final FluxSink<ClientMessage> requests = this.requestProcessor.sink();
 
-	private final EmitterProcessor<ClientMessage> requestProcessor = EmitterProcessor.create(false);
+    private final EmitterProcessor<Flux<Message>> responseProcessor = EmitterProcessor.create(false);
 
-	private final FluxSink<ClientMessage> requests = this.requestProcessor.sink();
+    private final AtomicReference<ConnectionState> state = new AtomicReference<>(ConnectionState.PRELOGIN);
 
-	private final EmitterProcessor<Flux<Message>> responseProcessor = EmitterProcessor.create(false);
+    /**
+     * Creates a new frame processor connected to a given TCP connection.
+     *
+     * @param connection the TCP connection
+     */
+    private ReactorNettyClient(Connection connection, List<EnvironmentChangeListener> envChangeListeners) {
+        Objects.requireNonNull(connection, "Connection must not be null");
 
-	private final AtomicReference<ConnectionState> state = new AtomicReference<>(ConnectionState.PRELOGIN);
+        FluxSink<Flux<Message>> responses = this.responseProcessor.sink();
 
-	/**
-	 * Creates a new frame processor connected to a given TCP connection.
-	 *
-	 * @param connection the TCP connection
-	 */
-	private ReactorNettyClient(Connection connection, List<EnvironmentChangeListener> envChangeListeners) {
-		Objects.requireNonNull(connection, "Connection must not be null");
+        StreamDecoder decoder = new StreamDecoder();
 
-		FluxSink<Flux<Message>> responses = this.responseProcessor.sink();
+        this.byteBufAllocator.set(connection.outbound().alloc());
+        this.connection.set(connection);
+        this.envChangeListeners.addAll(envChangeListeners);
+        this.envChangeListeners.add(new TransactionListener());
 
-		StreamDecoder decoder = new StreamDecoder();
+        connection.inbound().receiveObject() //
+            .concatMap(it -> {
 
-		this.byteBufAllocator.set(connection.outbound().alloc());
-		this.connection.set(connection);
-		this.envChangeListeners.addAll(envChangeListeners);
+                if (it instanceof ByteBuf) {
 
-		connection.inbound().receiveObject() //
-				.concatMap(it -> {
+                    ByteBuf buffer = (ByteBuf) it;
+                    buffer.retain();
+                    return decoder.decode(buffer, this.state.get().decoder(this));
+                }
 
-					if (it instanceof ByteBuf) {
+                if (it instanceof Message) {
+                    return Mono.just((Message) it);
+                }
 
-						ByteBuf buffer = (ByteBuf) it;
-						buffer.retain();
-						return decoder.decode(buffer, this.state.get().decoder());
-					}
+                return Mono.error(new ProtocolException(String.format("Unexpected protocol message: %s", it)));
+            }) //
+            .doOnNext(message -> this.logger.debug("Response: {}", message)) //
+            .doOnError(message -> this.logger.warn("Error: {}", message)) //
+            .handle(this.handleStateChange) //
+            .doOnNext(this.handleEnvChange) //
+            .doOnNext(this.featureAckChange) //
+            .doOnNext(this.handleInfoToken)
+            .doOnError(ProtocolException.class, e -> {
+                this.isClosed.set(true);
+                connection.channel().close();
+            }).windowWhile(not(DoneToken.class::isInstance)) //
+            .subscribe(responses::next, responses::error, responses::complete);
 
-					if (it instanceof Message) {
-						return Mono.just((Message) it);
-					}
+        this.requestProcessor.doOnError(message -> {
+            this.logger.warn("Error: {}", message);
+            this.isClosed.set(true);
+            connection.channel().close();
+        }).doOnNext(message -> this.logger.debug("Request:  {}", message))
+            .concatMap(
+                message -> connection.outbound().sendObject(message.encode(connection.outbound().alloc())))
+            .subscribe();
+    }
 
-					return Mono.error(new ProtocolException(String.format("Unexpected protocol message: %s", it)));
-				}) //
-				.doOnNext(message -> this.logger.debug("Response: {}", message)) //
-				.doOnError(message -> this.logger.warn("Error: {}", message)) //
-				.handle(this.handleStateChange) //
-				.doOnNext(this.handleReadyForQuery) //
-				.doOnNext(this.handleEnvChange) //
-				.doOnNext(this.handleInfoToken)
-				/*.handle(this.handleNoticeResponse)
-				.handle(this.handleErrorResponse) */
-				// .handle(this.handleBackendKeyData)
-				// .handle(this.handleParameterStatus)
-				// .handle(this.handleReadyForQuery)
-				.doOnError(ProtocolException.class, e -> {
-					this.isClosed.set(true);
-					connection.channel().close();
-				}).windowWhile(not(ReadyForQuery.class::isInstance)) //
-				.subscribe(responses::next, responses::error, responses::complete);
+    /**
+     * Creates a new frame processor connected to a given host.
+     *
+     * @param host the host to connect to
+     * @param port the port to connect to
+     */
+    public static Mono<ReactorNettyClient> connect(String host, int port) {
 
-		this.requestProcessor.doOnError(message -> {
-			this.logger.warn("Error: {}", message);
-			this.isClosed.set(true);
-			connection.channel().close();
-		}).doOnNext(message -> this.logger.debug("Request:  {}", message))
-				.concatMap(
-						message -> connection.outbound().sendObject(message.encode(connection.outbound().alloc())))
-				.subscribe();
-	}
+        Objects.requireNonNull(host, "host must not be null");
 
-	/**
-	 * Creates a new frame processor connected to a given host.
-	 *
-	 * @param host the host to connect to
-	 * @param port the port to connect to
-	 */
-	public static Mono<ReactorNettyClient> connect(String host, int port) {
+        return connect(ConnectionProvider.newConnection(), host, port);
+    }
 
-		Objects.requireNonNull(host, "host must not be null");
+    /**
+     * Creates a new frame processor connected to a given host.
+     *
+     * @param connectionProvider the connection provider resources
+     * @param host               the host to connect to
+     * @param port               the port to connect to
+     */
+    public static Mono<ReactorNettyClient> connect(ConnectionProvider connectionProvider, String host, int port) {
 
-		return connect(ConnectionProvider.newConnection(), host, port);
-	}
+        Objects.requireNonNull(connectionProvider, "connectionProvider must not be null");
+        Objects.requireNonNull(host, "host must not be null");
 
-	/**
-	 * Creates a new frame processor connected to a given host.
-	 *
-	 * @param connectionProvider the connection provider resources
-	 * @param host the host to connect to
-	 * @param port the port to connect to
-	 */
-	public static Mono<ReactorNettyClient> connect(ConnectionProvider connectionProvider, String host, int port) {
+        PacketIdProvider packetIdProvider = PacketIdProvider.atomic();
 
-		Objects.requireNonNull(connectionProvider, "connectionProvider must not be null");
-		Objects.requireNonNull(host, "host must not be null");
+        TdsEncoder tdsEncoder = new TdsEncoder(packetIdProvider);
 
-		PacketIdProvider packetIdProvider = PacketIdProvider.atomic();
+        Mono<? extends Connection> connection = TcpClient.create(connectionProvider).host(host).port(port).connect()
+            .doOnNext(it -> {
 
-		TdsEncoder tdsEncoder = new TdsEncoder(packetIdProvider);
+                ChannelPipeline pipeline = it.channel().pipeline();
+                InternalLogger logger = InternalLoggerFactory.getInstance(ReactorNettyClient.class);
 
-		Mono<? extends Connection> connection = TcpClient.create(connectionProvider).host(host).port(port).connect()
-				.doOnNext(it -> {
+                pipeline.addFirst(tdsEncoder.getClass().getName(), tdsEncoder);
 
-					ChannelPipeline pipeline = it.channel().pipeline();
-					InternalLogger logger = InternalLoggerFactory.getInstance(ReactorNettyClient.class);
+                TdsSslHandler handler = new TdsSslHandler(packetIdProvider);
+                pipeline.addAfter(tdsEncoder.getClass().getName(), handler.getClass().getName(), handler);
 
-					pipeline.addFirst(tdsEncoder.getClass().getName(), tdsEncoder);
+                if (logger.isDebugEnabled()) {
+                    pipeline.addFirst(LoggingHandler.class.getSimpleName(),
+                        new LoggingHandler(ReactorNettyClient.class, LogLevel.DEBUG));
+                }
+            });
 
-					TdsSslHandler handler = new TdsSslHandler(packetIdProvider);
-					pipeline.addAfter(tdsEncoder.getClass().getName(), handler.getClass().getName(), handler);
+        return connection.map(it -> new ReactorNettyClient(it, Collections.singletonList(tdsEncoder)));
+    }
 
-					if (logger.isDebugEnabled()) {
-						pipeline.addFirst(LoggingHandler.class.getSimpleName(),
-								new LoggingHandler(ReactorNettyClient.class, LogLevel.DEBUG));
-					}
-				});
+    @Override
+    public Mono<Void> close() {
+        return Mono.defer(() -> {
+            Connection connection = this.connection.getAndSet(null);
 
-		return connection.map(it -> new ReactorNettyClient(it, Collections.singletonList(tdsEncoder)));
-	}
+            if (connection == null) {
+                return Mono.empty();
+            }
 
-	@Override
-	public Mono<Void> close() {
-		return Mono.defer(() -> {
-			Connection connection = this.connection.getAndSet(null);
+            return Mono.fromRunnable(connection::dispose);
+        });
+    }
 
-			if (connection == null) {
-				return Mono.empty();
-			}
+    @Override
+    public Flux<Message> exchange(Publisher<ClientMessage> requests) {
+        Objects.requireNonNull(requests, "requests must not be null");
 
-			return Mono.fromRunnable(connection::dispose);
-		});
-	}
+        return Flux.defer(() -> {
+            if (this.isClosed.get()) {
+                return Flux.error(new IllegalStateException("Cannot exchange messages because the connection is closed"));
+            }
 
-	@Override
-	public Flux<Message> exchange(Publisher<ClientMessage> requests) {
-		Objects.requireNonNull(requests, "requests must not be null");
+            return this.responseProcessor
+                .doOnSubscribe(s -> Flux.from(requests).subscribe(this.requests::next, this.requests::error)).next()
+                .flatMapMany(Function.identity());
+        });
+    }
 
-		return Flux.defer(() -> {
-			if (this.isClosed.get()) {
-				return Flux.error(new IllegalStateException("Cannot exchange messages because the connection is closed"));
-			}
+    @Override
+    public TransactionDescriptor getTransactionDescriptor() {
+        return new TransactionDescriptor(this.transactionState.get());
+    }
 
-			return this.responseProcessor
-					.doOnSubscribe(s -> Flux.from(requests).subscribe(this.requests::next, this.requests::error)).next()
-					.flatMapMany(Function.identity());
-		});
-	}
+    @Override
+    public boolean isColumnEncryptionSupported() {
+        return this.encryptionSupported.get();
+    }
 
-	@Override
-	public ByteBufAllocator getByteBufAllocator() {
-		return this.byteBufAllocator.get();
-	}
+    @Override
+    public ByteBufAllocator getByteBufAllocator() {
+        return this.byteBufAllocator.get();
+    }
 
-	@Override
-	public Map<String, String> getParameterStatus() {
-		return new HashMap<>(this.parameterStatus);
-	}
+    @SuppressWarnings("unchecked")
+    private static <T extends Message> BiConsumer<Message, SynchronousSink<Message>> handleMessage(Class<T> type,
+                                                                                                   BiConsumer<T, SynchronousSink<Message>> consumer) {
+        return (message, sink) -> {
+            if (type.isInstance(message)) {
+                consumer.accept((T) message, sink);
+            } else {
+                sink.next(message);
+            }
+        };
+    }
 
-	@Override
-	public Optional<Integer> getProcessId() {
-		return Optional.ofNullable(this.processId.get());
-	}
+    @SuppressWarnings("unchecked")
+    private static <T extends Message> Consumer<Message> handleMessage(Class<T> type, Consumer<T> consumer) {
+        return (message) -> {
+            if (type.isInstance(message)) {
+                consumer.accept((T) message);
+            }
+        };
+    }
 
-	@SuppressWarnings("unchecked")
-	private static <T extends Message> BiConsumer<Message, SynchronousSink<Message>> handleMessage(Class<T> type,
-			BiConsumer<T, SynchronousSink<Message>> consumer) {
-		return (message, sink) -> {
-			if (type.isInstance(message)) {
-				consumer.accept((T) message, sink);
-			} else {
-				sink.next(message);
-			}
-		};
-	}
+    class TransactionListener implements EnvironmentChangeListener {
 
-	@SuppressWarnings("unchecked")
-	private static <T extends Message> Consumer<Message> handleMessage(Class<T> type, Consumer<T> consumer) {
-		return (message) -> {
-			if (type.isInstance(message)) {
-				consumer.accept((T) message);
-			}
-		};
-	}
+        @Override
+        public void onEnvironmentChange(EnvironmentChangeEvent event) {
+
+            EnvChangeToken token = event.getToken();
+
+            if (token.getChangeType() == EnvChangeToken.EnvChangeType.BeginTx
+                || token.getChangeType() == EnvChangeToken.EnvChangeType.EnlistDTC) {
+
+                byte[] descriptor = transactionState.get();
+
+                if (descriptor.length != token.getLength()) {
+                    throw ProtocolException.invalidTds("Transaction descriptor length mismatch");
+                }
+
+                if (logger.isDebugEnabled()) {
+
+                    String op;
+                    if (token.getChangeType() == EnvChangeToken.EnvChangeType.BeginTx) {
+                        op = " started";
+                    } else {
+                        op = " enlisted";
+                    }
+
+                    logger.debug(String.format("Transaction %s", op));
+                }
+
+                transactionState.set(Arrays.copyOf(token.getNewValue(), token.getNewValue().length));
+            }
+        }
+    }
 }

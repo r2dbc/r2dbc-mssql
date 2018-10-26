@@ -14,24 +14,35 @@
  * limitations under the License.
  */
 
-package io.r2dbc.mssql.message;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.r2dbc.mssql.message.tds.TdsFragment;
-import org.reactivestreams.Publisher;
+package io.r2dbc.mssql.message.token;
 
 /**
- * A message sent from a client to a server.
+ * Data token.
+ *
+ * @author Mark Paluch
  */
-public interface ClientMessage extends Message {
+public abstract class AbstractDataToken implements DataToken {
 
-	/**
-	 * Encode a message into a {@link ByteBuf}.
-	 *
-	 * @param allocator the {@link ByteBufAllocator} to use to get a {@link ByteBuf} to write into
-	 * @return a {@link Publisher} that produces the {@link ByteBuf} containing the encoded message
-	 */
-	Publisher<TdsFragment> encode(ByteBufAllocator allocator);
+    private final byte type;
 
+    /**
+     * Creates a new {@link AbstractDataToken}.
+     *
+     * @param type token type.
+     */
+    protected AbstractDataToken(byte type) {
+        this.type = type;
+    }
+
+    /**
+     * @return the token type.
+     */
+    public byte getType() {
+        return this.type;
+    }
+
+    /**
+     * @return symbolic name of the {@link AbstractDataToken}.
+     */
+    public abstract String getName();
 }

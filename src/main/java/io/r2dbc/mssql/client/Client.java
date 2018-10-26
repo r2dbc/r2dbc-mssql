@@ -17,15 +17,12 @@
 package io.r2dbc.mssql.client;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.ClientMessage;
+import io.r2dbc.mssql.message.Message;
+import io.r2dbc.mssql.message.TransactionDescriptor;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.Map;
-import java.util.Optional;
-
-import org.reactivestreams.Publisher;
 
 /**
  * An abstraction that wraps the networking part of exchanging methods.
@@ -55,17 +52,16 @@ public interface Client {
 	ByteBufAllocator getByteBufAllocator();
 
 	/**
-	 * Returns a snapshot of the current parameter statuses.
-	 *
-	 * @return a snapshot of the current parameter statuses
+     * Returns the {@link TransactionDescriptor}.
+     *
+     * @return the {@link TransactionDescriptor} describing the server-side transaction.
 	 */
-	Map<String, String> getParameterStatus();
+    TransactionDescriptor getTransactionDescriptor();
 
 	/**
-	 * Returns the connected process id if it has been communicated.
-	 *
-	 * @return the connected process id if it has been communicated
+     * Returns whether the server supports column encryption.
+     *
+     * @return {@literal true} if the server supports column encryption.
 	 */
-	Optional<Integer> getProcessId();
-
+    boolean isColumnEncryptionSupported();
 }

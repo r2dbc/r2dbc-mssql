@@ -14,24 +14,17 @@
  * limitations under the License.
  */
 
-package io.r2dbc.mssql.message;
+package io.r2dbc.mssql.client;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.r2dbc.mssql.message.tds.TdsFragment;
-import org.reactivestreams.Publisher;
+import java.util.regex.Pattern;
 
 /**
- * A message sent from a client to a server.
+ * @author Mark Paluch
  */
-public interface ClientMessage extends Message {
+public class QueryMessageFlow {
 
-	/**
-	 * Encode a message into a {@link ByteBuf}.
-	 *
-	 * @param allocator the {@link ByteBufAllocator} to use to get a {@link ByteBuf} to write into
-	 * @return a {@link Publisher} that produces the {@link ByteBuf} containing the encoded message
-	 */
-	Publisher<TdsFragment> encode(ByteBufAllocator allocator);
-
+    /**
+     * The pattern that identifies a parameter symbol with its variable name.
+     */
+    public static final Pattern PARAMETER_SYMBOL = Pattern.compile(".*@([@_\\d\\p{IsAlpha}]+).*");
 }

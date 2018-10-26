@@ -15,12 +15,11 @@
  */
 package io.r2dbc.mssql.message.token;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import io.netty.buffer.ByteBuf;
-import io.r2dbc.mssql.util.ByteBufUtils;
-
+import io.r2dbc.mssql.util.HexUtils;
 import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link EnvChangeToken}.
@@ -32,7 +31,7 @@ final class EnvChangeTokenUnitTests {
 	@Test
 	void shouldDecodeDatabaseChange() {
 
-		ByteBuf buffer = ByteBufUtils.decodeHex("E31B0001066D0061007300740065007200066D0061007300740065007200");
+        ByteBuf buffer = HexUtils.decodeToByteBuf("E31B0001066D0061007300740065007200066D0061007300740065007200");
 
 		assertThat(buffer.readByte()).isEqualTo(EnvChangeToken.TYPE);
 
@@ -46,7 +45,7 @@ final class EnvChangeTokenUnitTests {
 	@Test
 	void shouldDecodeLanguageChange() {
 
-		ByteBuf buffer = ByteBufUtils.decodeHex("e31700020a750073005f0065" + "006e0067006c0069007300680000");
+        ByteBuf buffer = HexUtils.decodeToByteBuf("e31700020a750073005f0065" + "006e0067006c0069007300680000");
 
 		assertThat(buffer.readByte()).isEqualTo(EnvChangeToken.TYPE);
 

@@ -16,7 +16,8 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
-import io.r2dbc.mssql.util.Encoding;
+import io.r2dbc.mssql.message.tds.Decode;
+import io.r2dbc.mssql.message.type.Encoding;
 import reactor.util.annotation.Nullable;
 
 import java.util.Objects;
@@ -24,7 +25,7 @@ import java.util.Objects;
 /**
  * @author Mark Paluch
  */
-public class EnvChangeToken extends DataToken {
+public final class EnvChangeToken extends AbstractDataToken {
 
 	public static final byte TYPE = (byte) 0xE3;
 

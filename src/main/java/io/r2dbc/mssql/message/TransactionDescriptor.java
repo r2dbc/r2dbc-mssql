@@ -13,25 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.r2dbc.mssql.client;
 
-import io.r2dbc.mssql.message.Message;
-import io.r2dbc.mssql.message.token.Tabular;
+package io.r2dbc.mssql.message;
+
+import java.util.Arrays;
+import java.util.Objects;
 
 /**
- * Synthetic message indicates the connection is ready for query.
+ * Descriptor for the transaction state.
  * 
  * @author Mark Paluch
  */
-class ReadyForQuery implements Message {
+public class TransactionDescriptor {
 
-	private final Tabular loginack;
+    private final byte[] descriptor;
 
-	public ReadyForQuery(Tabular loginack) {
-		this.loginack = loginack;
-	}
+    public TransactionDescriptor(byte[] descriptor) {
 
-	public Tabular getLoginack() {
-		return loginack;
+        Objects.requireNonNull(descriptor, "Descriptor bytes must not be null");
+
+        this.descriptor = Arrays.copyOf(descriptor, descriptor.length);
+    }
+
+    public byte[] getDescriptor() {
+        return Arrays.copyOf(this.descriptor, this.descriptor.length);
 	}
 }

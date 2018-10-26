@@ -15,14 +15,13 @@
  */
 package io.r2dbc.mssql.message.token;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.TDSVersion;
-import io.r2dbc.mssql.util.ByteBufUtils;
+import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.Version;
-
 import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Mark Paluch
@@ -32,7 +31,7 @@ final class LoginAckTokenUnitTests {
 	@Test
 	void shouldDecode() {
 
-		ByteBuf buffer = ByteBufUtils.decodeHex("ad36000174000004164d00" + "6900630072006f0073006f0066007400"
+        ByteBuf buffer = HexUtils.decodeToByteBuf("ad36000174000004164d00" + "6900630072006f0073006f0066007400"
 				+ "2000530051004c002000530065007200" + "760065007200000000000e000bde");
 
 		assertThat(buffer.readByte()).isEqualTo(LoginAckToken.TYPE);
