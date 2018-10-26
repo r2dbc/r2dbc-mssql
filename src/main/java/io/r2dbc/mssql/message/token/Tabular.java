@@ -13,182 +13,280 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.Message;
-import io.r2dbc.mssql.message.header.Header;
 import io.r2dbc.mssql.message.header.Type;
+import io.r2dbc.mssql.message.tds.Decode;
 import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
 /**
  * Tabular response.
- * 
+ *
  * @author Mark Paluch
  * @see Type#TABULAR_RESULT
  */
 public final class Tabular implements Message {
 
-	private final List<? extends DataToken> tokens;
+    private final List<? extends DataToken> tokens;
 
-	public Tabular(List<? extends DataToken> tokens) {
-		this.tokens = tokens;
-	}
+    private Tabular(List<? extends DataToken> tokens) {
+        this.tokens = tokens;
+    }
 
-	/**
-	 * Decode the {@link Prelogin} response from a {@link ByteBuf}.
-	 * 
-	 * @param header must not be null.
-	 * @param byteBuf must not be null.
-	 * @return the decoded {@link Tabular} response {@link Message}.
-	 */
-	public static Tabular decode(Header header, ByteBuf byteBuf) {
+    /**
+     * Creates a new {@link Tabular}.
+     *
+     * @param tokens the tokens.
+     * @return the tabular token.
+     */
+    public static Tabular create(DataToken... tokens) {
 
-		Objects.requireNonNull(header, "Header must not be null");
-		Objects.requireNonNull(byteBuf, "ByteBuf must not be null");
+        Objects.requireNonNull(tokens, "Data tokens must not be null");
 
-		List<DataToken> tokens = new ArrayList<>();
+        return new Tabular(Arrays.asList(tokens));
+    }
 
-		while (true) {
+    /**
+     * Decode the {@link Tabular} response from a {@link ByteBuf}.
+     *
+     * @param buffer              must not be null.
+     * @param encryptionSupported whether encryption is supported.
+     * @return the decoded {@link Tabular} response {@link Message}.
+     */
+    public static Tabular decode(ByteBuf buffer, boolean encryptionSupported) {
 
-			byte type = Decode.asByte(byteBuf);
+        Objects.requireNonNull(buffer, "Buffer must not be null");
 
-			if (type == (byte) 0xFF) {
-				break;
-			}
+        TabularDecodeFunction decodeFunction = decodeFunction(encryptionSupported);
+        List<DataToken> tokens = new ArrayList<>();
 
-			if (type == EnvChangeToken.TYPE) {
-				tokens.add(EnvChangeToken.decode(byteBuf));
-			}
+        while (true) {
 
-			if (type == InfoToken.TYPE) {
-				tokens.add(InfoToken.decode(byteBuf));
-			}
+            if (buffer.readableBytes() == 0) {
+                break;
+            }
 
-			if (type == LoginAckToken.TYPE) {
-				tokens.add(LoginAckToken.decode(byteBuf));
-			}
-		}
+            byte type = Decode.asByte(buffer);
 
-		return new Tabular(tokens);
-	}
+            if (type == (byte) 0xFF) {
+                break;
+            }
 
-	/**
-	 * @return the tokens.
-	 */
-	public List<? extends DataToken> getTokens() {
-		return this.tokens;
-	}
+            DataToken message = decodeFunction.tryDecode(type, buffer);
 
-	/**
-	 * Resolve a {@link Prelogin.Token} given its {@link Class type}.
-	 * 
-	 * @param tokenType
-	 * @return
-	 */
-	@Nullable
-	private DataToken findToken(Predicate<DataToken> filter) {
+            if (message == DecodeFinished.INSTANCE) {
+                break;
+            }
 
-		Objects.requireNonNull(filter, "Filter must not be null");
+            tokens.add(message);
+        }
 
-		for (DataToken token : this.tokens) {
-			if (filter.test(token)) {
-				return token;
-			}
-		}
+        return new Tabular(tokens);
+    }
 
-		return null;
-	}
+    /**
+     * @param encryptionSupported {@literal true} if table column encryption is supported.
+     * @return
+     */
+    public static TabularDecodeFunction decodeFunction(boolean encryptionSupported) {
 
-	/**
-	 * Find a {@link DataToken} by its {@link Class type} and a {@link Predicate}.
-	 * 
-	 * @param tokenType
-	 * @return
-	 */
-	public <T extends DataToken> Optional<T> getToken(Class<? extends T> tokenType) {
+        AtomicReference<ColumnMetadataToken> columns = new AtomicReference<>();
 
-		Objects.requireNonNull(tokenType, "Token type must not be null");
+        return (type, buffer) -> {
 
-		return Optional.ofNullable(findToken(tokenType::isInstance)).map(tokenType::cast);
-	}
+            if (type == (byte) 0xFF) {
+                return DecodeFinished.INSTANCE;
+            }
 
-	/**
-	 * Find a {@link DataToken} by its {@link Class type} and a {@link Predicate}.
-	 * 
-	 * @param tokenType
-	 * @return
-	 */
-	public <T extends DataToken> Optional<T> getToken(Class<? extends T> tokenType, Predicate<T> filter) {
+            if (type == EnvChangeToken.TYPE) {
+                return EnvChangeToken.decode(buffer);
+            }
 
-		Objects.requireNonNull(tokenType, "Token type must not be null");
-		Objects.requireNonNull(filter, "Filter must not be null");
+            if (type == FeatureExtAckToken.TYPE) {
+                return FeatureExtAckToken.decode(buffer);
+            }
 
-		Predicate<DataToken> predicate = tokenType::isInstance;
-		return Optional.ofNullable(findToken(predicate.and(dataToken -> filter.test(tokenType.cast(dataToken)))))
-				.map(tokenType::cast);
-	}
+            if (type == InfoToken.TYPE) {
+                return InfoToken.decode(buffer);
+            }
 
-	/**
-	 * Find a {@link DataToken} by its {@link Class type} and a {@link Predicate}.
-	 * 
-	 * @param tokenType
-	 * @return
-	 * @throws IllegalArgumentException if no token was found.
-	 */
-	public <T extends DataToken> T getRequiredToken(Class<? extends T> tokenType) {
+            if (type == ErrorToken.TYPE) {
+                return ErrorToken.decode(buffer);
+            }
 
-		return getToken(tokenType).orElseThrow(
-				() -> new IllegalArgumentException(String.format("Token of type %s available", tokenType.getName())));
-	}
+            if (type == LoginAckToken.TYPE) {
+                return LoginAckToken.decode(buffer);
+            }
 
-	/**
-	 * Find a {@link DataToken} by its {@link Class type} and a {@link Predicate}.
-	 * 
-	 * @param tokenType
-	 * @param filter
-	 * @return
-	 * @throws IllegalArgumentException if no token was found.
-	 */
-	public <T extends DataToken> T getRequiredToken(Class<? extends T> tokenType, Predicate<T> filter) {
+            if (type == ColumnMetadataToken.TYPE) {
 
-		return getToken(tokenType, filter).orElseThrow(
-				() -> new IllegalArgumentException(String.format("Token of type %s available", tokenType.getName())));
-	}
+                ColumnMetadataToken colMetadataToken = ColumnMetadataToken.decode(buffer, encryptionSupported);
+                columns.set(colMetadataToken);
 
-	/**
-	 * Find a collection of {@link DataToken tokens} given their {@link Class type}.
-	 * 
-	 * @param tokenType the desired token type.
-	 * @return List of tokens.
-	 */
-	public <T extends DataToken> List<T> getTokens(Class<T> tokenType) {
+                return colMetadataToken;
+            }
 
-		Objects.requireNonNull(tokenType, "Token type must not be null");
+            if (type == DoneToken.TYPE) {
+                columns.set(null);
+                return DoneToken.decode(buffer);
+            }
 
-		List<T> result = new ArrayList<>();
+            if (type == RowToken.TYPE) {
 
-		for (DataToken token : this.tokens) {
-			if (tokenType.isInstance(token)) {
-				result.add(tokenType.cast(token));
-			}
-		}
+                ColumnMetadataToken colMetadataToken = columns.get();
+                return RowToken.decode(buffer, colMetadataToken.getColumns());
+            }
 
-		return result;
-	}
+            return null;
+        };
+    }
 
-	@Override
-	public String toString() {
-		final StringBuffer sb = new StringBuffer();
-		sb.append(getClass().getSimpleName());
-		sb.append(" [tokens=").append(this.tokens);
-		sb.append(']');
-		return sb.toString();
-	}
+    /**
+     * @return the tokens.
+     */
+    public List<? extends DataToken> getTokens() {
+        return this.tokens;
+    }
+
+    /**
+     * Resolve a {@link Prelogin.Token} given its {@link Class type}.
+     *
+     * @param filter
+     * @return
+     */
+    @Nullable
+    private DataToken findToken(Predicate<DataToken> filter) {
+
+        Objects.requireNonNull(filter, "Filter must not be null");
+
+        for (DataToken token : this.tokens) {
+            if (filter.test(token)) {
+                return token;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Find a {@link DataToken} by its {@link Class type} and a {@link Predicate}.
+     *
+     * @param tokenType
+     * @return
+     */
+    public <T extends DataToken> Optional<T> getToken(Class<? extends T> tokenType) {
+
+        Objects.requireNonNull(tokenType, "Token type must not be null");
+
+        return Optional.ofNullable(findToken(tokenType::isInstance)).map(tokenType::cast);
+    }
+
+    /**
+     * Find a {@link DataToken} by its {@link Class type} and a {@link Predicate}.
+     *
+     * @param tokenType
+     * @return
+     */
+    public <T extends DataToken> Optional<T> getToken(Class<? extends T> tokenType, Predicate<T> filter) {
+
+        Objects.requireNonNull(tokenType, "Token type must not be null");
+        Objects.requireNonNull(filter, "Filter must not be null");
+
+        Predicate<DataToken> predicate = tokenType::isInstance;
+        return Optional.ofNullable(findToken(predicate.and(dataToken -> filter.test(tokenType.cast(dataToken)))))
+            .map(tokenType::cast);
+    }
+
+    /**
+     * Find a {@link DataToken} by its {@link Class type} and a {@link Predicate}.
+     *
+     * @param tokenType
+     * @return
+     * @throws IllegalArgumentException if no token was found.
+     */
+    public <T extends DataToken> T getRequiredToken(Class<? extends T> tokenType) {
+
+        return getToken(tokenType).orElseThrow(
+            () -> new IllegalArgumentException(String.format("Token of type %s available", tokenType.getName())));
+    }
+
+    /**
+     * Find a {@link DataToken} by its {@link Class type} and a {@link Predicate}.
+     *
+     * @param tokenType
+     * @param filter
+     * @return
+     * @throws IllegalArgumentException if no token was found.
+     */
+    public <T extends DataToken> T getRequiredToken(Class<? extends T> tokenType, Predicate<T> filter) {
+
+        return getToken(tokenType, filter).orElseThrow(
+            () -> new IllegalArgumentException(String.format("Token of type %s available", tokenType.getName())));
+    }
+
+    /**
+     * Find a collection of {@link DataToken tokens} given their {@link Class type}.
+     *
+     * @param tokenType the desired token type.
+     * @return List of tokens.
+     */
+    public <T extends DataToken> List<T> getTokens(Class<T> tokenType) {
+
+        Objects.requireNonNull(tokenType, "Token type must not be null");
+
+        List<T> result = new ArrayList<>();
+
+        for (DataToken token : this.tokens) {
+            if (tokenType.isInstance(token)) {
+                result.add(tokenType.cast(token));
+            }
+        }
+
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        final StringBuffer sb = new StringBuffer();
+        sb.append(getClass().getSimpleName());
+        sb.append(" [tokens=").append(this.tokens);
+        sb.append(']');
+        return sb.toString();
+    }
+
+    public enum DecodeFinished implements DataToken {
+
+        INSTANCE;
+
+
+        @Override
+        public byte getType() {
+            return (byte) 0xFF;
+        }
+
+        @Override
+        public String getName() {
+            return "DECODE_FINISHED";
+        }
+    }
+
+
+    @FunctionalInterface
+    public interface TabularDecodeFunction {
+
+        @Nullable
+        DataToken tryDecode(byte type, ByteBuf buffer);
+    }
+
 }

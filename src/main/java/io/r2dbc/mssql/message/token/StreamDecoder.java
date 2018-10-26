@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
@@ -23,87 +24,90 @@ import io.r2dbc.mssql.message.header.Header;
 import reactor.core.publisher.Flux;
 import reactor.util.annotation.Nullable;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 /**
- * A decoder that reads {@link ByteBuf}s and returns a {@link Flux} of decoded {@link BackendMessage}s.
+ * A decoder that reads {@link ByteBuf}s and returns a {@link Flux} of decoded {@link Message}s.
  */
 public final class StreamDecoder {
 
-	private final AtomicReference<ByteBuf> remainder = new AtomicReference<>();
+    private final AtomicReference<ByteBuf> remainder = new AtomicReference<>();
 
-	/**
-	 * Decode a {@link ByteBuf} into a {@link Flux} of {@link Message}s. If the {@link ByteBuf} does not end on a
-	 * {@link Message} boundary, the {@link ByteBuf} will be retained until an the concatenated contents of all retained
-	 * {@link ByteBuf}s is a {@link Message} boundary.
-	 *
-	 * @param in the {@link ByteBuf} to decode
-	 * @return a {@link Flux} of {@link Message}s
-	 */
-	public Flux<Message> decode(ByteBuf in, BiFunction<Header, ByteBuf, Message> decodeFunction) {
-		Objects.requireNonNull(in, "in must not be null");
+    /**
+     * Decode a {@link ByteBuf} into a {@link Flux} of {@link Message}s. If the {@link ByteBuf} does not end on a
+     * {@link Message} boundary, the {@link ByteBuf} will be retained until an the concatenated contents of all retained
+     * {@link ByteBuf}s is a {@link Message} boundary.
+     *
+     * @param in the {@link ByteBuf} to decode
+     * @return a {@link Flux} of {@link Message}s
+     */
+    @SuppressWarnings("unchecked")
+    public Flux<Message> decode(ByteBuf in, BiFunction<Header, ByteBuf, List<? extends Message>> decodeFunction) {
+        Objects.requireNonNull(in, "in must not be null");
 
-		return Flux.generate(() -> {
-			ByteBuf remainder = this.remainder.getAndSet(null);
-			return remainder == null ? in : Unpooled.wrappedBuffer(remainder, in);
-		}, (byteBuf, sink) -> {
+        return Flux.<List<Message>, ByteBuf>generate(() -> {
+            ByteBuf remainder = this.remainder.getAndSet(null);
+            return remainder == null ? in : Unpooled.wrappedBuffer(remainder, in);
+        }, (byteBuf, sink) -> {
 
-			if (byteBuf.readableBytes() < Header.SIZE) {
 
-				this.remainder.set(byteBuf.retain());
-				sink.complete();
-				return byteBuf;
-			}
+            if (byteBuf.readableBytes() < Header.SIZE) {
 
-			ByteBuf headerBytes = getHeader(byteBuf);
+                this.remainder.set(byteBuf.retain());
+                sink.complete();
+                return byteBuf;
+            }
 
-			if (!Header.canDecode(headerBytes)) {
-				if (byteBuf.readableBytes() > 0) {
-					this.remainder.set(byteBuf.retain());
-				}
+            ByteBuf headerBytes = getHeader(byteBuf);
 
-				sink.complete();
-				return byteBuf;
-			}
+            if (!Header.canDecode(headerBytes)) {
+                if (byteBuf.readableBytes() > 0) {
+                    this.remainder.set(byteBuf.retain());
+                }
 
-			try {
+                sink.complete();
+                return byteBuf;
+            }
 
-				Header header = Header.decode(headerBytes);
-				ByteBuf body = getBody(header, byteBuf);
+            try {
 
-				Message message = decodeFunction.apply(header, body);
+                Header header = Header.decode(headerBytes);
+                ByteBuf body = getBody(header, byteBuf);
 
-				if (message != null) {
-					sink.next(message);
-				}
+                List<Message> messages = (List) decodeFunction.apply(header, body);
 
-			} catch (Exception e) {
-				sink.error(e);
-			}
+                if (!messages.isEmpty()) {
+                    sink.next(messages);
+                }
+            } catch (Exception e) {
+                sink.error(e);
+            }
 
-			return byteBuf;
-		}, ReferenceCountUtil::release);
-	}
+            return byteBuf;
+        }, ReferenceCountUtil::release).flatMapIterable(Function.identity());
+    }
 
-	static ByteBuf getHeader(ByteBuf in) {
-		Objects.requireNonNull(in, "in must not be null");
+    static ByteBuf getHeader(ByteBuf in) {
+        Objects.requireNonNull(in, "in must not be null");
 
-		return in.readSlice(Header.SIZE);
-	}
+        return in.readSlice(Header.SIZE);
+    }
 
-	@Nullable
-	static ByteBuf getBody(Header header, ByteBuf in) {
+    @Nullable
+    static ByteBuf getBody(Header header, ByteBuf in) {
 
-		Objects.requireNonNull(in, "in must not be null");
+        Objects.requireNonNull(in, "in must not be null");
 
-		int bodyLength = header.getLength() - Header.SIZE;
+        int bodyLength = header.getLength() - Header.SIZE;
 
-		if (in.readableBytes() < bodyLength) {
-			return null;
-		}
+        if (in.readableBytes() < bodyLength) {
+            return null;
+        }
 
-		return in.readSlice(bodyLength);
-	}
+        return in.readSlice(bodyLength);
+    }
 }
