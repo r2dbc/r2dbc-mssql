@@ -70,12 +70,12 @@ public final class MssqlConnectionConfiguration {
 		final StringBuffer sb = new StringBuffer();
 		sb.append(getClass().getSimpleName());
 		sb.append(" [connectionId=").append(this.connectionId);
-		sb.append(", database='").append(this.database).append('\'');
-		sb.append(", host='").append(this.host).append('\'');
-		sb.append(", password='").append(this.password.replaceAll("|", "\\*")).append('\'');
+		sb.append(", database='").append(this.database).append('\"');
+		sb.append(", host='").append(this.host).append('\"');
+		sb.append(", password='").append(this.password.replaceAll("|", "\\*")).append('\"');
 		sb.append(", port=").append(this.port);
-		sb.append(", username='").append(this.username).append('\'');
-		sb.append(", appName='").append(this.appName).append('\'');
+		sb.append(", username='").append(this.username).append('\"');
+		sb.append(", appName='").append(this.appName).append('\"');
 		sb.append(']');
 		return sb.toString();
 	}

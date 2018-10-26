@@ -154,7 +154,7 @@ public final class AllHeaders {
     }
 
     /**
-     * Transaction descriptor (0x2).
+     * Transaction descriptor (0x2). Sometimes also referred to as MARS header.
      */
     static final class TransactionDescriptorHeader extends NestedHeader {
 
