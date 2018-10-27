@@ -1,0 +1,60 @@
+/*
+ * Copyright 2018 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.r2dbc.mssql.codec;
+
+import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.util.EncodedAssert;
+import io.r2dbc.mssql.util.HexUtils;
+import io.r2dbc.mssql.util.TestByteBufAllocator;
+import org.junit.jupiter.api.Test;
+
+import java.time.LocalTime;
+
+import static io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
+import static io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
+import static io.r2dbc.mssql.message.type.TypeInformation.builder;
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * Unit tests for {@link LocalTimeCodec}.
+ *
+ * @author Mark Paluch
+ */
+class LocalTimeCodecUnitTests {
+
+    static final TypeInformation TIME = builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withServerType(SqlServerType.TIME).build();
+
+    @Test
+    void shouldDecodeTime() {
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("03A81664");
+
+        LocalTime decoded = LocalTimeCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(TIME), LocalTime.class);
+
+        assertThat(decoded).isEqualTo("18:13:14");
+    }
+
+    @Test
+    void shouldEncodeTime() {
+
+        LocalTime value = LocalTime.parse("18:13:14");
+
+        ByteBuf encoded = LocalTimeCodec.INSTANCE.encode(TestByteBufAllocator.TEST, TIME, value);
+        EncodedAssert.assertThat(encoded).isEqualToHex("03A81664");
+    }
+}

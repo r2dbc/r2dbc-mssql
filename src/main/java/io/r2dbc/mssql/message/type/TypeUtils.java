@@ -23,7 +23,7 @@ import io.r2dbc.mssql.util.Assert;
  *
  * @author Mark Paluch
  */
-final class TypeUtils {
+public final class TypeUtils {
 
     /* System defined UDTs */
     static final int UDT_TIMESTAMP = 0x0050;
@@ -85,21 +85,16 @@ final class TypeUtils {
 
     static final int UNKNOWN_STREAM_LENGTH = -1;
 
-    static final int MAX_FRACTIONAL_SECONDS_SCALE = 7;
+    public static final int MAX_FRACTIONAL_SECONDS_SCALE = 7;
 
     static final int DAYS_INTO_CE_LENGTH = 3;
 
     static final int MINUTES_OFFSET_LENGTH = 2;
 
-    /**
-     * Returns the length of time values using {@code scale}.
-     *
-     * @param scale the time scale.
-     * @return length of a time value.
-     */
-    static int getTimeValueLength(int scale) {
-        return getNanosSinceMidnightLength(scale);
-    }
+    // Number of days in a "normal" (non-leap) year according to SQL Server.
+    static final int DAYS_PER_YEAR = 365;
+
+    private static final int[] SCALED_TIME_LENGTHS = new int[]{3, 3, 3, 4, 4, 5, 5, 5};
 
     /**
      * Returns the length of time values using {@code scale}.
@@ -107,7 +102,17 @@ final class TypeUtils {
      * @param scale the time scale.
      * @return length of a time value.
      */
-    static int getDateTimeValueLenght(int scale) {
+    public static int getTimeValueLength(int scale) {
+        return getNanosSinceMidnightLength(scale);
+    }
+
+    /**
+     * Returns the length of Date-Time2 values using {@code scale}.
+     *
+     * @param scale the time scale.
+     * @return length of a time value.
+     */
+    public static int getDateTimeValueLength(int scale) {
         return DAYS_INTO_CE_LENGTH + getNanosSinceMidnightLength(scale);
     }
 
@@ -115,20 +120,22 @@ final class TypeUtils {
      * Returns the length of Date-Time offset values using {@code scale}.
      *
      * @param scale the scale.
-     * @return length Date-Time offset values.
+     * @return length of Date-Time offset values.
      */
     static int getDatetimeoffsetValueLength(int scale) {
         return DAYS_INTO_CE_LENGTH + MINUTES_OFFSET_LENGTH + getNanosSinceMidnightLength(scale);
     }
 
+    /**
+     * Returns the length of Time offset values using {@code scale}.
+     *
+     * @param scale the scale.
+     * @return
+     */
     private static int getNanosSinceMidnightLength(int scale) {
-
-        int[] scaledLengths = {3, 3, 3, 4, 4, 5, 5, 5};
 
         Assert.isTrue(scale >= 0 && scale <= MAX_FRACTIONAL_SECONDS_SCALE, "Scale must be between 0 and 7");
 
-        return scaledLengths[scale];
+        return SCALED_TIME_LENGTHS[scale];
     }
-
-
 }

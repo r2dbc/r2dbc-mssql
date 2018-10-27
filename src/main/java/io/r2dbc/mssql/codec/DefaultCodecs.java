@@ -47,10 +47,14 @@ public final class DefaultCodecs implements Codecs {
             FloatCodec.INSTANCE,
             IntegerCodec.INSTANCE,
             LongCodec.INSTANCE,
+            LocalTimeCodec.INSTANCE,
+            LocalDateCodec.INSTANCE,
+            LocalDateTimeCodec.INSTANCE,
             UuidCodec.INSTANCE,
             DecimalCodec.INSTANCE,
             MoneyCodec.INSTANCE,
-            TimestampCodec.INSTANCE
+            TimestampCodec.INSTANCE,
+            ZonedDateTimeCodec.INSTANCE
         );
     }
 

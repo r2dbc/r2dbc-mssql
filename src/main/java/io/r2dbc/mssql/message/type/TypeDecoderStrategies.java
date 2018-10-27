@@ -210,7 +210,7 @@ interface TypeDecoderStrategies {
 
                 case DATETIME2:
                     typeInfo.precision = getPrecision("yyyy-mm-dd hh:mm:ss", typeInfo.scale);
-                    typeInfo.maxLength = TypeUtils.getDateTimeValueLenght(typeInfo.scale);
+                    typeInfo.maxLength = TypeUtils.getDateTimeValueLength(typeInfo.scale);
                     break;
 
                 case DATETIMEOFFSET:
