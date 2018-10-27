@@ -21,7 +21,7 @@ import io.r2dbc.spi.ConnectionFactoryMetadata;
 /**
  * An implementation of {@link ConnectionFactoryMetadata} for a Microsoft SQL Server database.
  */
-public enum MssqlConnectionFactoryMetadata implements ConnectionFactoryMetadata {
+enum MssqlConnectionFactoryMetadata implements ConnectionFactoryMetadata {
 
 	INSTANCE;
 

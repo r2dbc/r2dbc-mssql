@@ -59,7 +59,6 @@ public final class MssqlException extends AbstractMssqlException {
 
     /**
      * The line number in the SQL batch or stored procedure that caused the error.
-     * <p/>
      * Line numbers begin at 1; therefore, if the line number is not applicable to the message as determined by the upper
      * layer, the value of LineNumber will be 0.
      */
@@ -68,13 +67,13 @@ public final class MssqlException extends AbstractMssqlException {
     /**
      * Creates a full {@link MssqlException}.
      *
-     * @param message
-     * @param number
-     * @param state
-     * @param infoClass
-     * @param serverName
-     * @param procName
-     * @param lineNumber
+     * @param message the exception message.
+     * @param number the error number.
+     * @param state SQL state.
+     * @param infoClass message classification.
+     * @param serverName name of the server.
+     * @param procName procedure name.
+     * @param lineNumber line number in the offending SQL.
      */
     public MssqlException(String message, long number, int state, int infoClass, String serverName, String procName,
                           long lineNumber) {
