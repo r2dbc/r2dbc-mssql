@@ -1,23 +1,28 @@
 # Reactive Relational Database Connectivity Microsoft SQL Server Implementation
 
-This project contains the [Microsoft SQL Server][m] implementation of the [R2DBC SPI][r].  This implementation is not inteded to be used directly, but rather to be used as the backing implementation for a humane client library to delegate to
+This project contains the [Microsoft SQL Server][m] implementation of the [R2DBC SPI][r]. This implementation is not intended to be used directly, but rather to be used as the backing implementation for a humane client library to delegate to
 
 [m]: http://microsoft.com/sqlserver
 [r]: https://github.com/r2dbc/r2dbc-spi
 
 Current state of this project is:
 
-* Establish transport connection
-* PRELOGIN exchange
-* PRELOGIN SSL Handshake
 * Login
-* LOGINACK processing
+* Transaction Control
+* Simple (un-cursored) execution of SQL batches
+* Read support for all data types except binary types (BLOB)
 
 Next steps:
 
 * Error handling for failed logins
-* Execution of SQL statements
-* Transaction control (begin/rollback/commit, disable auto-commit)
+* Execution of SQL cursored statements
+* Execution of prepared statements
+* Add encoding for remaining codecs
+* Execution of stored procedures 
+* Support for null-bit compression (NBCROW)
+* Chunking (inbound, outbound)
+* Batch support (`Connection.createBatch`)
+* Add support for TVP and UDTs
 
 ## Maven
 Both milestone and snapshot artifacts (library, source, and javadoc) can be found in Maven repositories.
