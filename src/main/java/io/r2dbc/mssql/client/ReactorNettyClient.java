@@ -29,7 +29,6 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.token.AbstractInfoToken;
-import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.EnvChangeToken;
 import io.r2dbc.mssql.message.token.FeatureExtAckToken;
 import io.r2dbc.mssql.message.token.StreamDecoder;
@@ -56,8 +55,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static io.r2dbc.mssql.util.PredicateUtils.not;
-
 /**
  * An implementation of a TDS client based on the Reactor Netty project.
  *
@@ -65,13 +62,15 @@ import static io.r2dbc.mssql.util.PredicateUtils.not;
  */
 public final class ReactorNettyClient implements Client {
 
+    private static final int TX_DESCRIPTOR_LENGTH = 8;
+
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private final AtomicReference<ByteBufAllocator> byteBufAllocator = new AtomicReference<>();
 
     private final AtomicReference<Connection> connection = new AtomicReference<>();
 
-    private final AtomicReference<byte[]> transactionState = new AtomicReference<>(new byte[8]);
+    private final AtomicReference<byte[]> transactionState = new AtomicReference<>(new byte[TX_DESCRIPTOR_LENGTH]);
 
     private final AtomicBoolean encryptionSupported = new AtomicBoolean();
 
@@ -174,8 +173,9 @@ public final class ReactorNettyClient implements Client {
             .doOnError(ProtocolException.class, e -> {
                 this.isClosed.set(true);
                 connection.channel().close();
-            }).windowWhile(not(DoneToken.class::isInstance)) //
-            .subscribe(responses::next, responses::error, responses::complete);
+            }).map(Flux::just) // Window surrogate
+            .subscribe(
+                responses::next, responses::error, responses::complete);
 
         this.requestProcessor.doOnError(message -> {
             this.logger.warn("Error: {}", message);
@@ -258,9 +258,8 @@ public final class ReactorNettyClient implements Client {
                 return Flux.error(new IllegalStateException("Cannot exchange messages because the connection is closed"));
             }
 
-            return this.responseProcessor
-                .doOnSubscribe(s -> Flux.from(requests).subscribe(this.requests::next, this.requests::error)).next()
-                .flatMapMany(Function.identity());
+            return this.responseProcessor.flatMap(Function.identity()) //
+                .doOnSubscribe(s -> Flux.from(requests).subscribe(this.requests::next, this.requests::error));
         });
     }
 
@@ -312,7 +311,7 @@ public final class ReactorNettyClient implements Client {
 
                 byte[] descriptor = transactionState.get();
 
-                if (descriptor.length != token.getLength()) {
+                if (descriptor.length != TX_DESCRIPTOR_LENGTH) {
                     throw ProtocolException.invalidTds("Transaction descriptor length mismatch");
                 }
 
@@ -320,15 +319,33 @@ public final class ReactorNettyClient implements Client {
 
                     String op;
                     if (token.getChangeType() == EnvChangeToken.EnvChangeType.BeginTx) {
-                        op = " started";
+                        op = "started";
                     } else {
-                        op = " enlisted";
+                        op = "enlisted";
                     }
 
                     logger.debug(String.format("Transaction %s", op));
                 }
 
                 transactionState.set(Arrays.copyOf(token.getNewValue(), token.getNewValue().length));
+            }
+
+            if (token.getChangeType() == EnvChangeToken.EnvChangeType.CommitTx) {
+
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Transaction committed");
+                }
+
+                transactionState.set(new byte[TX_DESCRIPTOR_LENGTH]);
+            }
+
+            if (token.getChangeType() == EnvChangeToken.EnvChangeType.RollbackTx) {
+
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Transaction rolled back");
+                }
+
+                transactionState.set(new byte[TX_DESCRIPTOR_LENGTH]);
             }
         }
     }

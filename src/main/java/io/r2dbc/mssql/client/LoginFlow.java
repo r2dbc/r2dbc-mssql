@@ -65,7 +65,6 @@ public final class LoginFlow {
 
 					try {
 
-                        System.out.println(message);
 						if (message instanceof Prelogin) {
 
 							Prelogin response = (Prelogin) message;
@@ -84,6 +83,12 @@ public final class LoginFlow {
 
 							Prelogin prelogin = preloginResponse.get();
 							requests.next(createLoginMessage(login, prelogin));
+							return;
+						}
+
+						if (DoneToken.isDone(message)) {
+							sink.next(message);
+							sink.complete();
 							return;
 						}
 

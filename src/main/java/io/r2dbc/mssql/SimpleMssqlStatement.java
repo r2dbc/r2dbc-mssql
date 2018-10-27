@@ -17,7 +17,6 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
-import io.r2dbc.mssql.client.QueryMessageFlow;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.token.DoneToken;

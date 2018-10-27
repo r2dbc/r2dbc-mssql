@@ -16,6 +16,8 @@
 
 package io.r2dbc.mssql.message.token;
 
+import io.r2dbc.mssql.message.Message;
+
 /**
  * Done token support.
  *
@@ -93,6 +95,21 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
         this.rowCount = rowCount;
     }
 
+    /**
+     * Check whether the the {@link Message} represents a finished done token.
+     *
+     * @param message
+     * @return
+     */
+    public static boolean isDone(Message message) {
+
+        if (message instanceof AbstractDoneToken) {
+            return ((AbstractDoneToken) message).isDone();
+        }
+
+        return false;
+    }
+
     public int getStatus() {
         return status;
     }
@@ -137,9 +154,9 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
         sb.append(" [done=").append(isDone());
-        sb.append(" ,hasCount=").append(hasCount());
-        sb.append(" ,rowCount=").append(getRowCount());
-        sb.append(" ,hasMore=").append(hasMore());
+        sb.append(", hasCount=").append(hasCount());
+        sb.append(", rowCount=").append(getRowCount());
+        sb.append(", hasMore=").append(hasMore());
         sb.append(']');
         return sb.toString();
     }
