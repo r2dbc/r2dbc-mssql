@@ -24,7 +24,6 @@ import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Result;
-import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -93,12 +92,6 @@ final class SimpleMssqlStatement implements MssqlStatement<SimpleMssqlStatement>
         return client.exchange(Mono.just(sqlBatch)) //
             .windowUntil(or(DoneToken.class::isInstance)) //
             .map(it -> SimpleMssqlResult.toResult(CODECS, it));
-    }
-
-    @Override
-    public Publisher<? extends Result> executeReturningGeneratedKeys() {
-        throw new UnsupportedOperationException(
-            String.format("Returning generated keys is not supported for the statement '%s'", this.sql));
     }
 
     static boolean supports(String sql) {

@@ -48,7 +48,6 @@ public class ZonedDateTimeCodec extends AbstractCodec<ZonedDateTime> {
      */
     public static final ZonedDateTimeCodec INSTANCE = new ZonedDateTimeCodec();
 
-
     private ZonedDateTimeCodec() {
         super(ZonedDateTime.class);
     }

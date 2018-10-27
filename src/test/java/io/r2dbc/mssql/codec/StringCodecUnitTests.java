@@ -101,4 +101,36 @@ class StringCodecUnitTests {
 
         EncodedAssert.assertThat(encoded).isEncodedAs(expected -> expected.writeBytes(data));
     }
+
+    @Test
+    void shouldDecodeChar() {
+
+        TypeInformation type =
+            builder().withMaxLength(20).withLengthStrategy(LengthStrategy.USHORTLENTYPE).withServerType(SqlServerType.CHAR).withCharset(Encoding.CP1252.charset()).build();
+
+        ByteBuf data = TestByteBufAllocator.TEST.buffer();
+        Encode.uShort(data, 20);
+        data.writeCharSequence("foobar              ", Encoding.CP1252.charset());
+
+        String value = StringCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), String.class);
+
+        assertThat(value).isEqualTo("foobar              ");
+    }
+
+    @Test
+    void shouldDecodeText() {
+
+        TypeInformation type =
+            builder().withMaxLength(2147483647).withLengthStrategy(LengthStrategy.LONGLENTYPE).withServerType(SqlServerType.TEXT).withCharset(Encoding.CP1252.charset()).build();
+
+        // Text value
+        ByteBuf data = HexUtils.decodeToByteBuf("10 64" +
+            "75 6D 6D 79 20 74 65 78 74 70 74 72 00 00 00 64" +
+            "75 6D 6D 79 54 53 00 0B 00 00 00 6D 79 74 65 78" +
+            "74 76 61 6C 75 65");
+
+        String value = StringCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), String.class);
+
+        assertThat(value).isEqualTo("mytextvalue");
+    }
 }
