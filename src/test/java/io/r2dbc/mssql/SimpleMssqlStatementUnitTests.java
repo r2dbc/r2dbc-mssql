@@ -30,15 +30,14 @@ import io.r2dbc.mssql.message.token.Tabular;
 import io.r2dbc.mssql.message.type.Encoding;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
-import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.spi.ColumnMetadata;
 import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
 
+import java.math.BigDecimal;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -58,9 +57,9 @@ class SimpleMssqlStatementUnitTests {
     static final List<Column> COLUMNS = Arrays.asList(createColumn(0, "employee_id", SqlServerType.TINYINT, 1, LengthStrategy.FIXEDLENTYPE, null),
         createColumn(1, "last_name", SqlServerType.NVARCHAR, 100, LengthStrategy.USHORTLENTYPE, Encoding.UNICODE.charset()),
 
-        createColumn(1, "first_name", SqlServerType.VARCHAR, 50, LengthStrategy.USHORTLENTYPE, Encoding.CP1252.charset()),
+        createColumn(2, "first_name", SqlServerType.VARCHAR, 50, LengthStrategy.USHORTLENTYPE, Encoding.CP1252.charset()),
 
-        createColumn(1, "salary", SqlServerType.MONEY, 8, LengthStrategy.BYTELENTYPE, null));
+        createColumn(3, "salary", SqlServerType.MONEY, 8, LengthStrategy.BYTELENTYPE, null));
 
     @Test
     void shouldReportNumberOfAffectedRows() {
@@ -92,11 +91,12 @@ class SimpleMssqlStatementUnitTests {
         RowToken rowToken = RowTokenFactory.create(columns, buffer -> {
 
             Encode.asByte(buffer, 1);
-            Encode.uString(buffer, "mark", StandardCharsets.UTF_16);
-            Encode.uString(buffer, "paluch", StandardCharsets.US_ASCII);
+            Encode.uString(buffer, "paluch", Encoding.UNICODE.charset());
+            Encode.uString(buffer, "mark", Encoding.CP1252.charset());
 
             //money/salary
-            buffer.writeBytes(HexUtils.decodeToByteBuf("080000000020A10700"));
+            Encode.asByte(buffer, 8);
+            Encode.money(buffer, new BigDecimal("50.0000").unscaledValue());
         });
 
         Tabular tabular = Tabular.create(columns, rowToken, DoneToken.create(1));

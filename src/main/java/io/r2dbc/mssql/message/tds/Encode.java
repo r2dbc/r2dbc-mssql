@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.r2dbc.mssql.message.type.Encoding;
 
+import java.math.BigInteger;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 
@@ -89,6 +90,33 @@ public final class Encode {
     }
 
     /**
+     * Encode an unscaled {@link BigInteger} value. SQL server type {@code SMALLMONEY}.
+     *
+     * @param buffer the data buffer.
+     * @param value  the value to encode.
+     * @return
+     */
+    public static void smallMoney(ByteBuf buffer, BigInteger value) {
+        buffer.writeIntLE(value.intValue());
+    }
+
+    /**
+     * Encode an unscaled {@link BigInteger} value. SQL server type {@code MONEY}.
+     *
+     * @param buffer the data buffer.
+     * @param value  the value to encode.
+     * @return
+     */
+    public static void money(ByteBuf buffer, BigInteger value) {
+
+        int intBitsHi = (int) (value.longValue() >> 32 & 0xFFFFFFFFL);
+        int intBitsLo = (int) (value.longValue() & 0xFFFFFFFFL);
+
+        buffer.writeIntLE(intBitsHi);
+        buffer.writeIntLE(intBitsLo);
+    }
+    
+    /**
      * Encode a bit. SQL server type {@code BIT}.
      *
      * @param buffer the data buffer.
@@ -98,6 +126,7 @@ public final class Encode {
     public static void bit(ByteBuf buffer, boolean value) {
         asByte(buffer, (byte) (value ? 1 : 0));
     }
+
 
     /**
      * Encode byte number. SQL server type {@code TINYINT}.
