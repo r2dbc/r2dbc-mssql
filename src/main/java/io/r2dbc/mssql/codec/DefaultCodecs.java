@@ -48,6 +48,7 @@ public final class DefaultCodecs implements Codecs {
             IntegerCodec.INSTANCE,
             LongCodec.INSTANCE,
             UuidCodec.INSTANCE,
+            DecimalCodec.INSTANCE,
             MoneyCodec.INSTANCE
         );
     }
