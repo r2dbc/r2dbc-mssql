@@ -35,7 +35,7 @@ import java.time.temporal.ChronoUnit;
  *
  * @author Mark Paluch
  */
-public class LocalDateCodec extends AbstractCodec<LocalDate> {
+final class LocalDateCodec extends AbstractCodec<LocalDate> {
 
     /**
      * Singleton instance.

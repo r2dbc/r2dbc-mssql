@@ -41,7 +41,7 @@ import java.time.ZonedDateTime;
  *
  * @author Mark Paluch
  */
-public class ZonedDateTimeCodec extends AbstractCodec<ZonedDateTime> {
+final class ZonedDateTimeCodec extends AbstractCodec<ZonedDateTime> {
 
     /**
      * Singleton instance.

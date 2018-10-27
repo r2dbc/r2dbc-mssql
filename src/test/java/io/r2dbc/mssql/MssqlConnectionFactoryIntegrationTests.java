@@ -13,34 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.r2dbc.mssql;
 
-import reactor.core.publisher.Hooks;
+package io.r2dbc.mssql;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Hooks;
 
 /**
  * @author Mark Paluch
  */
 final class MssqlConnectionFactoryIntegrationTests {
 
-	@Test
-	@Disabled("Requires running SQL server")
-	void shouldConnectToSqlServer() {
+    @Test
+    @Disabled("Requires running SQL server")
+    void shouldConnectToSqlServer() throws InterruptedException {
 
-		Hooks.onOperatorDebug();
-		MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
-			.host("localhost")
-			.username("sa")
-			.password("my1.password")
-			.database("master")
-			.build();
+        Hooks.onOperatorDebug();
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+            .host("localhost")
+            .username("sa")
+            .password("my1.password")
+            .database("master")
+            .build();
 
-		MssqlConnectionFactory factory = new MssqlConnectionFactory(configuration);
+        MssqlConnectionFactory factory = new MssqlConnectionFactory(configuration);
 
-		MssqlConnection connection = factory.create().block();
+        MssqlConnection connection = factory.create().block();
 
-		connection.close().block();
-	}
+        Thread.sleep(100);
+        connection.close().block();
+    }
 }

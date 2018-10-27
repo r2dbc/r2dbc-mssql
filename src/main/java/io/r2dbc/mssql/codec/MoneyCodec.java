@@ -40,10 +40,19 @@ import java.math.BigInteger;
  */
 final class MoneyCodec extends AbstractCodec<BigDecimal> {
 
+    /**
+     * Singleton instance.
+     */
     static final MoneyCodec INSTANCE = new MoneyCodec();
 
+    /**
+     * Value length of {@link SqlServerType#MONEY}.
+     */
     public static final int BIG_MONEY_LENGTH = 8;
 
+    /**
+     * Value length of {@link SqlServerType#SMALLMONEY}.
+     */
     public static final int SMALL_MONEY_LENGTH = 4;
 
     private MoneyCodec() {

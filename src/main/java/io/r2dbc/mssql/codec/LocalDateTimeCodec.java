@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Mark Paluch
  */
-public class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
+final class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
 
     /**
      * Singleton instance.

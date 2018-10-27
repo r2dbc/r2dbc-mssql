@@ -36,7 +36,7 @@ import java.time.LocalTime;
  *
  * @author Mark Paluch
  */
-public class LocalTimeCodec extends AbstractCodec<LocalTime> {
+final class LocalTimeCodec extends AbstractCodec<LocalTime> {
 
     /**
      * Singleton instance.
