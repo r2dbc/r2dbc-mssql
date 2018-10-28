@@ -25,43 +25,52 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
- * An abstraction that wraps the networking part of exchanging methods.
+ * An abstraction that wraps the networking part of exchanging {@link Message}s.
+ *
+ * @author Mark Paluch
  */
 public interface Client {
 
-	/**
-	 * Release any resources held by the {@link Client}.
-	 *
-	 * @return a {@link Mono} that indicates that a client has been closed
-	 */
-	Mono<Void> close();
+    /**
+     * Release any resources held by the {@link Client}.
+     *
+     * @return a {@link Mono} that indicates that a client has been closed
+     */
+    Mono<Void> close();
 
-	/**
-	 * Perform an exchange of messages.
-	 *
-	 * @param requests the publisher of outbound messages
-	 * @return a {@link Flux} of incoming messages that ends with the end of the frame.
-	 */
-	Flux<Message> exchange(Publisher<ClientMessage> requests);
+    /**
+     * Perform an exchange of messages.
+     *
+     * @param requests the publisher of outbound messages
+     * @return a {@link Flux} of incoming messages that ends with the end of the frame.
+     */
+    Flux<Message> exchange(Publisher<? extends ClientMessage> requests);
 
-	/**
-	 * Returns the {@link ByteBufAllocator}.
-	 *
-	 * @return the {@link ByteBufAllocator}
-	 */
-	ByteBufAllocator getByteBufAllocator();
+    /**
+     * Returns the {@link ByteBufAllocator}.
+     *
+     * @return the {@link ByteBufAllocator}
+     */
+    ByteBufAllocator getByteBufAllocator();
 
-	/**
+    /**
      * Returns the {@link TransactionDescriptor}.
      *
      * @return the {@link TransactionDescriptor} describing the server-side transaction.
-	 */
+     */
     TransactionDescriptor getTransactionDescriptor();
 
-	/**
+    /**
+     * Returns the {@link TransactionStatus}.
+     *
+     * @return the current {@link TransactionStatus}.
+     */
+    TransactionStatus getTransactionStatus();
+
+    /**
      * Returns whether the server supports column encryption.
      *
      * @return {@literal true} if the server supports column encryption.
-	 */
+     */
     boolean isColumnEncryptionSupported();
 }

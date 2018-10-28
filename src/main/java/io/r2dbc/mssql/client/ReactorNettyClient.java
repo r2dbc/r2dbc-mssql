@@ -45,7 +45,6 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -62,15 +61,15 @@ import java.util.function.Function;
  */
 public final class ReactorNettyClient implements Client {
 
-    private static final int TX_DESCRIPTOR_LENGTH = 8;
-
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private final AtomicReference<ByteBufAllocator> byteBufAllocator = new AtomicReference<>();
 
     private final AtomicReference<Connection> connection = new AtomicReference<>();
 
-    private final AtomicReference<byte[]> transactionState = new AtomicReference<>(new byte[TX_DESCRIPTOR_LENGTH]);
+    private final AtomicReference<TransactionDescriptor> transactionDescriptor = new AtomicReference<>(TransactionDescriptor.empty());
+
+    private final AtomicReference<TransactionStatus> transactionStatus = new AtomicReference<>(TransactionStatus.AUTO_COMMIT);
 
     private final AtomicBoolean encryptionSupported = new AtomicBoolean();
 
@@ -79,10 +78,10 @@ public final class ReactorNettyClient implements Client {
     private final Consumer<Message> handleInfoToken = handleMessage(AbstractInfoToken.class, (token) -> {
 
         if (token.getClassification() == AbstractInfoToken.Classification.INFORMATIONAL) {
-            this.logger.debug("Info: Code {} Severity {}: {}", token.getNumber(), token.getClassification(),
+            this.logger.debug("Info: Code [{}] Severity [{}]: {}", token.getNumber(), token.getClassification(),
                 token.getMessage());
         } else {
-            this.logger.debug("Warning: Code {} Severity {}: {}", token.getNumber(), token.getClassification(),
+            this.logger.debug("Warning: Code [{}] Severity [{}]: {}", token.getNumber(), token.getClassification(),
                 token.getMessage());
         }
     });
@@ -114,7 +113,7 @@ public final class ReactorNettyClient implements Client {
             if (connectionState.canAdvance(message)) {
                 ConnectionState nextState = connectionState.next(message, this.connection.get());
                 if (!this.state.compareAndSet(connectionState, nextState)) {
-                    sink.error(new ProtocolException(String.format("Cannot advance state from %s", connectionState)));
+                    sink.error(new ProtocolException(String.format("Cannot advance state from [%s]", connectionState)));
                 }
             }
 
@@ -162,7 +161,7 @@ public final class ReactorNettyClient implements Client {
                     return Mono.just((Message) it);
                 }
 
-                return Mono.error(new ProtocolException(String.format("Unexpected protocol message: %s", it)));
+                return Mono.error(new ProtocolException(String.format("Unexpected protocol message: [%s]", it)));
             }) //
             .doOnNext(message -> this.logger.debug("Response: {}", message)) //
             .doOnError(message -> this.logger.warn("Error: {}", message)) //
@@ -250,8 +249,9 @@ public final class ReactorNettyClient implements Client {
     }
 
     @Override
-    public Flux<Message> exchange(Publisher<ClientMessage> requests) {
-        Objects.requireNonNull(requests, "requests must not be null");
+    public Flux<Message> exchange(Publisher<? extends ClientMessage> requests) {
+
+        Objects.requireNonNull(requests, "Requests must not be null");
 
         return Flux.defer(() -> {
             if (this.isClosed.get()) {
@@ -264,18 +264,23 @@ public final class ReactorNettyClient implements Client {
     }
 
     @Override
+    public ByteBufAllocator getByteBufAllocator() {
+        return this.byteBufAllocator.get();
+    }
+
+    @Override
     public TransactionDescriptor getTransactionDescriptor() {
-        return new TransactionDescriptor(this.transactionState.get());
+        return this.transactionDescriptor.get();
+    }
+
+    @Override
+    public TransactionStatus getTransactionStatus() {
+        return this.transactionStatus.get();
     }
 
     @Override
     public boolean isColumnEncryptionSupported() {
         return this.encryptionSupported.get();
-    }
-
-    @Override
-    public ByteBufAllocator getByteBufAllocator() {
-        return this.byteBufAllocator.get();
     }
 
     @SuppressWarnings("unchecked")
@@ -309,9 +314,9 @@ public final class ReactorNettyClient implements Client {
             if (token.getChangeType() == EnvChangeToken.EnvChangeType.BeginTx
                 || token.getChangeType() == EnvChangeToken.EnvChangeType.EnlistDTC) {
 
-                byte[] descriptor = transactionState.get();
+                byte[] descriptor = token.getNewValue();
 
-                if (descriptor.length != TX_DESCRIPTOR_LENGTH) {
+                if (descriptor.length != TransactionDescriptor.LENGTH) {
                     throw ProtocolException.invalidTds("Transaction descriptor length mismatch");
                 }
 
@@ -327,7 +332,8 @@ public final class ReactorNettyClient implements Client {
                     logger.debug(String.format("Transaction %s", op));
                 }
 
-                transactionState.set(Arrays.copyOf(token.getNewValue(), token.getNewValue().length));
+                transactionStatus.set(TransactionStatus.STARTED);
+                transactionDescriptor.set(TransactionDescriptor.from(descriptor));
             }
 
             if (token.getChangeType() == EnvChangeToken.EnvChangeType.CommitTx) {
@@ -336,7 +342,8 @@ public final class ReactorNettyClient implements Client {
                     logger.debug("Transaction committed");
                 }
 
-                transactionState.set(new byte[TX_DESCRIPTOR_LENGTH]);
+                transactionStatus.set(TransactionStatus.EXPLICIT);
+                transactionDescriptor.set(TransactionDescriptor.empty());
             }
 
             if (token.getChangeType() == EnvChangeToken.EnvChangeType.RollbackTx) {
@@ -345,7 +352,8 @@ public final class ReactorNettyClient implements Client {
                     logger.debug("Transaction rolled back");
                 }
 
-                transactionState.set(new byte[TX_DESCRIPTOR_LENGTH]);
+                transactionStatus.set(TransactionStatus.EXPLICIT);
+                transactionDescriptor.set(TransactionDescriptor.empty());
             }
         }
     }

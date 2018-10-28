@@ -20,7 +20,7 @@ package io.r2dbc.mssql.util;
  */
 public class Version implements Comparable<Version> {
 
-	private static final String VERSION_PARSE_ERROR = "Invalid version string! Could not parse segment %s within %s.";
+    private static final String VERSION_PARSE_ERROR = "Invalid version string! Could not parse segment [%s] within [%s].";
 
 	private final int major;
 

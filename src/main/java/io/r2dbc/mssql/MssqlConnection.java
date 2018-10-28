@@ -17,19 +17,23 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
+import io.r2dbc.mssql.client.TransactionStatus;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Batch;
 import io.r2dbc.spi.Connection;
 import io.r2dbc.spi.IsolationLevel;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 /**
- * {@link Connection} to a Microsoft SQL server.
+ * {@link Connection} to a Microsoft SQL Server.
  *
  * @author Mark Paluch
  */
@@ -39,18 +43,29 @@ public final class MssqlConnection implements Connection {
     
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    private final Client client;
+
     MssqlConnection(Client client) {
         this.client = client;
     }
 
-    private final Client client;
-
-    private volatile boolean autoCommit = true;
-
     @Override
     public Mono<Void> beginTransaction() {
 
-        return QueryMessageFlow.exchange(client, "SET IMPLICIT_TRANSACTIONS OFF; BEGIN TRANSACTION").handle(MssqlException::handleErrorResponse).then();
+        return useTransactionStatus(tx -> {
+
+            if (tx == TransactionStatus.STARTED) {
+                this.logger.debug("Skipping begin transaction because status is [{}]", tx);
+                return Mono.empty();
+            }
+
+            String sql = tx == TransactionStatus.AUTO_COMMIT ? "SET IMPLICIT_TRANSACTIONS OFF; " : "";
+            sql += "BEGIN TRANSACTION";
+
+            this.logger.debug("Beginning transaction from status [{}]", tx);
+
+            return QueryMessageFlow.exchange(client, sql).handle(MssqlException::handleErrorResponse);
+        });
     }
 
     @Override
@@ -60,7 +75,18 @@ public final class MssqlConnection implements Connection {
 
     @Override
     public Mono<Void> commitTransaction() {
-        return QueryMessageFlow.exchange(client, "IF @@TRANCOUNT > 0 COMMIT TRANSACTION").handle(MssqlException::handleErrorResponse).then();
+
+        return useTransactionStatus(tx -> {
+
+            if (tx != TransactionStatus.STARTED) {
+                this.logger.debug("Skipping commit transaction because status is [{}]", tx);
+                return Mono.empty();
+            }
+
+            this.logger.debug("Committing transaction with status [{}]", tx);
+
+            return QueryMessageFlow.exchange(client, "IF @@TRANCOUNT > 0 COMMIT TRANSACTION").handle(MssqlException::handleErrorResponse);
+        });
     }
 
     @Override
@@ -74,12 +100,24 @@ public final class MssqlConnection implements Connection {
         Objects.requireNonNull(name, "Savepoint name must not be null");
         Assert.isTrue(SAVEPOINT_PATTERN.matcher(name).matches(), "Save point names must contain only characters and numbers and must not exceed 32 characters");
 
-        return QueryMessageFlow.exchange(client, String.format("IF @@TRANCOUNT = 0 BEGIN BEGIN TRANSACTION IF @@TRANCOUNT = 2 COMMIT TRANSACTION END SAVE TRANSACTION [%s]", name)) //
-            .handle(MssqlException::handleErrorResponse).then();
+        return useTransactionStatus(tx -> {
+
+            if (tx != TransactionStatus.STARTED) {
+                this.logger.debug("Skipping savepoint creation because status is [{}]", tx);
+                return Mono.empty();
+            }
+
+            this.logger.debug("Creating savepoint for transaction with status [{}]", tx);
+
+            return QueryMessageFlow.exchange(client, String.format("IF @@TRANCOUNT = 0 BEGIN BEGIN TRANSACTION IF @@TRANCOUNT = 2 COMMIT TRANSACTION END SAVE TRANSACTION %s", name)) //
+                .handle(MssqlException::handleErrorResponse);
+        });
     }
 
     @Override
     public MssqlStatement<?> createStatement(String sql) {
+
+        this.logger.debug("Creating statement for SQL: [{}]", sql);
         return new SimpleMssqlStatement(this.client, sql);
     }
 
@@ -90,7 +128,18 @@ public final class MssqlConnection implements Connection {
 
     @Override
     public Mono<Void> rollbackTransaction() {
-        return QueryMessageFlow.exchange(client, "IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION").handle(MssqlException::handleErrorResponse).then();
+
+        return useTransactionStatus(tx -> {
+
+            if (tx != TransactionStatus.STARTED) {
+                this.logger.debug("Skipping rollback transaction because status is [{}]", tx);
+                return Mono.empty();
+            }
+
+            this.logger.debug("Rolling back transaction with status [{}]", tx);
+
+            return QueryMessageFlow.exchange(client, "IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION").handle(MssqlException::handleErrorResponse);
+        });
     }
 
     @Override
@@ -99,8 +148,17 @@ public final class MssqlConnection implements Connection {
         Objects.requireNonNull(name, "Savepoint name must not be null");
         Assert.isTrue(SAVEPOINT_PATTERN.matcher(name).matches(), "Save point names must contain only characters and numbers and must not exceed 32 characters");
 
-        return QueryMessageFlow.exchange(client, String.format("ROLLBACK TRANSACTION [%s]", name)) //
-            .handle(MssqlException::handleErrorResponse).then();
+        return useTransactionStatus(tx -> {
+
+            if (tx != TransactionStatus.STARTED) {
+                this.logger.debug("Skipping rollback transaction to savepoint [{}] because status is [{}]", name, tx);
+                return Mono.empty();
+            }
+
+            this.logger.debug("Rolling back transaction to savepoint [{}] with status [{}]", name, tx);
+
+            return QueryMessageFlow.exchange(client, String.format("ROLLBACK TRANSACTION %s", name)).handle(MssqlException::handleErrorResponse);
+        });
     }
 
     @Override
@@ -134,5 +192,10 @@ public final class MssqlConnection implements Connection {
         }
 
         throw new IllegalArgumentException("Isolation level " + isolationLevel + " not supported");
+    }
+
+    private Mono<Void> useTransactionStatus(Function<TransactionStatus, Publisher<?>> function) {
+        return Flux.defer(() -> function.apply(this.client.getTransactionStatus()))
+            .then();
     }
 }

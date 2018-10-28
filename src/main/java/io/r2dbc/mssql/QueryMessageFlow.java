@@ -49,7 +49,10 @@ final class QueryMessageFlow {
         Objects.requireNonNull(client, "Client must not be null");
         Objects.requireNonNull(query, "Query must not be null");
 
-        return client.exchange(Mono.just(SqlBatch.create(1, client.getTransactionDescriptor(), query))) //
+        return client.exchange(Mono.just(SqlBatch.create(1, client.getTransactionDescriptor(), query)).doOnNext(it -> {
+            QueryLogger.logQuery(it.getSql());
+
+        })) //
             .handle((message, sink) -> {
 
                 sink.next(message);

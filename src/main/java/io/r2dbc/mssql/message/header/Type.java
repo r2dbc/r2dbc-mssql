@@ -46,7 +46,7 @@ public enum Type {
 			}
 		}
 
-		throw new IllegalArgumentException(String.format("Invalid header type 0x%01X", value));
+		throw new IllegalArgumentException(String.format("Invalid header type: 0x%01X", value));
 	}
 
 	public byte getValue() {

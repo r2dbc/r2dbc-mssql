@@ -21,7 +21,7 @@ import io.r2dbc.spi.Statement;
 import reactor.core.publisher.Flux;
 
 /**
- * A strongly typed implementation of {@link Statement} for a Microsoft SQL server database.
+ * A strongly typed implementation of {@link Statement} for a Microsoft SQL Server database.
  *
  * @author Mark Paluch
  */

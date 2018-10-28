@@ -43,7 +43,7 @@ public final class TdsPacket extends TdsFragment {
         int expectedBodySize = header.getLength() - Header.SIZE;
         Assert.isTrue(buffer.readableBytes() == expectedBodySize,
             () -> String.format(
-                "ByteBuffer body size does not match length field in header. Expeced body size: %d, actual size: %d",
+                "ByteBuffer body size does not match length field in header. Expected body size [%d], actual size [%d]",
                 buffer.readableBytes(), expectedBodySize));
     }
 

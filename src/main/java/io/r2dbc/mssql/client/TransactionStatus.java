@@ -14,10 +14,27 @@
  * limitations under the License.
  */
 
-/**
- * An implementation of the Reactive Relational Database Connection API for Microsoft SQL Servers.
- */
-@NonNullApi
-package io.r2dbc.mssql;
+package io.r2dbc.mssql.client;
 
-import reactor.util.annotation.NonNullApi;
+/**
+ * Transactional state.
+ *
+ * @author Mark Paluch
+ */
+public enum TransactionStatus {
+
+    /**
+     * Default (initial) state on startup using implicit transactions.
+     */
+    AUTO_COMMIT,
+
+    /**
+     * State after committing or rolling back a transaction.
+     */
+    EXPLICIT,
+
+    /**
+     * Started transaction.
+     */
+    STARTED
+}

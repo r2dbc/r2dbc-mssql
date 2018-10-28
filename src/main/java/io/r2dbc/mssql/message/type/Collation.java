@@ -176,14 +176,14 @@ public final class Collation {
         WindowsLocale locale = localeCache.get(getLanguageId());
 
         if (locale == null) {
-            throw new UnsupportedEncodingException(String.format("Windows collation %s not supported", Integer.toHexString(getLanguageId()).toUpperCase()));
+            throw new UnsupportedEncodingException(String.format("Windows collation not supported: %s", Integer.toHexString(getLanguageId()).toUpperCase()));
         }
 
         try {
             return locale.getEncoding();
         } catch (RuntimeException inner) {
 
-            UnsupportedEncodingException e = new UnsupportedEncodingException(String.format("Windows collation %s not supported",
+            UnsupportedEncodingException e = new UnsupportedEncodingException(String.format("Windows collation not supported: %s",
                 Integer.toHexString(getLanguageId()).toUpperCase()));
             e.initCause(inner);
 
@@ -196,14 +196,14 @@ public final class Collation {
         SortOrder sortOrder = sortOrderCache.get(sortId);
 
         if (sortOrder == null) {
-            throw new UnsupportedEncodingException(String.format("SQL Server collation %d is not supported", sortId));
+            throw new UnsupportedEncodingException(String.format("SQL Server collation is not supported: %d", sortId));
         }
 
         try {
             return sortOrder.getEncoding();
         } catch (RuntimeException inner) {
 
-            UnsupportedEncodingException e = new UnsupportedEncodingException(String.format("SQL Server collation %d is not supported", sortId));
+            UnsupportedEncodingException e = new UnsupportedEncodingException(String.format("SQL Server collation is not supported: %d", sortId));
             e.initCause(inner);
             throw e;
         }

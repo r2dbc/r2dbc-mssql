@@ -62,25 +62,25 @@ final class SimpleMssqlStatement implements MssqlStatement<SimpleMssqlStatement>
     @Override
     public SimpleMssqlStatement bind(Object identifier, Object value) {
         throw new UnsupportedOperationException(
-            String.format("Binding parameters is not supported for the statement '%s'", this.sql));
+            String.format("Binding parameters is not supported for the statement [%s]", this.sql));
     }
 
     @Override
     public SimpleMssqlStatement bind(int index, Object value) {
         throw new UnsupportedOperationException(
-            String.format("Binding parameters is not supported for the statement '%s'", this.sql));
+            String.format("Binding parameters is not supported for the statement [%s]", this.sql));
     }
 
     @Override
     public SimpleMssqlStatement bindNull(Object identifier, Class<?> type) {
         throw new UnsupportedOperationException(
-            String.format("Binding parameters is not supported for the statement '%s'", this.sql));
+            String.format("Binding parameters is not supported for the statement [%s]", this.sql));
     }
 
     @Override
     public SimpleMssqlStatement bindNull(int index, Class<?> type) {
         throw new UnsupportedOperationException(
-            String.format("Binding parameters is not supported for the statement '%s'", this.sql));
+            String.format("Binding parameters is not supported for the statement [%s]", this.sql));
     }
 
     @Override

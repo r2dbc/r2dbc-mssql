@@ -15,10 +15,10 @@
  */
 package io.r2dbc.mssql.message.header;
 
+import org.junit.jupiter.api.Test;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-import org.junit.jupiter.api.Test;
 
 /**
  * @author Mark Paluch
@@ -32,6 +32,6 @@ final class TypeUnitTests {
 
 	@Test
 	void typeResolutionShouldFail() {
-		assertThatThrownBy(() -> Type.valueOf((byte) 0xFF)).hasMessageContaining("Invalid header type 0xFF");
+		assertThatThrownBy(() -> Type.valueOf((byte) 0xFF)).hasMessageContaining("Invalid header type: 0xFF");
 	}
 }

@@ -21,7 +21,7 @@ import io.r2dbc.spi.R2dbcException;
 import reactor.util.annotation.Nullable;
 
 /**
- * Microsoft SQL server-specific exception class.
+ * Microsoft SQL Server-specific exception class.
  *
  * @author Mark Paluch
  */

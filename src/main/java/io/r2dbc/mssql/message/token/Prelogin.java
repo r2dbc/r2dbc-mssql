@@ -162,7 +162,7 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 		Objects.requireNonNull(tokenType, "Token type must not be null");
 
 		return getToken(tokenType).orElseThrow(
-				() -> new IllegalArgumentException(String.format("Token of type %s available", tokenType.getName())));
+			() -> new IllegalArgumentException(String.format("No token of type [%s] available", tokenType.getName())));
 	}
 
 	private static int getSize(List<? extends Token> tokens) {

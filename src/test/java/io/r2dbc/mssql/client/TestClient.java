@@ -37,7 +37,7 @@ import java.util.function.Function;
  */
 public final class TestClient implements Client {
 
-    public static final TestClient NO_OP = new TestClient(false, Flux.empty());
+    public static final TestClient NO_OP = new TestClient(false, Flux.empty(), TransactionStatus.AUTO_COMMIT);
 
     private final boolean expectClose;
 
@@ -47,9 +47,12 @@ public final class TestClient implements Client {
 
     private final EmitterProcessor<Flux<Message>> responseProcessor = EmitterProcessor.create(false);
 
-    private TestClient(boolean expectClose, Flux<Window> windows) {
+    private final TransactionStatus transactionStatus;
+
+    private TestClient(boolean expectClose, Flux<Window> windows, TransactionStatus transactionStatus) {
 
         this.expectClose = expectClose;
+        this.transactionStatus = transactionStatus;
 
         FluxSink<Flux<Message>> responses = this.responseProcessor.sink();
 
@@ -81,7 +84,7 @@ public final class TestClient implements Client {
     }
 
     @Override
-    public Flux<Message> exchange(Publisher<ClientMessage> requests) {
+    public Flux<Message> exchange(Publisher<? extends ClientMessage> requests) {
         Objects.requireNonNull(requests, "requests must not be null");
 
         return this.responseProcessor
@@ -99,7 +102,12 @@ public final class TestClient implements Client {
 
     @Override
     public TransactionDescriptor getTransactionDescriptor() {
-        return new TransactionDescriptor(new byte[8]);
+        return TransactionDescriptor.empty();
+    }
+
+    @Override
+    public TransactionStatus getTransactionStatus() {
+        return this.transactionStatus;
     }
 
     @Override
@@ -113,16 +121,22 @@ public final class TestClient implements Client {
 
         private boolean expectClose = false;
 
+        private TransactionStatus transactionStatus = TransactionStatus.AUTO_COMMIT;
 
         private Builder() {
         }
 
         public TestClient build() {
-            return new TestClient(this.expectClose, Flux.fromIterable(this.windows).map(Window.Builder::build));
+            return new TestClient(this.expectClose, Flux.fromIterable(this.windows).map(Window.Builder::build), transactionStatus);
         }
 
         public Builder expectClose() {
             this.expectClose = true;
+            return this;
+        }
+
+        public Builder withTransactionStatus(TransactionStatus transactionStatus) {
+            this.transactionStatus = Objects.requireNonNull(transactionStatus, "TransactionStatus must not be nul");
             return this;
         }
 

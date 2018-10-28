@@ -75,7 +75,7 @@ public enum Encoding {
             // Checks for support by converting a java.lang.String
             // This works for all of the code pages above in SE 5 and later.
             if (!Charset.isSupported(this.charsetName)) {
-                throw new UnsupportedOperationException(String.format("Code page %s not supported", this.charsetName));
+                throw new UnsupportedOperationException(String.format("Code page not supported: %s", this.charsetName));
             }
 
             this.jvmSupportConfirmed = true;

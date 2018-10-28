@@ -16,6 +16,8 @@
 
 package io.r2dbc.mssql.message;
 
+import io.r2dbc.mssql.util.Assert;
+
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -24,18 +26,60 @@ import java.util.Objects;
  * 
  * @author Mark Paluch
  */
-public class TransactionDescriptor {
+public final class TransactionDescriptor {
 
+    /**
+     * Length in bytes of the binary transaction descriptor representation.
+     */
+    public static final int LENGTH = 8;
+    
     private final byte[] descriptor;
 
-    public TransactionDescriptor(byte[] descriptor) {
+    private TransactionDescriptor(byte[] descriptor) {
 
         Objects.requireNonNull(descriptor, "Descriptor bytes must not be null");
+        Assert.isTrue(descriptor.length == LENGTH, "Descriptor must be 8 bytes long");
 
         this.descriptor = Arrays.copyOf(descriptor, descriptor.length);
     }
 
-    public byte[] getDescriptor() {
+    /**
+     * Creates an empty {@link TransactionDescriptor}.
+     *
+     * @return the empty {@link TransactionDescriptor}.
+     */
+    public static TransactionDescriptor empty() {
+        return new TransactionDescriptor(new byte[8]);
+    }
+
+    /**
+     * Creates an {@link TransactionDescriptor} from {@code descriptor} bytes.
+     *
+     * @param descriptor descriptor bytes. Must be 8 bytes long.
+     * @return the {@link TransactionDescriptor} for {@code descriptor} bytes.
+     */
+    public static TransactionDescriptor from(byte[] descriptor) {
+        return new TransactionDescriptor(descriptor);
+    }
+
+    public byte[] toBytes() {
         return Arrays.copyOf(this.descriptor, this.descriptor.length);
-	}
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof TransactionDescriptor)) {
+            return false;
+        }
+        TransactionDescriptor that = (TransactionDescriptor) o;
+        return Arrays.equals(descriptor, that.descriptor);
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(descriptor);
+    }
 }

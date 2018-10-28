@@ -74,7 +74,7 @@ public final class SqlBatch implements ClientMessage, TokenStream {
         Objects.requireNonNull(transactionDescriptor, "Transaction descriptor must not be null");
         Objects.requireNonNull(sql, "SQL must not be null");
 
-        return new SqlBatch(outstandingRequests, transactionDescriptor.getDescriptor(), sql);
+        return new SqlBatch(outstandingRequests, transactionDescriptor.toBytes(), sql);
     }
 
     @Override
@@ -129,7 +129,7 @@ public final class SqlBatch implements ClientMessage, TokenStream {
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [sql='").append(sql).append('\"');
+        sb.append(" [sql=\"").append(sql).append('\"');
         sb.append(']');
         return sb.toString();
     }

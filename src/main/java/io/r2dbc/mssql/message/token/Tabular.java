@@ -218,7 +218,7 @@ public final class Tabular implements Message {
     public <T extends DataToken> T getRequiredToken(Class<? extends T> tokenType) {
 
         return getToken(tokenType).orElseThrow(
-            () -> new IllegalArgumentException(String.format("Token of type %s available", tokenType.getName())));
+            () -> new IllegalArgumentException(String.format("No token of type [%s] available", tokenType.getName())));
     }
 
     /**
@@ -232,7 +232,7 @@ public final class Tabular implements Message {
     public <T extends DataToken> T getRequiredToken(Class<? extends T> tokenType, Predicate<T> filter) {
 
         return getToken(tokenType, filter).orElseThrow(
-            () -> new IllegalArgumentException(String.format("Token of type %s available", tokenType.getName())));
+            () -> new IllegalArgumentException(String.format("No token of type [%s] available", tokenType.getName())));
     }
 
     /**

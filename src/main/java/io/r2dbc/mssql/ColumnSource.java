@@ -64,7 +64,7 @@ abstract class ColumnSource {
             return getColumn((String) identifier);
         }
 
-        throw new IllegalArgumentException(String.format("Identifier '%s' is not a valid identifier. Should either be an Integer index or a String column name.", identifier));
+        throw new IllegalArgumentException(String.format("Identifier [%s] is not a valid identifier. Should either be an Integer index or a String column name.", identifier));
     }
 
     /**
@@ -79,7 +79,7 @@ abstract class ColumnSource {
             return this.columns.get(index);
         }
 
-        throw new IllegalArgumentException(String.format("Column index %d is larger than the number of columns %d", index, this.columns.size()));
+        throw new IllegalArgumentException(String.format("Column index [%d] is larger than the number of columns [%d]", index, this.columns.size()));
     }
 
     /**
@@ -93,7 +93,7 @@ abstract class ColumnSource {
         Column column = this.nameKeyedColumns.get(name);
 
         if (column == null) {
-            throw new IllegalArgumentException(String.format("Column name '%s' does not exist in column names %s", name, this.nameKeyedColumns.keySet()));
+            throw new IllegalArgumentException(String.format("Column name [%s] does not exist in column names [%s]", name, this.nameKeyedColumns.keySet()));
         }
 
         return column;

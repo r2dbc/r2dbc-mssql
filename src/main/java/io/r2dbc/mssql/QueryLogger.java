@@ -14,10 +14,19 @@
  * limitations under the License.
  */
 
-/**
- * An implementation of the Reactive Relational Database Connection API for Microsoft SQL Servers.
- */
-@NonNullApi
 package io.r2dbc.mssql;
 
-import reactor.util.annotation.NonNullApi;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * @author Mark Paluch
+ */
+final class QueryLogger {
+
+    private static final Logger QUERY_LOGGER = LoggerFactory.getLogger("io.r2dbc.mssql.QUERY");
+
+    static void logQuery(String sql) {
+        QUERY_LOGGER.debug("Executing query: {}", sql);
+    }
+}
