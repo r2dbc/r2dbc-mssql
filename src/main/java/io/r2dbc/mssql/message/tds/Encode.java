@@ -169,6 +169,16 @@ public final class Encode {
     }
 
     /**
+     * Encode unsigned long number. SQL server type {@code LONGLONG}.
+     *
+     * @param buffer the data buffer.
+     * @return
+     */
+    public static void uLongLong(ByteBuf buffer, long value) {
+        buffer.writeLongLE(value);
+    }
+
+    /**
      * Encode a unsigned short. SQL server type {@code USHORT}.
      *
      * @param buffer the data buffer.

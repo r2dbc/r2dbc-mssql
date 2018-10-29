@@ -136,7 +136,7 @@ public final class Login7 implements TokenStream, ClientMessage {
 
 		this.passwordChange = passwordChange;
 		this.baseLength = baseLength + 4 /* AE */;
-		this.estimatedPacketLength = this.baseLength + Header.SIZE + 2 + passwordChange.length() + 1;
+		this.estimatedPacketLength = this.baseLength + Header.LENGTH + 2 + passwordChange.length() + 1;
 	}
 
 	/**

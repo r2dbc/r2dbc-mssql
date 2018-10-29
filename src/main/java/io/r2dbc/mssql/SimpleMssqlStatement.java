@@ -19,7 +19,8 @@ package io.r2dbc.mssql;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.DefaultCodecs;
-import io.r2dbc.mssql.message.token.DoneToken;
+import io.r2dbc.mssql.message.Message;
+import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Result;
@@ -86,10 +87,19 @@ final class SimpleMssqlStatement implements MssqlStatement<SimpleMssqlStatement>
     @Override
     public Flux<Result> execute() {
 
-        SqlBatch sqlBatch = SqlBatch.create(0, client.getTransactionDescriptor(), this.sql);
+        SqlBatch sqlBatch = SqlBatch.create(1, client.getTransactionDescriptor(), this.sql);
 
         return client.exchange(Mono.just(sqlBatch)) //
-            .windowUntil(or(DoneToken.class::isInstance)) //
+            .<Message>handle((message, sink) -> {
+
+                sink.next(message);
+
+                // Terminate stream with the last DONE token.
+                if (AbstractDoneToken.isDone(message)) {
+                    sink.complete();
+                }
+            })
+            .windowUntil(or(AbstractDoneToken.class::isInstance)) //
             .map(it -> SimpleMssqlResult.toResult(CODECS, it));
     }
 

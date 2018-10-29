@@ -64,7 +64,7 @@ class SimpleMssqlStatementUnitTests {
     @Test
     void shouldReportNumberOfAffectedRows() {
 
-        SqlBatch batch = SqlBatch.create(0, TransactionDescriptor.empty(), "SELECT * FROM foo");
+        SqlBatch batch = SqlBatch.create(1, TransactionDescriptor.empty(), "SELECT * FROM foo");
 
         ColumnMetadataToken columns = ColumnMetadataToken.create(COLUMNS);
 
@@ -84,7 +84,7 @@ class SimpleMssqlStatementUnitTests {
     @Test
     void shouldReturnColumnData() {
 
-        SqlBatch batch = SqlBatch.create(0, TransactionDescriptor.empty(), "SELECT * FROM foo");
+        SqlBatch batch = SqlBatch.create(1, TransactionDescriptor.empty(), "SELECT * FROM foo");
 
         ColumnMetadataToken columns = ColumnMetadataToken.create(COLUMNS);
 

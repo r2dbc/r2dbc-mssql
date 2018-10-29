@@ -34,12 +34,15 @@ final class MssqlConnectionFactoryIntegrationTests {
             .host("localhost")
             .username("sa")
             .password("my1.password")
-            .database("master")
+            .database("foo")
             .build();
 
         MssqlConnectionFactory factory = new MssqlConnectionFactory(configuration);
 
         MssqlConnection connection = factory.create().block();
+
+        MssqlStatement<?> statement = connection.createStatement("SELECT * FROM my_table");
+        statement.execute().flatMap(it -> it.map((r, md) -> r.get(0, Integer.class))).doOnNext(System.out::println).blockLast();
 
         Thread.sleep(100);
         connection.close().block();

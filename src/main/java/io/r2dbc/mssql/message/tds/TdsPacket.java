@@ -40,7 +40,7 @@ public final class TdsPacket extends TdsFragment {
 
         this.header = Objects.requireNonNull(header, "Header must not be null!");
 
-        int expectedBodySize = header.getLength() - Header.SIZE;
+        int expectedBodySize = header.getLength() - Header.LENGTH;
         Assert.isTrue(buffer.readableBytes() == expectedBodySize,
             () -> String.format(
                 "ByteBuffer body size does not match length field in header. Expected body size [%d], actual size [%d]",

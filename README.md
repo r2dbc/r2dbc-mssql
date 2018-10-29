@@ -20,7 +20,6 @@ Next steps:
 * Add encoding for remaining codecs
 * Execution of stored procedures 
 * Support for null-bit compression (NBCROW)
-* Chunking (inbound, outbound)
 * Batch support (`Connection.createBatch`)
 * Add support for TVP and UDTs
 

@@ -68,31 +68,11 @@ public final class Tabular implements Message {
 
         Objects.requireNonNull(buffer, "Buffer must not be null");
 
-        TabularDecodeFunction decodeFunction = decodeFunction(encryptionSupported);
-        List<DataToken> tokens = new ArrayList<>();
+        return new Tabular(new TabularDecoder(encryptionSupported).decode(buffer));
+    }
 
-        while (true) {
-
-            if (buffer.readableBytes() == 0) {
-                break;
-            }
-
-            byte type = Decode.asByte(buffer);
-
-            if (type == (byte) 0xFF) {
-                break;
-            }
-
-            DataToken message = decodeFunction.tryDecode(type, buffer);
-
-            if (message == DecodeFinished.INSTANCE) {
-                break;
-            }
-
-            tokens.add(message);
-        }
-
-        return new Tabular(tokens);
+    public static TabularDecoder createDecoder(boolean encryptionSupported) {
+        return new TabularDecoder(encryptionSupported);
     }
 
     /**
@@ -109,7 +89,7 @@ public final class Tabular implements Message {
                 return DecodeFinished.INSTANCE;
             }
 
-            if (type == EnvChangeToken.TYPE) {
+            if (type == EnvChangeToken.TYPE && EnvChangeToken.canDecode(buffer)) {
                 return EnvChangeToken.decode(buffer);
             }
 
@@ -117,11 +97,11 @@ public final class Tabular implements Message {
                 return FeatureExtAckToken.decode(buffer);
             }
 
-            if (type == InfoToken.TYPE) {
+            if (type == InfoToken.TYPE && InfoToken.canDecode(buffer)) {
                 return InfoToken.decode(buffer);
             }
 
-            if (type == ErrorToken.TYPE) {
+            if (type == ErrorToken.TYPE && ErrorToken.canDecode(buffer)) {
                 return ErrorToken.decode(buffer);
             }
 
@@ -131,13 +111,14 @@ public final class Tabular implements Message {
 
             if (type == ColumnMetadataToken.TYPE) {
 
+                // TODO: Chunking support.
                 ColumnMetadataToken colMetadataToken = ColumnMetadataToken.decode(buffer, encryptionSupported);
                 columns.set(colMetadataToken);
 
                 return colMetadataToken;
             }
 
-            if (type == DoneToken.TYPE) {
+            if (type == DoneToken.TYPE && DoneToken.canDecode(buffer)) {
                 columns.set(null);
                 return DoneToken.decode(buffer);
             }
@@ -145,6 +126,11 @@ public final class Tabular implements Message {
             if (type == RowToken.TYPE) {
 
                 ColumnMetadataToken colMetadataToken = columns.get();
+
+                if (!RowToken.canDecode(buffer, colMetadataToken.getColumns())) {
+                    return null;
+                }
+                
                 return RowToken.decode(buffer, colMetadataToken.getColumns());
             }
 
@@ -287,6 +273,63 @@ public final class Tabular implements Message {
 
         @Nullable
         DataToken tryDecode(byte type, ByteBuf buffer);
+    }
+
+    /**
+     * @author Mark Paluch
+     */
+    public static class TabularDecoder {
+
+        private final Tabular.TabularDecodeFunction decodeFunction;
+
+        /**
+         * @param encryptionSupported whether encryption is supported.
+         */
+        TabularDecoder(boolean encryptionSupported) {
+            this.decodeFunction = Tabular.decodeFunction(encryptionSupported);
+        }
+
+        /**
+         * Decode the {@link Tabular} response from a {@link ByteBuf}.
+         *
+         * @param buffer must not be null.
+         * @return the decoded {@link Tabular} response {@link Message}.
+         */
+        public List<DataToken> decode(ByteBuf buffer) {
+
+            Objects.requireNonNull(buffer, "Buffer must not be null");
+
+            List<DataToken> tokens = new ArrayList<>();
+
+            while (true) {
+
+                if (buffer.readableBytes() == 0) {
+                    break;
+                }
+
+                int readerIndex = buffer.readerIndex();
+                byte type = Decode.asByte(buffer);
+
+                if (type == (byte) 0xFF) {
+                    break;
+                }
+
+                DataToken message = decodeFunction.tryDecode(type, buffer);
+
+                if (message == null) {
+                    buffer.readerIndex(readerIndex);
+                    break;
+                }
+
+                if (message == Tabular.DecodeFinished.INSTANCE) {
+                    break;
+                }
+
+                tokens.add(message);
+            }
+
+            return tokens;
+        }
     }
 
 }

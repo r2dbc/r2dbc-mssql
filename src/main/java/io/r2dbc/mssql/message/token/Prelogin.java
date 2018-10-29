@@ -78,18 +78,18 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 	 * Decode the {@link Prelogin} response from a {@link ByteBuf}.
 	 * 
 	 * @param header must not be null.
-	 * @param byteBuf must not be null.
+	 * @param buffer must not be null.
 	 * @return the decoded {@link Prelogin} response {@link Message}.
 	 */
-	public static Prelogin decode(Header header, ByteBuf byteBuf) {
+	public static Prelogin decode(Header header, ByteBuf buffer) {
 
 		Objects.requireNonNull(header, "Header must not be null");
-		Objects.requireNonNull(byteBuf, "ByteBuf must not be null");
+		Objects.requireNonNull(buffer, "ByteBuf must not be null");
 
 		List<Token> decodedTokens = new ArrayList<>();
 		Prelogin prelogin = new Prelogin(header, decodedTokens);
 
-		TokenDecodingState decodingState = TokenDecodingState.create(byteBuf);
+		TokenDecodingState decodingState = TokenDecodingState.create(buffer);
 
 		while (true) {
 
@@ -97,7 +97,7 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 				break;
 			}
 
-			byte type = Decode.asByte(byteBuf);
+			byte type = Decode.asByte(buffer);
 
 			if (type == Terminator.TYPE) {
 				decodedTokens.add(Terminator.INSTANCE);
@@ -121,6 +121,9 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 
 			decodedTokens.add(UnknownToken.decode(type, decodingState));
 		}
+
+		// ignore remaining bytes of PreLogin response
+		buffer.skipBytes(buffer.readableBytes());
 
 		return prelogin;
 	}
@@ -167,7 +170,7 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 
 	private static int getSize(List<? extends Token> tokens) {
 
-		int size = Header.SIZE;
+		int size = Header.LENGTH;
 
 		for (Token token : tokens) {
 			size += token.getTotalLength();

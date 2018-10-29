@@ -54,9 +54,8 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
     /**
      * Decode a {@link RowToken}.
      *
-     * @param buffer
-     * @param columns @param columns column descriptors.
-     * @param nbc     {@literal null} bit compressed map to indicate {@literal null} values for column values.
+     * @param buffer the data buffer.
+     * @param columns column descriptors.
      * @return the {@link RowToken}.
      */
     public static RowToken decode(ByteBuf buffer, List<Column> columns) {
@@ -64,7 +63,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
         ByteBuf copy = buffer.copy();
 
         int start = copy.readerIndex();
-        RowToken rowToken = doDecode(columns, copy);
+        RowToken rowToken = doDecode(copy, columns);
         int fastForward = copy.readerIndex() - start;
 
         buffer.skipBytes(fastForward);
@@ -72,7 +71,46 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
         return rowToken;
     }
 
-    private static RowToken doDecode(List<Column> columns, ByteBuf buffer) {
+    /**
+     * Check whether the {@link ByteBuf} can be decoded into an entire {@link RowToken}.
+     *
+     * @param buffer  the data buffer.
+     * @param columns column descriptors.
+     * @return {@literal true} if the buffer contains sufficient data to entirely decode a row.
+     */
+    public static boolean canDecode(ByteBuf buffer, List<Column> columns) {
+
+        int readerIndex = buffer.readerIndex();
+
+        try {
+            for (Column column : columns) {
+
+                buffer.markReaderIndex();
+
+                int startRead = buffer.readerIndex();
+                LengthDescriptor lengthDescriptor = LengthDescriptor.decode(buffer, column);
+
+                int endRead = buffer.readerIndex();
+                buffer.resetReaderIndex();
+
+                int descriptorLength = endRead - startRead;
+                int dataLength = descriptorLength + lengthDescriptor.getLength();
+
+                if (buffer.readableBytes() >= dataLength) {
+                    buffer.skipBytes(dataLength);
+                    continue;
+                }
+
+                return false;
+            }
+
+            return true;
+        } finally {
+            buffer.readerIndex(readerIndex);
+        }
+    }
+
+    private static RowToken doDecode(ByteBuf buffer, List<Column> columns) {
 
         List<ByteBuf> data = new ArrayList<>(columns.size());
 

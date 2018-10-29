@@ -16,6 +16,9 @@
 
 package io.r2dbc.mssql.message.token;
 
+import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.message.tds.Decode;
+
 /**
  * Info token.
  *
@@ -84,6 +87,26 @@ public abstract class AbstractInfoToken extends AbstractDataToken {
         this.serverName = serverName;
         this.procName = procName;
         this.lineNumber = lineNumber;
+    }
+
+    /**
+     * Check whether the {@link ByteBuf} can be decoded into an entire {@link AbstractInfoToken}.
+     *
+     * @param buffer the data buffer.
+     * @return {@literal true} if the token can be decoded.
+     */
+    public static boolean canDecode(ByteBuf buffer) {
+
+        if (buffer.readableBytes() > 2) {
+
+            buffer.markReaderIndex();
+            int length = Decode.uShort(buffer);
+            buffer.resetReaderIndex();
+
+            return buffer.readableBytes() >= length;
+        }
+
+        return false;
     }
 
     public long getNumber() {
@@ -240,7 +263,7 @@ public abstract class AbstractInfoToken extends AbstractDataToken {
         static Classification valueOf(int value) {
 
             for (Classification classification : Classification.values()) {
-                if (classification.from >= value && classification.to <= value) {
+                if (value >= classification.from && value <= classification.to) {
                     return classification;
                 }
             }

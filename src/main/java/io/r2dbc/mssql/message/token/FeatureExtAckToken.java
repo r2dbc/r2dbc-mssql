@@ -37,7 +37,7 @@ public class FeatureExtAckToken extends AbstractDataToken {
 
     private final List<FeatureToken> featureTokens;
 
-    public FeatureExtAckToken(List<FeatureToken> featureTokens) {
+    private FeatureExtAckToken(List<FeatureToken> featureTokens) {
         super(TYPE);
         this.featureTokens = featureTokens;
     }
@@ -53,7 +53,6 @@ public class FeatureExtAckToken extends AbstractDataToken {
         Objects.requireNonNull(buffer, "Buffer must not be null");
 
         List<FeatureToken> featureTokens = new ArrayList<>();
-
 
         while (true) {
 

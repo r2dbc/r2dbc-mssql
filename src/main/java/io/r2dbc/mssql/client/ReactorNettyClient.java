@@ -31,7 +31,6 @@ import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.token.AbstractInfoToken;
 import io.r2dbc.mssql.message.token.EnvChangeToken;
 import io.r2dbc.mssql.message.token.FeatureExtAckToken;
-import io.r2dbc.mssql.message.token.StreamDecoder;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,7 +111,9 @@ public final class ReactorNettyClient implements Client {
 
             if (connectionState.canAdvance(message)) {
                 ConnectionState nextState = connectionState.next(message, this.connection.get());
-                if (!this.state.compareAndSet(connectionState, nextState)) {
+                if (this.state.compareAndSet(connectionState, nextState)) {
+                    this.decodeFunction.set(nextState.decoder(this));
+                } else {
                     sink.error(new ProtocolException(String.format("Cannot advance state from [%s]", connectionState)));
                 }
             }
@@ -129,6 +130,8 @@ public final class ReactorNettyClient implements Client {
     private final EmitterProcessor<Flux<Message>> responseProcessor = EmitterProcessor.create(false);
 
     private final AtomicReference<ConnectionState> state = new AtomicReference<>(ConnectionState.PRELOGIN);
+
+    private final AtomicReference<MessageDecoder> decodeFunction = new AtomicReference<>(ConnectionState.PRELOGIN.decoder(this));
 
     /**
      * Creates a new frame processor connected to a given TCP connection.
@@ -154,7 +157,7 @@ public final class ReactorNettyClient implements Client {
 
                     ByteBuf buffer = (ByteBuf) it;
                     buffer.retain();
-                    return decoder.decode(buffer, this.state.get().decoder(this));
+                    return decoder.decode(buffer, this.decodeFunction.get());
                 }
 
                 if (it instanceof Message) {

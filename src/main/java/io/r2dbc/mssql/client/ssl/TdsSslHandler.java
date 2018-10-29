@@ -209,7 +209,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
 			HeaderOptions headerOptions = tdsFragment.getHeaderOptions();
 			Status eom = headerOptions.getStatus().and(Status.StatusBit.EOM);
-			Header header = new Header(headerOptions.getType(), eom, Header.SIZE + tdsFragment.getByteBuf().readableBytes(),
+			Header header = new Header(headerOptions.getType(), eom, Header.LENGTH + tdsFragment.getByteBuf().readableBytes(),
 					0, this.packetIdProvider.nextPacketId(), 0);
 
 			ByteBuf buffer = allocator.buffer(header.getLength());

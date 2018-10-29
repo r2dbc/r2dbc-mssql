@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
@@ -27,176 +28,203 @@ import java.util.Objects;
  */
 public final class EnvChangeToken extends AbstractDataToken {
 
-	public static final byte TYPE = (byte) 0xE3;
+    public static final byte TYPE = (byte) 0xE3;
 
-	/**
-	 * The total length of the ENVCHANGE data stream (EnvValueData).
-	 */
-	private final int length;
+    /**
+     * The total length of the ENVCHANGE data stream (EnvValueData).
+     */
+    private final int length;
 
-	/**
-	 * The type of environment change.
-	 */
-	private final EnvChangeType changeType;
+    /**
+     * The type of environment change.
+     */
+    private final EnvChangeType changeType;
 
-	private final byte[] newValue;
-	private final byte[] oldValue;
+    private final byte[] newValue;
 
-	public EnvChangeToken(int length, EnvChangeType changeType, byte[] newValue, @Nullable byte[] oldValue) {
-		super(TYPE);
+    private final byte[] oldValue;
 
-		Objects.requireNonNull(changeType, "EnvChangeType must not be null");
-		Objects.requireNonNull(newValue, "New value must not be null");
+    public EnvChangeToken(int length, EnvChangeType changeType, byte[] newValue, @Nullable byte[] oldValue) {
+        super(TYPE);
 
-		this.length = length;
-		this.changeType = changeType;
-		this.newValue = newValue;
-		this.oldValue = oldValue;
-	}
+        Objects.requireNonNull(changeType, "EnvChangeType must not be null");
+        Objects.requireNonNull(newValue, "New value must not be null");
 
-	public static EnvChangeToken decode(ByteBuf buffer) {
+        this.length = length;
+        this.changeType = changeType;
+        this.newValue = newValue;
+        this.oldValue = oldValue;
+    }
 
-		int length = Decode.uShort(buffer);
-		byte type = Decode.asByte(buffer);
+    /**
+     * Decode a {@link EnvChangeToken}.
+     *
+     * @param buffer the data buffer.
+     * @return
+     */
+    public static EnvChangeToken decode(ByteBuf buffer) {
 
-		EnvChangeType envChangeType = EnvChangeType.valueOf(type);
+        int length = Decode.uShort(buffer);
+        byte type = Decode.asByte(buffer);
 
-		int newValueLen = envChangeType.toByteLength(Decode.asByte(buffer));
-		byte[] newValue = new byte[newValueLen];
-		buffer.readBytes(newValue);
+        EnvChangeType envChangeType = EnvChangeType.valueOf(type);
 
-		int oldValueLen = envChangeType.toByteLength(Decode.asByte(buffer));
-		byte[] oldValue = new byte[oldValueLen];
-		buffer.readBytes(oldValue);
+        int newValueLen = envChangeType.toByteLength(Decode.asByte(buffer));
+        byte[] newValue = new byte[newValueLen];
+        buffer.readBytes(newValue);
 
-		return new EnvChangeToken(length, envChangeType, newValue, oldValue);
-	}
+        int oldValueLen = envChangeType.toByteLength(Decode.asByte(buffer));
+        byte[] oldValue = new byte[oldValueLen];
+        buffer.readBytes(oldValue);
 
-	@Override
-	public String getName() {
-		return "ENVCHANGE_TOKEN";
-	}
+        return new EnvChangeToken(length, envChangeType, newValue, oldValue);
+    }
 
-	public int getLength() {
-		return this.length;
-	}
+    /**
+     * Check whether the {@link ByteBuf} can be decoded into an entire {@link EnvChangeType}.
+     *
+     * @param buffer the data buffer.
+     * @return {@literal true} if the token can be decoded.
+     */
+    public static boolean canDecode(ByteBuf buffer) {
 
-	public EnvChangeType getChangeType() {
-		return this.changeType;
-	}
+        if (buffer.readableBytes() > 2) {
 
-	public byte[] getNewValue() {
-		return this.newValue;
-	}
+            buffer.markReaderIndex();
+            int length = Decode.uShort(buffer);
+            buffer.resetReaderIndex();
 
-	@Nullable
-	public byte[] getOldValue() {
-		return this.oldValue;
-	}
+            return buffer.readableBytes() >= length;
+        }
 
-	public String getOldValueString() {
-		return new String(this.oldValue, 0, this.oldValue.length, Encoding.UNICODE.charset());
-	}
+        return false;
+    }
 
-	public String getNewValueString() {
-		return new String(this.newValue, 0, this.newValue.length, Encoding.UNICODE.charset());
-	}
+    @Override
+    public String getName() {
+        return "ENVCHANGE_TOKEN";
+    }
 
-	@Override
-	public String toString() {
-		final StringBuffer sb = new StringBuffer();
-		sb.append(getClass().getSimpleName());
-		sb.append(" [length=").append(this.length);
-		sb.append(", changeType=").append(this.changeType);
-		sb.append(", newValue=").append(getNewValueString());
-		sb.append(']');
-		return sb.toString();
-	}
+    public int getLength() {
+        return this.length;
+    }
 
-	/**
-	 * Environment change payload type (type of environment change).
-	 */
-	public enum EnvChangeType {
+    public EnvChangeType getChangeType() {
+        return this.changeType;
+    }
 
-		Database(1) {
-			@Override
-			public int toByteLength(byte dataLength) {
-				return super.toByteLength(dataLength) * 2;
-			}
-		},
-		Language(2) {
-			@Override
-			public int toByteLength(byte dataLength) {
-				return super.toByteLength(dataLength) * 2;
-			}
-		},
-		Charset(3) {
-			@Override
-			public int toByteLength(byte dataLength) {
-				return super.toByteLength(dataLength) * 2;
-			}
-		},
-		Packetsize(4) {
-			@Override
-			public int toByteLength(byte dataLength) {
-				return super.toByteLength(dataLength) * 2;
-			}
-		},
-		UnicodeLCID(5) {
-			@Override
-			public int toByteLength(byte dataLength) {
-				return super.toByteLength(dataLength) * 2;
-			}
-		},
-		UnicodeSortingComparison(6) {
-			@Override
-			public int toByteLength(byte dataLength) {
-				return super.toByteLength(dataLength) * 2;
-			}
-		},
-		SQLCollation(7), BeginTx(8), CommitTx(9), RollbackTx(10), EnlistDTC(11), DefectTx(12), RealtimeLogShipping(13) {
-			@Override
-			public int toByteLength(byte dataLength) {
-				return super.toByteLength(dataLength) * 2;
-			}
-		},
-		PromoteTx(15), TXMgrAddress(16), TxEnd(17), RSETACK(18), UserInstance(19) {
-			@Override
-			public int toByteLength(byte dataLength) {
-				return super.toByteLength(dataLength) * 2;
-			}
-		},
-		Routing(20);
+    public byte[] getNewValue() {
+        return this.newValue;
+    }
 
-		private final byte type;
+    @Nullable
+    public byte[] getOldValue() {
+        return this.oldValue;
+    }
 
-		EnvChangeType(int type) {
-			this.type = (byte) type;
-		}
+    public String getOldValueString() {
+        return new String(this.oldValue, 0, this.oldValue.length, Encoding.UNICODE.charset());
+    }
 
-		public byte getType() {
-			return this.type;
-		}
+    public String getNewValueString() {
+        return new String(this.newValue, 0, this.newValue.length, Encoding.UNICODE.charset());
+    }
 
-		/**
-		 * Lookup {@link EnvChangeType} by its by {@code value}.
-		 * 
-		 * @param value the env change type byte value.
-		 * @return
-		 */
-		public static EnvChangeType valueOf(int value) {
+    @Override
+    public String toString() {
+        final StringBuffer sb = new StringBuffer();
+        sb.append(getClass().getSimpleName());
+        sb.append(" [length=").append(this.length);
+        sb.append(", changeType=").append(this.changeType);
+        sb.append(", newValue=").append(getNewValueString());
+        sb.append(']');
+        return sb.toString();
+    }
 
-			for (EnvChangeType envChangeType : values()) {
-				if (envChangeType.getType() == (byte) value) {
-					return envChangeType;
-				}
-			}
+    /**
+     * Environment change payload type (type of environment change).
+     */
+    public enum EnvChangeType {
 
-			throw new IllegalArgumentException(String.format("Invalid env change type 0x%01X", value));
-		}
+        Database(1) {
+            @Override
+            public int toByteLength(byte dataLength) {
+                return super.toByteLength(dataLength) * 2;
+            }
+        },
+        Language(2) {
+            @Override
+            public int toByteLength(byte dataLength) {
+                return super.toByteLength(dataLength) * 2;
+            }
+        },
+        Charset(3) {
+            @Override
+            public int toByteLength(byte dataLength) {
+                return super.toByteLength(dataLength) * 2;
+            }
+        },
+        Packetsize(4) {
+            @Override
+            public int toByteLength(byte dataLength) {
+                return super.toByteLength(dataLength) * 2;
+            }
+        },
+        UnicodeLCID(5) {
+            @Override
+            public int toByteLength(byte dataLength) {
+                return super.toByteLength(dataLength) * 2;
+            }
+        },
+        UnicodeSortingComparison(6) {
+            @Override
+            public int toByteLength(byte dataLength) {
+                return super.toByteLength(dataLength) * 2;
+            }
+        },
+        SQLCollation(7), BeginTx(8), CommitTx(9), RollbackTx(10), EnlistDTC(11), DefectTx(12), RealtimeLogShipping(13) {
+            @Override
+            public int toByteLength(byte dataLength) {
+                return super.toByteLength(dataLength) * 2;
+            }
+        },
+        PromoteTx(15), TXMgrAddress(16), TxEnd(17), RSETACK(18), UserInstance(19) {
+            @Override
+            public int toByteLength(byte dataLength) {
+                return super.toByteLength(dataLength) * 2;
+            }
+        },
+        Routing(20);
 
-		public int toByteLength(byte dataLength) {
-			return dataLength;
-		}
-	}
+        private final byte type;
+
+        EnvChangeType(int type) {
+            this.type = (byte) type;
+        }
+
+        public byte getType() {
+            return this.type;
+        }
+
+        /**
+         * Lookup {@link EnvChangeType} by its by {@code value}.
+         *
+         * @param value the env change type byte value.
+         * @return
+         */
+        public static EnvChangeType valueOf(int value) {
+
+            for (EnvChangeType envChangeType : values()) {
+                if (envChangeType.getType() == (byte) value) {
+                    return envChangeType;
+                }
+            }
+
+            throw new IllegalArgumentException(String.format("Invalid env change type 0x%01X", value));
+        }
+
+        public int toByteLength(byte dataLength) {
+            return dataLength;
+        }
+    }
 }

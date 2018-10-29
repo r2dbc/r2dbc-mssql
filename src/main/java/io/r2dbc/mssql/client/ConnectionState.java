@@ -15,23 +15,19 @@
  */
 package io.r2dbc.mssql.client;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.handler.ssl.SslHandler;
 import io.r2dbc.mssql.client.ssl.SslState;
 import io.r2dbc.mssql.message.Message;
-import io.r2dbc.mssql.message.header.Header;
 import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
+import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.Login7;
-import io.r2dbc.mssql.message.token.LoginAckToken;
 import io.r2dbc.mssql.message.token.Prelogin;
 import io.r2dbc.mssql.message.token.Tabular;
 import reactor.netty.Connection;
 
 import java.util.Collections;
-import java.util.List;
-import java.util.function.BiFunction;
 
 /**
  * Connection state according to the TDS state machine. The flow is defined as:
@@ -55,7 +51,7 @@ public enum ConnectionState {
 	 */
 	PRELOGIN {
 		@Override
-        BiFunction<Header, ByteBuf, List<? extends Message>> decoder(Client client) {
+        MessageDecoder decoder(Client client) {
 
 			return (header, byteBuf) -> {
 
@@ -116,7 +112,7 @@ public enum ConnectionState {
 		}
 
 		@Override
-        BiFunction<Header, ByteBuf, List<? extends Message>> decoder(Client client) {
+        MessageDecoder decoder(Client client) {
 			return (header, byteBuf) -> {
 
 				throw new ProtocolException("Nothing to decode during SSL negotiation");
@@ -128,21 +124,21 @@ public enum ConnectionState {
 
 		@Override
 		public boolean canAdvance(Message message) {
-            return message instanceof Tabular;
+            return message instanceof AbstractDoneToken;
         }
 
 		@Override
 		public ConnectionState next(Message message, Connection connection) {
 
-            if (message instanceof LoginAckToken) {
-				return LOGIN_FAILED;
-			}
+            if (AbstractDoneToken.isDone(message)) {
+                return POST_LOGIN;
+            }
 
-			return PRELOGIN_SSL_NEGOTIATION;
-		}
+            return LOGIN_FAILED;
+        }
 
 		@Override
-        BiFunction<Header, ByteBuf, List<? extends Message>> decoder(Client client) {
+        MessageDecoder decoder(Client client) {
 			
 			return (header, byteBuf) -> {
 
@@ -169,15 +165,15 @@ public enum ConnectionState {
 
         @SuppressWarnings("unchecked")
         @Override
-        BiFunction<Header, ByteBuf, List<? extends Message>> decoder(Client client) {
+        MessageDecoder decoder(Client client) {
+
+            Tabular.TabularDecoder decoder = Tabular.createDecoder(client.isColumnEncryptionSupported());
 
             return (header, byteBuf) -> {
 
                 // Expect Tabular message here!
                 assert header.getType() == Type.TABULAR_RESULT;
-
-                Tabular tabular = Tabular.decode(byteBuf, client.isColumnEncryptionSupported());
-                return tabular.getTokens();
+                return decoder.decode(byteBuf);
             };
         }
 	},
@@ -195,7 +191,7 @@ public enum ConnectionState {
 		}
 
 		@Override
-        BiFunction<Header, ByteBuf, List<? extends Message>> decoder(Client client) {
+        MessageDecoder decoder(Client client) {
 			return null;
 		}
 	};
@@ -204,5 +200,6 @@ public enum ConnectionState {
 
 	public abstract ConnectionState next(Message message, Connection connection);
 
-    abstract BiFunction<Header, ByteBuf, List<? extends Message>> decoder(Client client);
+    abstract MessageDecoder decoder(Client client);
+
 }

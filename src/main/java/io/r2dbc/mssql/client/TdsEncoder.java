@@ -17,7 +17,6 @@
 package io.r2dbc.mssql.client;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
@@ -52,16 +51,25 @@ import io.r2dbc.mssql.util.Assert;
  * @see HeaderOptions
  * @see TdsFragment
  */
-public class TdsEncoder extends ChannelOutboundHandlerAdapter implements EnvironmentChangeListener {
+public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements EnvironmentChangeListener {
 
+    public static final int INITIAL_PACKET_SIZE = 8000;
+
+    private ByteBuf lastChunkRemainder;
+    
     private final PacketIdProvider packetIdProvider;
 
-    private int packetSize = 8000;
+    private int packetSize;
 
     private HeaderOptions headerOptions;
 
     public TdsEncoder(PacketIdProvider packetIdProvider) {
+        this(packetIdProvider, INITIAL_PACKET_SIZE);
+    }
+
+    public TdsEncoder(PacketIdProvider packetIdProvider, int packetSize) {
         this.packetIdProvider = packetIdProvider;
+        this.packetSize = packetSize;
     }
 
     @Override
@@ -91,7 +99,7 @@ public class TdsEncoder extends ChannelOutboundHandlerAdapter implements Environ
 
             ByteBuf message = (ByteBuf) msg;
 
-            doWriteFragment(ctx, promise, message, getLastHeader(this.headerOptions));
+            doWriteFragment(ctx, promise, message, this.headerOptions, true);
             return;
         }
 
@@ -100,6 +108,9 @@ public class TdsEncoder extends ChannelOutboundHandlerAdapter implements Environ
 
             TdsPacket packet = (TdsPacket) msg;
             ByteBuf message = packet.encode(ctx.alloc(), packetIdProvider);
+
+            Assert.state(message.readableBytes() <= this.packetSize, "Packet size exceeded");
+            
             ctx.write(message, promise);
             return;
         }
@@ -111,7 +122,7 @@ public class TdsEncoder extends ChannelOutboundHandlerAdapter implements Environ
 
             this.headerOptions = fragment.getHeaderOptions();
 
-            doWriteFragment(ctx, promise, fragment.getByteBuf(), this.headerOptions);
+            doWriteFragment(ctx, promise, fragment.getByteBuf(), this.headerOptions, false);
             return;
         }
 
@@ -120,7 +131,7 @@ public class TdsEncoder extends ChannelOutboundHandlerAdapter implements Environ
 
             ContextualTdsFragment fragment = (ContextualTdsFragment) msg;
 
-            doWriteFragment(ctx, promise, fragment.getByteBuf(), getLastHeader(fragment.getHeaderOptions()));
+            doWriteFragment(ctx, promise, fragment.getByteBuf(), fragment.getHeaderOptions(), true);
             return;
         }
 
@@ -131,7 +142,7 @@ public class TdsEncoder extends ChannelOutboundHandlerAdapter implements Environ
 
             TdsFragment fragment = (TdsFragment) msg;
 
-            doWriteFragment(ctx, promise, fragment.getByteBuf(), getLastHeader(this.headerOptions));
+            doWriteFragment(ctx, promise, fragment.getByteBuf(), this.headerOptions, true);
 
             this.headerOptions = null;
             return;
@@ -144,7 +155,7 @@ public class TdsEncoder extends ChannelOutboundHandlerAdapter implements Environ
 
             TdsFragment fragment = (TdsFragment) msg;
 
-            doWriteFragment(ctx, promise, fragment.getByteBuf(), headerOptions);
+            doWriteFragment(ctx, promise, fragment.getByteBuf(), headerOptions, false);
             return;
         }
 
@@ -156,32 +167,130 @@ public class TdsEncoder extends ChannelOutboundHandlerAdapter implements Environ
 
         EnvChangeToken token = event.getToken();
         if (token.getChangeType() == EnvChangeToken.EnvChangeType.Packetsize) {
-            this.packetSize = Integer.parseInt(token.getNewValueString());
+            setPacketSize(Integer.parseInt(token.getNewValueString()));
         }
+    }
+
+    public void setPacketSize(int packetSize) {
+        this.packetSize = packetSize;
     }
 
     private static HeaderOptions getLastHeader(HeaderOptions headerOptions) {
         return HeaderOptions.create(headerOptions.getType(), headerOptions.getStatus().and(Status.StatusBit.EOM));
     }
 
-    private ByteBuf addHeaderPrefix(ByteBufAllocator allocator, ByteBuf message, HeaderOptions headerOptions) {
-
-        ByteBuf buffer = allocator.buffer(Header.SIZE + message.readableBytes());
-        Header header = Header.create(headerOptions, Header.SIZE + message.readableBytes(), packetIdProvider);
-
-        header.encode(buffer);
-        buffer.writeBytes(message);
-
-        return buffer;
+    private static HeaderOptions getChunkedHeaderOptions(HeaderOptions headerOptions) {
+        return HeaderOptions.create(headerOptions.getType(), headerOptions.getStatus().not(Status.StatusBit.EOM));
     }
 
-    private void doWriteFragment(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf byteBuf,
-                                 HeaderOptions headerOptions) {
+    private void doWriteFragment(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf body,
+                                 HeaderOptions headerOptions, boolean lastLogicalPacket) {
 
-        ByteBuf buffer = addHeaderPrefix(ctx.alloc(), byteBuf, headerOptions);
-        byteBuf.release();
+        if (requiresChunking(body.readableBytes())) {
+            writeChunkedMessage(ctx, promise, body, headerOptions, lastLogicalPacket);
+        } else {
+            writeSingleMessage(ctx, promise, body, headerOptions, lastLogicalPacket);
+        }
 
-        ctx.writeAndFlush(buffer, promise);
+        body.release();
+    }
+
+    private void writeSingleMessage(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf body, HeaderOptions headerOptions, boolean lastLogicalPacket) {
+
+        HeaderOptions optionsToUse = lastLogicalPacket ? getLastHeader(headerOptions) : headerOptions;
+
+        int messageLength = getBytesToWrite(body.readableBytes());
+        ByteBuf buffer = ctx.alloc().buffer(messageLength);
+        Header header = Header.create(optionsToUse, messageLength, packetIdProvider);
+
+        header.encode(buffer);
+
+        if (this.lastChunkRemainder != null) {
+
+            buffer.writeBytes(this.lastChunkRemainder);
+
+            this.lastChunkRemainder.release();
+            this.lastChunkRemainder = null;
+        }
+
+        buffer.writeBytes(body);
+
+        ctx.write(buffer, promise);
+    }
+
+    private void writeChunkedMessage(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf body, HeaderOptions headerOptions, boolean lastLogicalPacket) {
+
+        ByteBuf chunked = body.alloc().buffer(estimateChunkedSize(getBytesToWrite(body.readableBytes())));
+
+        while (body.readableBytes() > 0) {
+
+            ByteBuf chunk;
+            if (this.lastChunkRemainder != null) {
+
+                int combinedSize = this.lastChunkRemainder.readableBytes() + body.readableBytes();
+                HeaderOptions optionsToUse = isLastTransportPacket(combinedSize, lastLogicalPacket) ? getLastHeader(headerOptions) : getChunkedHeaderOptions(headerOptions);
+
+                Header header = Header.create(optionsToUse, this.packetSize, packetIdProvider);
+                header.encode(chunked);
+
+                int actualBodyReadableBytes = this.packetSize - Header.LENGTH - this.lastChunkRemainder.readableBytes();
+                chunked.writeBytes(this.lastChunkRemainder);
+                chunked.writeBytes(body, actualBodyReadableBytes);
+
+                this.lastChunkRemainder.release();
+                this.lastChunkRemainder = null;
+
+            } else {
+
+                if (!lastLogicalPacket && !requiresChunking(body.readableBytes())) {
+
+                    // Prevent partial packets/buffer underrun if not the last packet.
+                    this.lastChunkRemainder = body.retain();
+                    break;
+                }
+
+                HeaderOptions optionsToUse = isLastTransportPacket(body.readableBytes(), lastLogicalPacket) ? getLastHeader(headerOptions) : getChunkedHeaderOptions(headerOptions);
+
+                chunk = body.readSlice(getEffectiveChunkSizeWithoutHeader(body.readableBytes()));
+
+                Header header = Header.create(optionsToUse, Header.LENGTH + chunk.readableBytes(), packetIdProvider);
+                header.encode(chunked);
+                chunked.writeBytes(chunk);
+            }
+        }
+
+        ctx.write(chunked, promise);
+    }
+
+    int estimateChunkedSize(int readableBytes) {
+
+        int netPacketSize = this.packetSize + 1 - Header.LENGTH;
+
+        return readableBytes + (((readableBytes / netPacketSize) + 1) * Header.LENGTH);
+    }
+
+    private boolean requiresChunking(int readableBytes) {
+        return getBytesToWrite(readableBytes) > this.packetSize;
+    }
+
+    private int getBytesToWrite(int readableBytes) {
+        int bytesToWrite = Header.LENGTH;
+        bytesToWrite += this.lastChunkRemainder != null ? this.lastChunkRemainder.readableBytes() : 0;
+        bytesToWrite += readableBytes;
+        return bytesToWrite;
+    }
+
+    private int getEffectiveChunkSizeWithoutHeader(int readableBytes) {
+        return Math.min(readableBytes, this.packetSize - Header.LENGTH);
+    }
+
+    private boolean isLastTransportPacket(int readableBytes, boolean lastLogicalPacket) {
+
+        if (requiresChunking(readableBytes)) {
+            return false;
+        }
+
+        return lastLogicalPacket;
     }
 
     /**

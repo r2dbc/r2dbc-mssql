@@ -16,14 +16,23 @@
 
 package io.r2dbc.mssql.message.token;
 
+import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.Message;
+import io.r2dbc.mssql.message.tds.Encode;
+
+import java.util.Objects;
 
 /**
- * Done token support.
+ * Abstract base class for Done token implementation classes.
  *
  * @author Mark Paluch
  */
 public abstract class AbstractDoneToken extends AbstractDataToken {
+
+    /**
+     * Packet length in bytes.
+     */
+    public static final int LENGTH = 13;
 
     /**
      * This DONE is the final DONE in the request.
@@ -110,6 +119,30 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
         return false;
     }
 
+    /**
+     * Check whether the {@link ByteBuf} can be decoded into an entire {@link AbstractDoneToken}.
+     *
+     * @param buffer the data buffer.
+     * @return {@literal true} if the token can be decoded.
+     */
+    public static boolean canDecode(ByteBuf buffer) {
+        return buffer.readableBytes() >= LENGTH - 1 /* Decoding always decodes the token type first 
+        so no need to check the for the type byte */;
+    }
+
+    /**
+     * Encode this token.
+     *
+     * @param buffer the data buffer.
+     */
+    public void encode(ByteBuf buffer) {
+
+        buffer.writeByte(getType());
+        Encode.uShort(buffer, getStatus());
+        Encode.uShort(buffer, getCurrentCommand());
+        Encode.uLongLong(buffer, getRowCount());
+    }
+
     public int getStatus() {
         return status;
     }
@@ -147,6 +180,25 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
      */
     public long getRowCount() {
         return rowCount;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof AbstractDoneToken)) {
+            return false;
+        }
+        AbstractDoneToken doneToken = (AbstractDoneToken) o;
+        return status == doneToken.status &&
+            currentCommand == doneToken.currentCommand &&
+            rowCount == doneToken.rowCount;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(status, currentCommand, rowCount);
     }
 
     @Override

@@ -98,7 +98,7 @@ public class Status {
 	}
 
 	/**
-	 * Create a {@link Status} the current state and add the {@link StatusBit}s.
+     * Create a {@link Status} from the current state and add the {@link StatusBit}.
 	 * 
 	 * @param bit the status bit.
 	 * @return the {@link Status} from the given {@link StatusBit}.
@@ -107,11 +107,37 @@ public class Status {
 
 		Objects.requireNonNull(bit, "StatusBit must not be null");
 
+        // If bit set, then we can optimize.
+        if (this.statusBits.contains(bit)) {
+            return this;
+        }
+		
 		EnumSet<StatusBit> statusBits = EnumSet.copyOf(this.statusBits);
 		statusBits.add(bit);
 
 		return new Status(statusBits);
 	}
+
+    /**
+     * Create a {@link Status} from the current state and remove the {@link StatusBit}.
+     *
+     * @param bit the status bit.
+     * @return the {@link Status} from the given {@link StatusBit}.
+     */
+    public Status not(StatusBit bit) {
+
+        Objects.requireNonNull(bit, "StatusBit must not be null");
+
+        // If bit not set, then we can optimize.
+        if (!this.statusBits.contains(bit)) {
+            return this;
+        }
+
+        EnumSet<StatusBit> statusBits = EnumSet.copyOf(this.statusBits);
+        statusBits.remove(bit);
+
+        return new Status(statusBits);
+    }
 
 	/**
 	 * Check if the header status has set the {@link Status.StatusBit}.
@@ -131,7 +157,25 @@ public class Status {
 	 */
 	public byte getValue() {
 		return value;
-	}
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Status)) {
+            return false;
+        }
+        Status status = (Status) o;
+        return value == status.value &&
+            Objects.equals(statusBits, status.statusBits);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(statusBits, value);
+    }
 
 	private static byte getStatusValue(Collection<StatusBit> statusBits) {
 
