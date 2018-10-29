@@ -71,15 +71,23 @@ public final class Tabular implements Message {
         return new Tabular(new TabularDecoder(encryptionSupported).decode(buffer));
     }
 
+    /**
+     * Creates a new {@link TabularDecoder}.
+     *
+     * @param encryptionSupported {@literal true} if table column encryption is supported.
+     * @return the decoder.
+     */
     public static TabularDecoder createDecoder(boolean encryptionSupported) {
         return new TabularDecoder(encryptionSupported);
     }
 
     /**
+     * Creates a new, stateful {@link TabularDecodeFunction}.
+     *
      * @param encryptionSupported {@literal true} if table column encryption is supported.
-     * @return
+     * @return the decoder.
      */
-    public static TabularDecodeFunction decodeFunction(boolean encryptionSupported) {
+    private static TabularDecodeFunction decodeFunction(boolean encryptionSupported) {
 
         AtomicReference<ColumnMetadataToken> columns = new AtomicReference<>();
 
@@ -130,7 +138,7 @@ public final class Tabular implements Message {
                 if (!RowToken.canDecode(buffer, colMetadataToken.getColumns())) {
                     return null;
                 }
-                
+
                 return RowToken.decode(buffer, colMetadataToken.getColumns());
             }
 
@@ -268,6 +276,9 @@ public final class Tabular implements Message {
     }
 
 
+    /**
+     * Decode function for {@link Tabular} streams.
+     */
     @FunctionalInterface
     public interface TabularDecodeFunction {
 
@@ -276,6 +287,9 @@ public final class Tabular implements Message {
     }
 
     /**
+     * A stateful {@link TabularDecoder}. State is required to decode response chunks in multiple attempts/calls to a {@link TabularDecodeFunction}. Typically, state is a previous
+     * {@link ColumnMetadataToken column description} for row results.
+     *
      * @author Mark Paluch
      */
     public static class TabularDecoder {
