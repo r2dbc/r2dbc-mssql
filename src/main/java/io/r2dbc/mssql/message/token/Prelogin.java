@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
@@ -41,822 +42,837 @@ import java.util.UUID;
 
 /**
  * Stream structure for {@code PRELOGIN}.
- * 
+ *
  * @author Mark Paluch
  * @see Token
  */
 public final class Prelogin implements TokenStream, ClientMessage, ServerMessage {
 
-	private final Header header;
-
-	private final int size;
-
-	private final List<? extends Token> tokens;
-
-	/**
-	 * Create a new {@link Prelogin} given {@link List} of {@link Token}.
-	 * 
-	 * @param tokens must not be null.
-	 */
-	public Prelogin(List<? extends Token> tokens) {
-
-		Objects.requireNonNull(tokens, "Tokens must not be null");
-
-		this.size = getSize(tokens);
-		this.header = new Header(Type.PRE_LOGIN, Status.of(Status.StatusBit.EOM), this.size, 0, 0, 0);
-		this.tokens = tokens;
-	}
-
-	private Prelogin(Header header, List<Token> tokens) {
-
-		this.header = header;
-		this.tokens = tokens;
-		this.size = getSize(tokens);
-	}
+    private final Header header;
+
+    private final int size;
+
+    private final List<? extends Token> tokens;
+
+    /**
+     * Create a new {@link Prelogin} given {@link List} of {@link Token}.
+     *
+     * @param tokens must not be null.
+     */
+    public Prelogin(List<? extends Token> tokens) {
+
+        Objects.requireNonNull(tokens, "Tokens must not be null");
+
+        this.size = getSize(tokens);
+        this.header = new Header(Type.PRE_LOGIN, Status.of(Status.StatusBit.EOM), this.size, 0, 0, 0);
+        this.tokens = tokens;
+    }
+
+    private Prelogin(Header header, List<Token> tokens) {
+
+        this.header = header;
+        this.tokens = tokens;
+        this.size = getSize(tokens);
+    }
 
-	/**
-	 * Decode the {@link Prelogin} response from a {@link ByteBuf}.
-	 * 
-	 * @param header must not be null.
-	 * @param buffer must not be null.
-	 * @return the decoded {@link Prelogin} response {@link Message}.
-	 */
-	public static Prelogin decode(Header header, ByteBuf buffer) {
+    /**
+     * Decode the {@link Prelogin} response from a {@link ByteBuf}.
+     *
+     * @param header must not be null.
+     * @param buffer must not be null.
+     * @return the decoded {@link Prelogin} response {@link Message}.
+     */
+    public static Prelogin decode(Header header, ByteBuf buffer) {
 
-		Objects.requireNonNull(header, "Header must not be null");
-		Objects.requireNonNull(buffer, "ByteBuf must not be null");
+        Objects.requireNonNull(header, "Header must not be null");
+        Objects.requireNonNull(buffer, "ByteBuf must not be null");
 
-		List<Token> decodedTokens = new ArrayList<>();
-		Prelogin prelogin = new Prelogin(header, decodedTokens);
+        List<Token> decodedTokens = new ArrayList<>();
+        Prelogin prelogin = new Prelogin(header, decodedTokens);
 
-		TokenDecodingState decodingState = TokenDecodingState.create(buffer);
+        TokenDecodingState decodingState = TokenDecodingState.create(buffer);
 
-		while (true) {
+        while (true) {
 
-			if (!decodingState.canDecode()) {
-				break;
-			}
+            if (!decodingState.canDecode()) {
+                break;
+            }
 
-			byte type = Decode.asByte(buffer);
+            byte type = Decode.asByte(buffer);
 
-			if (type == Terminator.TYPE) {
-				decodedTokens.add(Terminator.INSTANCE);
-				break;
-			}
+            if (type == Terminator.TYPE) {
+                decodedTokens.add(Terminator.INSTANCE);
+                break;
+            }
 
-			if (type == Version.TYPE) {
-				decodedTokens.add(Version.decode(decodingState));
-				continue;
-			}
+            if (type == Version.TYPE) {
+                decodedTokens.add(Version.decode(decodingState));
+                continue;
+            }
 
-			if (type == Encryption.TYPE) {
-				decodedTokens.add(Encryption.decode(decodingState));
-				continue;
-			}
+            if (type == Encryption.TYPE) {
+                decodedTokens.add(Encryption.decode(decodingState));
+                continue;
+            }
 
-			if (type == InstanceValidation.TYPE) {
-				decodedTokens.add(InstanceValidation.decode(decodingState));
-				continue;
-			}
+            if (type == InstanceValidation.TYPE) {
+                decodedTokens.add(InstanceValidation.decode(decodingState));
+                continue;
+            }
 
-			decodedTokens.add(UnknownToken.decode(type, decodingState));
-		}
+            decodedTokens.add(UnknownToken.decode(type, decodingState));
+        }
 
-		// ignore remaining bytes of PreLogin response
-		buffer.skipBytes(buffer.readableBytes());
+        // ignore remaining bytes of PreLogin response
+        buffer.skipBytes(buffer.readableBytes());
 
-		return prelogin;
-	}
+        return prelogin;
+    }
 
-	/**
-	 * @return the tokens.
-	 */
-	public List<? extends Token> getTokens() {
-		return this.tokens;
-	}
+    /**
+     * @return the tokens.
+     */
+    public List<? extends Token> getTokens() {
+        return this.tokens;
+    }
 
-	/**
-	 * Resolve a {@link Token} given its {@link Class type}.
-	 * 
-	 * @param tokenType
-	 * @return
-	 */
-	public <T extends Token> Optional<T> getToken(Class<? extends T> tokenType) {
+    /**
+     * Resolve a {@link Token} given its {@link Class type}.
+     *
+     * @param tokenType
+     * @return
+     */
+    public <T extends Token> Optional<T> getToken(Class<? extends T> tokenType) {
 
-		Objects.requireNonNull(tokenType, "Token type must not be null");
+        Objects.requireNonNull(tokenType, "Token type must not be null");
 
-		for (Token token : this.tokens) {
-			if (tokenType.isInstance(token)) {
-				return Optional.of(tokenType.cast(token));
-			}
-		}
-
-		return Optional.empty();
-	}
-
-	/**
-	 * Resolve a {@link Token} given its {@link Class type}.
-	 * 
-	 * @param tokenType
-	 * @return
-	 */
-	public <T extends Token> T getRequiredToken(Class<? extends T> tokenType) {
-
-		Objects.requireNonNull(tokenType, "Token type must not be null");
-
-		return getToken(tokenType).orElseThrow(
-			() -> new IllegalArgumentException(String.format("No token of type [%s] available", tokenType.getName())));
-	}
-
-	private static int getSize(List<? extends Token> tokens) {
-
-		int size = Header.LENGTH;
-
-		for (Token token : tokens) {
-			size += token.getTotalLength();
-		}
+        for (Token token : this.tokens) {
+            if (tokenType.isInstance(token)) {
+                return Optional.of(tokenType.cast(token));
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    /**
+     * Resolve a {@link Token} given its {@link Class type}.
+     *
+     * @param tokenType
+     * @return
+     */
+    public <T extends Token> T getRequiredToken(Class<? extends T> tokenType) {
+
+        Objects.requireNonNull(tokenType, "Token type must not be null");
+
+        return getToken(tokenType).orElseThrow(
+            () -> new IllegalArgumentException(String.format("No token of type [%s] available", tokenType.getName())));
+    }
+
+    private static int getSize(List<? extends Token> tokens) {
+
+        int size = Header.LENGTH;
+
+        for (Token token : tokens) {
+            size += token.getTotalLength();
+        }
+
+        return size;
+    }
+
+    @Override
+    public String getName() {
+        return "PRELOGIN";
+    }
+
+    @Override
+    public Publisher<TdsFragment> encode(ByteBufAllocator allocator) {
+
+        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+
+        return Mono.fromSupplier(() -> {
 
-		return size;
-	}
+            ByteBuf buffer = allocator.buffer(this.size);
 
-	@Override
-	public String getName() {
-		return "PRELOGIN";
-	}
+            encode(buffer);
 
-	@Override
-	public Publisher<TdsFragment> encode(ByteBufAllocator allocator) {
+            return new ContextualTdsFragment(header, buffer);
+        });
+    }
 
-		Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+    /**
+     * Encode the {@link Prelogin} request message.
+     *
+     * @param buffer
+     */
+    void encode(ByteBuf buffer) {
 
-		return Mono.fromSupplier(() -> {
+        int tokenHeaderLength = 0;
 
-			ByteBuf buffer = allocator.buffer(this.size);
+        for (Token token : this.tokens) {
+            tokenHeaderLength += token.getTokenHeaderLength();
+        }
 
-			encode(buffer);
+        int position = tokenHeaderLength;
+        for (Token token : this.tokens) {
 
-			return new ContextualTdsFragment(header, buffer);
-		});
-	}
+            token.encodeToken(buffer, position);
+            position += token.getDataLength();
+        }
 
-	/**
-	 * Encode the {@link Prelogin} request message.
-	 * 
-	 * @param buffer
-	 */
-	void encode(ByteBuf buffer) {
+        for (Token token : this.tokens) {
 
-		int tokenHeaderLength = 0;
+            token.encodeStream(buffer);
+            position += token.getDataLength();
+        }
+    }
 
-		for (Token token : this.tokens) {
-			tokenHeaderLength += token.getTokenHeaderLength();
-		}
+    @Override
+    public String toString() {
+        final StringBuffer sb = new StringBuffer();
+        sb.append(getClass().getSimpleName());
+        sb.append(" [header=").append(this.header);
+        sb.append(", tokens=").append(this.tokens);
+        sb.append(", size=").append(this.size);
+        sb.append(']');
+        return sb.toString();
+    }
 
-		int position = tokenHeaderLength;
-		for (Token token : this.tokens) {
+    /**
+     * @return a new builder for {@link Prelogin}.
+     */
+    public static PreloginBuilder builder() {
+        return new PreloginBuilder();
+    }
 
-			token.encodeToken(buffer, position);
-			position += token.getDataLength();
-		}
+    /**
+     * Builder for {@link Prelogin}.
+     *
+     * @author Mark Paluch
+     */
+    public static class PreloginBuilder {
 
-		for (Token token : this.tokens) {
+        /**
+         * Client application thread id;
+         */
+        private Integer threadId;
 
-			token.encodeStream(buffer);
-			position += token.getDataLength();
-		}
-	}
+        /**
+         * Client application trace id (for debugging purposes).
+         */
+        @Nullable
+        private UUID connectionId;
 
-	@Override
-	public String toString() {
-		final StringBuffer sb = new StringBuffer();
-		sb.append(getClass().getSimpleName());
-		sb.append(" [header=").append(this.header);
-		sb.append(", tokens=").append(this.tokens);
-		sb.append(", size=").append(this.size);
-		sb.append(']');
-		return sb.toString();
-	}
+        /**
+         * Client application activity id (for debugging purposes).
+         */
+        @Nullable
+        private UUID activityId;
 
-	/**
-	 * @return a new builder for {@link Prelogin}.
-	 */
-	public static PreloginBuilder builder() {
-		return new PreloginBuilder();
-	}
+        /**
+         * Client application activity sequence (for debugging purposes).
+         */
+        @Nullable
+        private long activitySequence;
 
-	/**
-	 * Builder for {@link Prelogin}.
-	 * 
-	 * @author Mark Paluch
-	 */
-	public static class PreloginBuilder {
+        private String instanceName = InstanceValidation.MSSQLSERVER_VALUE;
 
-		/**
-		 * Client application thread id;
-		 */
-		private Integer threadId;
+        private PreloginBuilder() {
+        }
 
-		/**
-		 * Client application trace id (for debugging purposes).
-		 */
-		@Nullable private UUID connectionId;
+        public PreloginBuilder withConnectionId(UUID connectionId) {
 
-		/**
-		 * Client application activity id (for debugging purposes).
-		 */
-		@Nullable private UUID activityId;
+            Objects.requireNonNull(connectionId, "ConnectionID must not be null");
+            this.connectionId = connectionId;
 
-		/**
-		 * Client application activity sequence (for debugging purposes).
-		 */
-		@Nullable private long activitySequence;
+            return this;
+        }
 
-		private String instanceName = InstanceValidation.MSSQLSERVER_VALUE;
+        public PreloginBuilder withActivityId(UUID activityId) {
 
-		private PreloginBuilder() {}
+            Objects.requireNonNull(activityId, "Activity ID must not be null");
+            this.activityId = activityId;
 
-		public PreloginBuilder withConnectionId(UUID connectionId) {
+            return this;
+        }
 
-			Objects.requireNonNull(connectionId, "ConnectionID must not be null");
-			this.connectionId = connectionId;
+        public PreloginBuilder withActivitySequence(long activitySequence) {
 
-			return this;
-		}
+            this.activitySequence = activitySequence;
 
-		public PreloginBuilder withActivityId(UUID activityId) {
+            return this;
+        }
 
-			Objects.requireNonNull(activityId, "Activity ID must not be null");
-			this.activityId = activityId;
+        public PreloginBuilder withThreadId(int threadId) {
 
-			return this;
-		}
+            this.threadId = threadId;
 
-		public PreloginBuilder withActivitySequence(long activitySequence) {
+            return this;
+        }
 
-			this.activitySequence = activitySequence;
+        public PreloginBuilder withInstanceName(String instanceName) {
 
-			return this;
-		}
+            Objects.requireNonNull(instanceName, "Instance name must not be null");
+            this.instanceName = instanceName;
 
-		public PreloginBuilder withThreadId(int threadId) {
+            return this;
+        }
 
-			this.threadId = threadId;
+        /**
+         * Build the {@link Prelogin} message.
+         *
+         * @return the {@link Prelogin} message.
+         */
+        public Prelogin build() {
 
-			return this;
-		}
+            List<Token> tokens = new ArrayList<>();
 
-		public PreloginBuilder withInstanceName(String instanceName) {
+            tokens.add(new Version(0, 0));
+            tokens.add(new Encryption(Encryption.ENCRYPT_OFF));
+            tokens.add(new InstanceValidation(this.instanceName));
 
-			Objects.requireNonNull(instanceName, "Instance name must not be null");
-			this.instanceName = instanceName;
+            if (this.threadId != null) {
+                tokens.add(new ThreadId(this.threadId));
+            }
 
-			return this;
-		}
+            if (this.connectionId != null) {
+                tokens.add(new TraceId(this.connectionId, null, 0));
+            }
 
-		/**
-		 * Build the {@link Prelogin} message.
-		 * 
-		 * @return the {@link Prelogin} message.
-		 */
-		public Prelogin build() {
+            tokens.add(Terminator.INSTANCE);
 
-			List<Token> tokens = new ArrayList<>();
+            return new Prelogin(tokens);
+        }
+    }
 
-			tokens.add(new Version(0, 0));
-			tokens.add(new Encryption(Encryption.ENCRYPT_OFF));
-			tokens.add(new InstanceValidation(this.instanceName));
+    /**
+     * Pre-Login Token.
+     */
+    public abstract static class Token {
 
-			if (this.threadId != null) {
-				tokens.add(new ThreadId(this.threadId));
-			}
+        private byte type;
 
-			if (this.connectionId != null) {
-				tokens.add(new TraceId(this.connectionId, null, 0));
-			}
+        private int length;
 
-			tokens.add(Terminator.INSTANCE);
+        Token(int type, int length) {
 
-			return new Prelogin(tokens);
-		}
-	}
+            if (type > Byte.MAX_VALUE) {
+                throw new IllegalArgumentException("Type " + type + " exceeds byte value");
+            }
 
-	/**
-	 * Pre-Login Token.
-	 */
-	public abstract static class Token {
+            this.type = (byte) type;
+            this.length = length;
+        }
 
-		private byte type;
-		private int length;
+        byte getType() {
+            return this.type;
+        }
 
-		Token(int type, int length) {
-
-			if (type > Byte.MAX_VALUE) {
-				throw new IllegalArgumentException("Type " + type + " exceeds byte value");
-			}
-
-			this.type = (byte) type;
-			this.length = length;
-		}
-
-		byte getType() {
-			return this.type;
-		}
-
-		int getLength() {
-			return this.length;
-		}
+        int getLength() {
+            return this.length;
+        }
 
         public void encodeToken(ByteBuf buffer, int position) {
 
             Encode.asByte(buffer, this.type);
             Encode.uShortBE(buffer, position);
             Encode.uShortBE(buffer, this.length);
-		}
+        }
 
         public abstract void encodeStream(ByteBuf buffer);
 
-		/**
-		 * @return total length in bytes (including token header).
-		 */
-		final int getTotalLength() {
-			return getDataLength() + getTokenHeaderLength();
-		}
+        /**
+         * @return total length in bytes (including token header).
+         */
+        final int getTotalLength() {
+            return getDataLength() + getTokenHeaderLength();
+        }
 
-		/**
-		 * @return token header length in bytes.
-		 */
-		int getTokenHeaderLength() {
-			return 5;
-		}
+        /**
+         * @return token header length in bytes.
+         */
+        int getTokenHeaderLength() {
+            return 5;
+        }
 
-		/**
-		 * @return length of data bytes.
-		 */
-		int getDataLength() {
-			return this.length;
-		}
+        /**
+         * @return length of data bytes.
+         */
+        int getDataLength() {
+            return this.length;
+        }
 
-		/**
-		 * Apply functional decoding.
-		 * 
-		 * @param toDecode
-		 * @param validator
-		 * @param decoder
-		 * @param <T>
-		 * @return
-		 */
-		static <T extends Token> T decode(TokenDecodingState toDecode, LengthValidator validator,
-				DecodeFunction<T> decoder) {
+        /**
+         * Apply functional decoding.
+         *
+         * @param toDecode
+         * @param validator
+         * @param decoder
+         * @param <T>
+         * @return
+         */
+        static <T extends Token> T decode(TokenDecodingState toDecode, LengthValidator validator,
+                                          DecodeFunction<T> decoder) {
 
-			Objects.requireNonNull(toDecode, "TokenDecodingState must not be null");
-			Objects.requireNonNull(validator, "LengthValidator must not be null");
-			Objects.requireNonNull(decoder, "DecodeFunction must not be null");
+            Objects.requireNonNull(toDecode, "TokenDecodingState must not be null");
+            Objects.requireNonNull(validator, "LengthValidator must not be null");
+            Objects.requireNonNull(decoder, "DecodeFunction must not be null");
 
-			ByteBuf buffer = toDecode.buffer;
-			short position = buffer.readShort();
-			short length = buffer.readShort();
+            ByteBuf buffer = toDecode.buffer;
+            short position = buffer.readShort();
+            short length = buffer.readShort();
 
-			validator.validate(length);
+            validator.validate(length);
 
-			buffer.markReaderIndex();
+            buffer.markReaderIndex();
 
-			ByteBuf data = toDecode.readBody(position, length);
+            ByteBuf data = toDecode.readBody(position, length);
 
-			T result = decoder.decode(length, data);
+            T result = decoder.decode(length, data);
 
-			data.release();
+            data.release();
 
-			buffer.resetReaderIndex();
+            buffer.resetReaderIndex();
 
-			toDecode.afterTokenDecoded();
-			return result;
-		}
-	}
+            toDecode.afterTokenDecoded();
+            return result;
+        }
+    }
 
-	public static class Terminator extends Token {
+    public static class Terminator extends Token {
 
-		public static final Terminator INSTANCE = new Terminator();
+        public static final Terminator INSTANCE = new Terminator();
 
-		public static final byte TYPE = (byte) 0xFF;
+        public static final byte TYPE = (byte) 0xFF;
 
-		public Terminator() {
-			super(TYPE, 0);
-		}
+        public Terminator() {
+            super(TYPE, 0);
+        }
 
-		@Override
+        @Override
         public void encodeToken(ByteBuf buffer, int position) {
             buffer.writeByte(getType());
-		}
+        }
 
-		@Override
-		public int getTokenHeaderLength() {
-			return 1;
-		}
+        @Override
+        public int getTokenHeaderLength() {
+            return 1;
+        }
 
-		@Override
+        @Override
         public void encodeStream(ByteBuf buffer) {
         }
 
-		@Override
-		public String toString() {
-			final StringBuffer sb = new StringBuffer();
-			sb.append(getClass().getSimpleName());
-			sb.append(" []");
-			return sb.toString();
-		}
-	}
+        @Override
+        public String toString() {
+            final StringBuffer sb = new StringBuffer();
+            sb.append(getClass().getSimpleName());
+            sb.append(" []");
+            return sb.toString();
+        }
+    }
 
-	public static class Version extends Token {
+    public static class Version extends Token {
 
-		public static final byte TYPE = 0x00;
+        public static final byte TYPE = 0x00;
 
-		/**
-		 * version of the sender.
-		 */
-		private final int version;
+        /**
+         * version of the sender.
+         */
+        private final int version;
 
-		/**
-		 * sub-build number of the sender
-		 */
-		private final short subbuild;
+        /**
+         * sub-build number of the sender
+         */
+        private final short subbuild;
 
-		public Version(int version, int subbuild) {
-			this(version, (byte) subbuild);
-		}
+        public Version(int version, int subbuild) {
+            this(version, (byte) subbuild);
+        }
 
-		public Version(int version, short subbuild) {
+        public Version(int version, short subbuild) {
 
-			super(TYPE, 6);
+            super(TYPE, 6);
 
-			this.version = version;
-			this.subbuild = subbuild;
-		}
+            this.version = version;
+            this.subbuild = subbuild;
+        }
 
-		/**
-		 * Decode the {@link Version} token.
-		 * 
-		 * @param byteBuf
-		 * @return
-		 */
-		public static Version decode(TokenDecodingState toDecode) {
+        /**
+         * Decode the {@link Version} token.
+         *
+         * @param byteBuf
+         * @return
+         */
+        public static Version decode(TokenDecodingState toDecode) {
 
-			return decode(toDecode,
-					length -> Assert.isTrue(length == 6, () -> String.format("Invalid version length: %s", length)),
-					(length, body) -> {
+            return decode(toDecode,
+                length -> Assert.isTrue(length == 6, () -> String.format("Invalid version length: %s", length)),
+                (length, body) -> {
 
-						int major = Decode.asByte(body);
-						int minor = Decode.asByte(body);
-						short build = body.readShort();
+                    int major = Decode.asByte(body);
+                    int minor = Decode.asByte(body);
+                    short build = body.readShort();
 
-						return new Version(major, build);
-					});
-		}
+                    return new Version(major, build);
+                });
+        }
 
-		public int getVersion() {
-			return this.version;
-		}
+        public int getVersion() {
+            return this.version;
+        }
 
-		public short getSubbuild() {
-			return this.subbuild;
-		}
+        public short getSubbuild() {
+            return this.subbuild;
+        }
 
-		@Override
+        @Override
         public void encodeStream(ByteBuf buffer) {
 
             Encode.dword(buffer, this.version);
             Encode.shortBE(buffer, this.subbuild);
-		}
+        }
 
-		@Override
-		public String toString() {
-			final StringBuffer sb = new StringBuffer();
-			sb.append(getClass().getSimpleName());
-			sb.append(" [version=").append(this.version);
-			sb.append(", subbuild=").append(this.subbuild);
-			sb.append(']');
-			return sb.toString();
-		}
-	}
+        @Override
+        public String toString() {
+            final StringBuffer sb = new StringBuffer();
+            sb.append(getClass().getSimpleName());
+            sb.append(" [version=").append(this.version);
+            sb.append(", subbuild=").append(this.subbuild);
+            sb.append(']');
+            return sb.toString();
+        }
+    }
 
-	public static class InstanceValidation extends Token {
+    public static class InstanceValidation extends Token {
 
-		static final String MSSQLSERVER_VALUE = "MSSQLServer";
+        static final String MSSQLSERVER_VALUE = "MSSQLServer";
 
-		public static final byte TYPE = 0x02;
+        public static final byte TYPE = 0x02;
 
-		/**
-		 * Instance name for validation
-		 */
-		private final byte[] instanceName;
+        /**
+         * Instance name for validation
+         */
+        private final byte[] instanceName;
 
-		public InstanceValidation(String instanceName) {
-			this(toBytes(instanceName));
-		}
+        public InstanceValidation(String instanceName) {
+            this(toBytes(instanceName));
+        }
 
-		private InstanceValidation(byte[] instanceName) {
+        private InstanceValidation(byte[] instanceName) {
 
-			super(TYPE, instanceName.length);
-			this.instanceName = instanceName;
-		}
+            super(TYPE, instanceName.length);
+            this.instanceName = instanceName;
+        }
 
-		/**
-		 * Decode the {@link InstanceValidation} token.
-		 * 
-		 * @param toDecode
-		 * @return
-		 */
-		public static InstanceValidation decode(TokenDecodingState toDecode) {
+        /**
+         * Decode the {@link InstanceValidation} token.
+         *
+         * @param toDecode
+         * @return
+         */
+        public static InstanceValidation decode(TokenDecodingState toDecode) {
 
-			return decode(toDecode, length -> {}, (length, body) -> {
+            return decode(toDecode, length -> {
+            }, (length, body) -> {
 
-				byte[] validation = new byte[length];
-				body.readBytes(validation, 0, length);
+                byte[] validation = new byte[length];
+                body.readBytes(validation, 0, length);
 
-				return new InstanceValidation(validation);
-			});
-		}
+                return new InstanceValidation(validation);
+            });
+        }
 
-		@Override
+        @Override
         public void encodeStream(ByteBuf buffer) {
             buffer.writeBytes(this.instanceName);
-		}
+        }
 
-		@Override
-		public String toString() {
-			final StringBuffer sb = new StringBuffer();
-			sb.append(getClass().getSimpleName());
-			sb.append(" [instanceName=").append(this.instanceName == null ? "null" : new String(this.instanceName));
-			sb.append(']');
-			return sb.toString();
-		}
+        @Override
+        public String toString() {
+            final StringBuffer sb = new StringBuffer();
+            sb.append(getClass().getSimpleName());
+            sb.append(" [instanceName=").append(this.instanceName == null ? "null" : new String(this.instanceName));
+            sb.append(']');
+            return sb.toString();
+        }
 
-		private static byte[] toBytes(String instanceName) {
+        private static byte[] toBytes(String instanceName) {
 
-			Objects.requireNonNull(instanceName, "Instance name must not be null");
-			byte[] name = instanceName.getBytes(StandardCharsets.UTF_8);
-			byte[] result = new byte[name.length + 1];
-			System.arraycopy(name, 0, result, 0, name.length);
+            Objects.requireNonNull(instanceName, "Instance name must not be null");
+            byte[] name = instanceName.getBytes(StandardCharsets.UTF_8);
+            byte[] result = new byte[name.length + 1];
+            System.arraycopy(name, 0, result, 0, name.length);
 
-			return result;
-		}
-	}
+            return result;
+        }
+    }
 
-	public static class Encryption extends Token {
+    public static class Encryption extends Token {
 
-		public static final byte TYPE = 0x01;
+        public static final byte TYPE = 0x01;
 
-		public static byte ENCRYPT_OFF = 0x00;
-		public static byte ENCRYPT_ON = 0x01;
-		public static byte ENCRYPT_NOT_SUP = 0x02;
-		public static byte ENCRYPT_REQ = 0x03;
+        public static byte ENCRYPT_OFF = 0x00;
 
-		private final byte encryption;
+        public static byte ENCRYPT_ON = 0x01;
 
-		public Encryption(byte encryption) {
+        public static byte ENCRYPT_NOT_SUP = 0x02;
 
-			super(TYPE, 1);
+        public static byte ENCRYPT_REQ = 0x03;
 
-			this.encryption = encryption;
-		}
+        private final byte encryption;
 
-		/**
-		 * Decode the {@link Encryption} token.
-		 * 
-		 * @param byteBuf
-		 * @return
-		 */
-		public static Encryption decode(TokenDecodingState toDecode) {
+        public Encryption(byte encryption) {
 
-			return decode(toDecode,
-					length -> Assert.isTrue(length == 1, () -> String.format("Invalid encryption length: %s", length)),
-					(length, body) -> {
+            super(TYPE, 1);
 
-                        byte encryption = Decode.asByte(body);
+            this.encryption = encryption;
+        }
 
-						return new Encryption(encryption);
-					});
-		}
+        /**
+         * Decode the {@link Encryption} token.
+         *
+         * @param byteBuf
+         * @return
+         */
+        public static Encryption decode(TokenDecodingState toDecode) {
 
-		public byte getEncryption() {
-			return this.encryption;
-		}
+            return decode(toDecode,
+                length -> Assert.isTrue(length == 1, () -> String.format("Invalid encryption length: %s", length)),
+                (length, body) -> {
 
-		@Override
+                    byte encryption = Decode.asByte(body);
+
+                    return new Encryption(encryption);
+                });
+        }
+
+        public byte getEncryption() {
+            return this.encryption;
+        }
+
+        @Override
         public void encodeStream(ByteBuf buffer) {
             Encode.asByte(buffer, this.encryption);
-		}
+        }
 
-		public boolean requiresSslHanshake() {
-			return getEncryption() == Prelogin.Encryption.ENCRYPT_REQ || getEncryption() == Prelogin.Encryption.ENCRYPT_OFF
-					|| getEncryption() == Prelogin.Encryption.ENCRYPT_ON;
-		}
+        public boolean requiresSslHanshake() {
+            return getEncryption() == Prelogin.Encryption.ENCRYPT_REQ || getEncryption() == Prelogin.Encryption.ENCRYPT_OFF
+                || getEncryption() == Prelogin.Encryption.ENCRYPT_ON;
+        }
 
-		public boolean requiresLoginSslHanshake() {
-			return getEncryption() == Prelogin.Encryption.ENCRYPT_OFF;
-		}
+        public boolean requiresLoginSslHanshake() {
+            return getEncryption() == Prelogin.Encryption.ENCRYPT_OFF;
+        }
 
-		@Override
-		public String toString() {
-			final StringBuffer sb = new StringBuffer();
-			sb.append(getClass().getSimpleName());
-			sb.append(" [encryption=").append(this.encryption);
-			sb.append(']');
-			return sb.toString();
-		}
-	}
+        @Override
+        public String toString() {
+            final StringBuffer sb = new StringBuffer();
+            sb.append(getClass().getSimpleName());
+            sb.append(" [encryption=").append(this.encryption);
+            sb.append(']');
+            return sb.toString();
+        }
+    }
 
-	public static class ThreadId extends Token {
+    public static class ThreadId extends Token {
 
-		public static final byte TYPE = 0x03;
+        public static final byte TYPE = 0x03;
 
-		/**
-		 * Client application thread id;
-		 */
-		private final int threadId;
+        /**
+         * Client application thread id;
+         */
+        private final int threadId;
 
-		public ThreadId(int threadId) {
+        public ThreadId(int threadId) {
 
-			super(TYPE, 4);
+            super(TYPE, 4);
 
-			this.threadId = threadId;
-		}
+            this.threadId = threadId;
+        }
 
-		@Override
+        @Override
         public void encodeStream(ByteBuf buffer) {
             buffer.writeInt(this.threadId);
-		}
+        }
 
-		@Override
-		public String toString() {
-			final StringBuffer sb = new StringBuffer();
-			sb.append(getClass().getSimpleName());
-			sb.append(" [threadId=").append(this.threadId);
-			sb.append(']');
-			return sb.toString();
-		}
-	}
+        @Override
+        public String toString() {
+            final StringBuffer sb = new StringBuffer();
+            sb.append(getClass().getSimpleName());
+            sb.append(" [threadId=").append(this.threadId);
+            sb.append(']');
+            return sb.toString();
+        }
+    }
 
-	public static class TraceId extends Token {
+    public static class TraceId extends Token {
 
-		/**
-		 * Client application trace id (for debugging purposes).
-		 */
-		@Nullable private final UUID connectionId;
+        /**
+         * Client application trace id (for debugging purposes).
+         */
+        @Nullable
+        private final UUID connectionId;
 
-		/**
-		 * Client application activity id (for debugging purposes).
-		 */
-		@Nullable private final UUID activityId;
+        /**
+         * Client application activity id (for debugging purposes).
+         */
+        @Nullable
+        private final UUID activityId;
 
-		/**
-		 * Client application activity sequence (for debugging purposes).
-		 */
-		@Nullable private final int activitySequence;
+        /**
+         * Client application activity sequence (for debugging purposes).
+         */
+        @Nullable
+        private final int activitySequence;
 
-		public TraceId(@Nullable UUID connectionId, @Nullable UUID activityId, int activitySequence) {
+        public TraceId(@Nullable UUID connectionId, @Nullable UUID activityId, int activitySequence) {
 
-			super(0x05, 36);
+            super(0x05, 36);
 
-			this.connectionId = connectionId;
-			this.activityId = activityId;
-			this.activitySequence = activitySequence;
-		}
+            this.connectionId = connectionId;
+            this.activityId = activityId;
+            this.activitySequence = activitySequence;
+        }
 
-		@Override
+        @Override
         public void encodeStream(ByteBuf buffer) {
 
-			if (this.connectionId != null) {
+            if (this.connectionId != null) {
                 buffer.writeLong(this.connectionId.getMostSignificantBits());
                 buffer.writeLong(this.connectionId.getLeastSignificantBits());
-			} else {
+            } else {
                 buffer.writeLong(0);
                 buffer.writeLong(0);
-			}
+            }
 
-			if (this.activityId != null) {
+            if (this.activityId != null) {
                 buffer.writeLong(this.activityId.getMostSignificantBits());
                 buffer.writeLong(this.activityId.getLeastSignificantBits());
-			} else {
+            } else {
                 buffer.writeLong(0);
                 buffer.writeLong(0);
-			}
+            }
 
             buffer.writeInt(this.activitySequence);
-		}
+        }
 
-		@Override
-		public String toString() {
-			final StringBuffer sb = new StringBuffer();
-			sb.append(getClass().getSimpleName());
-			sb.append(" [connectionId=").append(this.connectionId);
-			sb.append(", activityId=").append(this.activityId);
-			sb.append(", activitySequence=").append(this.activitySequence);
-			sb.append(']');
-			return sb.toString();
-		}
-	}
+        @Override
+        public String toString() {
+            final StringBuffer sb = new StringBuffer();
+            sb.append(getClass().getSimpleName());
+            sb.append(" [connectionId=").append(this.connectionId);
+            sb.append(", activityId=").append(this.activityId);
+            sb.append(", activitySequence=").append(this.activitySequence);
+            sb.append(']');
+            return sb.toString();
+        }
+    }
 
-	public static class UnknownToken extends Token {
+    public static class UnknownToken extends Token {
 
-		public UnknownToken(int type, int length) {
+        public UnknownToken(int type, int length) {
 
-			super(type, length);
-		}
+            super(type, length);
+        }
 
-		/**
-		 * Decode the unknown token.
-		 * 
-		 * @return
-		 */
-		public static UnknownToken decode(byte type, TokenDecodingState toDecode) {
+        /**
+         * Decode the unknown token.
+         *
+         * @return
+         */
+        public static UnknownToken decode(byte type, TokenDecodingState toDecode) {
 
-			return decode(toDecode, length -> {}, (length, body) -> {
-				return new UnknownToken(type, length);
-			});
-		}
+            return decode(toDecode, length -> {
+            }, (length, body) -> {
+                return new UnknownToken(type, length);
+            });
+        }
 
-		@Override
+        @Override
         public void encodeStream(ByteBuf buffer) {
         }
 
-		@Override
-		public String toString() {
-			return getClass().getSimpleName();
-		}
-	}
+        @Override
+        public String toString() {
+            return getClass().getSimpleName();
+        }
+    }
 
-	/**
-	 * Function to apply decoding.
-	 * 
-	 * @param <T>
-	 */
-	@FunctionalInterface
-	interface DecodeFunction<T> {
+    /**
+     * Function to apply decoding.
+     *
+     * @param <T>
+     */
+    @FunctionalInterface
+    interface DecodeFunction<T> {
 
-		T decode(short length, ByteBuf buffer);
-	}
+        T decode(short length, ByteBuf buffer);
+    }
 
-	/**
-	 * Length validator.
-	 * 
-	 * @param <T>
-	 */
-	@FunctionalInterface
-	interface LengthValidator {
+    /**
+     * Length validator.
+     *
+     * @param <T>
+     */
+    @FunctionalInterface
+    interface LengthValidator {
 
-		/**
-		 * Validate the token data {@code lenght}.
-		 * 
-		 * @param length
-		 */
-		void validate(short length);
-	}
+        /**
+         * Validate the token data {@code lenght}.
+         *
+         * @param length
+         */
+        void validate(short length);
+    }
 
-	/**
+    /**
      * Decoding state for Token Stream decoding using positional data length and positional index data reading.
-	 */
-	static class TokenDecodingState {
+     */
+    static class TokenDecodingState {
 
-		ByteBuf buffer;
-		int initialReaderIndex;
-		int readPositionOffset;
+        ByteBuf buffer;
 
-		public TokenDecodingState(ByteBuf buffer) {
-			this.initialReaderIndex = buffer.readerIndex();
-			this.buffer = buffer;
-		}
+        int initialReaderIndex;
 
-		public static TokenDecodingState create(ByteBuf byteBuf) {
-			return new TokenDecodingState(byteBuf);
-		}
+        int readPositionOffset;
 
-		public boolean canDecode() {
-			return this.buffer.readableBytes() > 0;
-		}
+        public TokenDecodingState(ByteBuf buffer) {
+            this.initialReaderIndex = buffer.readerIndex();
+            this.buffer = buffer;
+        }
 
-		/**
-		 * Callback to update the state after reading.
-		 */
-		public void afterTokenDecoded() {
+        public static TokenDecodingState create(ByteBuf byteBuf) {
+            return new TokenDecodingState(byteBuf);
+        }
+
+        public boolean canDecode() {
+            return this.buffer.readableBytes() > 0;
+        }
+
+        /**
+         * Callback to update the state after reading.
+         */
+        public void afterTokenDecoded() {
             this.readPositionOffset = this.buffer.readerIndex() - this.initialReaderIndex;
-		}
+        }
 
-		/**
-		 * Read data at {@code position} of {@code length}.
-		 * 
-		 * @param position position index within the entire buffer.
-		 * @param length bytes to read.
-		 * @return the data bytes.
-		 */
-		public ByteBuf readBody(int position, short length) {
+        /**
+         * Read data at {@code position} of {@code length}.
+         *
+         * @param position position index within the entire buffer.
+         * @param length   bytes to read.
+         * @return the data bytes.
+         */
+        public ByteBuf readBody(int position, short length) {
 
             this.buffer.skipBytes(position - 5 /* type 1 byte, position 2 byte, length 2 byte */ - this.readPositionOffset);
 
-			ByteBuf data = this.buffer.alloc().buffer(length);
+            ByteBuf data = this.buffer.alloc().buffer(length);
             this.buffer.readBytes(data, length);
 
-			return data;
-		}
-	}
+            return data;
+        }
+    }
 
 }

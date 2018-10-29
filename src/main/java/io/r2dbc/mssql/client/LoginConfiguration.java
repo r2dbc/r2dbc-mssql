@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.client;
 
 import io.r2dbc.mssql.message.token.Login7;
@@ -23,43 +24,51 @@ import java.util.UUID;
 
 /**
  * Login configuration properties.
- * 
+ *
  * @author Mark Paluch
  */
 public final class LoginConfiguration {
 
-	private final String username;
-	private final String password;
-	private final String database;
-	private final String hostname;
-	@Nullable private final String appName;
-	private final String serverName;
-	@Nullable private final UUID connectionId;
+    private final String username;
 
-	public LoginConfiguration(String username, String password, String database, String hostname, String appName,
-			String serverName, @Nullable UUID connectionId) {
-		this.username = Objects.requireNonNull(username, "Username must not be null");
-		this.password = Objects.requireNonNull(password, "Password must not be null");
-		this.database = Objects.requireNonNull(database, "Database must not be null");
-		this.hostname = Objects.requireNonNull(hostname, "Hostname must not be null");
-		this.appName = appName;
-		this.serverName = Objects.requireNonNull(serverName, "Server name must not be null");
-		this.connectionId = connectionId;
-	}
+    private final String password;
 
-	@Nullable
-	UUID getConnectionId() {
-		return this.connectionId;
-	}
+    private final String database;
 
-	Login7.Builder asBuilder() {
+    private final String hostname;
 
-		Login7.Builder builder = Login7.builder().username(this.username).password(this.password).database(this.database)
-				.hostName(this.hostname).serverName(this.serverName);
+    @Nullable
+    private final String appName;
 
-		if (this.appName != null) {
-			builder.appName(this.appName);
-		}
-		return builder;
-	}
+    private final String serverName;
+
+    @Nullable
+    private final UUID connectionId;
+
+    public LoginConfiguration(String username, String password, String database, String hostname, String appName,
+                              String serverName, @Nullable UUID connectionId) {
+        this.username = Objects.requireNonNull(username, "Username must not be null");
+        this.password = Objects.requireNonNull(password, "Password must not be null");
+        this.database = Objects.requireNonNull(database, "Database must not be null");
+        this.hostname = Objects.requireNonNull(hostname, "Hostname must not be null");
+        this.appName = appName;
+        this.serverName = Objects.requireNonNull(serverName, "Server name must not be null");
+        this.connectionId = connectionId;
+    }
+
+    @Nullable
+    UUID getConnectionId() {
+        return this.connectionId;
+    }
+
+    Login7.Builder asBuilder() {
+
+        Login7.Builder builder = Login7.builder().username(this.username).password(this.password).database(this.database)
+            .hostName(this.hostname).serverName(this.serverName);
+
+        if (this.appName != null) {
+            builder.appName(this.appName);
+        }
+        return builder;
+    }
 }

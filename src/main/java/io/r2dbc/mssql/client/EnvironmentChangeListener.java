@@ -13,21 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.client;
 
 /**
  * Listener interface for {@link EnvironmentChangeEvent}s. This interface is intended for objects that want to be
  * notified about environment changes such as a changed database or packet size.
- * 
+ *
  * @author Mark Paluch
  */
 @FunctionalInterface
 public interface EnvironmentChangeListener {
 
-	/**
-	 * Event listener callback for environment change events.
-	 * 
-	 * @param event environment change event
-	 */
-	void onEnvironmentChange(EnvironmentChangeEvent event);
+    /**
+     * Event listener callback for environment change events.
+     *
+     * @param event environment change event
+     */
+    void onEnvironmentChange(EnvironmentChangeEvent event);
 }

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.message.header;
 
 import java.util.Collection;
@@ -25,98 +26,99 @@ import java.util.Set;
  * <p/>
  * Status is a bit field used to indicate the message state. Status is a 1-byte unsigned char. The following Status bit
  * flags are defined.
- * 
+ *
  * @author Mark Paluch
  * @see StatusBit
  */
 public class Status {
 
-	private static final Status EMPTY = new Status(EnumSet.noneOf(StatusBit.class));
+    private static final Status EMPTY = new Status(EnumSet.noneOf(StatusBit.class));
 
-	private final Set<StatusBit> statusBits;
-	private final byte value;
+    private final Set<StatusBit> statusBits;
 
-	private Status(Set<StatusBit> statusBits) {
-		this.statusBits = statusBits;
-		this.value = getStatusValue(statusBits);
-	}
+    private final byte value;
 
-	/**
-	 * Return an empty {@link Status}.
-	 * 
-	 * @return the empty {@link Status}.
-	 */
-	public static Status empty() {
-		return EMPTY;
-	}
+    private Status(Set<StatusBit> statusBits) {
+        this.statusBits = statusBits;
+        this.value = getStatusValue(statusBits);
+    }
 
-	/**
-	 * Create {@link StatusBit} {@link Set} from the given {@code bitmask}.
-	 * 
-	 * @param bitmask
-	 * @return
-	 */
-	public static Status fromBitmask(byte bitmask) {
+    /**
+     * Return an empty {@link Status}.
+     *
+     * @return the empty {@link Status}.
+     */
+    public static Status empty() {
+        return EMPTY;
+    }
 
-		EnumSet<StatusBit> result = EnumSet.noneOf(StatusBit.class);
+    /**
+     * Create {@link StatusBit} {@link Set} from the given {@code bitmask}.
+     *
+     * @param bitmask
+     * @return
+     */
+    public static Status fromBitmask(byte bitmask) {
 
-		for (StatusBit status : StatusBit.values()) {
-			if ((bitmask & status.getBits()) != 0) {
-				result.add(status);
-			}
-		}
+        EnumSet<StatusBit> result = EnumSet.noneOf(StatusBit.class);
 
-		return new Status(result);
-	}
+        for (StatusBit status : StatusBit.values()) {
+            if ((bitmask & status.getBits()) != 0) {
+                result.add(status);
+            }
+        }
 
-	/**
-	 * Create a {@link Status} from the given {@link StatusBit}.
-	 * 
-	 * @param bit the status bit.
-	 * @return the {@link Status} from the given {@link StatusBit}.
-	 */
-	public static Status of(StatusBit bit) {
+        return new Status(result);
+    }
 
-		Objects.requireNonNull(bit, "StatusBit must not be null");
+    /**
+     * Create a {@link Status} from the given {@link StatusBit}.
+     *
+     * @param bit the status bit.
+     * @return the {@link Status} from the given {@link StatusBit}.
+     */
+    public static Status of(StatusBit bit) {
 
-		return new Status(EnumSet.of(bit));
-	}
+        Objects.requireNonNull(bit, "StatusBit must not be null");
 
-	/**
-	 * Create a {@link Status} from the given {@link StatusBit}s.
-	 * 
-	 * @param bit the status bit.
-	 * @param other the status bits.
-	 * @return the {@link Status} from the given {@link StatusBit}.
-	 */
-	public static Status of(StatusBit bit, StatusBit... other) {
+        return new Status(EnumSet.of(bit));
+    }
 
-		Objects.requireNonNull(bit, "StatusBit must not be null");
-		Objects.requireNonNull(other, "StatusBits must not be null");
+    /**
+     * Create a {@link Status} from the given {@link StatusBit}s.
+     *
+     * @param bit   the status bit.
+     * @param other the status bits.
+     * @return the {@link Status} from the given {@link StatusBit}.
+     */
+    public static Status of(StatusBit bit, StatusBit... other) {
 
-		return new Status(EnumSet.of(bit, other));
-	}
+        Objects.requireNonNull(bit, "StatusBit must not be null");
+        Objects.requireNonNull(other, "StatusBits must not be null");
 
-	/**
+        return new Status(EnumSet.of(bit, other));
+    }
+
+    /**
      * Create a {@link Status} from the current state and add the {@link StatusBit}.
-	 * 
-	 * @param bit the status bit.
-	 * @return the {@link Status} from the given {@link StatusBit}.
-	 */
-	public Status and(StatusBit bit) {
+     *
+     * @param bit the status bit.
+     * @return the {@link Status} from the given {@link StatusBit}.
+     */
+    public Status and(StatusBit bit) {
 
-		Objects.requireNonNull(bit, "StatusBit must not be null");
+        Objects.requireNonNull(bit, "StatusBit must not be null");
 
         // If bit set, then we can optimize.
         if (this.statusBits.contains(bit)) {
             return this;
         }
-		
-		EnumSet<StatusBit> statusBits = EnumSet.copyOf(this.statusBits);
-		statusBits.add(bit);
 
-		return new Status(statusBits);
-	}
+        EnumSet<StatusBit> statusBits = EnumSet.copyOf(this.statusBits);
+        statusBits.add(bit);
+
+        return new Status(statusBits);
+    }
 
     /**
      * Create a {@link Status} from the current state and remove the {@link StatusBit}.
@@ -139,24 +141,24 @@ public class Status {
         return new Status(statusBits);
     }
 
-	/**
-	 * Check if the header status has set the {@link Status.StatusBit}.
-	 * 
-	 * @param bit the status bit.
-	 * @return {@literal true} of the bit is set; {@literal false} otherwise.
-	 */
-	public boolean is(Status.StatusBit bit) {
+    /**
+     * Check if the header status has set the {@link Status.StatusBit}.
+     *
+     * @param bit the status bit.
+     * @return {@literal true} of the bit is set; {@literal false} otherwise.
+     */
+    public boolean is(Status.StatusBit bit) {
 
-		Objects.requireNonNull(bit, "StatusBit must not be null");
+        Objects.requireNonNull(bit, "StatusBit must not be null");
 
-		return this.statusBits.contains(bit);
-	}
+        return this.statusBits.contains(bit);
+    }
 
-	/**
-	 * @return the status byte.
-	 */
-	public byte getValue() {
-		return value;
+    /**
+     * @return the status byte.
+     */
+    public byte getValue() {
+        return value;
     }
 
     @Override
@@ -177,54 +179,54 @@ public class Status {
         return Objects.hash(statusBits, value);
     }
 
-	private static byte getStatusValue(Collection<StatusBit> statusBits) {
+    private static byte getStatusValue(Collection<StatusBit> statusBits) {
 
-		byte result = 0;
+        byte result = 0;
 
-		for (Status.StatusBit s : statusBits) {
-			result |= s.getBits();
-		}
+        for (Status.StatusBit s : statusBits) {
+            result |= s.getBits();
+        }
 
-		return result;
-	}
+        return result;
+    }
 
-	@Override
-	public String toString() {
-		return Integer.toHexString(value);
-	}
+    @Override
+    public String toString() {
+        return Integer.toHexString(value);
+    }
 
-	/**
-	 * Packet header status bits as defined in ch {@literal 2.2.3.1.2 Status} of the TDS v20180912 spec.
-	 * <p/>
-	 * Status is a bit field used to indicate the message state. Status is a 1-byte unsigned char. The following Status
-	 * bit flags are defined.
-	 */
-	public enum StatusBit {
+    /**
+     * Packet header status bits as defined in ch {@literal 2.2.3.1.2 Status} of the TDS v20180912 spec.
+     * <p/>
+     * Status is a bit field used to indicate the message state. Status is a 1-byte unsigned char. The following Status
+     * bit flags are defined.
+     */
+    public enum StatusBit {
 
-		NORMAL(0x00), EOM(0x01), IGNORE(0x02),
+        NORMAL(0x00), EOM(0x01), IGNORE(0x02),
 
-		/**
-		 * RESETCONNECTION
-		 * 
-		 * @since TDS 7.1
-		 */
-		RESET_CONNECTION(0x08),
+        /**
+         * RESETCONNECTION
+         *
+         * @since TDS 7.1
+         */
+        RESET_CONNECTION(0x08),
 
-		/**
-		 * RESETCONNECTIONSKIPTRAN
-		 * 
-		 * @since TDS 7.3
-		 */
-		RESET_CONNECTION_SKIP_TRAN(0x10);
+        /**
+         * RESETCONNECTIONSKIPTRAN
+         *
+         * @since TDS 7.3
+         */
+        RESET_CONNECTION_SKIP_TRAN(0x10);
 
-		StatusBit(int bits) {
-			this.bits = Integer.valueOf(bits).byteValue();
-		}
+        StatusBit(int bits) {
+            this.bits = Integer.valueOf(bits).byteValue();
+        }
 
-		private final byte bits;
+        private final byte bits;
 
-		public int getBits() {
-			return this.bits;
-		}
-	}
+        public int getBits() {
+            return this.bits;
+        }
+    }
 }

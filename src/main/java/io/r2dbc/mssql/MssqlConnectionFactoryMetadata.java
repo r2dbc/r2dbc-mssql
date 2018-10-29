@@ -23,17 +23,18 @@ import io.r2dbc.spi.ConnectionFactoryMetadata;
  */
 enum MssqlConnectionFactoryMetadata implements ConnectionFactoryMetadata {
 
-	INSTANCE;
+    INSTANCE;
 
-	/**
-	 * The name of the Microsoft SQL Server database product.
-	 */
-	public static final String NAME = "Microsoft SQL Server";
+    /**
+     * The name of the Microsoft SQL Server database product.
+     */
+    public static final String NAME = "Microsoft SQL Server";
 
-	MssqlConnectionFactoryMetadata() {}
+    MssqlConnectionFactoryMetadata() {
+    }
 
-	@Override
-	public String getName() {
-		return NAME;
-	}
+    @Override
+    public String getName() {
+        return NAME;
+    }
 }

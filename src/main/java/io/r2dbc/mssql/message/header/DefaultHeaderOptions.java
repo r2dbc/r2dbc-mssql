@@ -13,46 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.message.header;
 
 /**
  * Default implementation of {@link HeaderOptions}.
- * 
+ *
  * @author Mark Paluch
  */
 class DefaultHeaderOptions implements HeaderOptions {
 
-	private final Type type;
+    private final Type type;
 
-	private final Status status;
+    private final Status status;
 
-	DefaultHeaderOptions(Type type, Status status) {
-		this.type = type;
-		this.status = status;
-	}
+    DefaultHeaderOptions(Type type, Status status) {
+        this.type = type;
+        this.status = status;
+    }
 
-	@Override
-	public Type getType() {
-		return type;
-	}
+    @Override
+    public Type getType() {
+        return type;
+    }
 
-	@Override
-	public Status getStatus() {
-		return status;
-	}
+    @Override
+    public Status getStatus() {
+        return status;
+    }
 
-	@Override
-	public boolean is(Status.StatusBit bit) {
-		return this.status.is(bit);
-	}
+    @Override
+    public boolean is(Status.StatusBit bit) {
+        return this.status.is(bit);
+    }
 
-	@Override
-	public String toString() {
-		final StringBuffer sb = new StringBuffer();
-		sb.append(getClass().getSimpleName());
-		sb.append(" [type=").append(type);
-		sb.append(", status=").append(status);
-		sb.append(']');
-		return sb.toString();
-	}
+    @Override
+    public String toString() {
+        final StringBuffer sb = new StringBuffer();
+        sb.append(getClass().getSimpleName());
+        sb.append(" [type=").append(type);
+        sb.append(", status=").append(status);
+        sb.append(']');
+        return sb.toString();
+    }
 }

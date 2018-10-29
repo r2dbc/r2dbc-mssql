@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.util;
 
 import reactor.util.annotation.Nullable;
@@ -48,160 +49,160 @@ import java.util.function.Supplier;
  */
 public final class Assert {
 
-	/**
-	 * Assert a boolean expression, throwing an {@code IllegalStateException} if the expression evaluates to
-	 * {@code false}.
-	 * <p>
-	 * Call {@link #isTrue} if you wish to throw an {@code IllegalArgumentException} on an assertion failure.
-	 * 
-	 * <pre class="code">
-	 * Assert.state(id == null, "The id property must not already be initialized");
-	 * </pre>
-	 * 
-	 * @param expression a boolean expression
-	 * @param message the exception message to use if the assertion fails
-	 * @throws IllegalStateException if {@code expression} is {@code false}
-	 */
-	public static void state(boolean expression, String message) {
-		if (!expression) {
-			throw new IllegalStateException(message);
-		}
-	}
+    /**
+     * Assert a boolean expression, throwing an {@code IllegalStateException} if the expression evaluates to
+     * {@code false}.
+     * <p>
+     * Call {@link #isTrue} if you wish to throw an {@code IllegalArgumentException} on an assertion failure.
+     *
+     * <pre class="code">
+     * Assert.state(id == null, "The id property must not already be initialized");
+     * </pre>
+     *
+     * @param expression a boolean expression
+     * @param message    the exception message to use if the assertion fails
+     * @throws IllegalStateException if {@code expression} is {@code false}
+     */
+    public static void state(boolean expression, String message) {
+        if (!expression) {
+            throw new IllegalStateException(message);
+        }
+    }
 
-	/**
-	 * Assert a boolean expression, throwing an {@code IllegalStateException} if the expression evaluates to
-	 * {@code false}.
-	 * <p>
-	 * Call {@link #isTrue} if you wish to throw an {@code IllegalArgumentException} on an assertion failure.
-	 * 
-	 * <pre class="code">
-	 * Assert.state(id == null, () -&gt; "ID for " + entity.getName() + " must not already be initialized");
-	 * </pre>
-	 * 
-	 * @param expression a boolean expression
-	 * @param messageSupplier a supplier for the exception message to use if the assertion fails
-	 * @throws IllegalStateException if {@code expression} is {@code false}
-	 */
-	public static void state(boolean expression, Supplier<String> messageSupplier) {
-		if (!expression) {
-			throw new IllegalStateException(nullSafeGet(messageSupplier));
-		}
-	}
+    /**
+     * Assert a boolean expression, throwing an {@code IllegalStateException} if the expression evaluates to
+     * {@code false}.
+     * <p>
+     * Call {@link #isTrue} if you wish to throw an {@code IllegalArgumentException} on an assertion failure.
+     *
+     * <pre class="code">
+     * Assert.state(id == null, () -&gt; "ID for " + entity.getName() + " must not already be initialized");
+     * </pre>
+     *
+     * @param expression      a boolean expression
+     * @param messageSupplier a supplier for the exception message to use if the assertion fails
+     * @throws IllegalStateException if {@code expression} is {@code false}
+     */
+    public static void state(boolean expression, Supplier<String> messageSupplier) {
+        if (!expression) {
+            throw new IllegalStateException(nullSafeGet(messageSupplier));
+        }
+    }
 
-	/**
-	 * Assert a boolean expression, throwing an {@code IllegalArgumentException} if the expression evaluates to
-	 * {@code false}.
-	 * 
-	 * <pre class="code">
-	 * Assert.isTrue(i &gt; 0, "The value must be greater than zero");
-	 * </pre>
-	 * 
-	 * @param expression a boolean expression
-	 * @param message the exception message to use if the assertion fails
-	 * @throws IllegalArgumentException if {@code expression} is {@code false}
-	 */
-	public static void isTrue(boolean expression, String message) {
-		if (!expression) {
-			throw new IllegalArgumentException(message);
-		}
-	}
+    /**
+     * Assert a boolean expression, throwing an {@code IllegalArgumentException} if the expression evaluates to
+     * {@code false}.
+     *
+     * <pre class="code">
+     * Assert.isTrue(i &gt; 0, "The value must be greater than zero");
+     * </pre>
+     *
+     * @param expression a boolean expression
+     * @param message    the exception message to use if the assertion fails
+     * @throws IllegalArgumentException if {@code expression} is {@code false}
+     */
+    public static void isTrue(boolean expression, String message) {
+        if (!expression) {
+            throw new IllegalArgumentException(message);
+        }
+    }
 
-	/**
-	 * Assert a boolean expression, throwing an {@code IllegalArgumentException} if the expression evaluates to
-	 * {@code false}.
-	 * 
-	 * <pre class="code">
-	 * Assert.isTrue(i &gt; 0, () -&gt; "The value '" + i + "' must be greater than zero");
-	 * </pre>
-	 * 
-	 * @param expression a boolean expression
-	 * @param messageSupplier a supplier for the exception message to use if the assertion fails
-	 * @throws IllegalArgumentException if {@code expression} is {@code false}
-	 */
-	public static void isTrue(boolean expression, Supplier<String> messageSupplier) {
-		if (!expression) {
-			throw new IllegalArgumentException(nullSafeGet(messageSupplier));
-		}
-	}
+    /**
+     * Assert a boolean expression, throwing an {@code IllegalArgumentException} if the expression evaluates to
+     * {@code false}.
+     *
+     * <pre class="code">
+     * Assert.isTrue(i &gt; 0, () -&gt; "The value '" + i + "' must be greater than zero");
+     * </pre>
+     *
+     * @param expression      a boolean expression
+     * @param messageSupplier a supplier for the exception message to use if the assertion fails
+     * @throws IllegalArgumentException if {@code expression} is {@code false}
+     */
+    public static void isTrue(boolean expression, Supplier<String> messageSupplier) {
+        if (!expression) {
+            throw new IllegalArgumentException(nullSafeGet(messageSupplier));
+        }
+    }
 
-	/**
-	 * Assert that an object is {@code null}.
-	 * 
-	 * <pre class="code">
-	 * Assert.isNull(value, "The value must be null");
-	 * </pre>
-	 * 
-	 * @param object the object to check
-	 * @param message the exception message to use if the assertion fails
-	 * @throws IllegalArgumentException if the object is not {@code null}
-	 */
-	public static void isNull(@Nullable Object object, String message) {
-		if (object != null) {
-			throw new IllegalArgumentException(message);
-		}
-	}
+    /**
+     * Assert that an object is {@code null}.
+     *
+     * <pre class="code">
+     * Assert.isNull(value, "The value must be null");
+     * </pre>
+     *
+     * @param object  the object to check
+     * @param message the exception message to use if the assertion fails
+     * @throws IllegalArgumentException if the object is not {@code null}
+     */
+    public static void isNull(@Nullable Object object, String message) {
+        if (object != null) {
+            throw new IllegalArgumentException(message);
+        }
+    }
 
-	/**
-	 * Assert that an object is {@code null}.
-	 * 
-	 * <pre class="code">
-	 * Assert.isNull(value, () -&gt; "The value '" + value + "' must be null");
-	 * </pre>
-	 * 
-	 * @param object the object to check
-	 * @param messageSupplier a supplier for the exception message to use if the assertion fails
-	 * @throws IllegalArgumentException if the object is not {@code null}
-	 */
-	public static void isNull(@Nullable Object object, Supplier<String> messageSupplier) {
-		if (object != null) {
-			throw new IllegalArgumentException(nullSafeGet(messageSupplier));
-		}
-	}
+    /**
+     * Assert that an object is {@code null}.
+     *
+     * <pre class="code">
+     * Assert.isNull(value, () -&gt; "The value '" + value + "' must be null");
+     * </pre>
+     *
+     * @param object          the object to check
+     * @param messageSupplier a supplier for the exception message to use if the assertion fails
+     * @throws IllegalArgumentException if the object is not {@code null}
+     */
+    public static void isNull(@Nullable Object object, Supplier<String> messageSupplier) {
+        if (object != null) {
+            throw new IllegalArgumentException(nullSafeGet(messageSupplier));
+        }
+    }
 
-	/**
-	 * Assert that an object is not {@code null}.
-	 * 
-	 * <pre class="code">
-	 * Assert.notNull(clazz, "The class must not be null");
-	 * </pre>
-	 * 
-	 * @param object the object to check
-	 * @param message the exception message to use if the assertion fails
-	 * @throws IllegalArgumentException if the object is {@code null}
-	 */
-	public static void notNull(@Nullable Object object, String message) {
-		if (object == null) {
-			throw new IllegalArgumentException(message);
-		}
-	}
+    /**
+     * Assert that an object is not {@code null}.
+     *
+     * <pre class="code">
+     * Assert.notNull(clazz, "The class must not be null");
+     * </pre>
+     *
+     * @param object  the object to check
+     * @param message the exception message to use if the assertion fails
+     * @throws IllegalArgumentException if the object is {@code null}
+     */
+    public static void notNull(@Nullable Object object, String message) {
+        if (object == null) {
+            throw new IllegalArgumentException(message);
+        }
+    }
 
-	/**
-	 * Assert that an object is not {@code null}.
-	 * 
-	 * <pre class="code">
-	 * Assert.notNull(clazz, () -&gt; "The class '" + clazz.getName() + "' must not be null");
-	 * </pre>
-	 * 
-	 * @param object the object to check
-	 * @param messageSupplier a supplier for the exception message to use if the assertion fails
-	 * @throws IllegalArgumentException if the object is {@code null}
-	 */
-	public static void notNull(@Nullable Object object, Supplier<String> messageSupplier) {
-		if (object == null) {
-			throw new IllegalArgumentException(nullSafeGet(messageSupplier));
-		}
-	}
+    /**
+     * Assert that an object is not {@code null}.
+     *
+     * <pre class="code">
+     * Assert.notNull(clazz, () -&gt; "The class '" + clazz.getName() + "' must not be null");
+     * </pre>
+     *
+     * @param object          the object to check
+     * @param messageSupplier a supplier for the exception message to use if the assertion fails
+     * @throws IllegalArgumentException if the object is {@code null}
+     */
+    public static void notNull(@Nullable Object object, Supplier<String> messageSupplier) {
+        if (object == null) {
+            throw new IllegalArgumentException(nullSafeGet(messageSupplier));
+        }
+    }
 
-	private static boolean endsWithSeparator(String msg) {
-		return (msg.endsWith(":") || msg.endsWith(";") || msg.endsWith(",") || msg.endsWith("."));
-	}
+    private static boolean endsWithSeparator(String msg) {
+        return (msg.endsWith(":") || msg.endsWith(";") || msg.endsWith(",") || msg.endsWith("."));
+    }
 
-	private static String messageWithTypeName(String msg, @Nullable Object typeName) {
-		return msg + (msg.endsWith(" ") ? "" : ": ") + typeName;
-	}
+    private static String messageWithTypeName(String msg, @Nullable Object typeName) {
+        return msg + (msg.endsWith(" ") ? "" : ": ") + typeName;
+    }
 
-	@Nullable
-	private static String nullSafeGet(@Nullable Supplier<String> messageSupplier) {
-		return (messageSupplier != null ? messageSupplier.get() : null);
-	}
+    @Nullable
+    private static String nullSafeGet(@Nullable Supplier<String> messageSupplier) {
+        return (messageSupplier != null ? messageSupplier.get() : null);
+    }
 }

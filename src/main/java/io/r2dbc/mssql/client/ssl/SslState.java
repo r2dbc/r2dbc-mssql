@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.client.ssl;
 
 import io.r2dbc.mssql.message.Message;
@@ -20,28 +21,28 @@ import io.r2dbc.mssql.message.token.Login7;
 
 /**
  * Represents the SSL state aspect of a connection.
- * 
+ *
  * @author Mark Paluch
  */
 public enum SslState implements Message {
 
-	/**
-	 * SSL not enabled (default).
-	 */
-	OFF,
+    /**
+     * SSL not enabled (default).
+     */
+    OFF,
 
-	/**
-	 * SSL handshake negotiated.
-	 */
-	NEGOTIATED,
+    /**
+     * SSL handshake negotiated.
+     */
+    NEGOTIATED,
 
-	/**
-	 * SSL requested during the {@link Login7} message only.
-	 */
-	LOGIN_ONLY,
+    /**
+     * SSL requested during the {@link Login7} message only.
+     */
+    LOGIN_ONLY,
 
-	/**
-	 * SSL disabled once it was used for the login message.
-	 */
-	AFTER_LOGIN_ONLY;
+    /**
+     * SSL disabled once it was used for the login message.
+     */
+    AFTER_LOGIN_ONLY;
 }

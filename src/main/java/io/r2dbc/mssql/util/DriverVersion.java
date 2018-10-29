@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.util;
 
 import reactor.util.annotation.Nullable;
@@ -25,17 +26,18 @@ import reactor.util.annotation.Nullable;
  */
 public final class DriverVersion {
 
-	private DriverVersion() {}
+    private DriverVersion() {
+    }
 
-	/**
-	 * Return the full version string of the present Spring codebase, or {@code null} if it cannot be determined.
-	 * 
-	 * @see Package#getImplementationVersion()
-	 */
-	@Nullable
-	public static Version getVersion() {
-		Package pkg = DriverVersion.class.getPackage();
-		return (pkg != null && pkg.getImplementationVersion() != null ? Version.parse(pkg.getImplementationVersion())
-				: null);
-	}
+    /**
+     * Return the full version string of the present Spring codebase, or {@code null} if it cannot be determined.
+     *
+     * @see Package#getImplementationVersion()
+     */
+    @Nullable
+    public static Version getVersion() {
+        Package pkg = DriverVersion.class.getPackage();
+        return (pkg != null && pkg.getImplementationVersion() != null ? Version.parse(pkg.getImplementationVersion())
+            : null);
+    }
 }

@@ -24,40 +24,40 @@ import java.util.Objects;
  */
 public interface HeaderOptions {
 
-	/**
-	 * Defines the type of message. 1-byte.
-	 * 
-	 * @return the message type.
-	 */
-	Type getType();
+    /**
+     * Defines the type of message. 1-byte.
+     *
+     * @return the message type.
+     */
+    Type getType();
 
-	/**
-	 * Status is a bit field used to indicate the message state. 1-byte.
-	 * 
-	 * @return the {@link Status.StatusBit}.
-	 */
-	Status getStatus();
+    /**
+     * Status is a bit field used to indicate the message state. 1-byte.
+     *
+     * @return the {@link Status.StatusBit}.
+     */
+    Status getStatus();
 
-	/**
-	 * Check if the header status has set the {@link Status.StatusBit}.
-	 * 
-	 * @param bit the status bit.
-	 * @return {@literal true} of the bit is set; {@literal false} otherwise.
-	 */
-	boolean is(Status.StatusBit bit);
+    /**
+     * Check if the header status has set the {@link Status.StatusBit}.
+     *
+     * @param bit the status bit.
+     * @return {@literal true} of the bit is set; {@literal false} otherwise.
+     */
+    boolean is(Status.StatusBit bit);
 
-	/**
-	 * Create {@link HeaderOptions} given {@link Type} and {@link Status}.
-	 * 
-	 * @param type the header {@link Type}.
-	 * @param status the {@link Status}.
-	 * @return the {@link HeaderOptions}.
-	 */
-	static HeaderOptions create(Type type, Status status) {
+    /**
+     * Create {@link HeaderOptions} given {@link Type} and {@link Status}.
+     *
+     * @param type   the header {@link Type}.
+     * @param status the {@link Status}.
+     * @return the {@link HeaderOptions}.
+     */
+    static HeaderOptions create(Type type, Status status) {
 
-		Objects.requireNonNull(type, "Type must not be null");
-		Objects.requireNonNull(status, "Status must not be null");
+        Objects.requireNonNull(type, "Type must not be null");
+        Objects.requireNonNull(status, "Status must not be null");
 
-		return new DefaultHeaderOptions(type, status);
-	}
+        return new DefaultHeaderOptions(type, status);
+    }
 }

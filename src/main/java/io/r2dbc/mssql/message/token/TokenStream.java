@@ -21,8 +21,8 @@ package io.r2dbc.mssql.message.token;
  */
 public interface TokenStream {
 
-	/**
-	 * @return symbolic name of the {@link TokenStream}.
-	 */
-	String getName();
+    /**
+     * @return symbolic name of the {@link TokenStream}.
+     */
+    String getName();
 }

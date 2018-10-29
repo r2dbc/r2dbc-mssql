@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.client;
 
 import io.r2dbc.mssql.client.ssl.SslState;
@@ -36,95 +37,96 @@ import static io.r2dbc.mssql.util.PredicateUtils.or;
  */
 public final class LoginFlow {
 
-	private LoginFlow() {}
+    private LoginFlow() {
+    }
 
-	/**
-	 * @param client the {@link Client} to exchange messages with
-	 * @param login the login configuration for login negotiation
-	 * @return the messages received after authentication is complete, in response to this exchange
-	 */
-	public static Flux<Message> exchange(Client client, LoginConfiguration login) {
+    /**
+     * @param client the {@link Client} to exchange messages with
+     * @param login  the login configuration for login negotiation
+     * @return the messages received after authentication is complete, in response to this exchange
+     */
+    public static Flux<Message> exchange(Client client, LoginConfiguration login) {
 
-		Objects.requireNonNull(client, "client must not be null");
-		Objects.requireNonNull(login, "Login must not be null");
+        Objects.requireNonNull(client, "client must not be null");
+        Objects.requireNonNull(login, "Login must not be null");
 
-		EmitterProcessor<ClientMessage> requestProcessor = EmitterProcessor.create();
-		FluxSink<ClientMessage> requests = requestProcessor.sink();
+        EmitterProcessor<ClientMessage> requestProcessor = EmitterProcessor.create();
+        FluxSink<ClientMessage> requests = requestProcessor.sink();
 
-		Prelogin.PreloginBuilder builder = Prelogin.builder();
-		if (login.getConnectionId() != null) {
-			builder.withConnectionId(login.getConnectionId());
-		}
-		AtomicReference<Prelogin> preloginResponse = new AtomicReference<>();
+        Prelogin.PreloginBuilder builder = Prelogin.builder();
+        if (login.getConnectionId() != null) {
+            builder.withConnectionId(login.getConnectionId());
+        }
+        AtomicReference<Prelogin> preloginResponse = new AtomicReference<>();
 
-		Prelogin request = builder.build();
+        Prelogin request = builder.build();
 
-		return client.exchange(requestProcessor.startWith(request)) //
+        return client.exchange(requestProcessor.startWith(request)) //
             .filter(or(Prelogin.class::isInstance, SslState.class::isInstance, DoneToken.class::isInstance)) //
-				.handle((message, sink) -> {
+            .handle((message, sink) -> {
 
-					try {
+                try {
 
-						if (message instanceof Prelogin) {
+                    if (message instanceof Prelogin) {
 
-							Prelogin response = (Prelogin) message;
-							preloginResponse.set(response);
+                        Prelogin response = (Prelogin) message;
+                        preloginResponse.set(response);
 
-							Prelogin.Encryption encryption = response.getRequiredToken(Prelogin.Encryption.class);
+                        Prelogin.Encryption encryption = response.getRequiredToken(Prelogin.Encryption.class);
 
-							if (!encryption.requiresSslHanshake()) {
-								requests.next(createLoginMessage(login, response));
-							}
+                        if (!encryption.requiresSslHanshake()) {
+                            requests.next(createLoginMessage(login, response));
+                        }
 
-							return;
-						}
+                        return;
+                    }
 
-						if (message instanceof SslState && message == SslState.NEGOTIATED) {
+                    if (message instanceof SslState && message == SslState.NEGOTIATED) {
 
-							Prelogin prelogin = preloginResponse.get();
-							requests.next(createLoginMessage(login, prelogin));
-							return;
-						}
+                        Prelogin prelogin = preloginResponse.get();
+                        requests.next(createLoginMessage(login, prelogin));
+                        return;
+                    }
 
-						if (DoneToken.isDone(message)) {
-							sink.next(message);
-							sink.complete();
-							return;
-						}
+                    if (DoneToken.isDone(message)) {
+                        sink.next(message);
+                        sink.complete();
+                        return;
+                    }
 
-						throw new ProtocolException(String.format("Unexpected login flow message: %s", message));
-					} catch (Exception e) {
-						requests.error(e);
-						sink.error(e);
-					}
-				});
-	}
+                    throw new ProtocolException(String.format("Unexpected login flow message: %s", message));
+                } catch (Exception e) {
+                    requests.error(e);
+                    sink.error(e);
+                }
+            });
+    }
 
-	private static Login7 createLoginMessage(LoginConfiguration login, Prelogin prelogin) {
+    private static Login7 createLoginMessage(LoginConfiguration login, Prelogin prelogin) {
 
-		Prelogin.Version serverVersion = prelogin.getRequiredToken(Prelogin.Version.class);
-		TDSVersion tdsVersion = getTdsVersion(serverVersion.getVersion());
+        Prelogin.Version serverVersion = prelogin.getRequiredToken(Prelogin.Version.class);
+        TDSVersion tdsVersion = getTdsVersion(serverVersion.getVersion());
 
-		return login.asBuilder().tdsVersion(tdsVersion).build();
-	}
+        return login.asBuilder().tdsVersion(tdsVersion).build();
+    }
 
-	private static TDSVersion getTdsVersion(int serverVersion) {
+    private static TDSVersion getTdsVersion(int serverVersion) {
 
-		if (serverVersion >= 11) // Denali --> TDS 7.4
-		{
-			return TDSVersion.VER_DENALI;
-		}
+        if (serverVersion >= 11) // Denali --> TDS 7.4
+        {
+            return TDSVersion.VER_DENALI;
+        }
 
-		if (serverVersion >= 10) // Katmai (10.0) & later 7.3B
-		{
-			return TDSVersion.VER_KATMAI;
-		}
+        if (serverVersion >= 10) // Katmai (10.0) & later 7.3B
+        {
+            return TDSVersion.VER_KATMAI;
+        }
 
-		if (serverVersion >= 9) // Yukon (9.0) --> TDS 7.2 // Prelogin disconnects anything older
-		{
-			return TDSVersion.VER_YUKON;
-		}
+        if (serverVersion >= 9) // Yukon (9.0) --> TDS 7.2 // Prelogin disconnects anything older
+        {
+            return TDSVersion.VER_YUKON;
+        }
 
-		throw new ProtocolException("Unsupported server version: " + serverVersion);
-	}
+        throw new ProtocolException("Unsupported server version: " + serverVersion);
+    }
 }

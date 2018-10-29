@@ -13,47 +13,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.message;
 
 import java.util.Objects;
 
 /**
  * TDS protocol versions.
- * 
+ *
  * @author Mark Paluch
  */
 public enum TDSVersion {
 
-	// TDS 7.4
-	VER_DENALI(0x74000004),
+    // TDS 7.4
+    VER_DENALI(0x74000004),
 
-	// TDS 7.3B(includes null bit compression)
-	VER_KATMAI(0x730B0003),
+    // TDS 7.3B(includes null bit compression)
+    VER_KATMAI(0x730B0003),
 
-	// TDS 7.2
-	VER_YUKON(0x72090002),
+    // TDS 7.2
+    VER_YUKON(0x72090002),
 
-	UNKNOWN(0x00000000);
+    UNKNOWN(0x00000000);
 
-	private final int version;
+    private final int version;
 
-	TDSVersion(int version) {
-		this.version = version;
-	}
+    TDSVersion(int version) {
+        this.version = version;
+    }
 
-	public int getVersion() {
-		return this.version;
-	}
+    public int getVersion() {
+        return this.version;
+    }
 
-	/**
-	 * Check is the reference {@link TDSVersion} is greater or equal to {@code this} version.
-	 * 
-	 * @param reference the reference version.
-	 * @return {@literal true} if the reference {@link TDSVersion} is greater or equal to {@code this} version.
-	 */
-	public boolean isGreateOrEqualsTo(TDSVersion reference) {
+    /**
+     * Check is the reference {@link TDSVersion} is greater or equal to {@code this} version.
+     *
+     * @param reference the reference version.
+     * @return {@literal true} if the reference {@link TDSVersion} is greater or equal to {@code this} version.
+     */
+    public boolean isGreateOrEqualsTo(TDSVersion reference) {
 
-		Objects.requireNonNull(reference, "Reference version must not be null");
-		return getVersion() >= reference.getVersion();
-	}
+        Objects.requireNonNull(reference, "Reference version must not be null");
+        return getVersion() >= reference.getVersion();
+    }
 }

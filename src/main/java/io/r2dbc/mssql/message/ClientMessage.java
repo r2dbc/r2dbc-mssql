@@ -26,12 +26,12 @@ import org.reactivestreams.Publisher;
  */
 public interface ClientMessage extends Message {
 
-	/**
-	 * Encode a message into a {@link ByteBuf}.
-	 *
-	 * @param allocator the {@link ByteBufAllocator} to use to get a {@link ByteBuf} to write into
-	 * @return a {@link Publisher} that produces the {@link ByteBuf} containing the encoded message
-	 */
-	Publisher<TdsFragment> encode(ByteBufAllocator allocator);
+    /**
+     * Encode a message into a {@link ByteBuf}.
+     *
+     * @param allocator the {@link ByteBufAllocator} to use to get a {@link ByteBuf} to write into
+     * @return a {@link Publisher} that produces the {@link ByteBuf} containing the encoded message
+     */
+    Publisher<TdsFragment> encode(ByteBufAllocator allocator);
 
 }

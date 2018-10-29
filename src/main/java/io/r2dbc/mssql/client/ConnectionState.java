@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.client;
 
 import io.netty.channel.Channel;
@@ -39,96 +40,94 @@ import java.util.Collections;
  * <li>Enter {@link #LOGIN} state once SSL is negotiated and send a {@link Login7} message</li>
  * <li>Enter {@link #POST_LOGIN} after receiving login ack</li>
  * </ul>
- * 
+ *
  * @author Mark Paluch
  */
 public enum ConnectionState {
 
-	/**
-	 * State directly after the establishing the transport connection.
-	 * <p/>
-	 * The only allowed message to send and receive is {@link Prelogin}.
-	 */
-	PRELOGIN {
-		@Override
+    /**
+     * State directly after the establishing the transport connection.
+     * <p/>
+     * The only allowed message to send and receive is {@link Prelogin}.
+     */
+    PRELOGIN {
+        @Override
         MessageDecoder decoder(Client client) {
 
-			return (header, byteBuf) -> {
+            return (header, byteBuf) -> {
 
-				assert header.getType() == Type.TABULAR_RESULT;
-				assert header.is(Status.StatusBit.EOM);
+                assert header.getType() == Type.TABULAR_RESULT;
+                assert header.is(Status.StatusBit.EOM);
 
                 return Collections.singletonList(Prelogin.decode(header, byteBuf));
-			};
-		}
+            };
+        }
 
-		@Override
-		public boolean canAdvance(Message message) {
+        @Override
+        public boolean canAdvance(Message message) {
 
-			Prelogin prelogin = (Prelogin) message;
+            Prelogin prelogin = (Prelogin) message;
 
-			Prelogin.Version version = prelogin.getRequiredToken(Prelogin.Version.class);
+            Prelogin.Version version = prelogin.getRequiredToken(Prelogin.Version.class);
 
-			if (version.getVersion() >= 9) {
-				return true;
-			}
+            if (version.getVersion() >= 9) {
+                return true;
+            }
 
-			throw new ProtocolException("Unsupported SQL server version: " + version.getVersion());
-		}
+            throw new ProtocolException("Unsupported SQL server version: " + version.getVersion());
+        }
 
-		@Override
-		public ConnectionState next(Message message, Connection connection) {
+        @Override
+        public ConnectionState next(Message message, Connection connection) {
 
-			Prelogin prelogin = (Prelogin) message;
-			Prelogin.Encryption encryption = prelogin.getRequiredToken(Prelogin.Encryption.class);
+            Prelogin prelogin = (Prelogin) message;
+            Prelogin.Encryption encryption = prelogin.getRequiredToken(Prelogin.Encryption.class);
 
-			if (encryption.requiresLoginSslHanshake()) {
+            if (encryption.requiresLoginSslHanshake()) {
 
-				Channel channel = connection.channel();
-				channel.pipeline().fireUserEventTriggered(SslState.LOGIN_ONLY);
+                Channel channel = connection.channel();
+                channel.pipeline().fireUserEventTriggered(SslState.LOGIN_ONLY);
 
-				return PRELOGIN_SSL_NEGOTIATION;
-			}
+                return PRELOGIN_SSL_NEGOTIATION;
+            }
 
-			return PRELOGIN;
-		}
-	},
+            return PRELOGIN;
+        }
+    },
 
-	/**
-	 * SSL negotiation state. This state is handled entirely on the transport level.
-	 * 
-	 * @see SslHandler
-	 */
-	PRELOGIN_SSL_NEGOTIATION {
+    /**
+     * SSL negotiation state. This state is handled entirely on the transport level.
+     *
+     * @see SslHandler
+     */
+    PRELOGIN_SSL_NEGOTIATION {
+        @Override
+        public boolean canAdvance(Message message) {
+            return message == SslState.NEGOTIATED;
+        }
 
-		@Override
-		public boolean canAdvance(Message message) {
-			return message == SslState.NEGOTIATED;
-		}
+        @Override
+        public ConnectionState next(Message message, Connection connection) {
+            return LOGIN;
+        }
 
-		@Override
-		public ConnectionState next(Message message, Connection connection) {
-			return LOGIN;
-		}
-
-		@Override
+        @Override
         MessageDecoder decoder(Client client) {
-			return (header, byteBuf) -> {
+            return (header, byteBuf) -> {
 
-				throw new ProtocolException("Nothing to decode during SSL negotiation");
-			};
-		}
-	},
+                throw new ProtocolException("Nothing to decode during SSL negotiation");
+            };
+        }
+    },
 
-	LOGIN {
-
-		@Override
-		public boolean canAdvance(Message message) {
+    LOGIN {
+        @Override
+        public boolean canAdvance(Message message) {
             return message instanceof AbstractDoneToken;
         }
 
-		@Override
-		public ConnectionState next(Message message, Connection connection) {
+        @Override
+        public ConnectionState next(Message message, Connection connection) {
 
             if (AbstractDoneToken.isDone(message)) {
                 return POST_LOGIN;
@@ -137,31 +136,30 @@ public enum ConnectionState {
             return LOGIN_FAILED;
         }
 
-		@Override
+        @Override
         MessageDecoder decoder(Client client) {
-			
-			return (header, byteBuf) -> {
 
-				// Expect Tabular message here!
-				assert header.getType() == Type.TABULAR_RESULT;
-				assert header.is(Status.StatusBit.EOM);
+            return (header, byteBuf) -> {
+
+                // Expect Tabular message here!
+                assert header.getType() == Type.TABULAR_RESULT;
+                assert header.is(Status.StatusBit.EOM);
 
                 Tabular tabular = Tabular.decode(byteBuf, client.isColumnEncryptionSupported());
                 return tabular.getTokens();
-			};
-		}
-	},
-	POST_LOGIN {
+            };
+        }
+    },
+    POST_LOGIN {
+        @Override
+        public boolean canAdvance(Message message) {
+            return false;
+        }
 
-		@Override
-		public boolean canAdvance(Message message) {
-			return false;
-		}
-
-		@Override
-		public ConnectionState next(Message message, Connection connection) {
-			return null;
-		}
+        @Override
+        public ConnectionState next(Message message, Connection connection) {
+            return null;
+        }
 
         @SuppressWarnings("unchecked")
         @Override
@@ -176,29 +174,28 @@ public enum ConnectionState {
                 return decoder.decode(byteBuf);
             };
         }
-	},
+    },
 
-	LOGIN_FAILED {
+    LOGIN_FAILED {
+        @Override
+        public boolean canAdvance(Message message) {
+            return false;
+        }
 
-		@Override
-		public boolean canAdvance(Message message) {
-			return false;
-		}
+        @Override
+        public ConnectionState next(Message message, Connection connection) {
+            return null;
+        }
 
-		@Override
-		public ConnectionState next(Message message, Connection connection) {
-			return null;
-		}
-
-		@Override
+        @Override
         MessageDecoder decoder(Client client) {
-			return null;
-		}
-	};
+            return null;
+        }
+    };
 
-	public abstract boolean canAdvance(Message message);
+    public abstract boolean canAdvance(Message message);
 
-	public abstract ConnectionState next(Message message, Connection connection);
+    public abstract ConnectionState next(Message message, Connection connection);
 
     abstract MessageDecoder decoder(Client client);
 

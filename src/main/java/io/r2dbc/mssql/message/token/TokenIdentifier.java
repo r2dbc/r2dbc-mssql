@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.message.token;
 
 /**
@@ -20,61 +21,61 @@ package io.r2dbc.mssql.message.token;
  */
 public final class TokenIdentifier {
 
-	public final byte value;
+    public final byte value;
 
-	private TokenIdentifier(byte value) {
-		this.value = value;
-	}
+    private TokenIdentifier(byte value) {
+        this.value = value;
+    }
 
-	/**
-	 * @return {@literal true} if the token has a zero-length.
-	 */
-	public boolean isZeroLength() {
-		return (this.value & 1 << 2) == 0 && (this.value & 1 << 3) != 0;
-	}
+    /**
+     * @return {@literal true} if the token has a zero-length.
+     */
+    public boolean isZeroLength() {
+        return (this.value & 1 << 2) == 0 && (this.value & 1 << 3) != 0;
+    }
 
-	/**
-	 * @return {@literal true} if the token has a fixed length.
-	 * @see #getFixedLength()
-	 */
-	public boolean isFixedLength() {
-		return (this.value & 1 << 2) != 0 && (this.value & 1 << 3) != 0;
-	}
+    /**
+     * @return {@literal true} if the token has a fixed length.
+     * @see #getFixedLength()
+     */
+    public boolean isFixedLength() {
+        return (this.value & 1 << 2) != 0 && (this.value & 1 << 3) != 0;
+    }
 
-	/**
-	 * @return {@literal true} if the token has a variable length.
-	 */
-	public boolean isVariableLength() {
-		return (this.value & 1 << 2) == 0 && (this.value & 1 << 3) == 0;
-	}
+    /**
+     * @return {@literal true} if the token has a variable length.
+     */
+    public boolean isVariableLength() {
+        return (this.value & 1 << 2) == 0 && (this.value & 1 << 3) == 0;
+    }
 
-	/**
-	 * @return the length in bytes for fixed-length tokens.
-	 */
-	public int getFixedLength() {
+    /**
+     * @return the length in bytes for fixed-length tokens.
+     */
+    public int getFixedLength() {
 
-		int len = (this.value >> 4) & 0x3;
+        int len = (this.value >> 4) & 0x3;
 
-		return (int) Math.pow(2, len);
-	}
+        return (int) Math.pow(2, len);
+    }
 
-	/**
-	 * Create a {@link TokenIdentifier} given its {@code value}.
-	 * 
-	 * @param value
-	 * @return
-	 */
-	public static TokenIdentifier of(int value) {
-		return of((byte) value);
-	}
+    /**
+     * Create a {@link TokenIdentifier} given its {@code value}.
+     *
+     * @param value
+     * @return
+     */
+    public static TokenIdentifier of(int value) {
+        return of((byte) value);
+    }
 
-	/**
-	 * Create a {@link TokenIdentifier} given its {@code value}.
-	 * 
-	 * @param value
-	 * @return
-	 */
-	public static TokenIdentifier of(byte value) {
-		return new TokenIdentifier(value);
-	}
+    /**
+     * Create a {@link TokenIdentifier} given its {@code value}.
+     *
+     * @param value
+     * @return
+     */
+    public static TokenIdentifier of(byte value) {
+        return new TokenIdentifier(value);
+    }
 }

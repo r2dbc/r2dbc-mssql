@@ -30,45 +30,45 @@ import java.util.Objects;
  */
 public final class MssqlConnectionFactory implements ConnectionFactory {
 
-	private final Mono<? extends Client> clientFactory;
+    private final Mono<? extends Client> clientFactory;
 
-	private final MssqlConnectionConfiguration configuration;
+    private final MssqlConnectionConfiguration configuration;
 
-	/**
-	 * Creates a new connection factory.
-	 *
-	 * @param configuration the configuration to use connections
-	 */
-	public MssqlConnectionFactory(MssqlConnectionConfiguration configuration) {
-		this(Mono.defer(() -> {
-			Objects.requireNonNull(configuration, "configuration must not be null");
+    /**
+     * Creates a new connection factory.
+     *
+     * @param configuration the configuration to use connections
+     */
+    public MssqlConnectionFactory(MssqlConnectionConfiguration configuration) {
+        this(Mono.defer(() -> {
+            Objects.requireNonNull(configuration, "configuration must not be null");
 
-			return ReactorNettyClient.connect(configuration.getHost(), configuration.getPort()).cast(Client.class);
-		}), configuration);
-	}
+            return ReactorNettyClient.connect(configuration.getHost(), configuration.getPort()).cast(Client.class);
+        }), configuration);
+    }
 
-	MssqlConnectionFactory(Mono<? extends Client> clientFactory, MssqlConnectionConfiguration configuration) {
-		this.clientFactory = Objects.requireNonNull(clientFactory, "clientFactory must not be null");
-		this.configuration = Objects.requireNonNull(configuration, "configuration must not be null");
-	}
+    MssqlConnectionFactory(Mono<? extends Client> clientFactory, MssqlConnectionConfiguration configuration) {
+        this.clientFactory = Objects.requireNonNull(clientFactory, "clientFactory must not be null");
+        this.configuration = Objects.requireNonNull(configuration, "configuration must not be null");
+    }
 
-	@Override
-	public Mono<MssqlConnection> create() {
+    @Override
+    public Mono<MssqlConnection> create() {
 
-		LoginConfiguration loginConfiguration = this.configuration.getLoginConfiguration();
+        LoginConfiguration loginConfiguration = this.configuration.getLoginConfiguration();
 
-		return this.clientFactory.delayUntil(client -> LoginFlow.exchange(client, loginConfiguration))
-				.map(MssqlConnection::new);
-	}
+        return this.clientFactory.delayUntil(client -> LoginFlow.exchange(client, loginConfiguration))
+            .map(MssqlConnection::new);
+    }
 
-	@Override
-	public MssqlConnectionFactoryMetadata getMetadata() {
-		return MssqlConnectionFactoryMetadata.INSTANCE;
-	}
+    @Override
+    public MssqlConnectionFactoryMetadata getMetadata() {
+        return MssqlConnectionFactoryMetadata.INSTANCE;
+    }
 
-	@Override
-	public String toString() {
-		return "MssqlConnectionFactory{" + "clientFactory=" + this.clientFactory + ", configuration=" + this.configuration
-				+ '}';
-	}
+    @Override
+    public String toString() {
+        return "MssqlConnectionFactory{" + "clientFactory=" + this.clientFactory + ", configuration=" + this.configuration
+            + '}';
+    }
 }

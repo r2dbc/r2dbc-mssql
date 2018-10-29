@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.client.ssl;
 
 import io.netty.channel.ChannelDuplexHandler;
@@ -21,22 +22,22 @@ import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 
 /**
  * Event handler for SSL negotiation events.
- * 
+ *
  * @author Mark Paluch
  */
 class SslEventHandler extends ChannelDuplexHandler {
 
-	@Override
-	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
 
-		if (evt == SslHandshakeCompletionEvent.SUCCESS) {
-			ctx.channel().pipeline().fireUserEventTriggered(SslState.NEGOTIATED);
-		}
+        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
+            ctx.channel().pipeline().fireUserEventTriggered(SslState.NEGOTIATED);
+        }
 
-		if (evt == SslState.NEGOTIATED) {
-			ctx.fireChannelRead(SslState.NEGOTIATED);
-		}
+        if (evt == SslState.NEGOTIATED) {
+            ctx.fireChannelRead(SslState.NEGOTIATED);
+        }
 
-		super.userEventTriggered(ctx, evt);
-	}
+        super.userEventTriggered(ctx, evt);
+    }
 }

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.message.header;
 
 import io.netty.buffer.ByteBuf;
@@ -21,7 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Provider for the PacketId {@link Header} field.
- * 
+ *
  * @author Mark Paluch
  * @see Header#getPacketId()
  * @see Header#encode(ByteBuf, PacketIdProvider)
@@ -29,39 +30,39 @@ import java.util.concurrent.atomic.AtomicLong;
 @FunctionalInterface
 public interface PacketIdProvider {
 
-	/**
-	 * @return the next packet id.
-	 */
-	byte nextPacketId();
+    /**
+     * @return the next packet id.
+     */
+    byte nextPacketId();
 
-	/**
-	 * Static packet Id provider.
-	 * 
-	 * @param value packet number.
-	 * @return {@link PacketIdProvider} returning the static {@code value}.
-	 */
-	static PacketIdProvider just(int value) {
-		return just((byte) (value % 256));
-	}
+    /**
+     * Static packet Id provider.
+     *
+     * @param value packet number.
+     * @return {@link PacketIdProvider} returning the static {@code value}.
+     */
+    static PacketIdProvider just(int value) {
+        return just((byte) (value % 256));
+    }
 
-	/**
-	 * Static packet Id provider.
-	 * 
-	 * @param value packet number.
-	 * @return {@link PacketIdProvider} returning the static {@code value}.
-	 */
-	static PacketIdProvider just(byte value) {
-		return () -> value;
-	}
+    /**
+     * Static packet Id provider.
+     *
+     * @param value packet number.
+     * @return {@link PacketIdProvider} returning the static {@code value}.
+     */
+    static PacketIdProvider just(byte value) {
+        return () -> value;
+    }
 
-	/**
-	 * Atomic/concurrent packetId provider.
-	 * 
-	 * @return a thread-safe packet counter.
-	 */
-	static PacketIdProvider atomic() {
+    /**
+     * Atomic/concurrent packetId provider.
+     *
+     * @return a thread-safe packet counter.
+     */
+    static PacketIdProvider atomic() {
 
-		AtomicLong counter = new AtomicLong();
-		return () -> (byte) (counter.incrementAndGet() % 256);
-	}
+        AtomicLong counter = new AtomicLong();
+        return () -> (byte) (counter.incrementAndGet() % 256);
+    }
 }

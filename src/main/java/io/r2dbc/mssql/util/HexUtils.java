@@ -30,16 +30,16 @@ public final class HexUtils {
     private HexUtils() {
     }
 
-	/**
-	 * Decode a {@link String} containing Hex-encoded bytes into a {@link ByteBuf}.
-	 *
-	 * @param sequence the {@link String} to decode
-	 * @return the {@link ByteBuf} decoded from the {@link String}
-	 */
+    /**
+     * Decode a {@link String} containing Hex-encoded bytes into a {@link ByteBuf}.
+     *
+     * @param sequence the {@link String} to decode
+     * @return the {@link ByteBuf} decoded from the {@link String}
+     */
     public static ByteBuf decodeToByteBuf(String chars) {
 
         Objects.requireNonNull(chars, "String must not be null");
 
         return Unpooled.wrappedBuffer(ByteBufUtil.decodeHexDump(chars.replaceAll(" ", "")));
-	}
+    }
 }

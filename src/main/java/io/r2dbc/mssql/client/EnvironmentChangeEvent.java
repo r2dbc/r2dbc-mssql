@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.client;
 
 import io.r2dbc.mssql.message.token.EnvChangeToken;
@@ -21,26 +22,26 @@ import java.util.Objects;
 
 /**
  * Environment change event based on a {@link EnvChangeToken}.
- * 
+ *
  * @author Mark Paluch
  */
 public class EnvironmentChangeEvent {
 
-	private final EnvChangeToken token;
+    private final EnvChangeToken token;
 
-	/**
-	 * Create a new {@link EnvironmentChangeEvent}.
-	 * 
-	 * @param token the environment change token.
-	 */
-	public EnvironmentChangeEvent(EnvChangeToken token) {
-		this.token = Objects.requireNonNull(token);
-	}
+    /**
+     * Create a new {@link EnvironmentChangeEvent}.
+     *
+     * @param token the environment change token.
+     */
+    public EnvironmentChangeEvent(EnvChangeToken token) {
+        this.token = Objects.requireNonNull(token);
+    }
 
-	/**
-	 * @return the environment change token.
-	 */
-	public EnvChangeToken getToken() {
-		return token;
-	}
+    /**
+     * @return the environment change token.
+     */
+    public EnvChangeToken getToken() {
+        return token;
+    }
 }

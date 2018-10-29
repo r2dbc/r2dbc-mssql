@@ -13,25 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.message.token;
 
 import io.r2dbc.mssql.message.Message;
 
 /**
  * Data token.
- * 
+ *
  * @author Mark Paluch
  */
 public interface DataToken extends Message {
 
-	/**
-	 * @return the token type.
-	 */
-	byte getType();
-		
+    /**
+     * @return the token type.
+     */
+    byte getType();
 
-	/**
-	 * @return symbolic name of the {@link DataToken}.
-	 */
-	String getName();
+
+    /**
+     * @return symbolic name of the {@link DataToken}.
+     */
+    String getName();
 }
