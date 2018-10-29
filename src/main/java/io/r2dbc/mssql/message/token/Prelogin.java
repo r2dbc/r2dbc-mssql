@@ -18,17 +18,18 @@ package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.r2dbc.mssql.client.ProtocolException;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
-import io.r2dbc.mssql.message.ServerMessage;
 import io.r2dbc.mssql.message.header.Header;
+import io.r2dbc.mssql.message.header.HeaderOptions;
 import io.r2dbc.mssql.message.header.Status;
+import io.r2dbc.mssql.message.header.Status.StatusBit;
 import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.tds.ContextualTdsFragment;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.TdsFragment;
-import io.r2dbc.mssql.util.Assert;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
@@ -46,9 +47,9 @@ import java.util.UUID;
  * @author Mark Paluch
  * @see Token
  */
-public final class Prelogin implements TokenStream, ClientMessage, ServerMessage {
+public final class Prelogin implements TokenStream, ClientMessage {
 
-    private final Header header;
+    private static final HeaderOptions HEADER_OPTIONS = HeaderOptions.create(Type.PRE_LOGIN, Status.of(StatusBit.EOM));
 
     private final int size;
 
@@ -64,31 +65,28 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
         Objects.requireNonNull(tokens, "Tokens must not be null");
 
         this.size = getSize(tokens);
-        this.header = new Header(Type.PRE_LOGIN, Status.of(Status.StatusBit.EOM), this.size, 0, 0, 0);
         this.tokens = tokens;
     }
 
-    private Prelogin(Header header, List<Token> tokens) {
-
-        this.header = header;
-        this.tokens = tokens;
-        this.size = getSize(tokens);
+    /**
+     * @return a new builder for {@link Prelogin}.
+     */
+    public static Builder builder() {
+        return new Builder();
     }
 
     /**
      * Decode the {@link Prelogin} response from a {@link ByteBuf}.
      *
-     * @param header must not be null.
      * @param buffer must not be null.
      * @return the decoded {@link Prelogin} response {@link Message}.
      */
-    public static Prelogin decode(Header header, ByteBuf buffer) {
+    public static Prelogin decode(ByteBuf buffer) {
 
-        Objects.requireNonNull(header, "Header must not be null");
         Objects.requireNonNull(buffer, "ByteBuf must not be null");
 
         List<Token> decodedTokens = new ArrayList<>();
-        Prelogin prelogin = new Prelogin(header, decodedTokens);
+        Prelogin prelogin = new Prelogin(decodedTokens);
 
         TokenDecodingState decodingState = TokenDecodingState.create(buffer);
 
@@ -196,7 +194,7 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 
             encode(buffer);
 
-            return new ContextualTdsFragment(header, buffer);
+            return new ContextualTdsFragment(HEADER_OPTIONS, buffer);
         });
     }
 
@@ -228,21 +226,31 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Prelogin)) {
+            return false;
+        }
+        Prelogin prelogin = (Prelogin) o;
+        return size == prelogin.size &&
+            Objects.equals(tokens, prelogin.tokens);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(size, tokens);
+    }
+
+    @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [header=").append(this.header);
-        sb.append(", tokens=").append(this.tokens);
+        sb.append(" [tokens=").append(this.tokens);
         sb.append(", size=").append(this.size);
         sb.append(']');
         return sb.toString();
-    }
-
-    /**
-     * @return a new builder for {@link Prelogin}.
-     */
-    public static PreloginBuilder builder() {
-        return new PreloginBuilder();
     }
 
     /**
@@ -250,7 +258,7 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
      *
      * @author Mark Paluch
      */
-    public static class PreloginBuilder {
+    public static class Builder {
 
         /**
          * Client application thread id;
@@ -277,10 +285,10 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
 
         private String instanceName = InstanceValidation.MSSQLSERVER_VALUE;
 
-        private PreloginBuilder() {
+        private Builder() {
         }
 
-        public PreloginBuilder withConnectionId(UUID connectionId) {
+        public Builder withConnectionId(UUID connectionId) {
 
             Objects.requireNonNull(connectionId, "ConnectionID must not be null");
             this.connectionId = connectionId;
@@ -288,7 +296,7 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
             return this;
         }
 
-        public PreloginBuilder withActivityId(UUID activityId) {
+        public Builder withActivityId(UUID activityId) {
 
             Objects.requireNonNull(activityId, "Activity ID must not be null");
             this.activityId = activityId;
@@ -296,21 +304,21 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
             return this;
         }
 
-        public PreloginBuilder withActivitySequence(long activitySequence) {
+        public Builder withActivitySequence(long activitySequence) {
 
             this.activitySequence = activitySequence;
 
             return this;
         }
 
-        public PreloginBuilder withThreadId(int threadId) {
+        public Builder withThreadId(int threadId) {
 
             this.threadId = threadId;
 
             return this;
         }
 
-        public PreloginBuilder withInstanceName(String instanceName) {
+        public Builder withInstanceName(String instanceName) {
 
             Objects.requireNonNull(instanceName, "Instance name must not be null");
             this.instanceName = instanceName;
@@ -364,10 +372,20 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
             this.length = length;
         }
 
+        /**
+         * Returns the token type.
+         *
+         * @return the token type.
+         */
         byte getType() {
             return this.type;
         }
 
+        /**
+         * Returns the token length.
+         *
+         * @return the token data length.
+         */
         int getLength() {
             return this.length;
         }
@@ -403,13 +421,12 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
         }
 
         /**
-         * Apply functional decoding.
+         * Apply functional token decoding.
          *
-         * @param toDecode
-         * @param validator
-         * @param decoder
-         * @param <T>
-         * @return
+         * @param toDecode  the decoding state.
+         * @param validator validator for
+         * @param decoder   token decode function.
+         * @return the decoded token.
          */
         static <T extends Token> T decode(TokenDecodingState toDecode, LengthValidator validator,
                                           DecodeFunction<T> decoder) {
@@ -439,6 +456,9 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
         }
     }
 
+    /**
+     * Terminating token indicating the end of prelogin tokens.
+     */
     public static class Terminator extends Token {
 
         public static final Terminator INSTANCE = new Terminator();
@@ -472,6 +492,9 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
         }
     }
 
+    /**
+     * Version information representing the SQL server version.
+     */
     public static class Version extends Token {
 
         public static final byte TYPE = 0x00;
@@ -501,13 +524,17 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
         /**
          * Decode the {@link Version} token.
          *
-         * @param byteBuf
-         * @return
+         * @param toDecode the current decoding state.
+         * @return the decoded {@link Version} token.
          */
         public static Version decode(TokenDecodingState toDecode) {
 
             return decode(toDecode,
-                length -> Assert.isTrue(length == 6, () -> String.format("Invalid version length: %s", length)),
+                length -> {
+                    if (length != 6) {
+                        throw ProtocolException.invalidTds(String.format("Invalid version length: %s", length));
+                    }
+                },
                 (length, body) -> {
 
                     int major = Decode.asByte(body);
@@ -544,6 +571,9 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
         }
     }
 
+    /**
+     * Allows validating a remote SQL server instance.
+     */
     public static class InstanceValidation extends Token {
 
         static final String MSSQLSERVER_VALUE = "MSSQLServer";
@@ -568,13 +598,12 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
         /**
          * Decode the {@link InstanceValidation} token.
          *
-         * @param toDecode
-         * @return
+         * @param toDecode the current decoding state.
+         * @return the decoded {@link InstanceValidation}.
          */
         public static InstanceValidation decode(TokenDecodingState toDecode) {
 
-            return decode(toDecode, length -> {
-            }, (length, body) -> {
+            return decode(toDecode, LengthValidator.ignore(), (length, body) -> {
 
                 byte[] validation = new byte[length];
                 body.readBytes(validation, 0, length);
@@ -608,17 +637,32 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
         }
     }
 
+    /**
+     * Allows negotiation of the used encryption mode.
+     */
     public static class Encryption extends Token {
 
         public static final byte TYPE = 0x01;
 
-        public static byte ENCRYPT_OFF = 0x00;
+        /**
+         * Disabled encryption but enabled/required for login with credentials.
+         */
+        public static final byte ENCRYPT_OFF = 0x00;
 
-        public static byte ENCRYPT_ON = 0x01;
+        /**
+         * Encryption enabled.
+         */
+        public static final byte ENCRYPT_ON = 0x01;
 
-        public static byte ENCRYPT_NOT_SUP = 0x02;
+        /**
+         * Encryption not supported.
+         */
+        public static final byte ENCRYPT_NOT_SUP = 0x02;
 
-        public static byte ENCRYPT_REQ = 0x03;
+        /**
+         * Encryption required.
+         */
+        public static final byte ENCRYPT_REQ = 0x03;
 
         private final byte encryption;
 
@@ -632,13 +676,17 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
         /**
          * Decode the {@link Encryption} token.
          *
-         * @param byteBuf
+         * @param toDecode
          * @return
          */
         public static Encryption decode(TokenDecodingState toDecode) {
 
             return decode(toDecode,
-                length -> Assert.isTrue(length == 1, () -> String.format("Invalid encryption length: %s", length)),
+                length -> {
+                    if (length != 1) {
+                        throw ProtocolException.invalidTds(String.format("Invalid encryption length: %s", length));
+                    }
+                },
                 (length, body) -> {
 
                     byte encryption = Decode.asByte(body);
@@ -675,6 +723,9 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
         }
     }
 
+    /**
+     * Token that allows associating a client application Thread Id with the connection.
+     */
     public static class ThreadId extends Token {
 
         public static final byte TYPE = 0x03;
@@ -706,6 +757,9 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
         }
     }
 
+    /**
+     * TraceId token that allows associating a connectionId/activityId with the connection.
+     */
     public static class TraceId extends Token {
 
         /**
@@ -769,10 +823,12 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
         }
     }
 
+    /**
+     * Token placeholder that consumes unknown tokens.
+     */
     public static class UnknownToken extends Token {
 
         public UnknownToken(int type, int length) {
-
             super(type, length);
         }
 
@@ -783,8 +839,7 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
          */
         public static UnknownToken decode(byte type, TokenDecodingState toDecode) {
 
-            return decode(toDecode, length -> {
-            }, (length, body) -> {
+            return decode(toDecode, LengthValidator.ignore(), (length, body) -> {
                 return new UnknownToken(type, length);
             });
         }
@@ -818,12 +873,25 @@ public final class Prelogin implements TokenStream, ClientMessage, ServerMessage
     @FunctionalInterface
     interface LengthValidator {
 
+        LengthValidator IGNORE = length -> {
+        };
+
         /**
-         * Validate the token data {@code lenght}.
+         * Validate the token data {@code length}.
          *
          * @param length
+         * @throws ProtocolException
          */
         void validate(short length);
+
+        /**
+         * Returns a {@link LengthValidator} that ignores the length.
+         *
+         * @return {@link LengthValidator} that ignores the length.
+         */
+        static LengthValidator ignore() {
+            return IGNORE;
+        }
     }
 
     /**

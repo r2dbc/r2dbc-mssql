@@ -55,8 +55,10 @@ final class StreamDecoder {
      * @return a {@link Flux} of {@link Message}s
      */
     @SuppressWarnings("unchecked")
-    public Flux<Message> decode(ByteBuf in, MessageDecoder decodeFunction) {
+    public Flux<Message> decode(ByteBuf in, MessageDecoder messageDecoder) {
+
         Objects.requireNonNull(in, "in must not be null");
+        Objects.requireNonNull(messageDecoder, "MessageDecoder must not be null");
 
         return Flux.<List<Message>, DecoderState>generate(() -> {
             DecoderState decoderState = this.state.getAndSet(null);
@@ -65,6 +67,7 @@ final class StreamDecoder {
         }, (state, sink) -> {
 
             if (state.header == null) {
+
                 if (!Header.canDecode(state.remainder)) {
                     this.state.set(state.retain());
                     sink.complete();
@@ -78,30 +81,30 @@ final class StreamDecoder {
 
                 Header header = state.getRequiredHeader();
 
-                if (state.canReadChunk()) {
-                    state = state.readChunk();
-                } else {
+                if (!state.canReadChunk()) {
                     this.state.set(state.retain());
                     sink.complete();
                     return state;
                 }
 
-                int readerIndex = state.unchunkedBodyData.readerIndex();
+                state = state.readChunk();
 
-                List<Message> messages = (List) decodeFunction.apply(header, state.unchunkedBodyData);
+                int readerIndex = state.aggregatedBodyReaderIndex();
+
+                List<Message> messages = (List) messageDecoder.apply(header, state.aggregatedBody);
 
                 if (!messages.isEmpty()) {
                     sink.next(messages);
 
-                    if (state.remainder.readableBytes() != 0) {
+                    if (state.hasRawRemainder()) {
                         return state;
                     }
 
-                    if (state.unchunkedBodyData.readableBytes() != 0) {
+                    if (state.hasAggregatedBodyRemainder()) {
                         this.state.set(state.retain());
                     }
                 } else {
-                    state.unchunkedBodyData.readerIndex(readerIndex);
+                    state.aggregatedBodyReaderIndex(readerIndex);
                     this.state.set(state.retain());
                 }
 
@@ -122,31 +125,27 @@ final class StreamDecoder {
     }
 
     /**
-     * The current decoding state.
+     * The current decoding state. Encapsulates the raw transport stream buffers ("remainder") and the aggregated (de-chunked) body along an optional {@link Header}.
      */
     static class DecoderState {
 
         final ByteBuf remainder;
 
-        final ByteBuf unchunkedBodyData;
+        final ByteBuf aggregatedBody;
 
         @Nullable
         final Header header;
 
-        private DecoderState(ByteBuf remainder, ByteBuf unchunkedBodyData, @Nullable Header header) {
+        private DecoderState(ByteBuf remainder, ByteBuf aggregatedBody, @Nullable Header header) {
             this.remainder = remainder;
-            this.unchunkedBodyData = unchunkedBodyData;
+            this.aggregatedBody = aggregatedBody;
             this.header = header;
         }
 
-        private DecoderState(ByteBuf initialBuffer, ByteBuf unchunkedBodyData) {
+        private DecoderState(ByteBuf initialBuffer, ByteBuf aggregatedBody) {
             this.remainder = initialBuffer;
-            this.unchunkedBodyData = unchunkedBodyData;
+            this.aggregatedBody = aggregatedBody;
             this.header = null;
-        }
-
-        public DecoderState withHeader(Header header) {
-            return new DecoderState(this.remainder, this.unchunkedBodyData, header);
         }
 
         /**
@@ -166,9 +165,51 @@ final class StreamDecoder {
             return this.remainder.readableBytes() >= requiredChunkLength;
         }
 
-        private int getChunkLength() {
-            return getRequiredHeader().getLength() - Header.LENGTH;
+        /**
+         * @return {@literal true} if the remaining raw bytes (raw transport buffer) are not yet fully consumed.
+         */
+        boolean hasRawRemainder() {
+            return this.remainder.readableBytes() != 0;
         }
+
+        /**
+         * @return {@literal true} if the remaining aggregated body bytes (aggregation of body buffers without header) are not yet fully consumed.
+         */
+        boolean hasAggregatedBodyRemainder() {
+            return this.aggregatedBody.readableBytes() != 0;
+        }
+
+        /**
+         * @return the aggregated body reader index.
+         */
+        int aggregatedBodyReaderIndex() {
+            return this.aggregatedBody.readerIndex();
+        }
+
+        /**
+         * Reset the aggregated body reader index.
+         *
+         * @param index the reader index.
+         */
+        void aggregatedBodyReaderIndex(int index) {
+            this.aggregatedBody.readerIndex(index);
+        }
+
+        /**
+         * @return the required {@link Header}.
+         */
+        Header getRequiredHeader() {
+
+            if (this.header == null) {
+                throw new IllegalStateException("DecoderState has no header");
+            }
+
+            return this.header;
+        }
+
+        // ----------------------------------------
+        // State-changing methods.
+        // ----------------------------------------
 
         /**
          * Create a new {@link DecoderState} with a decoded {@link Header}.
@@ -176,16 +217,7 @@ final class StreamDecoder {
          * @return the new {@link DecoderState}.
          */
         DecoderState readHeader() {
-            return new DecoderState(this.remainder, this.unchunkedBodyData, Header.decode(this.remainder));
-        }
-
-        public Header getRequiredHeader() {
-
-            if (this.header == null) {
-                throw new IllegalStateException("Header not decoded");
-            }
-
-            return this.header;
+            return new DecoderState(this.remainder, this.aggregatedBody, Header.decode(this.remainder));
         }
 
         /**
@@ -196,19 +228,25 @@ final class StreamDecoder {
          */
         DecoderState readChunk() {
 
-            if (unchunkedBodyData == Unpooled.EMPTY_BUFFER) {
+            if (aggregatedBody == Unpooled.EMPTY_BUFFER) {
 
                 ByteBuf unchunkedBodyData = this.remainder.copy(this.remainder.readerIndex(), getChunkLength());
                 this.remainder.skipBytes(getChunkLength());
                 return new DecoderState(remainder, unchunkedBodyData, null);
             }
 
-            ByteBuf unchunkedBodyData = this.unchunkedBodyData.writeBytes(this.remainder.readSlice(getChunkLength()));
+            ByteBuf unchunkedBodyData = this.aggregatedBody.writeBytes(this.remainder.readSlice(getChunkLength()));
             return new DecoderState(this.remainder, unchunkedBodyData, getRequiredHeader());
         }
 
+        /**
+         * Create a new {@link DecoderState} by appending a new raw remaining {@link ByteBuf data buffer}.
+         *
+         * @param in
+         * @return
+         */
         DecoderState andChunk(ByteBuf in) {
-            return new DecoderState(Unpooled.wrappedBuffer(this.remainder, in), this.unchunkedBodyData, this.header);
+            return new DecoderState(Unpooled.wrappedBuffer(this.remainder, in), this.aggregatedBody, this.header);
         }
 
         /**
@@ -218,7 +256,7 @@ final class StreamDecoder {
          */
         DecoderState retain() {
             this.remainder.retain();
-            this.unchunkedBodyData.retain();
+            this.aggregatedBody.retain();
             return this;
         }
 
@@ -227,7 +265,11 @@ final class StreamDecoder {
          */
         void release() {
             this.remainder.release();
-            this.unchunkedBodyData.release();
+            this.aggregatedBody.release();
+        }
+
+        private int getChunkLength() {
+            return getRequiredHeader().getLength() - Header.LENGTH;
         }
     }
 }

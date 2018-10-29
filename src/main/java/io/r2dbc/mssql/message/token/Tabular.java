@@ -82,19 +82,19 @@ public final class Tabular implements Message {
     }
 
     /**
-     * Creates a new, stateful {@link TabularDecodeFunction}.
+     * Creates a new, stateful {@link DecodeFunction}.
      *
      * @param encryptionSupported {@literal true} if table column encryption is supported.
      * @return the decoder.
      */
-    private static TabularDecodeFunction decodeFunction(boolean encryptionSupported) {
+    private static DecodeFunction decodeFunction(boolean encryptionSupported) {
 
         AtomicReference<ColumnMetadataToken> columns = new AtomicReference<>();
 
         return (type, buffer) -> {
 
             if (type == (byte) 0xFF) {
-                return DecodeFinished.INSTANCE;
+                return DecodeFinished.FINISHED;
             }
 
             if (type == EnvChangeToken.TYPE && EnvChangeToken.canDecode(buffer)) {
@@ -136,13 +136,13 @@ public final class Tabular implements Message {
                 ColumnMetadataToken colMetadataToken = columns.get();
 
                 if (!RowToken.canDecode(buffer, colMetadataToken.getColumns())) {
-                    return null;
+                    return DecodeFinished.UNABLE_TO_DECODE;
                 }
 
                 return RowToken.decode(buffer, colMetadataToken.getColumns());
             }
 
-            return null;
+            return DecodeFinished.UNABLE_TO_DECODE;
         };
     }
 
@@ -156,8 +156,8 @@ public final class Tabular implements Message {
     /**
      * Resolve a {@link Prelogin.Token} given its {@link Class type}.
      *
-     * @param filter
-     * @return
+     * @param filter filter that the desired {@link DataToken} must match.
+     * @return the lookup result or {@literal null} if no {@link DataToken} matches.
      */
     @Nullable
     private DataToken findToken(Predicate<DataToken> filter) {
@@ -176,10 +176,10 @@ public final class Tabular implements Message {
     /**
      * Find a {@link DataToken} by its {@link Class type} and a {@link Predicate}.
      *
-     * @param tokenType
-     * @return
+     * @param tokenType type of the desired {@link DataToken}.
+     * @return the lookup result.
      */
-    public <T extends DataToken> Optional<T> getToken(Class<? extends T> tokenType) {
+    <T extends DataToken> Optional<T> getToken(Class<? extends T> tokenType) {
 
         Objects.requireNonNull(tokenType, "Token type must not be null");
 
@@ -189,10 +189,11 @@ public final class Tabular implements Message {
     /**
      * Find a {@link DataToken} by its {@link Class type} and a {@link Predicate}.
      *
-     * @param tokenType
-     * @return
+     * @param tokenType type of the desired {@link DataToken}.
+     * @param filter filter that the desired {@link DataToken} must match.
+     * @return the lookup result.
      */
-    public <T extends DataToken> Optional<T> getToken(Class<? extends T> tokenType, Predicate<T> filter) {
+    <T extends DataToken> Optional<T> getToken(Class<? extends T> tokenType, Predicate<T> filter) {
 
         Objects.requireNonNull(tokenType, "Token type must not be null");
         Objects.requireNonNull(filter, "Filter must not be null");
@@ -205,11 +206,11 @@ public final class Tabular implements Message {
     /**
      * Find a {@link DataToken} by its {@link Class type} and a {@link Predicate}.
      *
-     * @param tokenType
+     * @param tokenType type of the desired {@link DataToken}.
      * @return
      * @throws IllegalArgumentException if no token was found.
      */
-    public <T extends DataToken> T getRequiredToken(Class<? extends T> tokenType) {
+    <T extends DataToken> T getRequiredToken(Class<? extends T> tokenType) {
 
         return getToken(tokenType).orElseThrow(
             () -> new IllegalArgumentException(String.format("No token of type [%s] available", tokenType.getName())));
@@ -218,36 +219,15 @@ public final class Tabular implements Message {
     /**
      * Find a {@link DataToken} by its {@link Class type} and a {@link Predicate}.
      *
-     * @param tokenType
-     * @param filter
+     * @param tokenType type of the desired {@link DataToken}.
+     * @param filter filter that the desired {@link DataToken} must match.
      * @return
      * @throws IllegalArgumentException if no token was found.
      */
-    public <T extends DataToken> T getRequiredToken(Class<? extends T> tokenType, Predicate<T> filter) {
+    <T extends DataToken> T getRequiredToken(Class<? extends T> tokenType, Predicate<T> filter) {
 
         return getToken(tokenType, filter).orElseThrow(
             () -> new IllegalArgumentException(String.format("No token of type [%s] available", tokenType.getName())));
-    }
-
-    /**
-     * Find a collection of {@link DataToken tokens} given their {@link Class type}.
-     *
-     * @param tokenType the desired token type.
-     * @return List of tokens.
-     */
-    public <T extends DataToken> List<T> getTokens(Class<T> tokenType) {
-
-        Objects.requireNonNull(tokenType, "Token type must not be null");
-
-        List<T> result = new ArrayList<>();
-
-        for (DataToken token : this.tokens) {
-            if (tokenType.isInstance(token)) {
-                result.add(tokenType.cast(token));
-            }
-        }
-
-        return result;
     }
 
     @Override
@@ -259,10 +239,21 @@ public final class Tabular implements Message {
         return sb.toString();
     }
 
-    public enum DecodeFinished implements DataToken {
+    /**
+     * Marker {@link DataToken} when decoding is finished.
+     */
+    enum DecodeFinished implements DataToken {
 
-        INSTANCE;
+        /**
+         * Decoding is finished.
+         */
+        FINISHED,
 
+
+        /**
+         * The {@link DecodeFunction} is not able to decode a {@link DataToken} from the given data buffer.
+         */
+        UNABLE_TO_DECODE;
 
         @Override
         public byte getType() {
@@ -275,26 +266,15 @@ public final class Tabular implements Message {
         }
     }
 
-
     /**
-     * Decode function for {@link Tabular} streams.
-     */
-    @FunctionalInterface
-    public interface TabularDecodeFunction {
-
-        @Nullable
-        DataToken tryDecode(byte type, ByteBuf buffer);
-    }
-
-    /**
-     * A stateful {@link TabularDecoder}. State is required to decode response chunks in multiple attempts/calls to a {@link TabularDecodeFunction}. Typically, state is a previous
+     * A stateful {@link TabularDecoder}. State is required to decode response chunks in multiple attempts/calls to a {@link DecodeFunction}. Typically, state is a previous
      * {@link ColumnMetadataToken column description} for row results.
      *
      * @author Mark Paluch
      */
     public static class TabularDecoder {
 
-        private final Tabular.TabularDecodeFunction decodeFunction;
+        private final DecodeFunction decodeFunction;
 
         /**
          * @param encryptionSupported whether encryption is supported.
@@ -330,12 +310,12 @@ public final class Tabular implements Message {
 
                 DataToken message = decodeFunction.tryDecode(type, buffer);
 
-                if (message == null) {
+                if (message == DecodeFinished.UNABLE_TO_DECODE) {
                     buffer.readerIndex(readerIndex);
                     break;
                 }
 
-                if (message == Tabular.DecodeFinished.INSTANCE) {
+                if (message == DecodeFinished.FINISHED) {
                     break;
                 }
 
@@ -346,4 +326,19 @@ public final class Tabular implements Message {
         }
     }
 
+    /**
+     * Decode function for {@link Tabular} streams. Can be called incrementally until the {@link #tryDecode(byte, ByteBuf) decode method} returns {@link DecodeFinished}.
+     */
+    @FunctionalInterface
+    interface DecodeFunction {
+
+        /**
+         * Try to decode a {@link DataToken} from the {@link ByteBuf data buffer}.
+         *
+         * @param type   token type.
+         * @param buffer the data buffer.
+         * @return a decoded {@link DataToken} or a {@link DecodeFinished} marker.
+         */
+        DataToken tryDecode(byte type, ByteBuf buffer);
+    }
 }

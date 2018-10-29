@@ -83,7 +83,7 @@ class StreamDecoderUnitTests {
         assertThat(state).isNotNull();
         assertThat(state.header).isNull();
         assertThat(state.remainder.readableBytes()).isEqualTo(1);
-        assertThat(state.unchunkedBodyData.readableBytes()).isEqualTo(0);
+        assertThat(state.aggregatedBody.readableBytes()).isEqualTo(0);
         assertThat(partial.refCnt()).isEqualTo(1);
 
         ByteBuf nextPacket = TestByteBufAllocator.TEST.buffer();
@@ -126,7 +126,7 @@ class StreamDecoderUnitTests {
         assertThat(state).isNotNull();
         assertThat(state.header).isNull();
         assertThat(state.remainder.readableBytes()).isEqualTo(1);
-        assertThat(state.unchunkedBodyData.readableBytes()).isEqualTo(0);
+        assertThat(state.aggregatedBody.readableBytes()).isEqualTo(0);
 
         assertThat(buffer.refCnt()).isEqualTo(1);
     }
@@ -158,7 +158,7 @@ class StreamDecoderUnitTests {
         assertThat(state).isNotNull();
         assertThat(state.header).isNotNull().isEqualTo(header2);
         assertThat(state.remainder.readableBytes()).isEqualTo(3);
-        assertThat(state.unchunkedBodyData.readableBytes()).isEqualTo(0);
+        assertThat(state.aggregatedBody.readableBytes()).isEqualTo(0);
     }
 
     @Test
@@ -190,7 +190,7 @@ class StreamDecoderUnitTests {
         assertThat(state).isNotNull();
         assertThat(state.header).isNotNull().isEqualTo(header2);
         assertThat(state.remainder.readableBytes()).isEqualTo(3);
-        assertThat(state.unchunkedBodyData.readableBytes()).isEqualTo(0);
+        assertThat(state.aggregatedBody.readableBytes()).isEqualTo(0);
         assertThat(buffer.refCnt()).isEqualTo(1);
 
         Flux<Message> secondMessage = decoder.decode(nextBuffer, ConnectionState.POST_LOGIN.decoder(CLIENT));
@@ -235,7 +235,7 @@ class StreamDecoderUnitTests {
         assertThat(state).isNotNull();
         assertThat(state.header).isNull(); // header completed
         assertThat(state.remainder.readableBytes()).isEqualTo(0);
-        assertThat(state.unchunkedBodyData.readableBytes()).isEqualTo(3);
+        assertThat(state.aggregatedBody.readableBytes()).isEqualTo(3);
         assertThat(firstChunk.refCnt()).isEqualTo(1);
 
         Flux<Message> nextAttempt = decoder.decode(lastChunk, ConnectionState.POST_LOGIN.decoder(CLIENT));

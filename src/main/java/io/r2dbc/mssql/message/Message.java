@@ -17,7 +17,7 @@
 package io.r2dbc.mssql.message;
 
 /**
- * A message.
+ * A TDS message. Messages declare typically encode or decode functions
  */
 public interface Message {
 

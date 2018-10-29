@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-package io.r2dbc.mssql.client;
+package io.r2dbc.mssql;
 
+import io.r2dbc.mssql.client.Client;
+import io.r2dbc.mssql.client.ProtocolException;
 import io.r2dbc.mssql.client.ssl.SslState;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
@@ -35,7 +37,7 @@ import static io.r2dbc.mssql.util.PredicateUtils.or;
 /**
  * A utility class that encapsulates the Login message flow.
  */
-public final class LoginFlow {
+final class LoginFlow {
 
     private LoginFlow() {
     }
@@ -45,7 +47,7 @@ public final class LoginFlow {
      * @param login  the login configuration for login negotiation
      * @return the messages received after authentication is complete, in response to this exchange
      */
-    public static Flux<Message> exchange(Client client, LoginConfiguration login) {
+    static Flux<Message> exchange(Client client, LoginConfiguration login) {
 
         Objects.requireNonNull(client, "client must not be null");
         Objects.requireNonNull(login, "Login must not be null");
@@ -53,7 +55,7 @@ public final class LoginFlow {
         EmitterProcessor<ClientMessage> requestProcessor = EmitterProcessor.create();
         FluxSink<ClientMessage> requests = requestProcessor.sink();
 
-        Prelogin.PreloginBuilder builder = Prelogin.builder();
+        Prelogin.Builder builder = Prelogin.builder();
         if (login.getConnectionId() != null) {
             builder.withConnectionId(login.getConnectionId());
         }

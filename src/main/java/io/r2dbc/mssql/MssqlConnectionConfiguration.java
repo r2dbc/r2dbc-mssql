@@ -16,7 +16,6 @@
 
 package io.r2dbc.mssql;
 
-import io.r2dbc.mssql.client.LoginConfiguration;
 import reactor.util.annotation.Nullable;
 
 import java.net.InetAddress;

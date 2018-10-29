@@ -17,8 +17,6 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
-import io.r2dbc.mssql.client.LoginConfiguration;
-import io.r2dbc.mssql.client.LoginFlow;
 import io.r2dbc.mssql.client.ReactorNettyClient;
 import io.r2dbc.spi.ConnectionFactory;
 import reactor.core.publisher.Mono;

@@ -113,7 +113,7 @@ final class PreloginUnitTests {
 
 		ByteBuf byteBuf = Unpooled.wrappedBuffer(ByteBufUtil.decodeHexDump(response));
 		Header header = Header.decode(byteBuf);
-		Prelogin prelogin = Prelogin.decode(header, byteBuf);
+		Prelogin prelogin = Prelogin.decode(byteBuf);
 
 		assertThat(prelogin.getTokens()).hasSize(4);
 		assertThat(prelogin.getToken(Prelogin.Version.class)).isNotEmpty().hasValueSatisfying(actual -> {

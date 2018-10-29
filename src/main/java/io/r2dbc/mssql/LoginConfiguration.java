@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.r2dbc.mssql.client;
+package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.message.token.Login7;
 import reactor.util.annotation.Nullable;
@@ -27,7 +27,7 @@ import java.util.UUID;
  *
  * @author Mark Paluch
  */
-public final class LoginConfiguration {
+final class LoginConfiguration {
 
     private final String username;
 
