@@ -38,4 +38,15 @@ class TypeBuilderUnitTests {
         assertThat(typeInformation.getLengthStrategy()).isEqualTo(TypeInformation.LengthStrategy.FIXEDLENTYPE);
         assertThat(typeInformation.getDisplaySize()).isEqualTo(11);
     }
+
+    @Test
+    void canDecodeShouldCheckDecodingAbility() {
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("000000000800380B");
+
+        assertThat(TypeBuilder.canDecode(buffer, true)).isTrue();
+        assertThat(buffer.readerIndex()).isEqualTo(0);
+
+        assertThat(TypeBuilder.canDecode(HexUtils.decodeToByteBuf("000000000800"), true)).isFalse();
+    }
 }

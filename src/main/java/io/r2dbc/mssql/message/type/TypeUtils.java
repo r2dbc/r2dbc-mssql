@@ -38,7 +38,7 @@ public final class TypeUtils {
      * Max length in bytes allowed by the "short" VARBINARY/VARCHAR types. Values longer than this must use
      * VARBINARY(max)/VARCHAR(max) (Yukon or later) or IMAGE/TEXT (Shiloh)
      */
-    static final int SHORT_VARTYPE_MAX_BYTES = 8000;
+    public static final int SHORT_VARTYPE_MAX_BYTES = 8000;
 
     /**
      * A type with unlimited max size, known as varchar(max), varbinary(max) and nvarchar(max), which has a max size of
@@ -58,7 +58,7 @@ public final class TypeUtils {
      */
     static final int NTEXT_MAX_CHARS = 0x3FFFFFFF;
 
-    static final int IMAGE_TEXT_MAX_BYTES = 0x7FFFFFFF;
+    public static final int IMAGE_TEXT_MAX_BYTES = 0x7FFFFFFF;
 
     /**
      * Transact-SQL Data Types: http://msdn.microsoft.com/en-us/library/ms179910.aspx
@@ -83,7 +83,7 @@ public final class TypeUtils {
     // Special length indicator for varchar(max), nvarchar(max) and varbinary(max).
     static final int MAXTYPE_LENGTH = 0xFFFF;
 
-    static final int UNKNOWN_STREAM_LENGTH = -1;
+    public static final int UNKNOWN_STREAM_LENGTH = -1;
 
     public static final int MAX_FRACTIONAL_SECONDS_SCALE = 7;
 

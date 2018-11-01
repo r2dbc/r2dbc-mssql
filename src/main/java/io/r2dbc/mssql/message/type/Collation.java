@@ -85,6 +85,17 @@ public final class Collation {
     }
 
     /**
+     * Create a new {@link Collation} from LCID and {@code sortId}.
+     *
+     * @param lcid   locale Id
+     * @param sortId sort Id
+     * @return the {@link Collation}.
+     */
+    public static Collation from(int lcid, int sortId) throws UnsupportedEncodingException {
+        return new Collation(lcid, sortId);
+    }
+
+    /**
      * Decode the {@link Collation}.
      *
      * @param buffer the buffer.
@@ -104,16 +115,21 @@ public final class Collation {
         }
     }
 
+
     static int getLength() {
         return 5;
     } // Length of collation in TDS (in bytes)
 
     /**
      * Encode the collation.
+     *
+     * @param buffer the data buffer.
      */
-    void encode(ByteBuf buffer) {
+    public void encode(ByteBuf buffer) {
 
-        Encode.intBigEndian(buffer, lcid);
+        Objects.requireNonNull(buffer, "Data buffer must not be null");
+
+        Encode.asInt(buffer, lcid);
         Encode.asByte(buffer, (byte) sortId);
     }
 

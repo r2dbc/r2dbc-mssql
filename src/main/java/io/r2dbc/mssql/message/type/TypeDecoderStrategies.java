@@ -22,8 +22,6 @@ import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
-import java.util.function.BiConsumer;
-
 /**
  * Typical type parsing strategies.
  *
@@ -38,7 +36,7 @@ interface TypeDecoderStrategies {
      * @param small small type.
      * @return the decoder strategy.
      */
-    static BiConsumer<MutableTypeInformation, ByteBuf> bigOrSmall(TypeBuilder big, TypeBuilder small) {
+    static TypeDecoderStrategy bigOrSmall(TypeBuilder big, TypeBuilder small) {
         return new BigOrSmallByteLenStrategy(big, small);
     }
 
@@ -52,7 +50,7 @@ interface TypeDecoderStrategies {
      * @param scale
      * @return the decoder strategy.
      */
-    static BiConsumer<MutableTypeInformation, ByteBuf> create(SqlServerType serverType, int maxLength, int precision, int displaySize, int scale) {
+    static TypeDecoderStrategy create(SqlServerType serverType, int maxLength, int precision, int displaySize, int scale) {
         return new FixedLenStrategy(serverType, maxLength, precision, displaySize, scale);
     }
 
@@ -62,7 +60,7 @@ interface TypeDecoderStrategies {
      * @param serverType the server data type.
      * @return the decoder strategy.
      */
-    static BiConsumer<MutableTypeInformation, ByteBuf> decimalNumeric(SqlServerType serverType) {
+    static TypeDecoderStrategy decimalNumeric(SqlServerType serverType) {
         return new DecimalNumericStrategy(serverType);
     }
 
@@ -72,14 +70,14 @@ interface TypeDecoderStrategies {
      * @param serverType the server data type.
      * @return the decoder strategy.
      */
-    static BiConsumer<MutableTypeInformation, ByteBuf> temporal(SqlServerType serverType) {
+    static TypeDecoderStrategy temporal(SqlServerType serverType) {
         return new KatmaiScaledTemporalStrategy(serverType);
     }
 
     /**
      * Strategy for {@link LengthStrategy#FIXEDLENTYPE}.
      */
-    class FixedLenStrategy implements BiConsumer<MutableTypeInformation, ByteBuf> {
+    class FixedLenStrategy extends AbstractTypeDecoderStrategy {
 
         private final SqlServerType serverType;
 
@@ -92,6 +90,7 @@ interface TypeDecoderStrategies {
         private final int scale;
 
         FixedLenStrategy(SqlServerType serverType, int maxLength, int precision, int displaySize, int scale) {
+            super(0);
             this.serverType = serverType;
             this.maxLength = maxLength;
             this.precision = precision;
@@ -100,7 +99,7 @@ interface TypeDecoderStrategies {
         }
 
         @Override
-        public void accept(MutableTypeInformation typeInfo, ByteBuf buffer) {
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
 
             typeInfo.lengthStrategy = LengthStrategy.FIXEDLENTYPE;
             typeInfo.serverType = serverType;
@@ -114,16 +113,17 @@ interface TypeDecoderStrategies {
     /**
      * Strategy for decimal numbers using {@link LengthStrategy#BYTELENTYPE}.
      */
-    class DecimalNumericStrategy implements BiConsumer<MutableTypeInformation, ByteBuf> {
+    class DecimalNumericStrategy extends AbstractTypeDecoderStrategy {
 
         private final SqlServerType serverType;
 
         DecimalNumericStrategy(SqlServerType serverType) {
+            super(3);
             this.serverType = serverType;
         }
 
         @Override
-        public void accept(MutableTypeInformation typeInfo, ByteBuf buffer) {
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
 
             int maxLength = Decode.uByte(buffer);
             int precision = Decode.uByte(buffer);
@@ -145,19 +145,20 @@ interface TypeDecoderStrategies {
     /**
      * Strategy using a byte length ({@code 8} or {@code 4}) for big or small type parsing.
      */
-    class BigOrSmallByteLenStrategy implements BiConsumer<MutableTypeInformation, ByteBuf> {
+    class BigOrSmallByteLenStrategy extends AbstractTypeDecoderStrategy {
 
         private final TypeBuilder bigBuilder;
 
         private final TypeBuilder smallBuilder;
 
         BigOrSmallByteLenStrategy(TypeBuilder bigBuilder, TypeBuilder smallBuilder) {
+            super(1);
             this.bigBuilder = bigBuilder;
             this.smallBuilder = smallBuilder;
         }
 
         @Override
-        public void accept(MutableTypeInformation typeInfo, ByteBuf buffer) {
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
 
             int length = Decode.uByte(buffer);
 
@@ -180,11 +181,12 @@ interface TypeDecoderStrategies {
     /**
      * Strategy for temporal types.
      */
-    class KatmaiScaledTemporalStrategy implements BiConsumer<MutableTypeInformation, ByteBuf> {
+    class KatmaiScaledTemporalStrategy extends AbstractTypeDecoderStrategy {
 
         private final SqlServerType serverType;
 
         KatmaiScaledTemporalStrategy(SqlServerType serverType) {
+            super(1);
             this.serverType = serverType;
         }
 
@@ -195,7 +197,7 @@ interface TypeDecoderStrategies {
         }
 
         @Override
-        public void accept(MutableTypeInformation typeInfo, ByteBuf buffer) {
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
 
             typeInfo.scale = Decode.uByte(buffer);
             if (typeInfo.scale > TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE) {

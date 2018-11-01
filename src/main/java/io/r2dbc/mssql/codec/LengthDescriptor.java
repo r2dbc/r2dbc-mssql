@@ -67,9 +67,9 @@ public final class LengthDescriptor {
     /**
      * Creates a {@link LengthDescriptor}.
      *
-     * @param length
-     * @param isNull
-     * @return
+     * @param length value length.
+     * @param isNull {@literal true} if the value is {@literal null}.
+     * @return the {@link LengthDescriptor}.
      */
     public static LengthDescriptor of(int length, boolean isNull) {
         return new LengthDescriptor(length, isNull);
@@ -83,8 +83,18 @@ public final class LengthDescriptor {
      * @return the {@link LengthDescriptor}.
      */
     public static LengthDescriptor decode(ByteBuf buffer, Column column) {
+        return decode(buffer, column.getType());
+    }
 
-        TypeInformation type = column.getType();
+    /**
+     * Decode a {@link LengthDescriptor} for a {@link TypeInformation}.
+     *
+     * @param buffer the data buffer.
+     * @param type   {@link TypeInformation}.
+     * @return the {@link LengthDescriptor}.
+     */
+    public static LengthDescriptor decode(ByteBuf buffer, TypeInformation type) {
+
         switch (type.getLengthStrategy()) {
 
             case PARTLENTYPE: {
@@ -136,6 +146,71 @@ public final class LengthDescriptor {
 
                 int length = Decode.uShort(buffer);
                 return new LengthDescriptor(length == USHORT_NULL ? 0 : length, length == USHORT_NULL);
+            }
+        }
+
+        throw ProtocolException.invalidTds("Cannot parse value LengthDescriptor");
+    }
+
+    /**
+     * Check whether the {@link ByteBuf} can be decoded into an {@link LengthDescriptor}.
+     *
+     * @param buffer the data buffer.
+     * @param type   {@link TypeInformation}.
+     * @return {@literal true} if the buffer contains sufficient data to decode a {@link LengthDescriptor}.
+     */
+    public static boolean canDecode(ByteBuf buffer, TypeInformation type) {
+
+        int readerIndex = buffer.readerIndex();
+        try {
+            return doCanDecode(buffer, type);
+        } finally {
+            buffer.readerIndex(readerIndex);
+        }
+    }
+
+    private static boolean doCanDecode(ByteBuf buffer, TypeInformation type) {
+
+        switch (type.getLengthStrategy()) {
+
+            case PARTLENTYPE:
+                return buffer.readableBytes() >= 4;
+
+            case FIXEDLENTYPE:
+                return true;
+
+
+            case BYTELENTYPE:
+            case USHORTLENTYPE:
+                return buffer.readableBytes() >= 2;
+
+            case LONGLENTYPE: {
+
+                SqlServerType serverType = type.getServerType();
+
+                if (serverType == SqlServerType.TEXT || serverType == SqlServerType.IMAGE
+                    || serverType == SqlServerType.NTEXT) {
+
+                    if (buffer.readableBytes() == 0) {
+                        return false;
+                    }
+
+                    int nullMarker = Decode.uByte(buffer);
+
+                    if (nullMarker == 0) {
+                        return true;
+                    }
+
+
+                    // skip(24) is to skip the textptr and timestamp fields
+                    return buffer.readableBytes() >= 24 + /* int */ 4;
+                }
+
+                if (serverType == SqlServerType.SQL_VARIANT) {
+                    return buffer.readableBytes() >= 4;
+                }
+
+                return buffer.readableBytes() >= 2;
             }
         }
 

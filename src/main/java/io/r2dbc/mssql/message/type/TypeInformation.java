@@ -45,6 +45,17 @@ public interface TypeInformation {
     }
 
     /**
+     * Check whether the {@link ByteBuf} contains sufficient readable bytes to decode the {@link TypeInformation}.
+     *
+     * @param buffer    the data buffer.
+     * @param readFlags {@literal true} to parse type flags.
+     * @return {@literal true} if the data buffer contains sufficient readable bytes to decode the {@link TypeInformation}.
+     */
+    static boolean canDecode(ByteBuf buffer, boolean readFlags) {
+        return TypeBuilder.canDecode(buffer, readFlags);
+    }
+
+    /**
      * Returns the maximal length.
      *
      * @return the maximal length.

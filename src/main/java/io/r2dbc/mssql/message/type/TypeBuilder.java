@@ -25,7 +25,6 @@ import io.r2dbc.mssql.util.Assert;
 
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.function.BiConsumer;
 
 /**
  * Builders to parse {@link TypeInformation}.
@@ -106,39 +105,49 @@ enum TypeBuilder {
         4) // scale
     ),
 
-    BITN(TdsDataType.BITN, (typeInfo, buffer) -> {
+    BITN(TdsDataType.BITN, new AbstractTypeDecoderStrategy(1) {
 
-        if (1 != Decode.uByte(buffer)) {
-            throw ProtocolException.invalidTds("Invalid mutability for BITN");
+        @Override
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
+
+            if (1 != Decode.uByte(buffer)) {
+                throw ProtocolException.invalidTds("Invalid mutability for BITN");
+            }
+
+            BIT.build(typeInfo, buffer);
+            typeInfo.lengthStrategy = LengthStrategy.BYTELENTYPE;
         }
+    }
+    ),
 
-        BIT.build(typeInfo, buffer);
-        typeInfo.lengthStrategy = LengthStrategy.BYTELENTYPE;
-    }),
+    INTN(TdsDataType.INTN, new AbstractTypeDecoderStrategy(1) {
 
-    INTN(TdsDataType.INTN, (typeInfo, buffer) -> {
+        @Override
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
 
-        int intType = Decode.uByte(buffer);
+            int intType = Decode.uByte(buffer);
 
-        switch (intType) {
-            case 8:
-                BIGINT.build(typeInfo, buffer);
-                break;
-            case 4:
-                INTEGER.build(typeInfo, buffer);
-                break;
-            case 2:
-                SMALLINT.build(typeInfo, buffer);
-                break;
-            case 1:
-                TINYINT.build(typeInfo, buffer);
-                break;
-            default:
-                throw ProtocolException.invalidTds(String.format("Unsupported INTN type %s", intType));
+            switch (intType) {
+                case 8:
+                    BIGINT.build(typeInfo, buffer);
+                    break;
+                case 4:
+                    INTEGER.build(typeInfo, buffer);
+                    break;
+                case 2:
+                    SMALLINT.build(typeInfo, buffer);
+                    break;
+                case 1:
+                    TINYINT.build(typeInfo, buffer);
+                    break;
+                default:
+                    throw ProtocolException.invalidTds(String.format("Unsupported INTN type %s", intType));
+            }
+
+            typeInfo.lengthStrategy = LengthStrategy.BYTELENTYPE;
         }
-
-        typeInfo.lengthStrategy = LengthStrategy.BYTELENTYPE;
-    }),
+    }
+    ),
 
     DECIMAL(TdsDataType.DECIMALN, TypeDecoderStrategies.decimalNumeric(SqlServerType.DECIMAL)),
     NUMERIC(TdsDataType.NUMERICN, TypeDecoderStrategies.decimalNumeric(SqlServerType.NUMERIC)),
@@ -150,182 +159,230 @@ enum TypeBuilder {
     DATETIME2(TdsDataType.DATETIME2N, TypeDecoderStrategies.temporal(SqlServerType.DATETIME2)),
     DATETIMEOFFSET(TdsDataType.DATETIMEOFFSETN, TypeDecoderStrategies.temporal(SqlServerType.DATETIMEOFFSET)),
 
-    DATE(TdsDataType.DATEN, (typeInfo, buffer) -> {
-        typeInfo.serverType = SqlServerType.DATE;
-        typeInfo.lengthStrategy = LengthStrategy.BYTELENTYPE;
-        typeInfo.maxLength = 3;
-        typeInfo.displaySize = typeInfo.precision = "yyyy-mm-dd".length();
-    }),
+    DATE(TdsDataType.DATEN, new AbstractTypeDecoderStrategy(0) {
 
-    BIGBINARY(TdsDataType.BIGBINARY, (typeInfo, buffer) -> {
-
-        typeInfo.lengthStrategy = LengthStrategy.USHORTLENTYPE;
-        typeInfo.maxLength = Decode.uShort(buffer);
-        if (typeInfo.maxLength > TypeUtils.SHORT_VARTYPE_MAX_BYTES) {
-            throw ProtocolException.invalidTds("Max length exceeds short VARBINARY/VARCHAR type");
+        @Override
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
+            typeInfo.serverType = SqlServerType.DATE;
+            typeInfo.lengthStrategy = LengthStrategy.BYTELENTYPE;
+            typeInfo.maxLength = 3;
+            typeInfo.displaySize = typeInfo.precision = "yyyy-mm-dd".length();
         }
-        typeInfo.precision = typeInfo.maxLength;
-        typeInfo.displaySize = 2 * typeInfo.maxLength;
-        typeInfo.serverType = (TypeUtils.UDT_TIMESTAMP == typeInfo.userType) ? SqlServerType.TIMESTAMP : SqlServerType.BINARY;
     }),
 
-    BIGVARBINARY(TdsDataType.BIGVARBINARY, (typeInfo, buffer) -> {
+    BIGBINARY(TdsDataType.BIGBINARY, new AbstractTypeDecoderStrategy(2) {
 
-        typeInfo.maxLength = Decode.uShort(buffer);
+        @Override
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
 
-        if (TypeUtils.MAXTYPE_LENGTH == typeInfo.maxLength)// for PLP types
-        {
-            typeInfo.lengthStrategy = LengthStrategy.PARTLENTYPE;
-            typeInfo.serverType = SqlServerType.VARBINARYMAX;
-            typeInfo.displaySize = typeInfo.precision = TypeUtils.MAX_VARTYPE_MAX_BYTES;
-        } else if (typeInfo.maxLength <= TypeUtils.SHORT_VARTYPE_MAX_BYTES)// for non-PLP types
-        {
             typeInfo.lengthStrategy = LengthStrategy.USHORTLENTYPE;
-            typeInfo.serverType = SqlServerType.VARBINARY;
+            typeInfo.maxLength = Decode.uShort(buffer);
+            if (typeInfo.maxLength > TypeUtils.SHORT_VARTYPE_MAX_BYTES) {
+                throw ProtocolException.invalidTds("Max length exceeds short VARBINARY/VARCHAR type");
+            }
             typeInfo.precision = typeInfo.maxLength;
             typeInfo.displaySize = 2 * typeInfo.maxLength;
-        } else {
-            throw ProtocolException.invalidTds("Cannot parse BIGVARBINARY type info");
+            typeInfo.serverType = (TypeUtils.UDT_TIMESTAMP == typeInfo.userType) ? SqlServerType.TIMESTAMP : SqlServerType.BINARY;
         }
     }),
 
-    IMAGE(TdsDataType.IMAGE, (typeInfo, buffer) -> {
+    BIGVARBINARY(TdsDataType.BIGVARBINARY, new AbstractTypeDecoderStrategy(2) {
 
-        typeInfo.lengthStrategy = LengthStrategy.LONGLENTYPE;
-        typeInfo.maxLength = Decode.asLong(buffer);
+        @Override
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
 
-        if (typeInfo.maxLength < 0) {
-            throw ProtocolException.invalidTds("Negative IMAGE type length");
+            typeInfo.maxLength = Decode.uShort(buffer);
+
+            if (TypeUtils.MAXTYPE_LENGTH == typeInfo.maxLength)// for PLP types
+            {
+                typeInfo.lengthStrategy = LengthStrategy.PARTLENTYPE;
+                typeInfo.serverType = SqlServerType.VARBINARYMAX;
+                typeInfo.displaySize = typeInfo.precision = TypeUtils.MAX_VARTYPE_MAX_BYTES;
+            } else if (typeInfo.maxLength <= TypeUtils.SHORT_VARTYPE_MAX_BYTES)// for non-PLP types
+            {
+                typeInfo.lengthStrategy = LengthStrategy.USHORTLENTYPE;
+                typeInfo.serverType = SqlServerType.VARBINARY;
+                typeInfo.precision = typeInfo.maxLength;
+                typeInfo.displaySize = 2 * typeInfo.maxLength;
+            } else {
+                throw ProtocolException.invalidTds("Cannot parse BIGVARBINARY type info");
+            }
         }
-
-        typeInfo.serverType = SqlServerType.IMAGE;
-        typeInfo.displaySize = typeInfo.precision = Integer.MAX_VALUE;
     }),
 
-    BIGCHAR(TdsDataType.BIGCHAR, (typeInfo, buffer) -> {
+    IMAGE(TdsDataType.IMAGE, new AbstractTypeDecoderStrategy(4) {
 
-        typeInfo.lengthStrategy = LengthStrategy.USHORTLENTYPE;
-        typeInfo.maxLength = Decode.uShort(buffer);
+        @Override
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
 
-        if (typeInfo.maxLength > TypeUtils.SHORT_VARTYPE_MAX_BYTES) {
-            throw ProtocolException.invalidTds(String.format("BIGCHAR max length exceeded: %d", typeInfo.maxLength));
+            typeInfo.lengthStrategy = LengthStrategy.LONGLENTYPE;
+            typeInfo.maxLength = Decode.asLong(buffer);
+
+            if (typeInfo.maxLength < 0) {
+                throw ProtocolException.invalidTds("Negative IMAGE type length");
+            }
+
+            typeInfo.serverType = SqlServerType.IMAGE;
+            typeInfo.displaySize = typeInfo.precision = Integer.MAX_VALUE;
         }
-
-        typeInfo.displaySize = typeInfo.precision = typeInfo.maxLength;
-        typeInfo.serverType = SqlServerType.CHAR;
-        typeInfo.collation = Collation.decode(buffer);
-        typeInfo.charset = typeInfo.collation.getCharset();
     }),
 
-    BIGVARCHAR(TdsDataType.BIGVARCHAR, (typeInfo, buffer) -> {
+    BIGCHAR(TdsDataType.BIGCHAR, new AbstractTypeDecoderStrategy(7) {
 
-        typeInfo.maxLength = Decode.uShort(buffer);
+        @Override
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
 
-        if (TypeUtils.MAXTYPE_LENGTH == typeInfo.maxLength)// for PLP types
-        {
-            typeInfo.lengthStrategy = LengthStrategy.PARTLENTYPE;
-            typeInfo.serverType = SqlServerType.VARCHARMAX;
-            typeInfo.displaySize = typeInfo.precision = TypeUtils.MAX_VARTYPE_MAX_BYTES;
-        } else if (typeInfo.maxLength <= TypeUtils.SHORT_VARTYPE_MAX_BYTES)// for non-PLP types
-        {
             typeInfo.lengthStrategy = LengthStrategy.USHORTLENTYPE;
-            typeInfo.serverType = SqlServerType.VARCHAR;
+            typeInfo.maxLength = Decode.uShort(buffer);
+
+            if (typeInfo.maxLength > TypeUtils.SHORT_VARTYPE_MAX_BYTES) {
+                throw ProtocolException.invalidTds(String.format("BIGCHAR max length exceeded: %d", typeInfo.maxLength));
+            }
+
             typeInfo.displaySize = typeInfo.precision = typeInfo.maxLength;
-        } else {
-            throw ProtocolException.invalidTds("Cannot parse BIGVARCHAR type info");
+            typeInfo.serverType = SqlServerType.CHAR;
+            typeInfo.collation = Collation.decode(buffer);
+            typeInfo.charset = typeInfo.collation.getCharset();
         }
-
-        typeInfo.collation = Collation.decode(buffer);
-        typeInfo.charset = typeInfo.collation.getCharset();
     }),
 
-    TEXT(TdsDataType.TEXT, (typeInfo, buffer) -> {
-        typeInfo.lengthStrategy = LengthStrategy.LONGLENTYPE;
-        typeInfo.maxLength = Decode.asLong(buffer);
-        if (typeInfo.maxLength < 0) {
-            throw ProtocolException.invalidTds("Negative TEXT type length");
+    BIGVARCHAR(TdsDataType.BIGVARCHAR, new AbstractTypeDecoderStrategy(7) {
+
+        @Override
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
+
+            typeInfo.maxLength = Decode.uShort(buffer);
+
+            if (TypeUtils.MAXTYPE_LENGTH == typeInfo.maxLength)// for PLP types
+            {
+                typeInfo.lengthStrategy = LengthStrategy.PARTLENTYPE;
+                typeInfo.serverType = SqlServerType.VARCHARMAX;
+                typeInfo.displaySize = typeInfo.precision = TypeUtils.MAX_VARTYPE_MAX_BYTES;
+            } else if (typeInfo.maxLength <= TypeUtils.SHORT_VARTYPE_MAX_BYTES)// for non-PLP types
+            {
+                typeInfo.lengthStrategy = LengthStrategy.USHORTLENTYPE;
+                typeInfo.serverType = SqlServerType.VARCHAR;
+                typeInfo.displaySize = typeInfo.precision = typeInfo.maxLength;
+            } else {
+                throw ProtocolException.invalidTds("Cannot parse BIGVARCHAR type info");
+            }
+
+            typeInfo.collation = Collation.decode(buffer);
+            typeInfo.charset = typeInfo.collation.getCharset();
         }
-        typeInfo.serverType = SqlServerType.TEXT;
-        typeInfo.displaySize = typeInfo.precision = Integer.MAX_VALUE;
-        typeInfo.collation = Collation.decode(buffer);
-        typeInfo.charset = typeInfo.collation.getCharset();
     }),
 
-    NCHAR(TdsDataType.NCHAR, (typeInfo, buffer) -> {
+    TEXT(TdsDataType.TEXT, new AbstractTypeDecoderStrategy(9) {
 
-        typeInfo.lengthStrategy = LengthStrategy.USHORTLENTYPE;
-        typeInfo.maxLength = Decode.uShort(buffer);
-        if (typeInfo.maxLength > TypeUtils.SHORT_VARTYPE_MAX_BYTES || 0 != typeInfo.maxLength % 2) {
-            throw ProtocolException.invalidTds("Invalid NCHAR length");
+        @Override
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
+            typeInfo.lengthStrategy = LengthStrategy.LONGLENTYPE;
+            typeInfo.maxLength = Decode.asLong(buffer);
+            if (typeInfo.maxLength < 0) {
+                throw ProtocolException.invalidTds("Negative TEXT type length");
+            }
+            typeInfo.serverType = SqlServerType.TEXT;
+            typeInfo.displaySize = typeInfo.precision = Integer.MAX_VALUE;
+            typeInfo.collation = Collation.decode(buffer);
+            typeInfo.charset = typeInfo.collation.getCharset();
         }
-        typeInfo.displaySize = typeInfo.precision = typeInfo.maxLength / 2;
-        typeInfo.serverType = SqlServerType.NCHAR;
-        typeInfo.collation = Collation.decode(buffer);
-        typeInfo.charset = Encoding.UNICODE.charset();
     }),
 
-    NVARCHAR(TdsDataType.NVARCHAR, (typeInfo, buffer) -> {
+    NCHAR(TdsDataType.NCHAR, new AbstractTypeDecoderStrategy(7) {
 
-        typeInfo.maxLength = Decode.uShort(buffer);
-        if (TypeUtils.MAXTYPE_LENGTH == typeInfo.maxLength)// for PLP types
-        {
-            typeInfo.lengthStrategy = LengthStrategy.PARTLENTYPE;
-            typeInfo.serverType = SqlServerType.NVARCHARMAX;
-            typeInfo.displaySize = typeInfo.precision = TypeUtils.MAX_VARTYPE_MAX_CHARS;
-        } else if (typeInfo.maxLength <= TypeUtils.SHORT_VARTYPE_MAX_BYTES && 0 == typeInfo.maxLength % 2)// for
-        // non-PLP
-        // types
-        {
+        @Override
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
+
             typeInfo.lengthStrategy = LengthStrategy.USHORTLENTYPE;
-            typeInfo.serverType = SqlServerType.NVARCHAR;
+            typeInfo.maxLength = Decode.uShort(buffer);
+            if (typeInfo.maxLength > TypeUtils.SHORT_VARTYPE_MAX_BYTES || 0 != typeInfo.maxLength % 2) {
+                throw ProtocolException.invalidTds("Invalid NCHAR length");
+            }
             typeInfo.displaySize = typeInfo.precision = typeInfo.maxLength / 2;
-        } else {
-            throw ProtocolException.invalidTds("Invalid NVARCHAR length");
+            typeInfo.serverType = SqlServerType.NCHAR;
+            typeInfo.collation = Collation.decode(buffer);
+            typeInfo.charset = Encoding.UNICODE.charset();
         }
-        typeInfo.collation = Collation.decode(buffer);
-        typeInfo.charset = Encoding.UNICODE.charset();
     }),
 
-    NTEXT(TdsDataType.NTEXT, (typeInfo, buffer) -> {
+    NVARCHAR(TdsDataType.NVARCHAR, new AbstractTypeDecoderStrategy(7) {
 
-        typeInfo.lengthStrategy = LengthStrategy.LONGLENTYPE;
-        typeInfo.maxLength = Decode.asLong(buffer);
+        @Override
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
 
-        if (typeInfo.maxLength < 0) {
-            throw ProtocolException.invalidTds("Negative TEXT type length");
+            typeInfo.maxLength = Decode.uShort(buffer);
+            if (TypeUtils.MAXTYPE_LENGTH == typeInfo.maxLength)// for PLP types
+            {
+                typeInfo.lengthStrategy = LengthStrategy.PARTLENTYPE;
+                typeInfo.serverType = SqlServerType.NVARCHARMAX;
+                typeInfo.displaySize = typeInfo.precision = TypeUtils.MAX_VARTYPE_MAX_CHARS;
+            } else if (typeInfo.maxLength <= TypeUtils.SHORT_VARTYPE_MAX_BYTES && 0 == typeInfo.maxLength % 2)// for
+            // non-PLP
+            // types
+            {
+                typeInfo.lengthStrategy = LengthStrategy.USHORTLENTYPE;
+                typeInfo.serverType = SqlServerType.NVARCHAR;
+                typeInfo.displaySize = typeInfo.precision = typeInfo.maxLength / 2;
+            } else {
+                throw ProtocolException.invalidTds("Invalid NVARCHAR length");
+            }
+            typeInfo.collation = Collation.decode(buffer);
+            typeInfo.charset = Encoding.UNICODE.charset();
         }
-
-        typeInfo.serverType = SqlServerType.NTEXT;
-        typeInfo.displaySize = typeInfo.precision = Integer.MAX_VALUE / 2;
-        typeInfo.collation = Collation.decode(buffer);
-        typeInfo.charset = Encoding.UNICODE.charset();
     }),
 
-    GUID(TdsDataType.GUID, (typeInfo, buffer) -> {
+    NTEXT(TdsDataType.NTEXT, new AbstractTypeDecoderStrategy(9) {
 
-        int maxLength = Decode.uByte(buffer);
-        if (maxLength != 16 && maxLength != 0) {
-            throw ProtocolException.invalidTds("Negative GUID type length");
+        @Override
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
+
+            typeInfo.lengthStrategy = LengthStrategy.LONGLENTYPE;
+            typeInfo.maxLength = Decode.asLong(buffer);
+
+            if (typeInfo.maxLength < 0) {
+                throw ProtocolException.invalidTds("Negative TEXT type length");
+            }
+
+            typeInfo.serverType = SqlServerType.NTEXT;
+            typeInfo.displaySize = typeInfo.precision = Integer.MAX_VALUE / 2;
+            typeInfo.collation = Collation.decode(buffer);
+            typeInfo.charset = Encoding.UNICODE.charset();
         }
+    }),
 
-        typeInfo.lengthStrategy = LengthStrategy.BYTELENTYPE;
-        typeInfo.serverType = SqlServerType.GUID;
-        typeInfo.maxLength = maxLength;
-        typeInfo.displaySize = 36;
-        typeInfo.precision = 36;
+    GUID(TdsDataType.GUID, new AbstractTypeDecoderStrategy(1) {
+
+        @Override
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
+
+            int maxLength = Decode.uByte(buffer);
+            if (maxLength != 16 && maxLength != 0) {
+                throw ProtocolException.invalidTds("Negative GUID type length");
+            }
+
+            typeInfo.lengthStrategy = LengthStrategy.BYTELENTYPE;
+            typeInfo.serverType = SqlServerType.GUID;
+            typeInfo.maxLength = maxLength;
+            typeInfo.displaySize = 36;
+            typeInfo.precision = 36;
+        }
     }),
 
     // TODO: UDT, XML
 
-    SQL_VARIANT(TdsDataType.SQL_VARIANT, (typeInfo, buffer) -> {
-        typeInfo.lengthStrategy = LengthStrategy.LONGLENTYPE; // sql_variant type should be LONGLENTYPE length.
-        typeInfo.maxLength = Decode.asLong(buffer);
-        typeInfo.serverType = SqlServerType.SQL_VARIANT;
+    SQL_VARIANT(TdsDataType.SQL_VARIANT, new AbstractTypeDecoderStrategy(4) {
+
+        @Override
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
+            typeInfo.lengthStrategy = LengthStrategy.LONGLENTYPE; // sql_variant type should be LONGLENTYPE length.
+            typeInfo.maxLength = Decode.asLong(buffer);
+            typeInfo.serverType = SqlServerType.SQL_VARIANT;
+        }
     });
 
     private final TdsDataType tdsType;
 
-    private final BiConsumer<MutableTypeInformation, ByteBuf> strategy;
+    private final TypeDecoderStrategy strategy;
 
     private static final Map<TdsDataType, TypeBuilder> builderMap = new EnumMap<>(TdsDataType.class);
 
@@ -335,7 +392,7 @@ enum TypeBuilder {
         }
     }
 
-    TypeBuilder(TdsDataType tdsType, BiConsumer<MutableTypeInformation, ByteBuf> strategy) {
+    TypeBuilder(TdsDataType tdsType, TypeDecoderStrategy strategy) {
         this.tdsType = tdsType;
         this.strategy = strategy;
     }
@@ -366,10 +423,38 @@ enum TypeBuilder {
         return typeBuilder.build(typeInfo, buffer);
     }
 
+    /**
+     * Check whether the {@link ByteBuf} contains sufficient readable bytes to decode the {@link TypeInformation}.
+     *
+     * @param buffer  the data buffer.
+     * @param boolean {@literal true} to parse type flags.
+     * @return {@literal true} if the data buffer contains sufficient readable bytes to decode the {@link TypeInformation}.
+     */
+    static boolean canDecode(ByteBuf buffer, boolean readFlags) {
+
+        int length = 4 /* user type */ + (readFlags ? 2 : 0);
+        int readerIndex = buffer.readerIndex();
+
+        try {
+            if (buffer.readableBytes() >= length + 1) {
+
+                buffer.skipBytes(length);
+
+                TdsDataType tdsType = TdsDataType.valueOf(Decode.uByte(buffer));
+
+                TypeBuilder typeBuilder = builderMap.get(tdsType);
+                return typeBuilder.strategy.canDecode(buffer);
+            }
+
+            return false;
+        } finally {
+            buffer.readerIndex(readerIndex);
+        }
+    }
+
     TdsDataType getTdsDataType() {
         return tdsType;
     }
-
 
     /**
      * Build the {@link TypeInformation} by parsing details from {@link ByteBuf}.
@@ -381,7 +466,7 @@ enum TypeBuilder {
      */
     MutableTypeInformation build(MutableTypeInformation typeInfo, ByteBuf buffer) throws ProtocolException {
 
-        strategy.accept(typeInfo, buffer);
+        strategy.decode(typeInfo, buffer);
 
         // Postcondition: SqlServerType and SqlServerLength are initialized
 
