@@ -131,6 +131,16 @@ public final class Tabular implements Message {
                 return DoneToken.decode(buffer);
             }
 
+            if (type == DoneInProcToken.TYPE && DoneInProcToken.canDecode(buffer)) {
+                columns.set(null);
+                return DoneInProcToken.decode(buffer);
+            }
+
+            if (type == DoneProcToken.TYPE && DoneProcToken.canDecode(buffer)) {
+                columns.set(null);
+                return DoneProcToken.decode(buffer);
+            }
+
             if (type == RowToken.TYPE) {
 
                 ColumnMetadataToken colMetadataToken = columns.get();
