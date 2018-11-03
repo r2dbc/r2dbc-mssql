@@ -84,7 +84,6 @@ public final class Encode {
         buffer.writeIntLE(value);
     }
 
-
     public static void intBigEndian(ByteBuf buffer, int value) {
         buffer.writeInt(value);
     }
@@ -237,5 +236,21 @@ public final class Encode {
         buffer.writeBytes(encoded);
 
         encoded.release();
+    }
+
+    /**
+     * Encode a {@link String} as RPC string.
+     *
+     * @param buffer the data buffer.
+     * @param value  the value to encode.
+     */
+    public static void rpcString(ByteBuf buffer, CharSequence value) {
+
+        for (int i = 0; i < value.length(); i++) {
+
+            char ch = value.charAt(i);
+            buffer.writeByte((byte) (ch & 0xFF));
+            buffer.writeByte((byte) ((ch >> 8) & 0xFF));
+        }
     }
 }

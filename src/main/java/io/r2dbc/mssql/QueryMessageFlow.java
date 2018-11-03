@@ -40,8 +40,8 @@ final class QueryMessageFlow {
     /**
      * Execute a simple query using {@link SqlBatch}. Query execution terminates with a {@link DoneToken}.
      *
-     * @param client the {@link Client} to exchange messages with
-     * @param query  the query to execute
+     * @param client the {@link Client} to exchange messages with.
+     * @param query  the query to execute.
      * @return the messages received in response to this exchange.
      */
     static Flux<Message> exchange(Client client, String query) {
