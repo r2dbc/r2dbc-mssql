@@ -49,7 +49,6 @@ class RowTokenUnitTests {
             "2408FED478E94628C6400437423146FD" +
             "1000C1000100000000000000");
 
-
         Tabular tabular = Tabular.decode(buffer, true);
 
         assertThat(tabular.getTokens()).hasSize(3);

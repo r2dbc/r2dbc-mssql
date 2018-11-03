@@ -64,7 +64,6 @@ final class DoubleCodec extends AbstractCodec<Double> {
     @Override
     Encoded doEncode(ByteBufAllocator allocator, TypeInformation type, Double value) {
 
-
         if (type.getServerType() == SqlServerType.REAL) {
 
             ByteBuf buffer = allocator.buffer(4);

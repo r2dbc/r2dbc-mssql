@@ -42,8 +42,8 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
     /**
      * Creates a {@link RowToken}.
      *
-     * @param columns column descriptors.
      * @param data    the row data.
+     * @param toRelease    item to {@link ReferenceCounted#release()} on {@link #deallocate() de-allocation}.
      */
     private RowToken(List<ByteBuf> data, ReferenceCounted toRelease) {
 

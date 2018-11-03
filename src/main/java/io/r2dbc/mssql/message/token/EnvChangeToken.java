@@ -45,6 +45,7 @@ public final class EnvChangeToken extends AbstractDataToken {
     private final byte[] oldValue;
 
     public EnvChangeToken(int length, EnvChangeType changeType, byte[] newValue, @Nullable byte[] oldValue) {
+
         super(TYPE);
 
         Objects.requireNonNull(changeType, "EnvChangeType must not be null");
