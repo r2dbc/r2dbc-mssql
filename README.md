@@ -5,19 +5,20 @@ This project contains the [Microsoft SQL Server][m] implementation of the [R2DBC
 [m]: http://microsoft.com/sqlserver
 [r]: https://github.com/r2dbc/r2dbc-spi
 
-Current state of this project is:
+This driver provides the following features:
 
-* Login
+* Login with username/password with temporary SSL encryption
 * Transaction Control
 * Simple (un-cursored) execution of SQL batches
 * Read support for all data types except binary types (BLOB)
+* Execution of SQL cursored statements
 
 Next steps:
 
 * Error handling for failed logins
-* Execution of SQL cursored statements
 * Execution of prepared statements
-* Add encoding for remaining codecs
+* Full SSL encryption support.
+* Add encoding for remaining codecs (VARBINARY, XML, UDT)
 * Execution of stored procedures 
 * Support for null-bit compression (NBCROW)
 * Batch support (`Connection.createBatch`)
