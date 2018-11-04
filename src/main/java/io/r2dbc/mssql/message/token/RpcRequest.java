@@ -166,7 +166,7 @@ public final class RpcRequest implements ClientMessage {
             int name = 2 + (this.procName != null ? this.procName.length() * 2 : 0);
             int length = 4 + name + this.allHeaders.getLength();
 
-            for (ParameterDescriptor descriptor : parameterDescriptors) {
+            for (ParameterDescriptor descriptor : this.parameterDescriptors) {
                 length += descriptor.estimateLength();
             }
 
@@ -181,7 +181,7 @@ public final class RpcRequest implements ClientMessage {
 
         this.allHeaders.encode(buffer);
 
-        if (procId != null) {
+        if (this.procId != null) {
             Encode.uShort(buffer, PROC_ID_SWITCH);
             Encode.uShort(buffer, this.procId);
         } else {
@@ -195,6 +195,41 @@ public final class RpcRequest implements ClientMessage {
         for (ParameterDescriptor descriptor : this.parameterDescriptors) {
             descriptor.encode(buffer);
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof RpcRequest)) {
+            return false;
+        }
+        RpcRequest that = (RpcRequest) o;
+        return statusFlags == that.statusFlags &&
+            Objects.equals(allHeaders, that.allHeaders) &&
+            Objects.equals(procName, that.procName) &&
+            Objects.equals(procId, that.procId) &&
+            Objects.equals(optionFlags, that.optionFlags) &&
+            Objects.equals(parameterDescriptors, that.parameterDescriptors);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(allHeaders, procName, procId, optionFlags, statusFlags, parameterDescriptors);
+    }
+
+    @Override
+    public String toString() {
+        final StringBuffer sb = new StringBuffer();
+        sb.append(getClass().getSimpleName());
+        sb.append(" [procName='").append(this.procName).append('\'');
+        sb.append(", procId=").append(this.procId);
+        sb.append(", optionFlags=").append(this.optionFlags);
+        sb.append(", statusFlags=").append(this.statusFlags);
+        sb.append(", parameterDescriptors=").append(this.parameterDescriptors);
+        sb.append(']');
+        return sb.toString();
     }
 
     /**
@@ -258,7 +293,7 @@ public final class RpcRequest implements ClientMessage {
             Objects.requireNonNull(direction, "RPC direction (in/out) must not be null");
             Objects.requireNonNull(collation, "Collation must not be null");
 
-            parameterDescriptors.add(new RpcString(direction, null, collation, value));
+            this.parameterDescriptors.add(new RpcString(direction, null, collation, value));
 
             return this;
         }
@@ -274,7 +309,7 @@ public final class RpcRequest implements ClientMessage {
 
             Objects.requireNonNull(direction, "RPC direction (in/out) must not be null");
 
-            parameterDescriptors.add(new RpcInt(direction, null, value));
+            this.parameterDescriptors.add(new RpcInt(direction, null, value));
 
             return this;
         }
@@ -294,7 +329,7 @@ public final class RpcRequest implements ClientMessage {
             Objects.requireNonNull(name, "Parameter name must not be null");
             Objects.requireNonNull(collation, "Collation must not be null");
 
-            parameterDescriptors.add(new RpcString(direction, name, collation, value));
+            this.parameterDescriptors.add(new RpcString(direction, name, collation, value));
 
             return this;
         }
@@ -312,7 +347,7 @@ public final class RpcRequest implements ClientMessage {
             Objects.requireNonNull(direction, "RPC direction (in/out) must not be null");
             Objects.requireNonNull(name, "Parameter name must not be null");
 
-            parameterDescriptors.add(new RpcInt(direction, name, value));
+            this.parameterDescriptors.add(new RpcInt(direction, name, value));
 
             return this;
         }
@@ -326,6 +361,19 @@ public final class RpcRequest implements ClientMessage {
         public Builder withTransactionDescriptor(TransactionDescriptor transactionDescriptor) {
 
             this.transactionDescriptor = Objects.requireNonNull(transactionDescriptor, "TransactionDescriptor must not be null");
+
+            return this;
+        }
+
+        /**
+         * Configure the {@link OptionFlags}.
+         *
+         * @param optionFlags the option flags to use.
+         * @return {@literal this} {@link Builder}.
+         */
+        public Builder withOptionFlags(OptionFlags optionFlags) {
+
+            this.optionFlags = Objects.requireNonNull(optionFlags, "OptionFlags must not be null");
 
             return this;
         }
@@ -350,6 +398,8 @@ public final class RpcRequest implements ClientMessage {
      */
     public final static class OptionFlags {
 
+        private static final OptionFlags EMPTY = new OptionFlags(0x00);
+
         /**
          * Recompile the called procedure.
          */
@@ -372,7 +422,7 @@ public final class RpcRequest implements ClientMessage {
          * @return a new {@link OptionFlags}.
          */
         public static OptionFlags empty() {
-            return new OptionFlags((byte) 0x00);
+            return EMPTY;
         }
 
         /**
@@ -432,12 +482,12 @@ public final class RpcRequest implements ClientMessage {
         abstract int estimateLength();
 
         public RpcDirection getDirection() {
-            return direction;
+            return this.direction;
         }
 
         @Nullable
         public String getName() {
-            return name;
+            return this.name;
         }
     }
 
@@ -466,6 +516,34 @@ public final class RpcRequest implements ClientMessage {
         int estimateLength() {
             return 16 + (this.value != null ? this.value.length() * 2 : 0);
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof RpcString)) {
+                return false;
+            }
+            RpcString rpcString = (RpcString) o;
+            return Objects.equals(collation, rpcString.collation) &&
+                Objects.equals(value, rpcString.value);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(collation, value);
+        }
+
+        @Override
+        public String toString() {
+            final StringBuffer sb = new StringBuffer();
+            sb.append(getClass().getSimpleName());
+            sb.append(" [name='").append(getName()).append('\'');
+            sb.append(", value=").append(this.value);
+            sb.append(']');
+            return sb.toString();
+        }
     }
 
     /**
@@ -490,6 +568,34 @@ public final class RpcRequest implements ClientMessage {
         int estimateLength() {
             return this.value != null ? 5 : 0;
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof RpcInt)) {
+                return false;
+            }
+            RpcInt rpcInt = (RpcInt) o;
+            return Objects.equals(value, rpcInt.value);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(value);
+        }
+
+        @Override
+        public String toString() {
+            final StringBuffer sb = new StringBuffer();
+            sb.append(getClass().getSimpleName());
+            sb.append(" [name='").append(getName()).append('\'');
+            sb.append(", value=").append(this.value);
+            sb.append(']');
+            return sb.toString();
+        }
     }
+    
 }
 

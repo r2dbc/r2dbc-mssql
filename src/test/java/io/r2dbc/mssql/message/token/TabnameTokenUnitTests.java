@@ -23,31 +23,33 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for {@link DoneProcToken}.
+ * Unit tests for {@link TabnameToken}.
  *
  * @author Mark Paluch
  */
-class DoneProcUnitTests {
+class TabnameTokenUnitTests {
 
     @Test
     void shouldDecodeToken() {
 
-        ByteBuf buffer = HexUtils.decodeToByteBuf("FE1000C1000100000000000000");
+        ByteBuf buffer = HexUtils.decodeToByteBuf("a413000108006d0079005f007400" +
+            "610062006c006500");
 
-        assertThat(buffer.readByte()).isEqualTo(DoneProcToken.TYPE);
+        assertThat(buffer.readByte()).isEqualTo(TabnameToken.TYPE);
 
-        DoneProcToken token = DoneProcToken.decode(buffer);
-        assertThat(token.isDone()).isTrue();
-        assertThat(token.hasMore()).isFalse();
-        assertThat(token.hasCount()).isTrue();
-        assertThat(token.getRowCount()).isEqualTo(1);
+        TabnameToken token = TabnameToken.decode(buffer);
+        assertThat(token.getTableNames()).hasSize(1);
+
+        Identifier name = token.getTableNames().get(0);
+        assertThat(name.getObjectName()).isEqualTo("my_table");
     }
 
     @Test
     void canDecodeShouldReportDecodability() {
 
-        String data = "1000C1000100000000000000";
+        String data = "13000108006d0079005f007400" +
+            "610062006c006500";
 
-        CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), DoneProcToken::canDecode);
+        CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), TabnameToken::canDecode);
     }
 }

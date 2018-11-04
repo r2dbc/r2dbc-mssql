@@ -18,6 +18,7 @@ package io.r2dbc.mssql.client;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -31,6 +32,7 @@ import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.token.AbstractInfoToken;
 import io.r2dbc.mssql.message.token.EnvChangeToken;
 import io.r2dbc.mssql.message.token.FeatureExtAckToken;
+import io.r2dbc.mssql.message.type.Collation;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -70,6 +73,8 @@ public final class ReactorNettyClient implements Client {
 
     private final AtomicReference<TransactionStatus> transactionStatus = new AtomicReference<>(TransactionStatus.AUTO_COMMIT);
 
+    private final AtomicReference<Optional<Collation>> databaseCollation = new AtomicReference<>(Optional.empty());
+
     private final AtomicBoolean encryptionSupported = new AtomicBoolean();
 
     private final List<EnvironmentChangeListener> envChangeListeners = new ArrayList<>();
@@ -89,8 +94,12 @@ public final class ReactorNettyClient implements Client {
 
         EnvironmentChangeEvent event = new EnvironmentChangeEvent(token);
 
-        for (EnvironmentChangeListener listener : envChangeListeners) {
-            listener.onEnvironmentChange(event);
+        for (EnvironmentChangeListener listener : this.envChangeListeners) {
+            try {
+                listener.onEnvironmentChange(event);
+            } catch (Exception e) {
+                this.logger.warn("Failed onEnvironmentChange() in {}", listener, e);
+            }
         }
     });
 
@@ -149,6 +158,7 @@ public final class ReactorNettyClient implements Client {
         this.connection.set(connection);
         this.envChangeListeners.addAll(envChangeListeners);
         this.envChangeListeners.add(new TransactionListener());
+        this.envChangeListeners.add(new CollationListener());
 
         connection.inbound().receiveObject() //
             .concatMap(it -> {
@@ -282,6 +292,11 @@ public final class ReactorNettyClient implements Client {
     }
 
     @Override
+    public Optional<Collation> getDatabaseCollation() {
+        return this.databaseCollation.get();
+    }
+
+    @Override
     public boolean isColumnEncryptionSupported() {
         return this.encryptionSupported.get();
     }
@@ -323,7 +338,7 @@ public final class ReactorNettyClient implements Client {
                     throw ProtocolException.invalidTds("Transaction descriptor length mismatch");
                 }
 
-                if (logger.isDebugEnabled()) {
+                if (ReactorNettyClient.this.logger.isDebugEnabled()) {
 
                     String op;
                     if (token.getChangeType() == EnvChangeToken.EnvChangeType.BeginTx) {
@@ -332,31 +347,44 @@ public final class ReactorNettyClient implements Client {
                         op = "enlisted";
                     }
 
-                    logger.debug(String.format("Transaction %s", op));
+                    ReactorNettyClient.this.logger.debug(String.format("Transaction %s", op));
                 }
 
-                transactionStatus.set(TransactionStatus.STARTED);
-                transactionDescriptor.set(TransactionDescriptor.from(descriptor));
+                ReactorNettyClient.this.transactionStatus.set(TransactionStatus.STARTED);
+                ReactorNettyClient.this.transactionDescriptor.set(TransactionDescriptor.from(descriptor));
             }
 
             if (token.getChangeType() == EnvChangeToken.EnvChangeType.CommitTx) {
 
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Transaction committed");
+                if (ReactorNettyClient.this.logger.isDebugEnabled()) {
+                    ReactorNettyClient.this.logger.debug("Transaction committed");
                 }
 
-                transactionStatus.set(TransactionStatus.EXPLICIT);
-                transactionDescriptor.set(TransactionDescriptor.empty());
+                ReactorNettyClient.this.transactionStatus.set(TransactionStatus.EXPLICIT);
+                ReactorNettyClient.this.transactionDescriptor.set(TransactionDescriptor.empty());
             }
 
             if (token.getChangeType() == EnvChangeToken.EnvChangeType.RollbackTx) {
 
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Transaction rolled back");
+                if (ReactorNettyClient.this.logger.isDebugEnabled()) {
+                    ReactorNettyClient.this.logger.debug("Transaction rolled back");
                 }
 
-                transactionStatus.set(TransactionStatus.EXPLICIT);
-                transactionDescriptor.set(TransactionDescriptor.empty());
+                ReactorNettyClient.this.transactionStatus.set(TransactionStatus.EXPLICIT);
+                ReactorNettyClient.this.transactionDescriptor.set(TransactionDescriptor.empty());
+            }
+        }
+    }
+
+    class CollationListener implements EnvironmentChangeListener {
+
+        @Override
+        public void onEnvironmentChange(EnvironmentChangeEvent event) {
+
+            if (event.getToken().getChangeType() == EnvChangeToken.EnvChangeType.SQLCollation) {
+
+                Collation collation = Collation.decode(Unpooled.wrappedBuffer(event.getToken().getNewValue()));
+                ReactorNettyClient.this.databaseCollation.set(Optional.of(collation));
             }
         }
     }

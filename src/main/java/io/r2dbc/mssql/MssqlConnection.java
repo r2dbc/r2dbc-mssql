@@ -64,7 +64,7 @@ public final class MssqlConnection implements Connection {
 
             this.logger.debug("Beginning transaction from status [{}]", tx);
 
-            return QueryMessageFlow.exchange(client, sql).handle(MssqlException::handleErrorResponse);
+            return QueryMessageFlow.exchange(this.client, sql).handle(MssqlException::handleErrorResponse);
         });
     }
 
@@ -85,7 +85,7 @@ public final class MssqlConnection implements Connection {
 
             this.logger.debug("Committing transaction with status [{}]", tx);
 
-            return QueryMessageFlow.exchange(client, "IF @@TRANCOUNT > 0 COMMIT TRANSACTION").handle(MssqlException::handleErrorResponse);
+            return QueryMessageFlow.exchange(this.client, "IF @@TRANCOUNT > 0 COMMIT TRANSACTION").handle(MssqlException::handleErrorResponse);
         });
     }
 
@@ -109,7 +109,7 @@ public final class MssqlConnection implements Connection {
 
             this.logger.debug("Creating savepoint for transaction with status [{}]", tx);
 
-            return QueryMessageFlow.exchange(client, String.format("IF @@TRANCOUNT = 0 BEGIN BEGIN TRANSACTION IF @@TRANCOUNT = 2 COMMIT TRANSACTION END SAVE TRANSACTION %s", name)) //
+            return QueryMessageFlow.exchange(this.client, String.format("IF @@TRANCOUNT = 0 BEGIN BEGIN TRANSACTION IF @@TRANCOUNT = 2 COMMIT TRANSACTION END SAVE TRANSACTION %s", name)) //
                 .handle(MssqlException::handleErrorResponse);
         });
     }
@@ -117,7 +117,13 @@ public final class MssqlConnection implements Connection {
     @Override
     public MssqlStatement<?> createStatement(String sql) {
 
+        Objects.requireNonNull(sql, "SQL must not be null");
         this.logger.debug("Creating statement for SQL: [{}]", sql);
+
+        if (SimpleCursoredMssqlStatement.supports(sql)) {
+            return new SimpleCursoredMssqlStatement(this.client, sql);
+        }
+        
         return new SimpleMssqlStatement(this.client, sql);
     }
 
@@ -138,7 +144,7 @@ public final class MssqlConnection implements Connection {
 
             this.logger.debug("Rolling back transaction with status [{}]", tx);
 
-            return QueryMessageFlow.exchange(client, "IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION").handle(MssqlException::handleErrorResponse);
+            return QueryMessageFlow.exchange(this.client, "IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION").handle(MssqlException::handleErrorResponse);
         });
     }
 
@@ -157,7 +163,7 @@ public final class MssqlConnection implements Connection {
 
             this.logger.debug("Rolling back transaction to savepoint [{}] with status [{}]", name, tx);
 
-            return QueryMessageFlow.exchange(client, String.format("ROLLBACK TRANSACTION %s", name)).handle(MssqlException::handleErrorResponse);
+            return QueryMessageFlow.exchange(this.client, String.format("ROLLBACK TRANSACTION %s", name)).handle(MssqlException::handleErrorResponse);
         });
     }
 
@@ -166,7 +172,11 @@ public final class MssqlConnection implements Connection {
 
         Objects.requireNonNull(isolationLevel, "IsolationLevel must not be null");
 
-        return QueryMessageFlow.exchange(client, "SET TRANSACTION ISOLATION LEVEL " + getIsolationLevelSql(isolationLevel)).handle(MssqlException::handleErrorResponse).then();
+        return QueryMessageFlow.exchange(this.client, "SET TRANSACTION ISOLATION LEVEL " + getIsolationLevelSql(isolationLevel)).handle(MssqlException::handleErrorResponse).then();
+    }
+
+    Client getClient() {
+        return this.client;
     }
 
     private static String getIsolationLevelSql(IsolationLevel isolationLevel) {

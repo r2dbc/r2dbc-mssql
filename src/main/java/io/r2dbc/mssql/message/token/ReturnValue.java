@@ -89,8 +89,15 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
         String name = Decode.unicodeBString(buffer);
         byte status = Decode.asByte(buffer);
         TypeInformation type = TypeInformation.decode(buffer, encryptionSupported);
+
+        // Preserve length for Codecs
+        int beforeLengthDescriptor = buffer.readerIndex();
         LengthDescriptor length = LengthDescriptor.decode(buffer, type);
-        ByteBuf value = buffer.readSlice(length.getLength());
+
+        int descriptorLength = buffer.readerIndex() - beforeLengthDescriptor;
+        buffer.readerIndex(beforeLengthDescriptor);
+
+        ByteBuf value = buffer.readRetainedSlice(descriptorLength + length.getLength());
 
         return new ReturnValue(ordinal, name, status, type, value);
     }
@@ -173,12 +180,12 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
     }
 
     public int getOrdinal() {
-        return ordinal;
+        return this.ordinal;
     }
 
     @Nullable
     public String getParameterName() {
-        return parameterName;
+        return this.parameterName;
     }
 
     public TypeInformation getValueType() {
@@ -186,11 +193,11 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
     }
 
     public byte getStatus() {
-        return status;
+        return this.status;
     }
 
     public ByteBuf getValue() {
-        return value;
+        return this.value;
     }
 
     @Override
@@ -214,4 +221,14 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
         this.value.release();
     }
 
+    @Override
+    public String toString() {
+        final StringBuffer sb = new StringBuffer();
+        sb.append(getClass().getSimpleName());
+        sb.append(" [ordinal=").append(this.ordinal);
+        sb.append(", parameterName='").append(this.parameterName).append('\'');
+        sb.append(", type=").append(this.type);
+        sb.append(']');
+        return sb.toString();
+    }
 }

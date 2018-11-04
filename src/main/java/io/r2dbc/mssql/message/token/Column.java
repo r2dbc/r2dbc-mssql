@@ -54,12 +54,26 @@ public class Column {
     }
 
     /**
+     * Create a {@link Column} from a RPC {@link ReturnValue}. The resulting object does not represent a column in a tabular sense but rather an encapsulated value that can be decoded using the
+     * codec components.
+     *
+     * @param returnValue the returned value.
+     * @return the {@link Column} for {@link ReturnValue}.
+     */
+    public static Column from(ReturnValue returnValue) {
+
+        Objects.requireNonNull(returnValue, "ReturnValue must not be null");
+
+        return new Column(returnValue.getOrdinal(), returnValue.getParameterName(), returnValue.getValueType(), null);
+    }
+
+    /**
      * Returns the column index.
      *
      * @return the column index.
      */
     public int getIndex() {
-        return index;
+        return this.index;
     }
 
     /**
@@ -68,7 +82,7 @@ public class Column {
      * @return the column name.
      */
     public String getName() {
-        return name;
+        return this.name;
     }
 
     /**
@@ -77,7 +91,7 @@ public class Column {
      * @return the column {@link TypeInformation type}.
      */
     public TypeInformation getType() {
-        return type;
+        return this.type;
     }
 
     /**
@@ -87,16 +101,16 @@ public class Column {
      */
     @Nullable
     public Identifier getTable() {
-        return table;
+        return this.table;
     }
 
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [name='").append(name).append('\"');
-        sb.append(", type=").append(type);
-        sb.append(", table=").append(table);
+        sb.append(" [name='").append(this.name).append('\"');
+        sb.append(", type=").append(this.type);
+        sb.append(", table=").append(this.table);
         sb.append(']');
         return sb.toString();
     }
@@ -110,13 +124,13 @@ public class Column {
             return false;
         }
         Column column = (Column) o;
-        return index == column.index &&
-            Objects.equals(name, column.name) &&
-            Objects.equals(table, column.table);
+        return this.index == column.index &&
+            Objects.equals(this.name, column.name) &&
+            Objects.equals(this.table, column.table);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(index, name, table);
+        return Objects.hash(this.index, this.name, this.table);
     }
 }

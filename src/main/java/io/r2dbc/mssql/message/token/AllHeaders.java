@@ -57,9 +57,25 @@ public final class AllHeaders {
      *
      * @param transactionDescriptor the binary transaction descriptor.
      * @param outstandingRequests   number of outstanding requests
-     * @return
+     * @return the {@link AllHeaders} for {@link TransactionDescriptor} and {@literal outstandingRequests}.
+     */
+    public static AllHeaders transactional(TransactionDescriptor transactionDescriptor, int outstandingRequests) {
+
+        Objects.requireNonNull(transactionDescriptor, "Transaction descriptor must not be null");
+
+        return transactional(transactionDescriptor.toBytes(), outstandingRequests);
+    }
+
+    /**
+     * Creates {@link AllHeaders} containing only a {@link TransactionDescriptor transactional} descriptor.
+     *
+     * @param transactionDescriptor the binary transaction descriptor.
+     * @param outstandingRequests   number of outstanding requests
+     * @return the {@link AllHeaders} for {@literal transactionDescriptor} and {@literal outstandingRequests}.
      */
     public static AllHeaders transactional(byte[] transactionDescriptor, int outstandingRequests) {
+
+        Objects.requireNonNull(transactionDescriptor, "Transaction descriptor must not be null");
 
         AllHeaders.TransactionDescriptorHeader txDescriptor = new AllHeaders.TransactionDescriptorHeader(transactionDescriptor, outstandingRequests
         );

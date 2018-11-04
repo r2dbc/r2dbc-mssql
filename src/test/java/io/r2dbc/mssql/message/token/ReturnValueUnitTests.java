@@ -50,6 +50,7 @@ class ReturnValueUnitTests {
         assertThat(buffer.readerIndex()).isEqualTo(buffer.writerIndex());
 
         EncodedAssert.assertThat(returnValue.getValue()).isEncodedAs(expected -> {
+            expected.writeByte(4); // length
             expected.writeIntLE(180150003);
         });
     }
@@ -59,14 +60,6 @@ class ReturnValueUnitTests {
 
         String data = "00000001000000000000260404F3DEBC0A";
 
-        assertThat(ReturnValue.canDecode(HexUtils.decodeToByteBuf(data), true)).isTrue();
-
-        for (int i = 1; i < data.length() / 2; i++) {
-
-            String subchunk = data.substring(0, data.length() - (i * 2));
-            ByteBuf buffer = HexUtils.decodeToByteBuf(subchunk);
-
-            assertThat(ReturnValue.canDecode(buffer, true)).as("i = " + i).isFalse();
-        }
+        CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), buffer -> ReturnValue.canDecode(buffer, true));
     }
 }

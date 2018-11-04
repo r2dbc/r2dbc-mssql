@@ -23,31 +23,36 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for {@link DoneProcToken}.
+ * Unit tests for {@link ColInfoToken}.
  *
  * @author Mark Paluch
  */
-class DoneProcUnitTests {
+class ColInfoTokenUnitTests {
 
     @Test
     void shouldDecodeToken() {
 
-        ByteBuf buffer = HexUtils.decodeToByteBuf("FE1000C1000100000000000000");
+        ByteBuf buffer = HexUtils.decodeToByteBuf("a50900010100020100030014");
 
-        assertThat(buffer.readByte()).isEqualTo(DoneProcToken.TYPE);
+        assertThat(buffer.readByte()).isEqualTo(ColInfoToken.TYPE);
 
-        DoneProcToken token = DoneProcToken.decode(buffer);
-        assertThat(token.isDone()).isTrue();
-        assertThat(token.hasMore()).isFalse();
-        assertThat(token.hasCount()).isTrue();
-        assertThat(token.getRowCount()).isEqualTo(1);
+        ColInfoToken token = ColInfoToken.decode(buffer);
+
+        assertThat(token.getColumns()).hasSize(3);
+
+        ColInfoToken.ColInfo column = token.getColumns().get(0);
+
+        assertThat(column.getTable()).isEqualTo((byte) 1);
+        assertThat(column.getColumn()).isEqualTo((byte) 1);
+        assertThat(column.getStatus()).isEqualTo((byte) 0);
+        assertThat(column.getName()).isNull();
     }
 
     @Test
     void canDecodeShouldReportDecodability() {
 
-        String data = "1000C1000100000000000000";
+        String data = "0900010100020100030014";
 
-        CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), DoneProcToken::canDecode);
+        CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), ColInfoToken::canDecode);
     }
 }

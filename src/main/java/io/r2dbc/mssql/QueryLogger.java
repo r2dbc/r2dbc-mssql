@@ -26,7 +26,7 @@ final class QueryLogger {
 
     private static final Logger QUERY_LOGGER = LoggerFactory.getLogger("io.r2dbc.mssql.QUERY");
 
-    static void logQuery(String sql) {
-        QUERY_LOGGER.debug("Executing query: {}", sql);
+    static void logQuery(String query) {
+        QUERY_LOGGER.debug("Executing query: {}", query);
     }
 }

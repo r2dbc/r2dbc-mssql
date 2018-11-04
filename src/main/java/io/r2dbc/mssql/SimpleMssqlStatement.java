@@ -19,30 +19,28 @@ package io.r2dbc.mssql;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.DefaultCodecs;
-import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Result;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.util.Objects;
 
 import static io.r2dbc.mssql.util.PredicateUtils.or;
 
 /**
- * Simple SQL statement without SQL parameter (variables).
+ * Simple SQL statement without SQL parameter (variables) using direct ({@link SqlBatch}) execution.
  *
  * @author Mark Paluch
  */
-final class SimpleMssqlStatement implements MssqlStatement<SimpleMssqlStatement> {
+class SimpleMssqlStatement implements MssqlStatement<SimpleMssqlStatement> {
 
-    private static final Codecs CODECS = new DefaultCodecs();
+    static final Codecs CODECS = new DefaultCodecs();
 
-    private final Client client;
+    final Client client;
 
-    private final String sql;
+    final String sql;
 
     SimpleMssqlStatement(Client client, String sql) {
 
@@ -87,25 +85,8 @@ final class SimpleMssqlStatement implements MssqlStatement<SimpleMssqlStatement>
     @Override
     public Flux<Result> execute() {
 
-        SqlBatch sqlBatch = SqlBatch.create(1, client.getTransactionDescriptor(), this.sql);
-
-        return client.exchange(Mono.just(sqlBatch)) //
-            .<Message>handle((message, sink) -> {
-
-                sink.next(message);
-
-                // Terminate stream with the last DONE token.
-                if (AbstractDoneToken.isDone(message)) {
-                    sink.complete();
-                }
-            })
+        return QueryMessageFlow.exchange(client, this.sql) //
             .windowUntil(or(AbstractDoneToken.class::isInstance)) //
             .map(it -> SimpleMssqlResult.toResult(CODECS, it));
-    }
-
-    static boolean supports(String sql) {
-        Objects.requireNonNull(sql, "sql must not be null");
-
-        return sql.trim().isEmpty() || !QueryMessageFlow.PARAMETER_SYMBOL.matcher(sql).matches();
     }
 }

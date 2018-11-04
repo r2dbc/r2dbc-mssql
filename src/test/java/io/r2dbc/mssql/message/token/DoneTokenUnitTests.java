@@ -42,4 +42,12 @@ class DoneTokenUnitTests {
         assertThat(token.hasCount()).isTrue();
         assertThat(token.getRowCount()).isEqualTo(1);
     }
+
+    @Test
+    void canDecodeShouldReportDecodability() {
+
+        String data = "1000C1000100000000000000";
+
+        CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), DoneToken::canDecode);
+    }
 }

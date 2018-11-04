@@ -28,6 +28,8 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
+ * Simple (direct) query message flow using {@link SqlBatch}.
+ *
  * @author Mark Paluch
  */
 final class QueryMessageFlow {

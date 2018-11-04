@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
+import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.EmitterProcessor;
@@ -30,6 +31,7 @@ import reactor.core.publisher.Mono;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -108,6 +110,13 @@ public final class TestClient implements Client {
     @Override
     public TransactionStatus getTransactionStatus() {
         return this.transactionStatus;
+    }
+
+    @Override
+    public Optional<Collation> getDatabaseCollation() {
+
+        // windows-1252
+        return Optional.of(Collation.from(13632521, 52));
     }
 
     @Override

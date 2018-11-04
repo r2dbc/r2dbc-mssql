@@ -77,10 +77,10 @@ public final class Collation {
         this.sortId = sortId;
 
         if (UTF8_IN_TDSCOLLATION == (lcid & UTF8_IN_TDSCOLLATION)) {
-            encoding = Encoding.UTF8;
+            this.encoding = Encoding.UTF8;
         } else {
             // For a SortId==0 collation, the LCID bits correspond to a LocaleId
-            encoding = (0 == sortId) ? getEncodingFromLCID() : getEncodingFromSortId();
+            this.encoding = (0 == sortId) ? getEncodingFromLCID() : getEncodingFromSortId();
         }
     }
 
@@ -91,8 +91,12 @@ public final class Collation {
      * @param sortId sort Id
      * @return the {@link Collation}.
      */
-    public static Collation from(int lcid, int sortId) throws UnsupportedEncodingException {
-        return new Collation(lcid, sortId);
+    public static Collation from(int lcid, int sortId) {
+        try {
+            return new Collation(lcid, sortId);
+        } catch (UnsupportedEncodingException e) {
+            throw new ProtocolException(e, ProtocolException.DRIVER_ERROR_UNSUPPORTED_CONFIG);
+        }
     }
 
     /**
@@ -129,13 +133,13 @@ public final class Collation {
 
         Objects.requireNonNull(buffer, "Data buffer must not be null");
 
-        Encode.asInt(buffer, lcid);
-        Encode.asByte(buffer, (byte) sortId);
+        Encode.intBigEndian(buffer, this.lcid);
+        Encode.asByte(buffer, (byte) this.sortId);
     }
 
     // Utility methods for getting details of this collation's encoding
     public Charset getCharset() {
-        return encoding.charset();
+        return this.encoding.charset();
     }
 
     /**
@@ -162,7 +166,7 @@ public final class Collation {
      * @return {@literal true} if the underlying encoding supports ASCII conversion.
      */
     boolean supportsAsciiConversion() {
-        return encoding.supportsAsciiConversion();
+        return this.encoding.supportsAsciiConversion();
     }
 
     /**
@@ -171,18 +175,36 @@ public final class Collation {
      * @return {@literal true} the underlying encoding allows fast-path ASCII.
      */
     boolean hasAsciiCompatibleSBCS() {
-        return encoding.hasAsciiCompatibleSBCS();
+        return this.encoding.hasAsciiCompatibleSBCS();
     }
 
     private int getLanguageId() {
-        return lcid & 0x0000FFFF;
+        return this.lcid & 0x0000FFFF;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Collation)) {
+            return false;
+        }
+        Collation collation = (Collation) o;
+        return this.lcid == collation.lcid &&
+            this.sortId == collation.sortId;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.lcid, this.sortId);
     }
 
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [encoding=").append(encoding);
+        sb.append(" [encoding=").append(this.encoding);
         sb.append(']');
         return sb.toString();
     }
@@ -209,17 +231,17 @@ public final class Collation {
 
     private Encoding getEncodingFromSortId() throws UnsupportedEncodingException {
 
-        SortOrder sortOrder = sortOrderCache.get(sortId);
+        SortOrder sortOrder = sortOrderCache.get(this.sortId);
 
         if (sortOrder == null) {
-            throw new UnsupportedEncodingException(String.format("SQL Server collation is not supported: %d", sortId));
+            throw new UnsupportedEncodingException(String.format("SQL Server collation is not supported: %d", this.sortId));
         }
 
         try {
             return sortOrder.getEncoding();
         } catch (RuntimeException inner) {
 
-            UnsupportedEncodingException e = new UnsupportedEncodingException(String.format("SQL Server collation is not supported: %d", sortId));
+            UnsupportedEncodingException e = new UnsupportedEncodingException(String.format("SQL Server collation is not supported: %d", this.sortId));
             e.initCause(inner);
             throw e;
         }
@@ -457,8 +479,8 @@ public final class Collation {
         }
 
         Encoding getEncoding() {
-            encoding.charset();
-            return encoding;
+            this.encoding.charset();
+            return this.encoding;
         }
     }
 
@@ -599,13 +621,13 @@ public final class Collation {
         }
 
         Encoding getEncoding() {
-            encoding.charset();
-            return encoding;
+            this.encoding.charset();
+            return this.encoding;
         }
 
 
         public final String toString() {
-            return name;
+            return this.name;
         }
     }
 }

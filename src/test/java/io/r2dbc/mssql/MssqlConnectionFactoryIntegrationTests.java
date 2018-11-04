@@ -25,7 +25,7 @@ import reactor.core.publisher.Hooks;
  */
 final class MssqlConnectionFactoryIntegrationTests {
 
-    @Test
+    @Test 
     @Disabled("Requires running SQL server")
     void shouldConnectToSqlServer() throws InterruptedException {
 

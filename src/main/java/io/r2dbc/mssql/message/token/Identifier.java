@@ -112,8 +112,26 @@ final class Identifier {
         return new Identifier(serverName, databaseName, schemaName, objectName);
     }
 
+    @Nullable
+    public String getServerName() {
+        return this.serverName;
+    }
 
-    final String asEscapedString() {
+    @Nullable
+    public String getDatabaseName() {
+        return this.databaseName;
+    }
+
+    @Nullable
+    public String getSchemaName() {
+        return this.schemaName;
+    }
+
+    public String getObjectName() {
+        return this.objectName;
+    }
+
+    String asEscapedString() {
 
         StringBuilder fullName = new StringBuilder(256);
 
@@ -152,15 +170,15 @@ final class Identifier {
             return false;
         }
         Identifier that = (Identifier) o;
-        return Objects.equals(serverName, that.serverName) &&
-            Objects.equals(databaseName, that.databaseName) &&
-            Objects.equals(schemaName, that.schemaName) &&
-            Objects.equals(objectName, that.objectName);
+        return Objects.equals(this.serverName, that.serverName) &&
+            Objects.equals(this.databaseName, that.databaseName) &&
+            Objects.equals(this.schemaName, that.schemaName) &&
+            Objects.equals(this.objectName, that.objectName);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(serverName, databaseName, schemaName, objectName);
+        return Objects.hash(this.serverName, this.databaseName, this.schemaName, this.objectName);
     }
 
     /**

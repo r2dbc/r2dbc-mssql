@@ -17,6 +17,7 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.client.ProtocolException;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.tds.Decode;
@@ -93,24 +94,20 @@ public final class Tabular implements Message {
 
         return (type, buffer) -> {
 
-            if (type == (byte) 0xFF) {
-                return DecodeFinished.FINISHED;
-            }
-
-            if (type == EnvChangeToken.TYPE && EnvChangeToken.canDecode(buffer)) {
-                return EnvChangeToken.decode(buffer);
+            if (type == EnvChangeToken.TYPE) {
+                return EnvChangeToken.canDecode(buffer) ? EnvChangeToken.decode(buffer) : DecodeFinished.UNABLE_TO_DECODE; 
             }
 
             if (type == FeatureExtAckToken.TYPE) {
                 return FeatureExtAckToken.decode(buffer);
             }
 
-            if (type == InfoToken.TYPE && InfoToken.canDecode(buffer)) {
-                return InfoToken.decode(buffer);
+            if (type == InfoToken.TYPE) {
+                return InfoToken.canDecode(buffer) ? InfoToken.decode(buffer) : DecodeFinished.UNABLE_TO_DECODE;
             }
 
-            if (type == ErrorToken.TYPE && ErrorToken.canDecode(buffer)) {
-                return ErrorToken.decode(buffer);
+            if (type == ErrorToken.TYPE) {
+                return ErrorToken.canDecode(buffer) ? ErrorToken.decode(buffer) : DecodeFinished.UNABLE_TO_DECODE;
             }
 
             if (type == LoginAckToken.TYPE) {
@@ -121,24 +118,54 @@ public final class Tabular implements Message {
 
                 // TODO: Chunking support.
                 ColumnMetadataToken colMetadataToken = ColumnMetadataToken.decode(buffer, encryptionSupported);
-                columns.set(colMetadataToken);
+
+                if (columns.get() == null && !colMetadataToken.getColumns().isEmpty()) {
+                    columns.set(colMetadataToken);
+                }
 
                 return colMetadataToken;
             }
 
-            if (type == DoneToken.TYPE && DoneToken.canDecode(buffer)) {
-                columns.set(null);
-                return DoneToken.decode(buffer);
+            if (type == ColInfoToken.TYPE) {
+                return ColInfoToken.canDecode(buffer) ? ColInfoToken.decode(buffer) : DecodeFinished.UNABLE_TO_DECODE;
             }
 
-            if (type == DoneInProcToken.TYPE && DoneInProcToken.canDecode(buffer)) {
-                columns.set(null);
-                return DoneInProcToken.decode(buffer);
+            if (type == TabnameToken.TYPE) {
+                return TabnameToken.canDecode(buffer) ? TabnameToken.decode(buffer) : DecodeFinished.UNABLE_TO_DECODE;
             }
 
-            if (type == DoneProcToken.TYPE && DoneProcToken.canDecode(buffer)) {
-                columns.set(null);
-                return DoneProcToken.decode(buffer);
+            if (type == DoneToken.TYPE) {
+
+                if (DoneToken.canDecode(buffer)) {
+
+                    DoneToken decode = DoneToken.decode(buffer);
+
+                    if (!decode.hasMore()) {
+                        columns.set(null);
+                    }
+
+                    return decode;
+                }
+
+                return DecodeFinished.UNABLE_TO_DECODE;
+            }
+
+            if (type == DoneInProcToken.TYPE) {
+
+                if (DoneInProcToken.canDecode(buffer)) {
+                    return DoneInProcToken.decode(buffer);
+                }
+
+                return DecodeFinished.UNABLE_TO_DECODE;
+            }
+
+            if (type == DoneProcToken.TYPE) {
+
+                if (DoneProcToken.canDecode(buffer)) {
+                    return DoneProcToken.decode(buffer);
+                }
+
+                return DecodeFinished.UNABLE_TO_DECODE;
             }
 
             if (type == RowToken.TYPE) {
@@ -152,7 +179,15 @@ public final class Tabular implements Message {
                 return RowToken.decode(buffer, colMetadataToken.getColumns());
             }
 
-            return DecodeFinished.UNABLE_TO_DECODE;
+            if (type == ReturnStatus.TYPE) {
+                return ReturnStatus.canDecode(buffer) ? ReturnStatus.decode(buffer) : DecodeFinished.UNABLE_TO_DECODE;
+            }
+
+            if (type == ReturnValue.TYPE) {
+                return ReturnValue.canDecode(buffer, encryptionSupported) ? ReturnValue.decode(buffer, encryptionSupported) : DecodeFinished.UNABLE_TO_DECODE;
+            }
+
+            throw ProtocolException.invalidTds(String.format("Unable to decode unknown token type 0x%02X", type));
         };
     }
 
@@ -314,11 +349,7 @@ public final class Tabular implements Message {
                 int readerIndex = buffer.readerIndex();
                 byte type = Decode.asByte(buffer);
 
-                if (type == (byte) 0xFF) {
-                    break;
-                }
-
-                DataToken message = decodeFunction.tryDecode(type, buffer);
+                DataToken message = this.decodeFunction.tryDecode(type, buffer);
 
                 if (message == DecodeFinished.UNABLE_TO_DECODE) {
                     buffer.readerIndex(readerIndex);

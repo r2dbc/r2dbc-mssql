@@ -20,9 +20,12 @@ import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
+import io.r2dbc.mssql.message.type.Collation;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.Optional;
 
 /**
  * An abstraction that wraps the networking part of exchanging {@link Message}s.
@@ -66,6 +69,13 @@ public interface Client {
      * @return the current {@link TransactionStatus}.
      */
     TransactionStatus getTransactionStatus();
+
+    /**
+     * Returns the database {@link Collation}.
+     *
+     * @return the database {@link Collation}.
+     */
+    Optional<Collation> getDatabaseCollation();
 
     /**
      * Returns whether the server supports column encryption.
