@@ -85,20 +85,15 @@ public final class EnvChangeToken extends AbstractDataToken {
      * Check whether the {@link ByteBuf} can be decoded into an entire {@link EnvChangeType}.
      *
      * @param buffer the data buffer.
-     * @return {@literal true} if the token can be decoded.
+     * @return {@literal true} if the buffer contains sufficient data to entirely decode a {@link EnvChangeType}.
      */
     public static boolean canDecode(ByteBuf buffer) {
 
-        if (buffer.readableBytes() > 2) {
+        Objects.requireNonNull(buffer, "Data buffer must not be null");
 
-            buffer.markReaderIndex();
-            int length = Decode.uShort(buffer);
-            buffer.resetReaderIndex();
+        Integer requiredLength = Decode.peekUShort(buffer);
 
-            return buffer.readableBytes() >= length;
-        }
-
-        return false;
+        return requiredLength != null && buffer.readableBytes() >= (requiredLength + /* length field */ 2);
     }
 
     @Override
@@ -134,7 +129,7 @@ public final class EnvChangeToken extends AbstractDataToken {
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();
-        sb.append(getClass().getSimpleName());
+        sb.append(getName());
         sb.append(" [length=").append(this.length);
         sb.append(", changeType=").append(this.changeType);
         sb.append(", newValue=").append(getNewValueString());

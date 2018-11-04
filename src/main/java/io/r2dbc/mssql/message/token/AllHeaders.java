@@ -37,7 +37,7 @@ public final class AllHeaders {
 
     private final int length;
 
-    AllHeaders(List<NestedHeader> headers) {
+    private AllHeaders(List<NestedHeader> headers) {
 
         Objects.requireNonNull(headers, "Headers must not be null");
 
@@ -77,7 +77,7 @@ public final class AllHeaders {
 
         Objects.requireNonNull(transactionDescriptor, "Transaction descriptor must not be null");
 
-        AllHeaders.TransactionDescriptorHeader txDescriptor = new AllHeaders.TransactionDescriptorHeader(transactionDescriptor, outstandingRequests
+        TransactionDescriptorHeader txDescriptor = new TransactionDescriptorHeader(transactionDescriptor, outstandingRequests
         );
 
         return new AllHeaders(Collections.singletonList(txDescriptor));
@@ -110,13 +110,13 @@ public final class AllHeaders {
             return false;
         }
         AllHeaders that = (AllHeaders) o;
-        return length == that.length &&
-            Objects.equals(headers, that.headers);
+        return this.length == that.length &&
+            Objects.equals(this.headers, that.headers);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(headers, length);
+        return Objects.hash(this.headers, this.length);
     }
 
     /**
@@ -209,14 +209,14 @@ public final class AllHeaders {
                 return false;
             }
             TransactionDescriptorHeader that = (TransactionDescriptorHeader) o;
-            return outstandingRequestCount == that.outstandingRequestCount &&
-                Arrays.equals(transactionDescriptor, that.transactionDescriptor);
+            return this.outstandingRequestCount == that.outstandingRequestCount &&
+                Arrays.equals(this.transactionDescriptor, that.transactionDescriptor);
         }
 
         @Override
         public int hashCode() {
-            int result = Objects.hash(outstandingRequestCount);
-            result = 31 * result + Arrays.hashCode(transactionDescriptor);
+            int result = Objects.hash(this.outstandingRequestCount);
+            result = 31 * result + Arrays.hashCode(this.transactionDescriptor);
             return result;
         }
     }

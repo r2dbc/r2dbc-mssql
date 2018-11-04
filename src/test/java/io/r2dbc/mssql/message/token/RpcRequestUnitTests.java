@@ -21,18 +21,21 @@ import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.header.HeaderOptions;
 import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
+import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.ClientMessageAssert;
 import io.r2dbc.mssql.util.HexUtils;
 import org.junit.jupiter.api.Test;
 
 /**
+ * Unit tests for {@link RpcRequest}.
+ *
  * @author Mark Paluch
  */
 class RpcRequestUnitTests {
 
     @Test
-    void shouldEncodeSpCursorOpen() throws Exception {
+    void shouldEncodeSpCursorOpen() {
 
         int SCROLLOPT_FAST_FORWARD = 16;
 
@@ -44,7 +47,9 @@ class RpcRequestUnitTests {
 
         Collation collation = Collation.from(13632521, 52);
 
-        RpcRequest rpcRequest = RpcRequest.builder().withProcId(RpcRequest.Sp_CursorOpen).withTransactionDescriptor(TransactionDescriptor.empty())
+        RpcRequest rpcRequest = RpcRequest.builder() //
+            .withProcId(RpcRequest.Sp_CursorOpen) //
+            .withTransactionDescriptor(TransactionDescriptor.empty())
             .withParameter(RpcDirection.OUT, 0) // cursor
             .withParameter(RpcDirection.IN, collation, "SELECT * FROM my_table")
             .withParameter(RpcDirection.IN, resultSetScrollOpt)  // scrollopt
@@ -52,10 +57,8 @@ class RpcRequestUnitTests {
             .withParameter(RpcDirection.OUT, 0) // rowcount
             .build();
 
-        String hex = "16 00 00 00 12 00 00 00" +
-            "02 00 00 00 00 00 00 00 00 00 01 00 00 00 FF FF" +
-            "02 00 00 00 00 01 26 04 04 00 00 00 00 00 00 E7" +
-            "40 1F 09 04 D0 00 34 2C 00 53 00 45 00 4C 00 45" +
+        String hex = "00 01 26 04 04 00 00 00 00 00 00 E7" +
+            "40 1F 00 D0 04 09 34 2C 00 53 00 45 00 4C 00 45" +
             "00 43 00 54 00 20 00 2A 00 20 00 46 00 52 00 4F" +
             "00 4D 00 20 00 6D 00 79 00 5F 00 74 00 61 00 62" +
             "00 6C 00 65 00 00 00 26 04 04 10 00 00 00 00 00" +
@@ -65,7 +68,14 @@ class RpcRequestUnitTests {
             .hasHeader(HeaderOptions.create(Type.RPC, Status.empty()))
             .isEncodedAs(expected -> {
 
-                expected.writeBytes(HexUtils.decodeToByteBuf(hex));
+                AllHeaders.transactional(TransactionDescriptor.empty(), 1).encode(expected);
+
+                Encode.uShort(expected, 0xFFFF); // proc Id switch
+                Encode.uShort(expected, 0x02); // proc Id
+                Encode.asByte(expected, 0); // option flag
+                Encode.asByte(expected, 0); // status flag
+
+                expected.writeBytes(HexUtils.decodeToByteBuf(hex)); // encoded parameters
             });
     }
 }

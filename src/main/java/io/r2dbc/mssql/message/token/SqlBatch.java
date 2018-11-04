@@ -51,7 +51,7 @@ public final class SqlBatch implements ClientMessage, TokenStream {
      * @param transactionDescriptor the transaction descriptor (8 byte).
      * @param sql                   the SQL string.
      */
-    public SqlBatch(int outstandingRequests, byte[] transactionDescriptor, String sql) {
+    private SqlBatch(int outstandingRequests, byte[] transactionDescriptor, String sql) {
 
         Objects.requireNonNull(transactionDescriptor, "Transaction descriptor must not be null");
         Objects.requireNonNull(sql, "SQL must not be null");
@@ -80,9 +80,11 @@ public final class SqlBatch implements ClientMessage, TokenStream {
     @Override
     public Publisher<TdsFragment> encode(ByteBufAllocator allocator) {
 
+        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        
         return Mono.fromSupplier(() -> {
 
-            int length = allHeaders.getLength() + (sql.length() * 2);
+            int length = this.allHeaders.getLength() + (this.sql.length() * 2);
 
             ByteBuf buffer = allocator.buffer(length);
 
@@ -116,20 +118,20 @@ public final class SqlBatch implements ClientMessage, TokenStream {
             return false;
         }
         SqlBatch batch = (SqlBatch) o;
-        return Objects.equals(allHeaders, batch.allHeaders) &&
-            Objects.equals(sql, batch.sql);
+        return Objects.equals(this.allHeaders, batch.allHeaders) &&
+            Objects.equals(this.sql, batch.sql);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(allHeaders, sql);
+        return Objects.hash(this.allHeaders, this.sql);
     }
 
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();
-        sb.append(getClass().getSimpleName());
-        sb.append(" [sql=\"").append(sql).append('\"');
+        sb.append(getName());
+        sb.append(" [sql=\"").append(this.sql).append('\"');
         sb.append(']');
         return sb.toString();
     }

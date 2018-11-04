@@ -72,4 +72,20 @@ final class InfoTokenUnitTests {
         assertThat(infoToken.getProcName()).isEqualTo("");
         assertThat(infoToken.getLineNumber()).isEqualTo(16777216);
     }
+
+    @Test
+    void canDecodeShouldReportDecodability() {
+
+        String data = "74" +
+            "0047160000010027004300680061006e" +
+            "0067006500640020006c0061006e0067" +
+            "00750061006700650020007300650074" +
+            "00740069006e006700200074006f0020" +
+            "00750073005f0065006e0067006c0069" +
+            "00730068002e000c6100360038003800" +
+            "30003900320061003700390066003500" +
+            "0001000000";
+
+        CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), InfoToken::canDecode);
+    }
 }

@@ -18,6 +18,7 @@ package io.r2dbc.mssql.message.tds;
 
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.type.Encoding;
+import reactor.util.annotation.Nullable;
 
 import java.util.Objects;
 
@@ -40,7 +41,6 @@ public final class Decode {
     public static byte asByte(ByteBuf buffer) {
         return buffer.readByte();
     }
-
 
     /**
      * Decode an unsigned byte. SQL server type {@code BYTE}
@@ -162,6 +162,34 @@ public final class Decode {
         return buffer.readUnsignedShortLE();
     }
 
+    /**
+     * Peek onto the next {@link #uShort(ByteBuf)}. This method retains the {@link ByteBuf#readerIndex()} and returns the {@code USHORT} value if it is readable (i.e. if the buffer has at least two
+     * readable bytes). Returns {@literal null} if not readable.
+     *
+     * @param buffer the data buffer.
+     * @return the peeked {@code USHORT} value or {@literal null}.
+     */
+    @Nullable
+    public static Integer peekUShort(ByteBuf buffer) {
+
+        if (buffer.readableBytes() >= 2) {
+
+            buffer.markReaderIndex();
+            int peek = Decode.uShort(buffer);
+            buffer.resetReaderIndex();
+
+            return peek;
+        }
+
+        return null;
+    }
+
+    /**
+     * Read an integer with big endian encoding. Typically used to evaluate bit masks.
+     *
+     * @param buffer the data buffer.
+     * @return
+     */
     public static int intBigEndian(ByteBuf buffer) {
         return buffer.readInt();
     }
@@ -187,17 +215,6 @@ public final class Decode {
     }
 
     /**
-     * Decode a unicode ({@code VARCHAR}) string from {@link ByteBuf} with the given {@code length}).
-     *
-     * @param buffer the data buffer.
-     * @param length length of bytes to read.
-     * @return
-     */
-    public static String unicodeString(ByteBuf buffer, int length) {
-        return as(buffer, length, Encoding.UNICODE);
-    }
-
-    /**
      * Decode the {@link ByteBuf} using the given {@link Encoding}.
      *
      * @param buffer   the data buffer.
@@ -205,7 +222,7 @@ public final class Decode {
      * @param encoding
      * @return
      */
-    public static String as(ByteBuf buffer, int length, Encoding encoding) {
+    private static String as(ByteBuf buffer, int length, Encoding encoding) {
 
         Objects.requireNonNull(buffer, "Buffer must not be null");
         Objects.requireNonNull(encoding, "Encoding must not be null");

@@ -16,6 +16,7 @@
 
 package io.r2dbc.mssql.message.token;
 
+import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.header.HeaderOptions;
 import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
@@ -34,9 +35,7 @@ class SqlBatchUnitTests {
     @Test
     void shouldEncodeProperly() {
 
-        byte tx[] = new byte[]{0, 0, 0, 0, 0, 0, 0, 0};
-
-        SqlBatch batch = new SqlBatch(1, tx, "SELECT *  FROM employees;");
+        SqlBatch batch = SqlBatch.create(1, TransactionDescriptor.empty(), "SELECT *  FROM employees;");
 
         assertThat(batch).encoded() //
             .hasHeader(HeaderOptions.create(Type.SQL_BATCH, Status.empty())) //

@@ -85,16 +85,8 @@ public class ColInfoToken extends AbstractDataToken {
 
         if (buffer.readableBytes() >= 5) {
 
-            int readerIndex = buffer.readerIndex();
-            try {
-                int length = Decode.uShort(buffer);
-
-                if (buffer.readableBytes() >= length) {
-                    return true;
-                }
-            } finally {
-                buffer.readerIndex(readerIndex);
-            }
+            Integer requiredLength = Decode.peekUShort(buffer);
+            return requiredLength != null && buffer.readableBytes() >= (requiredLength + /* length field */ 2);
         }
 
         return false;

@@ -34,12 +34,12 @@ class DefaultHeaderOptions implements HeaderOptions {
 
     @Override
     public Type getType() {
-        return type;
+        return this.type;
     }
 
     @Override
     public Status getStatus() {
-        return status;
+        return this.status;
     }
 
     @Override
@@ -51,8 +51,8 @@ class DefaultHeaderOptions implements HeaderOptions {
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [type=").append(type);
-        sb.append(", status=").append(status);
+        sb.append(" [type=").append(this.type);
+        sb.append(", status=").append(this.status);
         sb.append(']');
         return sb.toString();
     }

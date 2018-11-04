@@ -43,7 +43,7 @@ import java.util.Objects;
  *
  * @author Mark Paluch
  */
-public final class RpcRequest implements ClientMessage {
+public final class RpcRequest implements ClientMessage, TokenStream {
 
     static final HeaderOptions HEADER = HeaderOptions.create(Type.RPC, Status.empty());
 
@@ -161,6 +161,8 @@ public final class RpcRequest implements ClientMessage {
     @Override
     public Publisher<TdsFragment> encode(ByteBufAllocator allocator) {
 
+        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        
         return Mono.fromSupplier(() -> {
 
             int name = 2 + (this.procName != null ? this.procName.length() * 2 : 0);
@@ -198,6 +200,11 @@ public final class RpcRequest implements ClientMessage {
     }
 
     @Override
+    public String getName() {
+        return "RPCRequest";
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -206,23 +213,23 @@ public final class RpcRequest implements ClientMessage {
             return false;
         }
         RpcRequest that = (RpcRequest) o;
-        return statusFlags == that.statusFlags &&
-            Objects.equals(allHeaders, that.allHeaders) &&
-            Objects.equals(procName, that.procName) &&
-            Objects.equals(procId, that.procId) &&
-            Objects.equals(optionFlags, that.optionFlags) &&
-            Objects.equals(parameterDescriptors, that.parameterDescriptors);
+        return this.statusFlags == that.statusFlags &&
+            Objects.equals(this.allHeaders, that.allHeaders) &&
+            Objects.equals(this.procName, that.procName) &&
+            Objects.equals(this.procId, that.procId) &&
+            Objects.equals(this.optionFlags, that.optionFlags) &&
+            Objects.equals(this.parameterDescriptors, that.parameterDescriptors);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(allHeaders, procName, procId, optionFlags, statusFlags, parameterDescriptors);
+        return Objects.hash(this.allHeaders, this.procName, this.procId, this.optionFlags, this.statusFlags, this.parameterDescriptors);
     }
 
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();
-        sb.append(getClass().getSimpleName());
+        sb.append(getName());
         sb.append(" [procName='").append(this.procName).append('\'');
         sb.append(", procId=").append(this.procId);
         sb.append(", optionFlags=").append(this.optionFlags);
@@ -526,13 +533,13 @@ public final class RpcRequest implements ClientMessage {
                 return false;
             }
             RpcString rpcString = (RpcString) o;
-            return Objects.equals(collation, rpcString.collation) &&
-                Objects.equals(value, rpcString.value);
+            return Objects.equals(this.collation, rpcString.collation) &&
+                Objects.equals(this.value, rpcString.value);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(collation, value);
+            return Objects.hash(this.collation, this.value);
         }
 
         @Override
@@ -578,12 +585,12 @@ public final class RpcRequest implements ClientMessage {
                 return false;
             }
             RpcInt rpcInt = (RpcInt) o;
-            return Objects.equals(value, rpcInt.value);
+            return Objects.equals(this.value, rpcInt.value);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(value);
+            return Objects.hash(this.value);
         }
 
         @Override

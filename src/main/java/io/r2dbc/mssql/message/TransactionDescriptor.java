@@ -62,6 +62,9 @@ public final class TransactionDescriptor {
         return new TransactionDescriptor(descriptor);
     }
 
+    /**
+     * @return the binary representation of this {@link TransactionDescriptor}.
+     */
     public byte[] toBytes() {
         return Arrays.copyOf(this.descriptor, this.descriptor.length);
     }
@@ -75,11 +78,11 @@ public final class TransactionDescriptor {
             return false;
         }
         TransactionDescriptor that = (TransactionDescriptor) o;
-        return Arrays.equals(descriptor, that.descriptor);
+        return Arrays.equals(this.descriptor, that.descriptor);
     }
 
     @Override
     public int hashCode() {
-        return Arrays.hashCode(descriptor);
+        return Arrays.hashCode(this.descriptor);
     }
 }

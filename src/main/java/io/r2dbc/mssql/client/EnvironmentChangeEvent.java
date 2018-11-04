@@ -42,6 +42,6 @@ public class EnvironmentChangeEvent {
      * @return the environment change token.
      */
     public EnvChangeToken getToken() {
-        return token;
+        return this.token;
     }
 }

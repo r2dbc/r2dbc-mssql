@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
@@ -23,36 +24,44 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link EnvChangeToken}.
- * 
+ *
  * @author Mark Paluch
  */
 final class EnvChangeTokenUnitTests {
 
-	@Test
-	void shouldDecodeDatabaseChange() {
+    @Test
+    void shouldDecodeDatabaseChange() {
 
         ByteBuf buffer = HexUtils.decodeToByteBuf("E31B0001066D0061007300740065007200066D0061007300740065007200");
 
-		assertThat(buffer.readByte()).isEqualTo(EnvChangeToken.TYPE);
+        assertThat(buffer.readByte()).isEqualTo(EnvChangeToken.TYPE);
 
-		EnvChangeToken token = EnvChangeToken.decode(buffer);
+        EnvChangeToken token = EnvChangeToken.decode(buffer);
 
-		assertThat(token.getChangeType()).isEqualTo(EnvChangeToken.EnvChangeType.Database);
-		assertThat(token.getNewValueString()).isEqualTo("master");
-		assertThat(token.getOldValueString()).isEqualTo("master");
-	}
+        assertThat(token.getChangeType()).isEqualTo(EnvChangeToken.EnvChangeType.Database);
+        assertThat(token.getNewValueString()).isEqualTo("master");
+        assertThat(token.getOldValueString()).isEqualTo("master");
+    }
 
-	@Test
-	void shouldDecodeLanguageChange() {
+    @Test
+    void shouldDecodeLanguageChange() {
 
         ByteBuf buffer = HexUtils.decodeToByteBuf("e31700020a750073005f0065" + "006e0067006c0069007300680000");
 
-		assertThat(buffer.readByte()).isEqualTo(EnvChangeToken.TYPE);
+        assertThat(buffer.readByte()).isEqualTo(EnvChangeToken.TYPE);
 
-		EnvChangeToken token = EnvChangeToken.decode(buffer);
+        EnvChangeToken token = EnvChangeToken.decode(buffer);
 
-		assertThat(token.getChangeType()).isEqualTo(EnvChangeToken.EnvChangeType.Language);
-		assertThat(token.getNewValueString()).isEqualTo("us_english");
-		assertThat(token.getOldValueString()).isEqualTo("");
-	}
+        assertThat(token.getChangeType()).isEqualTo(EnvChangeToken.EnvChangeType.Language);
+        assertThat(token.getNewValueString()).isEqualTo("us_english");
+        assertThat(token.getOldValueString()).isEqualTo("");
+    }
+
+    @Test
+    void canDecodeShouldReportDecodability() {
+
+        String data = "1B0001066D0061007300740065007200066D0061007300740065007200";
+
+        CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), EnvChangeToken::canDecode);
+    }
 }

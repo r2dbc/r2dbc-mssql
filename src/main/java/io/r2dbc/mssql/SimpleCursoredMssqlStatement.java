@@ -32,6 +32,12 @@ final class SimpleCursoredMssqlStatement extends SimpleMssqlStatement {
 
     public static final int FETCH_SIZE = 128;
 
+    /**
+     * Creates a new {@link SimpleCursoredMssqlStatement}.
+     *
+     * @param client the client to exchange messages with.
+     * @param sql    the query to execute.
+     */
     SimpleCursoredMssqlStatement(Client client, String sql) {
         super(client, sql);
     }
@@ -39,11 +45,17 @@ final class SimpleCursoredMssqlStatement extends SimpleMssqlStatement {
     @Override
     public Flux<Result> execute() {
 
-        return CursoredQueryMessageFlow.exchange(this.client, CODECS, sql, FETCH_SIZE) //
+        return CursoredQueryMessageFlow.exchange(this.client, CODECS, this.sql, FETCH_SIZE) //
             .windowUntil(it -> false) //
             .map(it -> SimpleMssqlResult.toResult(CODECS, it));
     }
 
+    /**
+     * Returns {@literal true} if the query is supported by this {@link MssqlStatement}. Cursored execution is supported for {@literal SELECT} queries.
+     *
+     * @param sql the query to inspect.
+     * @return {@literal true} if the {@code sql} query is supported.
+     */
     static boolean supports(String sql) {
 
         if (sql.isEmpty()) {

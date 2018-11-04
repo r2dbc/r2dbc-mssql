@@ -81,10 +81,12 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
      *
      * @param buffer              the data buffer.
      * @param encryptionSupported whether encryption is supported.
-     * @return the {@link RowToken}.
+     * @return the {@link ReturnValue}.
      */
     public static ReturnValue decode(ByteBuf buffer, boolean encryptionSupported) {
 
+        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        
         int ordinal = Decode.uShort(buffer);
         String name = Decode.unicodeBString(buffer);
         byte status = Decode.asByte(buffer);
@@ -111,6 +113,8 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
      */
     public static boolean canDecode(ByteBuf buffer, boolean encryptionSupported) {
 
+        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        
         int readerIndex = buffer.readerIndex();
 
         try {

@@ -55,86 +55,86 @@ final class MutableTypeInformation implements TypeInformation {
 
     @Override
     public int getMaxLength() {
-        return maxLength;
+        return this.maxLength;
     }
 
     @Override
     public LengthStrategy getLengthStrategy() {
-        return lengthStrategy;
+        return this.lengthStrategy;
     }
 
     @Override
     public int getPrecision() {
-        return precision;
+        return this.precision;
     }
 
     @Override
     public int getDisplaySize() {
-        return displaySize;
+        return this.displaySize;
     }
 
     @Override
     public int getScale() {
-        return scale;
+        return this.scale;
     }
 
     @Override
     public SqlServerType getServerType() {
-        return serverType;
+        return this.serverType;
     }
 
     @Override
     public int getUserType() {
-        return userType;
+        return this.userType;
     }
 
     @Override
     @Nullable
     public String getUdtTypeName() {
-        return udtTypeName;
+        return this.udtTypeName;
     }
 
     @Override
     @Nullable
     public Collation getCollation() {
-        return collation;
+        return this.collation;
     }
 
     @Override
     @Nullable
     public Charset getCharset() {
-        return charset;
+        return this.charset;
     }
 
     @Override
     public String getServerTypeName() {
-        return (SqlServerType.UDT == serverType) ? udtTypeName : serverType.toString();
+        return (SqlServerType.UDT == this.serverType) ? this.udtTypeName : this.serverType.toString();
     }
 
     @Override
     public boolean isNullable() {
-        return 0x0001 == (flags & 0x0001);
+        return 0x0001 == (this.flags & 0x0001);
     }
 
     @Override
     public boolean isCaseSensitive() {
-        return 0x0002 == (flags & 0x0002);
+        return 0x0002 == (this.flags & 0x0002);
     }
 
     @Override
     public boolean isSparseColumnSet() {
-        return 0x0400 == (flags & 0x0400);
+        return 0x0400 == (this.flags & 0x0400);
     }
 
     @Override
     public boolean isEncrypted() {
-        return 0x0800 == (flags & 0x0800);
+        return 0x0800 == (this.flags & 0x0800);
     }
 
     @Override
     public Updatability getUpdatability() {
 
-        int value = (flags >> 2) & 0x0003;
+        int value = (this.flags >> 2) & 0x0003;
 
         if (value == 0) {
             return Updatability.READ_ONLY;
@@ -149,13 +149,13 @@ final class MutableTypeInformation implements TypeInformation {
 
     @Override
     public boolean isIdentity() {
-        return 0x0010 == (flags & 0x0010);
+        return 0x0010 == (this.flags & 0x0010);
     }
 
     private byte[] getFlags() {
         byte[] f = new byte[2];
-        f[0] = (byte) (flags & 0xFF);
-        f[1] = (byte) ((flags >> 8) & 0xFF);
+        f[0] = (byte) (this.flags & 0xFF);
+        f[1] = (byte) ((this.flags >> 8) & 0xFF);
         return f;
     }
 
@@ -165,12 +165,12 @@ final class MutableTypeInformation implements TypeInformation {
      */
     public boolean supportsFastAsciiConversion() {
 
-        switch (serverType) {
+        switch (this.serverType) {
             case CHAR:
             case VARCHAR:
             case VARCHARMAX:
             case TEXT:
-                return collation != null && collation.hasAsciiCompatibleSBCS();
+                return this.collation != null && this.collation.hasAsciiCompatibleSBCS();
 
             default:
                 return false;
@@ -182,17 +182,17 @@ final class MutableTypeInformation implements TypeInformation {
 
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [maxLength=").append(maxLength);
-        sb.append(", lengthStrategy=").append(lengthStrategy);
-        sb.append(", precision=").append(precision);
-        sb.append(", displaySize=").append(displaySize);
-        sb.append(", scale=").append(scale);
-        sb.append(", flags=").append(flags);
-        sb.append(", serverType=").append(serverType);
-        sb.append(", userType=").append(userType);
-        sb.append(", udtTypeName=\"").append(udtTypeName).append('\"');
-        sb.append(", collation=").append(collation);
-        sb.append(", charset=").append(charset);
+        sb.append(" [maxLength=").append(this.maxLength);
+        sb.append(", lengthStrategy=").append(this.lengthStrategy);
+        sb.append(", precision=").append(this.precision);
+        sb.append(", displaySize=").append(this.displaySize);
+        sb.append(", scale=").append(this.scale);
+        sb.append(", flags=").append(this.flags);
+        sb.append(", serverType=").append(this.serverType);
+        sb.append(", userType=").append(this.userType);
+        sb.append(", udtTypeName=\"").append(this.udtTypeName).append('\"');
+        sb.append(", collation=").append(this.collation);
+        sb.append(", charset=").append(this.charset);
         sb.append(']');
 
         return sb.toString();

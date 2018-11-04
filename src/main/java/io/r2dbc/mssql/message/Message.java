@@ -16,9 +16,13 @@
 
 package io.r2dbc.mssql.message;
 
+import io.r2dbc.mssql.message.token.TokenStream;
+
 /**
- * A TDS message. Messages declare typically encode or decode functions
+ * A TDS message. Messages declare typically encode or decode functions.
+ *
+ * @see ClientMessage
+ * @see TokenStream
  */
 public interface Message {
-
 }

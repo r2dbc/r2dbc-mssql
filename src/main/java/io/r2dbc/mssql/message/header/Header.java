@@ -220,17 +220,17 @@ public class Header implements HeaderOptions {
             return false;
         }
         Header header = (Header) o;
-        return length == header.length &&
-            spid == header.spid &&
-            packetId == header.packetId &&
-            window == header.window &&
-            type == header.type &&
-            Objects.equals(status, header.status);
+        return this.length == header.length &&
+            this.spid == header.spid &&
+            this.packetId == header.packetId &&
+            this.window == header.window &&
+            this.type == header.type &&
+            Objects.equals(this.status, header.status);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, status, length, spid, packetId, window);
+        return Objects.hash(this.type, this.status, this.length, this.spid, this.packetId, this.window);
     }
 
     @Override

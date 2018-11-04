@@ -42,6 +42,6 @@ public class TdsFragment {
      * @return the data buffer.
      */
     public ByteBuf getByteBuf() {
-        return byteBuf;
+        return this.byteBuf;
     }
 }

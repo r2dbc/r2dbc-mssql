@@ -228,11 +228,11 @@ final class StreamDecoder {
          */
         DecoderState readChunk() {
 
-            if (aggregatedBody == Unpooled.EMPTY_BUFFER) {
+            if (this.aggregatedBody == Unpooled.EMPTY_BUFFER) {
 
                 ByteBuf unchunkedBodyData = this.remainder.copy(this.remainder.readerIndex(), getChunkLength());
                 this.remainder.skipBytes(getChunkLength());
-                return new DecoderState(remainder, unchunkedBodyData, null);
+                return new DecoderState(this.remainder, unchunkedBodyData, null);
             }
 
             ByteBuf unchunkedBodyData = this.aggregatedBody.writeBytes(this.remainder.readSlice(getChunkLength()));

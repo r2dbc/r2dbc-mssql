@@ -74,7 +74,7 @@ public class FeatureExtAckToken extends AbstractDataToken {
     }
 
     public List<FeatureToken> getFeatureTokens() {
-        return featureTokens;
+        return this.featureTokens;
     }
 
     @Override
@@ -86,7 +86,7 @@ public class FeatureExtAckToken extends AbstractDataToken {
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [featureTokens=").append(featureTokens);
+        sb.append(" [featureTokens=").append(this.featureTokens);
         sb.append(']');
         return sb.toString();
     }
@@ -156,14 +156,14 @@ public class FeatureExtAckToken extends AbstractDataToken {
         }
 
         public byte getTceVersion() {
-            return tceVersion;
+            return this.tceVersion;
         }
 
         @Override
         public String toString() {
             final StringBuffer sb = new StringBuffer();
             sb.append(getClass().getSimpleName());
-            sb.append(" [tceVersion=").append(tceVersion);
+            sb.append(" [tceVersion=").append(this.tceVersion);
             sb.append(']');
             return sb.toString();
         }

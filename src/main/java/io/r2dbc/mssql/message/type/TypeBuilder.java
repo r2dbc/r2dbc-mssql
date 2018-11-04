@@ -453,7 +453,7 @@ enum TypeBuilder {
     }
 
     TdsDataType getTdsDataType() {
-        return tdsType;
+        return this.tdsType;
     }
 
     /**
@@ -466,7 +466,7 @@ enum TypeBuilder {
      */
     MutableTypeInformation build(MutableTypeInformation typeInfo, ByteBuf buffer) throws ProtocolException {
 
-        strategy.decode(typeInfo, buffer);
+        this.strategy.decode(typeInfo, buffer);
 
         // Postcondition: SqlServerType and SqlServerLength are initialized
 

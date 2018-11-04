@@ -59,7 +59,7 @@ final class SimpleMssqlResult implements Result {
 
     @Override
     public Publisher<Integer> getRowsUpdated() {
-        return rowsUpdated.map(Long::intValue);
+        return this.rowsUpdated.map(Long::intValue);
     }
 
     @Override

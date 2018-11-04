@@ -157,7 +157,7 @@ public final class Login7 implements TokenStream, ClientMessage {
 
         return Mono.fromSupplier(() -> {
 
-            ByteBuf buffer = allocator.buffer(estimatedPacketLength);
+            ByteBuf buffer = allocator.buffer(this.estimatedPacketLength);
 
             encode(buffer);
             return TdsPackets.create(header, buffer);

@@ -85,7 +85,7 @@ public enum TdsDataType {
     }
 
     public byte getValue() {
-        return (byte) value;
+        return (byte) this.value;
     }
 
     /**

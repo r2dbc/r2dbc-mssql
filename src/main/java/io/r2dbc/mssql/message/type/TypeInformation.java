@@ -351,7 +351,7 @@ public interface TypeInformation {
         }
 
         public byte getValue() {
-            return value;
+            return this.value;
         }
     }
 
@@ -458,7 +458,7 @@ public interface TypeInformation {
          * @return the type name.
          */
         public String toString() {
-            return name;
+            return this.name;
         }
 
         /**

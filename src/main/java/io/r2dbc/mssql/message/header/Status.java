@@ -158,7 +158,7 @@ public class Status {
      * @return the status byte.
      */
     public byte getValue() {
-        return value;
+        return this.value;
     }
 
     @Override
@@ -170,13 +170,13 @@ public class Status {
             return false;
         }
         Status status = (Status) o;
-        return value == status.value &&
-            Objects.equals(statusBits, status.statusBits);
+        return this.value == status.value &&
+            Objects.equals(this.statusBits, status.statusBits);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(statusBits, value);
+        return Objects.hash(this.statusBits, this.value);
     }
 
     private static byte getStatusValue(Collection<StatusBit> statusBits) {
@@ -192,7 +192,7 @@ public class Status {
 
     @Override
     public String toString() {
-        return Integer.toHexString(value);
+        return Integer.toHexString(this.value);
     }
 
     /**

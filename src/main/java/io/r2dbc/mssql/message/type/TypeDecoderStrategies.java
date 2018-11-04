@@ -102,11 +102,11 @@ interface TypeDecoderStrategies {
         public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
 
             typeInfo.lengthStrategy = LengthStrategy.FIXEDLENTYPE;
-            typeInfo.serverType = serverType;
-            typeInfo.maxLength = maxLength;
-            typeInfo.precision = precision;
-            typeInfo.displaySize = displaySize;
-            typeInfo.scale = scale;
+            typeInfo.serverType = this.serverType;
+            typeInfo.maxLength = this.maxLength;
+            typeInfo.precision = this.precision;
+            typeInfo.displaySize = this.displaySize;
+            typeInfo.scale = this.scale;
         }
     }
 
@@ -134,7 +134,7 @@ interface TypeDecoderStrategies {
             }
 
             typeInfo.lengthStrategy = LengthStrategy.BYTELENTYPE;
-            typeInfo.serverType = serverType;
+            typeInfo.serverType = this.serverType;
             typeInfo.maxLength = maxLength;
             typeInfo.precision = precision;
             typeInfo.displaySize = precision + 2;
@@ -165,10 +165,10 @@ interface TypeDecoderStrategies {
             switch (length) // maxLength
             {
                 case 8:
-                    bigBuilder.build(typeInfo, buffer);
+                    this.bigBuilder.build(typeInfo, buffer);
                     break;
                 case 4:
-                    smallBuilder.build(typeInfo, buffer);
+                    this.smallBuilder.build(typeInfo, buffer);
                     break;
                 default:
                     throw ProtocolException.invalidTds(String.format("Unsupported length for Big/Small strategy: %d", length));
@@ -204,7 +204,7 @@ interface TypeDecoderStrategies {
                 throw ProtocolException.invalidTds(String.format("Unsupported temporal scale: %d", typeInfo.scale));
             }
 
-            switch (serverType) {
+            switch (this.serverType) {
                 case TIME:
                     typeInfo.precision = getPrecision("hh:mm:ss", typeInfo.scale);
                     typeInfo.maxLength = TypeUtils.getTimeValueLength(typeInfo.scale);
@@ -221,11 +221,11 @@ interface TypeDecoderStrategies {
                     break;
 
                 default:
-                    throw ProtocolException.invalidTds(String.format("Unexpected SQL Server type: %s", serverType));
+                    throw ProtocolException.invalidTds(String.format("Unexpected SQL Server type: %s", this.serverType));
             }
 
             typeInfo.lengthStrategy = LengthStrategy.BYTELENTYPE;
-            typeInfo.serverType = serverType;
+            typeInfo.serverType = this.serverType;
             typeInfo.displaySize = typeInfo.precision;
         }
     }

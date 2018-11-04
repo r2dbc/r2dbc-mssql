@@ -21,6 +21,7 @@ import io.r2dbc.mssql.message.tds.Decode;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Table name token. Used to send the table name to the client only when in browser mode or from cursors.
@@ -34,8 +35,8 @@ public class TabnameToken extends AbstractDataToken {
     private final List<Identifier> tableNames;
 
     private TabnameToken(List<Identifier> tableNames) {
-        super(TYPE);
 
+        super(TYPE);
         this.tableNames = tableNames;
     }
 
@@ -47,6 +48,8 @@ public class TabnameToken extends AbstractDataToken {
      */
     public static TabnameToken decode(ByteBuf buffer) {
 
+        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        
         int length = Decode.uShort(buffer);
 
         int readerIndex = buffer.readerIndex();
@@ -68,18 +71,12 @@ public class TabnameToken extends AbstractDataToken {
      */
     public static boolean canDecode(ByteBuf buffer) {
 
+        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        
         if (buffer.readableBytes() >= 5) {
 
-            int readerIndex = buffer.readerIndex();
-            try {
-                int length = Decode.uShort(buffer);
-
-                if (buffer.readableBytes() >= length) {
-                    return true;
-                }
-            } finally {
-                buffer.readerIndex(readerIndex);
-            }
+            Integer requiredLength = Decode.peekUShort(buffer);
+            return requiredLength != null && buffer.readableBytes() >= (requiredLength + /* length field */ 2);
         }
 
         return false;
@@ -97,7 +94,7 @@ public class TabnameToken extends AbstractDataToken {
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();
-        sb.append(getClass().getSimpleName());
+        sb.append(getName());
         sb.append(" [names=").append(this.tableNames);
         sb.append(']');
         return sb.toString();

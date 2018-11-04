@@ -234,13 +234,13 @@ public final class Prelogin implements TokenStream, ClientMessage {
             return false;
         }
         Prelogin prelogin = (Prelogin) o;
-        return size == prelogin.size &&
-            Objects.equals(tokens, prelogin.tokens);
+        return this.size == prelogin.size &&
+            Objects.equals(this.tokens, prelogin.tokens);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(size, tokens);
+        return Objects.hash(this.size, this.tokens);
     }
 
     @Override

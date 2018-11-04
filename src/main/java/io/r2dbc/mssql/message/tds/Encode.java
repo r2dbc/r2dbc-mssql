@@ -84,9 +84,6 @@ public final class Encode {
         buffer.writeIntLE(value);
     }
 
-    public static void intBigEndian(ByteBuf buffer, int value) {
-        buffer.writeInt(value);
-    }
 
     /**
      * Encode an unscaled {@link BigInteger} value. SQL server type {@code SMALLMONEY}.
@@ -185,6 +182,16 @@ public final class Encode {
      */
     public static void uShort(ByteBuf buffer, int value) {
         buffer.writeShortLE(value);
+    }
+
+    /**
+     * Encode an integer with big endian encoding. Typically used to write bit masks.
+     *
+     * @param buffer the data buffer.
+     * @param value  the value to encode.
+     */
+    public static void intBigEndian(ByteBuf buffer, int value) {
+        buffer.writeInt(value);
     }
 
     /**

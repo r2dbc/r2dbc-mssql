@@ -16,19 +16,27 @@
 
 package io.r2dbc.mssql;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Query logger to log queries.
+ * Unit tests for {@link SimpleCursoredMssqlStatement}.
  *
  * @author Mark Paluch
  */
-final class QueryLogger {
+class SimpleCursoredMssqlStatementUnitTests {
 
-    private static final Logger QUERY_LOGGER = LoggerFactory.getLogger("io.r2dbc.mssql.QUERY");
+    @ParameterizedTest
+    @ValueSource(strings = {"select", "SELECT", "sElEcT"})
+    void shouldAcceptQueries(String query) {
+        assertThat(SimpleCursoredMssqlStatement.supports(query)).isTrue();
+    }
 
-    static void logQuery(String query) {
-        QUERY_LOGGER.debug("Executing query: {}", query);
+    @ParameterizedTest
+    @ValueSource(strings = {" select", "sp_cursor", "INSERT"})
+    void shouldRejectQueries(String query) {
+        assertThat(SimpleCursoredMssqlStatement.supports(query)).isFalse();
     }
 }

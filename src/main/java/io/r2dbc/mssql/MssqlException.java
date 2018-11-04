@@ -130,7 +130,7 @@ public final class MssqlException extends AbstractMssqlException {
      * @return the message number.
      */
     public long getNumber() {
-        return number;
+        return this.number;
     }
 
     /**
@@ -139,7 +139,7 @@ public final class MssqlException extends AbstractMssqlException {
      * @return the error state.
      */
     public int getState() {
-        return state;
+        return this.state;
     }
 
     /**
@@ -148,7 +148,7 @@ public final class MssqlException extends AbstractMssqlException {
      * @return severity class of this {@link MssqlException}.
      */
     public int getInfoClass() {
-        return infoClass;
+        return this.infoClass;
     }
 
     /**
@@ -158,7 +158,7 @@ public final class MssqlException extends AbstractMssqlException {
      */
     @Nullable
     public String getServerName() {
-        return serverName;
+        return this.serverName;
     }
 
     /**
@@ -168,7 +168,7 @@ public final class MssqlException extends AbstractMssqlException {
      */
     @Nullable
     public String getProcName() {
-        return procName;
+        return this.procName;
     }
 
     /**
@@ -178,6 +178,6 @@ public final class MssqlException extends AbstractMssqlException {
      * @return the line number in the SQL batch.
      */
     public long getLineNumber() {
-        return lineNumber;
+        return this.lineNumber;
     }
 }

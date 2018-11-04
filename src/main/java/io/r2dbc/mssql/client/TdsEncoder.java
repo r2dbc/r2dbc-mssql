@@ -33,6 +33,8 @@ import io.r2dbc.mssql.message.tds.TdsPacket;
 import io.r2dbc.mssql.message.token.EnvChangeToken;
 import io.r2dbc.mssql.util.Assert;
 
+import java.util.Objects;
+
 /**
  * Encoder for TDS packets. This encoder can apply various strategies regarding TDS header handling:
  * <ul>
@@ -50,9 +52,13 @@ import io.r2dbc.mssql.util.Assert;
  * @see TdsPacket
  * @see HeaderOptions
  * @see TdsFragment
+ * TODO: Prevent buffer underrun if FirstTdsPacket contains less bytes than the negotiated packet size. 
  */
 public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements EnvironmentChangeListener {
 
+    /**
+     * Initial (default) packet size for TDS packets.
+     */
     public static final int INITIAL_PACKET_SIZE = 8000;
 
     private ByteBuf lastChunkRemainder;
@@ -63,12 +69,23 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
 
     private HeaderOptions headerOptions;
 
+    /**
+     * Creates a new {@link TdsEncoder} using the default {@link #INITIAL_PACKET_SIZE packet size.}.
+     *
+     * @param packetIdProvider provider for the {@literal packetId}.
+     */
     public TdsEncoder(PacketIdProvider packetIdProvider) {
         this(packetIdProvider, INITIAL_PACKET_SIZE);
     }
 
+    /**
+     * Creates a new {@link TdsEncoder} using the given {@code packetSize}
+     *
+     * @param packetIdProvider provider for the {@literal packetId}.
+     */
     public TdsEncoder(PacketIdProvider packetIdProvider, int packetSize) {
-        this.packetIdProvider = packetIdProvider;
+
+        this.packetIdProvider = Objects.requireNonNull(packetIdProvider, "PacketId Provider must not be null");
         this.packetSize = packetSize;
     }
 
@@ -92,7 +109,7 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
         // Expect ByteBuf to be self-contained messages that do not require further chunking (for now).
         if (msg instanceof ByteBuf) {
 
-            if (headerOptions == null) {
+            if (this.headerOptions == null) {
                 ctx.write(msg, promise);
                 return;
             }
@@ -107,7 +124,7 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
         if (msg instanceof TdsPacket) {
 
             TdsPacket packet = (TdsPacket) msg;
-            ByteBuf message = packet.encode(ctx.alloc(), packetIdProvider);
+            ByteBuf message = packet.encode(ctx.alloc(), this.packetIdProvider);
 
             Assert.state(message.readableBytes() <= this.packetSize, "Packet size exceeded");
             
@@ -155,7 +172,7 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
 
             TdsFragment fragment = (TdsFragment) msg;
 
-            doWriteFragment(ctx, promise, fragment.getByteBuf(), headerOptions, false);
+            doWriteFragment(ctx, promise, fragment.getByteBuf(), this.headerOptions, false);
             return;
         }
 
@@ -201,7 +218,7 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
 
         int messageLength = getBytesToWrite(body.readableBytes());
         ByteBuf buffer = ctx.alloc().buffer(messageLength);
-        Header header = Header.create(optionsToUse, messageLength, packetIdProvider);
+        Header header = Header.create(optionsToUse, messageLength, this.packetIdProvider);
 
         header.encode(buffer);
 
@@ -230,7 +247,7 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
                 int combinedSize = this.lastChunkRemainder.readableBytes() + body.readableBytes();
                 HeaderOptions optionsToUse = isLastTransportPacket(combinedSize, lastLogicalPacket) ? getLastHeader(headerOptions) : getChunkedHeaderOptions(headerOptions);
 
-                Header header = Header.create(optionsToUse, this.packetSize, packetIdProvider);
+                Header header = Header.create(optionsToUse, this.packetSize, this.packetIdProvider);
                 header.encode(chunked);
 
                 int actualBodyReadableBytes = this.packetSize - Header.LENGTH - this.lastChunkRemainder.readableBytes();
@@ -253,7 +270,7 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
 
                 chunk = body.readSlice(getEffectiveChunkSizeWithoutHeader(body.readableBytes()));
 
-                Header header = Header.create(optionsToUse, Header.LENGTH + chunk.readableBytes(), packetIdProvider);
+                Header header = Header.create(optionsToUse, Header.LENGTH + chunk.readableBytes(), this.packetIdProvider);
                 header.encode(chunked);
                 chunked.writeBytes(chunk);
             }

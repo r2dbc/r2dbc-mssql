@@ -77,13 +77,13 @@ abstract class AbstractNumericCodec<T> extends AbstractCodec<T> {
 
         switch (length.getLength()) {
             case SIZE_BIGINT:
-                return converter.apply(Decode.bigint(buffer));
+                return this.converter.apply(Decode.bigint(buffer));
             case SIZE_INT:
-                return converter.apply(Decode.asInt(buffer));
+                return this.converter.apply(Decode.asInt(buffer));
             case SIZE_SMALL_INT:
-                return converter.apply(Decode.smallInt(buffer));
+                return this.converter.apply(Decode.smallInt(buffer));
             case SIZE_TINY_INT:
-                return converter.apply(Decode.tinyInt(buffer));
+                return this.converter.apply(Decode.tinyInt(buffer));
             default:
                 throw ProtocolException.invalidTds(String.format("Unexpected value length: %d", length.getLength()));
         }

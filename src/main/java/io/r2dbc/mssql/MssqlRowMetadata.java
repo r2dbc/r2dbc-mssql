@@ -17,7 +17,6 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.message.token.Column;
-import io.r2dbc.spi.ColumnMetadata;
 import io.r2dbc.spi.RowMetadata;
 
 import java.util.ArrayList;
@@ -47,14 +46,14 @@ final class MssqlRowMetadata implements RowMetadata {
     }
 
     @Override
-    public ColumnMetadata getColumnMetadata(Object identifier) {
+    public MssqlColumnMetadata getColumnMetadata(Object identifier) {
         return this.metadataCache.computeIfAbsent(this.columnSource.getColumn(identifier), MssqlColumnMetadata::new);
     }
 
     @Override
     public List<MssqlColumnMetadata> getColumnMetadatas() {
 
-        List<MssqlColumnMetadata> metadatas = new ArrayList<>(columnSource.getColumnCount());
+        List<MssqlColumnMetadata> metadatas = new ArrayList<>(this.columnSource.getColumnCount());
 
         for (int i = 0; i < this.columnSource.getColumnCount(); i++) {
 

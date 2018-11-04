@@ -286,19 +286,19 @@ public final class LengthDescriptor {
     }
 
     public int getLength() {
-        return length;
+        return this.length;
     }
 
     public boolean isNull() {
-        return isNull;
+        return this.isNull;
     }
 
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [length=").append(length);
-        sb.append(", isNull=").append(isNull);
+        sb.append(" [length=").append(this.length);
+        sb.append(", isNull=").append(this.isNull);
         sb.append(']');
         return sb.toString();
     }

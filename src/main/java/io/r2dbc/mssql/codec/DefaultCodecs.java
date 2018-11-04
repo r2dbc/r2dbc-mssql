@@ -39,14 +39,14 @@ public final class DefaultCodecs implements Codecs {
         this.codecs = Arrays.asList(
 
             // Prioritized Codecs
-            ShortCodec.INSTANCE,
             StringCodec.INSTANCE,
 
-            BooleanCodec.INSTANCE,
-            ByteCodec.INSTANCE,
             FloatCodec.INSTANCE,
             IntegerCodec.INSTANCE,
             LongCodec.INSTANCE,
+            ShortCodec.INSTANCE,
+            ByteCodec.INSTANCE,
+            BooleanCodec.INSTANCE,
             LocalTimeCodec.INSTANCE,
             LocalDateCodec.INSTANCE,
             LocalDateTimeCodec.INSTANCE,

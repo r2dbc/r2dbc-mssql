@@ -19,6 +19,8 @@ package io.r2dbc.mssql.message.token;
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Decode;
 
+import java.util.Objects;
+
 /**
  * Return Status token.
  *
@@ -31,6 +33,7 @@ public class ReturnStatus extends AbstractDataToken {
     private final int status;
 
     private ReturnStatus(int status) {
+
         super(TYPE);
         this.status = status;
     }
@@ -52,6 +55,9 @@ public class ReturnStatus extends AbstractDataToken {
      * @return the decoded {@link ReturnStatus}.
      */
     public static ReturnStatus decode(ByteBuf buffer) {
+
+        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        
         return new ReturnStatus(Decode.asLong(buffer));
     }
 
@@ -59,14 +65,17 @@ public class ReturnStatus extends AbstractDataToken {
      * Check whether the {@link ByteBuf} can be decoded into a {@link ReturnStatus}.
      *
      * @param buffer the data buffer.
-     * @return {@literal true} if the token can be decoded.
+     * @return {@literal true} if the buffer contains sufficient data to entirely decode a {@link ReturnStatus}.
      */
     public static boolean canDecode(ByteBuf buffer) {
+
+        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        
         return buffer.readableBytes() >= 5;
     }
 
     public int getStatus() {
-        return status;
+        return this.status;
     }
 
     @Override
@@ -83,7 +92,7 @@ public class ReturnStatus extends AbstractDataToken {
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [status=").append(status);
+        sb.append(" [status=").append(this.status);
         sb.append(']');
         return sb.toString();
     }

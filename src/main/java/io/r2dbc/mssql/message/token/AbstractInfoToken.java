@@ -19,6 +19,8 @@ package io.r2dbc.mssql.message.token;
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Decode;
 
+import java.util.Objects;
+
 /**
  * Info token.
  *
@@ -93,20 +95,15 @@ public abstract class AbstractInfoToken extends AbstractDataToken {
      * Check whether the {@link ByteBuf} can be decoded into an entire {@link AbstractInfoToken}.
      *
      * @param buffer the data buffer.
-     * @return {@literal true} if the token can be decoded.
+     * @return {@literal true} if the buffer contains sufficient data to entirely decode a {@link AbstractInfoToken}.
      */
     public static boolean canDecode(ByteBuf buffer) {
 
-        if (buffer.readableBytes() > 2) {
+        Objects.requireNonNull(buffer, "Data buffer must not be null");
 
-            buffer.markReaderIndex();
-            int length = Decode.uShort(buffer);
-            buffer.resetReaderIndex();
+        Integer requiredLength = Decode.peekUShort(buffer);
 
-            return buffer.readableBytes() >= length;
-        }
-
-        return false;
+        return requiredLength != null && buffer.readableBytes() >= (requiredLength + /* length field */ 2);
     }
 
     public long getNumber() {

@@ -60,6 +60,9 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      */
     public static RowToken decode(ByteBuf buffer, List<Column> columns) {
 
+        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        Objects.requireNonNull(columns, "List of Columns must not be null");
+        
         ByteBuf copy = buffer.copy();
 
         int start = copy.readerIndex();
@@ -80,6 +83,9 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      */
     public static boolean canDecode(ByteBuf buffer, List<Column> columns) {
 
+        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        Objects.requireNonNull(columns, "List of Columns must not be null");
+        
         int readerIndex = buffer.readerIndex();
 
         try {
@@ -88,6 +94,11 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
                 buffer.markReaderIndex();
 
                 int startRead = buffer.readerIndex();
+
+                if (!LengthDescriptor.canDecode(buffer, column.getType())) {
+                    return false;
+                }
+                
                 LengthDescriptor lengthDescriptor = LengthDescriptor.decode(buffer, column);
 
                 int endRead = buffer.readerIndex();
@@ -138,7 +149,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      */
     @Nullable
     public ByteBuf getColumnData(int index) {
-        return data.get(index);
+        return this.data.get(index);
     }
 
     @Override
@@ -154,12 +165,12 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
     @Override
     public RowToken touch(Object hint) {
 
-        toRelease.touch(hint);
+        this.toRelease.touch(hint);
         return this;
     }
 
     @Override
     protected void deallocate() {
-        toRelease.release();
+        this.toRelease.release();
     }
 }

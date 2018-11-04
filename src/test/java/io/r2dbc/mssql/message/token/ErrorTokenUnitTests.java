@@ -23,6 +23,8 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
+ * Unit tests for {@link ErrorToken}.
+ * 
  * @author Mark Paluch
  */
 class ErrorTokenUnitTests {
@@ -49,5 +51,19 @@ class ErrorTokenUnitTests {
         assertThat(errorToken.getClassification()).isEqualTo(AbstractInfoToken.Classification.GENERAL_ERROR);
         assertThat(errorToken.getProcName()).isEqualTo("");
         assertThat(errorToken.getLineNumber()).isEqualTo(16777216);
+    }
+
+    @Test
+    void canDecodeShouldReportDecodability() {
+
+        String data = "5C00CF00000001" +
+            "101B0049006E00760061006C00690064" +
+            "00200063006F006C0075006D006E0020" +
+            "006E0061006D00650020002700660073" +
+            "006400660027002E000C610036003800" +
+            "38003000390032006100370039006600" +
+            "35000001000000";
+
+        CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), ErrorToken::canDecode);
     }
 }

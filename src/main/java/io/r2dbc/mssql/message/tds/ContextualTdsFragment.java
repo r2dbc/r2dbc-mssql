@@ -47,6 +47,6 @@ public class ContextualTdsFragment extends TdsFragment {
      * @return the header options.
      */
     public HeaderOptions getHeaderOptions() {
-        return headerOptions;
+        return this.headerOptions;
     }
 }

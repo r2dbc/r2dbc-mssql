@@ -55,7 +55,7 @@ final class MssqlRow extends ColumnSource implements Row {
     @SuppressWarnings("unused")
     private volatile int state = STATE_ACTIVE;
 
-    private MssqlRow(Codecs codecs, List<Column> columns, Map<String, Column> nameKeyedColumns, RowToken rowToken) {
+    MssqlRow(Codecs codecs, List<Column> columns, Map<String, Column> nameKeyedColumns, RowToken rowToken) {
 
         super(columns, nameKeyedColumns);
         this.codecs = codecs;
@@ -109,7 +109,9 @@ final class MssqlRow extends ColumnSource implements Row {
      */
     public void release() {
         requireNotReleased();
-        this.rowToken.release();
+        if (STATE_ACCESSOR.compareAndSet(this, STATE_ACTIVE, STATE_RELEASED)) {
+            this.rowToken.release();
+        }
     }
 
     private void requireNotReleased() {

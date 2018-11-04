@@ -17,7 +17,7 @@
 package io.r2dbc.mssql.message.token;
 
 /**
- * Data token.
+ * Data token. A data token is typed by a single byte and provides a symbolic name.
  *
  * @author Mark Paluch
  */

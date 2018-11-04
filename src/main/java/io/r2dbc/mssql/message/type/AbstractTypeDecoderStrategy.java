@@ -38,6 +38,6 @@ abstract class AbstractTypeDecoderStrategy implements TypeDecoderStrategy {
 
     @Override
     public final boolean canDecode(ByteBuf buffer) {
-        return buffer.readableBytes() >= typeDescriptorLength;
+        return buffer.readableBytes() >= this.typeDescriptorLength;
     }
 }

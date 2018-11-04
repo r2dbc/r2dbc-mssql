@@ -57,9 +57,9 @@ public final class TdsPacket extends TdsFragment {
 
         Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
 
-        ByteBuf buffer = allocator.buffer(header.getLength());
+        ByteBuf buffer = allocator.buffer(this.header.getLength());
 
-        header.encode(buffer);
+        this.header.encode(buffer);
         buffer.writeBytes(getByteBuf());
 
         getByteBuf().release();
@@ -80,9 +80,9 @@ public final class TdsPacket extends TdsFragment {
         Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
         Objects.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
 
-        ByteBuf buffer = allocator.buffer(header.getLength());
+        ByteBuf buffer = allocator.buffer(this.header.getLength());
 
-        header.encode(buffer, packetIdProvider);
+        this.header.encode(buffer, packetIdProvider);
         buffer.writeBytes(getByteBuf());
 
         getByteBuf().release();

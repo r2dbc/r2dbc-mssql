@@ -42,6 +42,12 @@ class SimpleMssqlStatement implements MssqlStatement<SimpleMssqlStatement> {
 
     final String sql;
 
+    /**
+     * Creates a new {@link SimpleMssqlStatement}.
+     *
+     * @param client the client to exchange messages with.
+     * @param sql    the query to execute.
+     */
     SimpleMssqlStatement(Client client, String sql) {
 
         Objects.requireNonNull(client, "Client must not be null");
@@ -85,7 +91,7 @@ class SimpleMssqlStatement implements MssqlStatement<SimpleMssqlStatement> {
     @Override
     public Flux<Result> execute() {
 
-        return QueryMessageFlow.exchange(client, this.sql) //
+        return QueryMessageFlow.exchange(this.client, this.sql) //
             .windowUntil(or(AbstractDoneToken.class::isInstance)) //
             .map(it -> SimpleMssqlResult.toResult(CODECS, it));
     }

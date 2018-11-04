@@ -17,11 +17,10 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.r2dbc.mssql.message.tds.Encode;
+import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.Test;
-
-import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,15 +35,22 @@ class AllHeadersUnitTests {
     void shouldEncodeProperly() {
 
         byte tx[] = new byte[]{0, 0, 0, 0, 0, 0, 0, 0};
-        AllHeaders.TransactionDescriptorHeader txDescriptor = new AllHeaders.TransactionDescriptorHeader(tx, 1);
 
-        AllHeaders header = new AllHeaders(Collections.singletonList(txDescriptor));
+        AllHeaders header = AllHeaders.transactional(tx, 1);
 
         ByteBuf buffer = TestByteBufAllocator.TEST.buffer();
 
         header.encode(buffer);
 
         assertThat(buffer.readableBytes()).isEqualTo(header.getLength());
-        assertThat(ByteBufUtil.hexDump(buffer)).isEqualTo("16000000120000000200000000000000000001000000");
+
+        EncodedAssert.assertThat(buffer).isEncodedAs(expected -> {
+
+            Encode.asInt(expected, 22); // all length inclusive
+            Encode.asInt(expected, 18); // header length inclusive
+            Encode.uShort(expected, 2); // Tx header
+            expected.writeBytes(tx); // Tx descriptor
+            Encode.dword(expected, 1); // outstanding requests
+        });
     }
 }

@@ -143,7 +143,7 @@ public final class ColumnMetadataToken extends AbstractDataToken {
     }
 
     public List<Column> getColumns() {
-        return columns;
+        return this.columns;
     }
 
     @Override
@@ -152,14 +152,14 @@ public final class ColumnMetadataToken extends AbstractDataToken {
     }
 
     public Map<String, Column> toMap() {
-        return namedColumns;
+        return this.namedColumns;
     }
 
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [columns=").append(columns);
+        sb.append(" [columns=").append(this.columns);
         sb.append(']');
         return sb.toString();
     }

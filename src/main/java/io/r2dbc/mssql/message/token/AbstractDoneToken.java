@@ -123,9 +123,12 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
      * Check whether the {@link ByteBuf} can be decoded into an entire {@link AbstractDoneToken}.
      *
      * @param buffer the data buffer.
-     * @return {@literal true} if the token can be decoded.
+     * @return {@literal true} if the buffer contains sufficient data to entirely decode a {@link AbstractDoneToken}.
      */
     public static boolean canDecode(ByteBuf buffer) {
+
+        Objects.requireNonNull(buffer, "Data buffer must not be null");
+
         return buffer.readableBytes() >= LENGTH - 1 /* Decoding always decodes the token type first 
         so no need to check the for the type byte */;
     }
@@ -137,6 +140,8 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
      */
     public void encode(ByteBuf buffer) {
 
+        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        
         buffer.writeByte(getType());
         Encode.uShort(buffer, getStatus());
         Encode.uShort(buffer, getCurrentCommand());
@@ -144,7 +149,7 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
     }
 
     public int getStatus() {
-        return status;
+        return this.status;
     }
 
     /**
@@ -172,14 +177,14 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
      * @return the application-level command counter.
      */
     public int getCurrentCommand() {
-        return currentCommand;
+        return this.currentCommand;
     }
 
     /**
      * @return the row count. Only valid if {@link #hasCount()} is set.
      */
     public long getRowCount() {
-        return rowCount;
+        return this.rowCount;
     }
 
     @Override
@@ -191,14 +196,14 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
             return false;
         }
         AbstractDoneToken doneToken = (AbstractDoneToken) o;
-        return status == doneToken.status &&
-            currentCommand == doneToken.currentCommand &&
-            rowCount == doneToken.rowCount;
+        return this.status == doneToken.status &&
+            this.currentCommand == doneToken.currentCommand &&
+            this.rowCount == doneToken.rowCount;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(status, currentCommand, rowCount);
+        return Objects.hash(this.status, this.currentCommand, this.rowCount);
     }
 
     @Override
