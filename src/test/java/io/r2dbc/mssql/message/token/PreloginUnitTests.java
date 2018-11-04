@@ -18,9 +18,9 @@ package io.r2dbc.mssql.message.token;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.r2dbc.mssql.message.header.Header;
 import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.tds.ContextualTdsFragment;
+import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
@@ -108,12 +108,10 @@ final class PreloginUnitTests {
 		// Server version 14.0.3038.14
 		// Encryption disabled
 		// Instance validation 0x00
-		String response = "04 01 00 20 00 00 01 00 00 00 10 00 06 01 00 16 00 01 02 00 17 00 01 ff 0e 00 0b de 00 00 02 00"
-				.replaceAll(" ", "");
+		String response = "00 00 10 00 06 01 00 16 00 01 02 00 17 00 01 ff 0e 00 0b de 00 00 02 00";
 
-		ByteBuf byteBuf = Unpooled.wrappedBuffer(ByteBufUtil.decodeHexDump(response));
-		Header header = Header.decode(byteBuf);
-		Prelogin prelogin = Prelogin.decode(byteBuf);
+		ByteBuf buffer = HexUtils.decodeToByteBuf(response);
+		Prelogin prelogin = Prelogin.decode(buffer);
 
 		assertThat(prelogin.getTokens()).hasSize(4);
 		assertThat(prelogin.getToken(Prelogin.Version.class)).isNotEmpty().hasValueSatisfying(actual -> {
@@ -128,5 +126,16 @@ final class PreloginUnitTests {
 		});
 
 		assertThat(prelogin.getToken(Prelogin.Terminator.class)).hasValue(Prelogin.Terminator.INSTANCE);
+	}
+
+	@Test
+	void decodeShouldConsumeRemainingBytes() {
+
+		String response = "00 00 10 00 06 01 00 16 00 01 02 00 17 00 01 ff 0e 00 0b de 00 00 02 00 01 02 03 04";
+
+		ByteBuf buffer = HexUtils.decodeToByteBuf(response);
+		Prelogin.decode(buffer);
+
+		assertThat(buffer.readerIndex()).isEqualTo(buffer.writerIndex());
 	}
 }

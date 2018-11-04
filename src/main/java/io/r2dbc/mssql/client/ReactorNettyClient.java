@@ -19,6 +19,7 @@ package io.r2dbc.mssql.client;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -257,7 +258,20 @@ public final class ReactorNettyClient implements Client {
                 return Mono.empty();
             }
 
-            return Mono.fromRunnable(connection::dispose);
+            return Mono.create(it -> {
+
+                ReactorNettyClient.this.isClosed.set(true);
+
+                connection.channel().disconnect().addListener((ChannelFutureListener) future ->
+                {
+                    if (future.isSuccess()) {
+                        it.success();
+                    } else {
+                        it.error(future.cause());
+                    }
+                });
+
+            });
         });
     }
 

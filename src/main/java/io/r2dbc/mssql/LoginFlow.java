@@ -23,6 +23,7 @@ import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TDSVersion;
 import io.r2dbc.mssql.message.token.DoneToken;
+import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.Login7;
 import io.r2dbc.mssql.message.token.Prelogin;
 import reactor.core.publisher.EmitterProcessor;
@@ -64,7 +65,7 @@ final class LoginFlow {
         Prelogin request = builder.build();
 
         return client.exchange(requestProcessor.startWith(request)) //
-            .filter(or(Prelogin.class::isInstance, SslState.class::isInstance, DoneToken.class::isInstance)) //
+            .filter(or(Prelogin.class::isInstance, SslState.class::isInstance, DoneToken.class::isInstance, ErrorToken.class::isInstance)) //
             .handle((message, sink) -> {
 
                 try {
@@ -96,10 +97,17 @@ final class LoginFlow {
                         return;
                     }
 
+                    if (message instanceof ErrorToken) {
+                        MssqlException.handleErrorResponse(message, sink);
+                        client.close().subscribe();
+                        return;
+                    }
+
                     throw new ProtocolException(String.format("Unexpected login flow message: %s", message));
                 } catch (Exception e) {
                     requests.error(e);
                     sink.error(e);
+                    client.close().subscribe();
                 }
             });
     }

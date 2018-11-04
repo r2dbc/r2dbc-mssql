@@ -246,7 +246,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();
-        sb.append(getClass().getSimpleName());
+        sb.append(getName());
         sb.append(" [tokens=").append(this.tokens);
         sb.append(", size=").append(this.size);
         sb.append(']');
@@ -283,11 +283,19 @@ public final class Prelogin implements TokenStream, ClientMessage {
         @Nullable
         private long activitySequence;
 
+        private byte encryption = Encryption.ENCRYPT_OFF;
+
         private String instanceName = InstanceValidation.MSSQLSERVER_VALUE;
 
         private Builder() {
         }
 
+        /**
+         * Configure the client-side connection {@link UUID}. Typically used for tracing.
+         *
+         * @param connectionId the connection UUID.
+         * @return {@literal this} {@link Builder}.
+         */
         public Builder withConnectionId(UUID connectionId) {
 
             Objects.requireNonNull(connectionId, "ConnectionID must not be null");
@@ -296,6 +304,12 @@ public final class Prelogin implements TokenStream, ClientMessage {
             return this;
         }
 
+        /**
+         * Configure the client-side activity {@link UUID}. Typically used for tracing.
+         *
+         * @param activityId the activity UUID.
+         * @return {@literal this} {@link Builder}.
+         */
         public Builder withActivityId(UUID activityId) {
 
             Objects.requireNonNull(activityId, "Activity ID must not be null");
@@ -304,6 +318,12 @@ public final class Prelogin implements TokenStream, ClientMessage {
             return this;
         }
 
+        /**
+         * Configure the client-side activity sequence. Typically used for tracing.
+         *
+         * @param activitySequence the activity sequence.
+         * @return {@literal this} {@link Builder}.
+         */
         public Builder withActivitySequence(long activitySequence) {
 
             this.activitySequence = activitySequence;
@@ -311,9 +331,39 @@ public final class Prelogin implements TokenStream, ClientMessage {
             return this;
         }
 
+        /**
+         * Configure the client-side Thread Id. Typically used for tracing.
+         *
+         * @param threadId the Thread Id.
+         * @return {@literal this} {@link Builder}.
+         */
         public Builder withThreadId(int threadId) {
 
             this.threadId = threadId;
+
+            return this;
+        }
+
+        /**
+         * Disable encryption.
+         *
+         * @return {@literal this} {@link Builder}.
+         */
+        public Builder withEncryptionDisabled() {
+
+            this.encryption = Encryption.ENCRYPT_OFF;
+
+            return this;
+        }
+
+        /**
+         * Disable encryption by indicating encryption not supported.
+         *
+         * @return {@literal this} {@link Builder}.
+         */
+        public Builder withEncryptionNotSupported() {
+
+            this.encryption = Encryption.ENCRYPT_NOT_SUP;
 
             return this;
         }
@@ -336,7 +386,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
             List<Token> tokens = new ArrayList<>();
 
             tokens.add(new Version(0, 0));
-            tokens.add(new Encryption(Encryption.ENCRYPT_OFF));
+            tokens.add(new Encryption(this.encryption));
             tokens.add(new InstanceValidation(this.instanceName));
 
             if (this.threadId != null) {
@@ -704,6 +754,11 @@ public final class Prelogin implements TokenStream, ClientMessage {
             Encode.asByte(buffer, this.encryption);
         }
 
+        /**
+         * Returns {@literal true} if the login phase requires a SSL handshake.
+         *
+         * @return {@literal true} if the login phase requires a SSL handshake.
+         */
         public boolean requiresSslHanshake() {
             return getEncryption() == Prelogin.Encryption.ENCRYPT_REQ || getEncryption() == Prelogin.Encryption.ENCRYPT_OFF
                 || getEncryption() == Prelogin.Encryption.ENCRYPT_ON;
@@ -905,7 +960,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
 
         int readPositionOffset;
 
-        public TokenDecodingState(ByteBuf buffer) {
+        TokenDecodingState(ByteBuf buffer) {
             this.initialReaderIndex = buffer.readerIndex();
             this.buffer = buffer;
         }
@@ -921,7 +976,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
         /**
          * Callback to update the state after reading.
          */
-        public void afterTokenDecoded() {
+        void afterTokenDecoded() {
             this.readPositionOffset = this.buffer.readerIndex() - this.initialReaderIndex;
         }
 
@@ -932,7 +987,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
          * @param length   bytes to read.
          * @return the data bytes.
          */
-        public ByteBuf readBody(int position, short length) {
+        ByteBuf readBody(int position, short length) {
 
             this.buffer.skipBytes(position - 5 /* type 1 byte, position 2 byte, length 2 byte */ - this.readPositionOffset);
 
@@ -942,5 +997,4 @@ public final class Prelogin implements TokenStream, ClientMessage {
             return data;
         }
     }
-
 }

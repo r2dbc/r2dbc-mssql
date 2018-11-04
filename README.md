@@ -15,7 +15,6 @@ This driver provides the following features:
 
 Next steps:
 
-* Error handling for failed logins
 * Execution of prepared statements
 * Full SSL encryption support.
 * Add encoding for remaining codecs (VARBINARY, XML, UDT)

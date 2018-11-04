@@ -22,6 +22,7 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
+import org.assertj.core.api.Assertions;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
@@ -29,14 +30,17 @@ import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
  * Test {@link Client} implementation.
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 public final class TestClient implements Client {
 
     public static final TestClient NO_OP = new TestClient(false, Flux.empty(), TransactionStatus.AUTO_COMMIT);
@@ -66,10 +70,12 @@ public final class TestClient implements Client {
                     this.requestProcessor.zipWith(exchange.requests)
                         .handle((tuple, sink) -> {
                             Message actual = tuple.getT1();
-                            Message expected = tuple.getT2();
+                            Consumer<Message> expected = (Consumer) tuple.getT2();
 
-                            if (!actual.equals(expected)) {
-                                sink.error(new AssertionError(String.format("Request %s was not the expected request %s", actual, expected)));
+                            try {
+                                expected.accept(actual);
+                            } catch (Throwable t) {
+                                sink.error(t);
                             }
                         })
                         .thenMany(exchange.responses)))
@@ -152,6 +158,24 @@ public final class TestClient implements Client {
         public Exchange.Builder<Builder> expectRequest(ClientMessage... requests) {
             Objects.requireNonNull(requests);
 
+            Consumer[] consumers = Arrays.stream(requests).map(request -> {
+
+                Consumer<ClientMessage> messageConsumer = actual -> Assertions.assertThat(actual).isEqualTo(request);
+                return messageConsumer;
+            }).toArray(i -> new Consumer[i]);
+
+            return assertNextRequestWith(consumers);
+        }
+
+        public Exchange.Builder<Builder> assertNextRequestWith(Consumer<ClientMessage> request) {
+            Objects.requireNonNull(request);
+
+            return assertNextRequestWith(new Consumer[]{request});
+        }
+
+        public Exchange.Builder<Builder> assertNextRequestWith(Consumer<ClientMessage>... requests) {
+            Objects.requireNonNull(requests);
+
             Window.Builder<Builder> window = new Window.Builder<>(this);
             this.windows.add(window);
 
@@ -161,22 +185,20 @@ public final class TestClient implements Client {
             return exchange;
         }
 
-
         public Window.Builder<Builder> window() {
             Window.Builder<Builder> window = new Window.Builder<>(this);
             this.windows.add(window);
             return window;
         }
-
     }
 
     private static final class Exchange {
 
-        private final Flux<ClientMessage> requests;
+        private final Flux<Consumer<? extends Message>> requests;
 
         private final Publisher<Message> responses;
 
-        private Exchange(Flux<ClientMessage> requests, Publisher<Message> responses) {
+        private Exchange(Flux<Consumer<? extends Message>> requests, Publisher<Message> responses) {
             this.requests = Objects.requireNonNull(requests);
             this.responses = Objects.requireNonNull(responses);
         }
@@ -185,11 +207,11 @@ public final class TestClient implements Client {
 
             private final T chain;
 
-            private final Flux<ClientMessage> requests;
+            private final Flux<Consumer<? extends Message>> requests;
 
             private Publisher<Message> responses;
 
-            private Builder(T chain, ClientMessage... requests) {
+            private Builder(T chain, Consumer<? extends Message>... requests) {
                 this.chain = Objects.requireNonNull(chain);
                 this.requests = Flux.just(Objects.requireNonNull(requests));
             }
@@ -236,6 +258,11 @@ public final class TestClient implements Client {
             }
 
             public Exchange.Builder<Builder<T>> expectRequest(ClientMessage request) {
+                return assertNextRequestWith((Consumer<ClientMessage>) actual -> Assertions.assertThat(actual).isEqualTo(request));
+            }
+
+            public Exchange.Builder<Builder<T>> assertNextRequestWith(Consumer<ClientMessage> request) {
+
                 Objects.requireNonNull(request);
 
                 Exchange.Builder<Builder<T>> exchange = new Exchange.Builder<>(this, request);
