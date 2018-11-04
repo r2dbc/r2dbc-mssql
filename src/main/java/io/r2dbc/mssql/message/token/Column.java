@@ -43,6 +43,17 @@ public class Column {
      * @param index the index (ordinal position) within the result set, zero-based.
      * @param name  the column name.
      * @param type  the associated type of this column.
+     */
+    public Column(int index, String name, TypeInformation type) {
+        this(index, name, type, null);
+    }
+
+    /**
+     * Creates a new {@link Column}.
+     *
+     * @param index the index (ordinal position) within the result set, zero-based.
+     * @param name  the column name.
+     * @param type  the associated type of this column.
      * @param table the optional {@link Identifier table name}.
      */
     public Column(int index, String name, TypeInformation type, @Nullable Identifier table) {

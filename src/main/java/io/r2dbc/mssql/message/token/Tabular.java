@@ -179,6 +179,17 @@ public final class Tabular implements Message {
                 return RowToken.decode(buffer, colMetadataToken.getColumns());
             }
 
+            if (type == NbcRowToken.TYPE) {
+
+                ColumnMetadataToken colMetadataToken = columns.get();
+
+                if (!NbcRowToken.canDecode(buffer, colMetadataToken.getColumns())) {
+                    return DecodeFinished.UNABLE_TO_DECODE;
+                }
+
+                return NbcRowToken.decode(buffer, colMetadataToken.getColumns());
+            }
+
             if (type == ReturnStatus.TYPE) {
                 return ReturnStatus.canDecode(buffer) ? ReturnStatus.decode(buffer) : DecodeFinished.UNABLE_TO_DECODE;
             }

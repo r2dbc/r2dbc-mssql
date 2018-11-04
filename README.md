@@ -19,7 +19,6 @@ Next steps:
 * Full SSL encryption support.
 * Add encoding for remaining codecs (VARBINARY, XML, UDT)
 * Execution of stored procedures 
-* Support for null-bit compression (NBCROW)
 * Batch support (`Connection.createBatch`)
 * Add support for TVP and UDTs
 

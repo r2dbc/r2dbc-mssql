@@ -45,7 +45,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      * @param data    the row data.
      * @param toRelease    item to {@link ReferenceCounted#release()} on {@link #deallocate() de-allocation}.
      */
-    private RowToken(List<ByteBuf> data, ReferenceCounted toRelease) {
+    RowToken(List<ByteBuf> data, ReferenceCounted toRelease) {
 
         this.data = Objects.requireNonNull(data, "Row data must not be null");
         this.toRelease = toRelease;
@@ -89,30 +89,12 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
         int readerIndex = buffer.readerIndex();
 
         try {
+
             for (Column column : columns) {
 
-                buffer.markReaderIndex();
-
-                int startRead = buffer.readerIndex();
-
-                if (!LengthDescriptor.canDecode(buffer, column.getType())) {
+                if (!canDecodeColumn(buffer, column)) {
                     return false;
                 }
-                
-                LengthDescriptor lengthDescriptor = LengthDescriptor.decode(buffer, column);
-
-                int endRead = buffer.readerIndex();
-                buffer.resetReaderIndex();
-
-                int descriptorLength = endRead - startRead;
-                int dataLength = descriptorLength + lengthDescriptor.getLength();
-
-                if (buffer.readableBytes() >= dataLength) {
-                    buffer.skipBytes(dataLength);
-                    continue;
-                }
-
-                return false;
             }
 
             return true;
@@ -121,24 +103,60 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
         }
     }
 
+    static boolean canDecodeColumn(ByteBuf buffer, Column column) {
+
+        buffer.markReaderIndex();
+
+        int startRead = buffer.readerIndex();
+
+        if (!LengthDescriptor.canDecode(buffer, column.getType())) {
+            return false;
+        }
+
+        LengthDescriptor lengthDescriptor = LengthDescriptor.decode(buffer, column);
+
+        int endRead = buffer.readerIndex();
+        buffer.resetReaderIndex();
+
+        int descriptorLength = endRead - startRead;
+        int dataLength = descriptorLength + lengthDescriptor.getLength();
+
+        if (buffer.readableBytes() >= dataLength) {
+            buffer.skipBytes(dataLength);
+            return true;
+        }
+
+        return false;
+    }
+
     private static RowToken doDecode(ByteBuf buffer, List<Column> columns) {
 
         List<ByteBuf> data = new ArrayList<>(columns.size());
 
         for (Column column : columns) {
-
-            buffer.markReaderIndex();
-            int startRead = buffer.readerIndex();
-            LengthDescriptor lengthDescriptor = LengthDescriptor.decode(buffer, column);
-            int endRead = buffer.readerIndex();
-            buffer.resetReaderIndex();
-
-            int descriptorLength = endRead - startRead;
-            ByteBuf columnData = buffer.readSlice(descriptorLength + lengthDescriptor.getLength());
-            data.add(columnData);
+            data.add(decodeColumnData(buffer, column));
         }
 
         return new RowToken(data, buffer);
+    }
+
+    /**
+     * Decode a {@link ByteBuf data buffer} for a single {@link Column}.
+     *
+     * @param buffer the data buffer.
+     * @param column the column.
+     * @return
+     */
+    static ByteBuf decodeColumnData(ByteBuf buffer, Column column) {
+
+        buffer.markReaderIndex();
+        int startRead = buffer.readerIndex();
+        LengthDescriptor lengthDescriptor = LengthDescriptor.decode(buffer, column);
+        int endRead = buffer.readerIndex();
+        buffer.resetReaderIndex();
+
+        int descriptorLength = endRead - startRead;
+        return buffer.readSlice(descriptorLength + lengthDescriptor.getLength());
     }
 
     /**
@@ -159,7 +177,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
 
     @Override
     public String getName() {
-        return "ROW_TOKEN";
+        return "ROW";
     }
 
     @Override
