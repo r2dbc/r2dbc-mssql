@@ -25,7 +25,6 @@ import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.spi.Result;
 import io.r2dbc.spi.Row;
 import io.r2dbc.spi.RowMetadata;
-import org.reactivestreams.Publisher;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -36,34 +35,34 @@ import java.util.function.BiFunction;
 import static reactor.function.TupleUtils.function;
 
 /**
- * Simple, non-cursored {@link Result} of query results.
+ * Simple {@link Result} of query results.
  *
  * @author Mark Paluch
  */
-final class SimpleMssqlResult implements Result {
+public final class MssqlResult implements Result {
 
     private final Flux<MssqlRow> rows;
 
     private final Mono<Long> rowsUpdated;
 
     /**
-     * Creates a new {@link SimpleMssqlResult}.
+     * Creates a new {@link MssqlResult}.
      *
      * @param rows        stream of {@link MssqlRow}.
      * @param rowsUpdated publisher of the updated row count.
      */
-    SimpleMssqlResult(Flux<MssqlRow> rows, Mono<Long> rowsUpdated) {
+    MssqlResult(Flux<MssqlRow> rows, Mono<Long> rowsUpdated) {
         this.rows = rows;
         this.rowsUpdated = rowsUpdated;
     }
 
     @Override
-    public Publisher<Integer> getRowsUpdated() {
+    public Mono<Integer> getRowsUpdated() {
         return this.rowsUpdated.map(Long::intValue);
     }
 
     @Override
-    public <T> Publisher<T> map(BiFunction<Row, RowMetadata, ? extends T> f) {
+    public <T> Flux<T> map(BiFunction<Row, RowMetadata, ? extends T> f) {
 
         Objects.requireNonNull(f, "Mapping function must not be null");
 
@@ -78,13 +77,13 @@ final class SimpleMssqlResult implements Result {
     }
 
     /**
-     * Create a non-cursored {@link SimpleMssqlResult}.
+     * Create a non-cursored {@link MssqlResult}.
      *
      * @param codecs   the codecs to use.
      * @param messages message stream.
      * @return {@link Result} object.
      */
-    static SimpleMssqlResult toResult(Codecs codecs, Flux<Message> messages) {
+    static MssqlResult toResult(Codecs codecs, Flux<Message> messages) {
 
         Objects.requireNonNull(codecs, "Codecs must not be null");
         Objects.requireNonNull(messages, "Messages must not be null");
@@ -122,6 +121,6 @@ final class SimpleMssqlResult implements Result {
             .hide()
             .subscribe(processor);
 
-        return new SimpleMssqlResult(rows, rowsUpdated);
+        return new MssqlResult(rows, rowsUpdated);
     }
 }

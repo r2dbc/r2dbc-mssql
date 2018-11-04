@@ -18,6 +18,8 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.TransactionStatus;
+import io.r2dbc.mssql.codec.Codecs;
+import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Batch;
 import io.r2dbc.spi.Connection;
@@ -45,8 +47,16 @@ public final class MssqlConnection implements Connection {
 
     private final Client client;
 
+    private final Codecs codecs;
+
     MssqlConnection(Client client) {
-        this.client = client;
+        this(client, new DefaultCodecs());
+    }
+
+    MssqlConnection(Client client, Codecs codecs) {
+
+        this.client = Objects.requireNonNull(client, "Client must not be null");
+        this.codecs = Objects.requireNonNull(codecs, "Codecs must not be null");
     }
 
     @Override
@@ -91,7 +101,7 @@ public final class MssqlConnection implements Connection {
 
     @Override
     public Batch<?> createBatch() {
-        throw new UnsupportedOperationException();
+        return new MssqlBatch(this.client, this.codecs);
     }
 
     @Override
@@ -121,10 +131,10 @@ public final class MssqlConnection implements Connection {
         this.logger.debug("Creating statement for SQL: [{}]", sql);
 
         if (SimpleCursoredMssqlStatement.supports(sql)) {
-            return new SimpleCursoredMssqlStatement(this.client, sql);
+            return new SimpleCursoredMssqlStatement(this.client, this.codecs, sql);
         }
-        
-        return new SimpleMssqlStatement(this.client, sql);
+
+        return new SimpleMssqlStatement(this.client, this.codecs, sql);
     }
 
     @Override

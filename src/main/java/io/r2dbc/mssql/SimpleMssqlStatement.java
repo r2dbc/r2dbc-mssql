@@ -18,11 +18,9 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.Codecs;
-import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.Assert;
-import io.r2dbc.spi.Result;
 import reactor.core.publisher.Flux;
 
 import java.util.Objects;
@@ -36,9 +34,9 @@ import static io.r2dbc.mssql.util.PredicateUtils.or;
  */
 class SimpleMssqlStatement implements MssqlStatement<SimpleMssqlStatement> {
 
-    static final Codecs CODECS = new DefaultCodecs();
-
     final Client client;
+
+    final Codecs codecs;
 
     final String sql;
 
@@ -46,16 +44,19 @@ class SimpleMssqlStatement implements MssqlStatement<SimpleMssqlStatement> {
      * Creates a new {@link SimpleMssqlStatement}.
      *
      * @param client the client to exchange messages with.
+     * @param codecs the codecs to exchange data.
      * @param sql    the query to execute.
      */
-    SimpleMssqlStatement(Client client, String sql) {
+    SimpleMssqlStatement(Client client, Codecs codecs, String sql) {
 
         Objects.requireNonNull(client, "Client must not be null");
+        Objects.requireNonNull(codecs, "Codecs must not be null");
         Objects.requireNonNull(sql, "SQL must not be null");
 
         Assert.isTrue(sql.trim().length() > 0, "SQL must contain text");
 
         this.client = client;
+        this.codecs = codecs;
         this.sql = sql;
     }
 
@@ -89,10 +90,10 @@ class SimpleMssqlStatement implements MssqlStatement<SimpleMssqlStatement> {
     }
 
     @Override
-    public Flux<Result> execute() {
+    public Flux<MssqlResult> execute() {
 
         return QueryMessageFlow.exchange(this.client, this.sql) //
             .windowUntil(or(AbstractDoneToken.class::isInstance)) //
-            .map(it -> SimpleMssqlResult.toResult(CODECS, it));
+            .map(it -> MssqlResult.toResult(this.codecs, it));
     }
 }

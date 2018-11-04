@@ -16,7 +16,6 @@
 
 package io.r2dbc.mssql;
 
-import io.r2dbc.spi.Result;
 import io.r2dbc.spi.Statement;
 import reactor.core.publisher.Flux;
 
@@ -46,5 +45,5 @@ public interface MssqlStatement<SELF extends MssqlStatement<SELF>> extends State
     SELF bindNull(Object identifier, Class<?> type);
 
     @Override
-    Flux<Result> execute();
+    Flux<MssqlResult> execute();
 }

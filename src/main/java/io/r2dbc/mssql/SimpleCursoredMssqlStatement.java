@@ -17,8 +17,8 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
+import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.message.token.RpcRequest;
-import io.r2dbc.spi.Result;
 import reactor.core.publisher.Flux;
 
 import java.util.Locale;
@@ -38,16 +38,16 @@ final class SimpleCursoredMssqlStatement extends SimpleMssqlStatement {
      * @param client the client to exchange messages with.
      * @param sql    the query to execute.
      */
-    SimpleCursoredMssqlStatement(Client client, String sql) {
-        super(client, sql);
+    SimpleCursoredMssqlStatement(Client client, Codecs codecs, String sql) {
+        super(client, codecs, sql);
     }
 
     @Override
-    public Flux<Result> execute() {
+    public Flux<MssqlResult> execute() {
 
-        return CursoredQueryMessageFlow.exchange(this.client, CODECS, this.sql, FETCH_SIZE) //
+        return CursoredQueryMessageFlow.exchange(this.client, this.codecs, this.sql, FETCH_SIZE) //
             .windowUntil(it -> false) //
-            .map(it -> SimpleMssqlResult.toResult(CODECS, it));
+            .map(it -> MssqlResult.toResult(this.codecs, it));
     }
 
     /**
