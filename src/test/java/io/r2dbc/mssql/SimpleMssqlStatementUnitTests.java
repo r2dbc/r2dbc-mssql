@@ -21,6 +21,7 @@ import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.tds.Encode;
+import io.r2dbc.mssql.message.tds.ServerCharset;
 import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.token.ColumnMetadataToken;
 import io.r2dbc.mssql.message.token.DataToken;
@@ -29,7 +30,6 @@ import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.message.token.RowTokenFactory;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.message.token.Tabular;
-import io.r2dbc.mssql.message.type.Encoding;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import io.r2dbc.spi.ColumnMetadata;
@@ -57,9 +57,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SimpleMssqlStatementUnitTests {
 
     static final List<Column> COLUMNS = Arrays.asList(createColumn(0, "employee_id", SqlServerType.TINYINT, 1, LengthStrategy.FIXEDLENTYPE, null),
-        createColumn(1, "last_name", SqlServerType.NVARCHAR, 100, LengthStrategy.USHORTLENTYPE, Encoding.UNICODE.charset()),
+        createColumn(1, "last_name", SqlServerType.NVARCHAR, 100, LengthStrategy.USHORTLENTYPE, ServerCharset.UNICODE.charset()),
 
-        createColumn(2, "first_name", SqlServerType.VARCHAR, 50, LengthStrategy.USHORTLENTYPE, Encoding.CP1252.charset()),
+        createColumn(2, "first_name", SqlServerType.VARCHAR, 50, LengthStrategy.USHORTLENTYPE, ServerCharset.CP1252.charset()),
 
         createColumn(3, "salary", SqlServerType.MONEY, 8, LengthStrategy.BYTELENTYPE, null));
 
@@ -95,8 +95,8 @@ class SimpleMssqlStatementUnitTests {
         RowToken rowToken = RowTokenFactory.create(columns, buffer -> {
 
             Encode.asByte(buffer, 1);
-            Encode.uString(buffer, "paluch", Encoding.UNICODE.charset());
-            Encode.uString(buffer, "mark", Encoding.CP1252.charset());
+            Encode.uString(buffer, "paluch", ServerCharset.UNICODE.charset());
+            Encode.uString(buffer, "mark", ServerCharset.CP1252.charset());
 
             //money/salary
             Encode.asByte(buffer, 8);

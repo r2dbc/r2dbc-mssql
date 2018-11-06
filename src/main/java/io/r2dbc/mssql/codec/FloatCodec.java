@@ -18,6 +18,7 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
@@ -47,7 +48,7 @@ final class FloatCodec extends AbstractCodec<Float> {
     }
 
     @Override
-    Float doDecode(ByteBuf buffer, LengthDescriptor length, TypeInformation type, Class<? extends Float> valueType) {
+    Float doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends Float> valueType) {
 
         Double value = DoubleCodec.INSTANCE.doDecode(buffer, length, type, Double.class);
         return value == null ? null

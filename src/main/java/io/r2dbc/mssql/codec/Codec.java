@@ -18,7 +18,6 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import reactor.util.annotation.Nullable;
 
@@ -38,24 +37,25 @@ import reactor.util.annotation.Nullable;
 interface Codec<T> {
 
     /**
-     * Determine whether this {@link Codec} is capable of decoding a value for the given {@link Column} and whether it can represent the decoded value as the desired {@link Class type}.
+     * Determine whether this {@link Codec} is capable of decoding a value for the given {@link Decodable} and whether it can represent the decoded value as the desired {@link Class type}.
+     * {@link Decodable} represents typically a column or RPC return value.
      *
-     * @param column the column metadata.
-     * @param type   the column metadata.
-     * @return {@literal true} if this codec is able to decode values of {@link Column}.
+     * @param decodable the decodable metadata.
+     * @param type   the desired value type.
+     * @return {@literal true} if this codec is able to decode values of {@link TypeInformation}.
      */
-    boolean canDecode(Column column, Class<?> type);
+    boolean canDecode(Decodable decodable, Class<?> type);
 
     /**
      * Decode the {@link ByteBuf data} and return it as the requested {@link Class type}.
      *
      * @param buffer    the data buffer.
-     * @param type      the type descriptor.
+     * @param decodable      the decodable descriptor.
      * @param valueType the desired value type.
-     * @return the decoded value. Can be {@literal null} if the column value is {@literal null}.
+     * @return the decoded value. Can be {@literal null} if the value is {@literal null}.
      */
     @Nullable
-    T decode(@Nullable ByteBuf buffer, Column column, Class<? extends T> type);
+    T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type);
 
     /**
      * Encode the value.

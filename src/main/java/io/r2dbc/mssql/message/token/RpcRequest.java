@@ -18,8 +18,9 @@ package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.r2dbc.mssql.codec.Encoded;
 import io.r2dbc.mssql.codec.RpcDirection;
-import io.r2dbc.mssql.codec.RpcParameters;
+import io.r2dbc.mssql.codec.RpcEncoding;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.header.HeaderOptions;
@@ -516,7 +517,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
 
         @Override
         void encode(ByteBuf buffer) {
-            RpcParameters.encodeString(buffer, getDirection(), getName(), this.collation, this.value);
+            RpcEncoding.encodeString(buffer, getName(), getDirection(), this.collation, this.value);
         }
 
         @Override
@@ -568,7 +569,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
 
         @Override
         void encode(ByteBuf buffer) {
-            RpcParameters.encodeInteger(buffer, getDirection(), getName(), this.value);
+            RpcEncoding.encodeInteger(buffer, getName(), getDirection(), this.value);
         }
 
         @Override
@@ -603,6 +604,30 @@ public final class RpcRequest implements ClientMessage, TokenStream {
             return sb.toString();
         }
     }
-    
+
+    /**
+     * String RPC parameter.
+     */
+    static class RpcParameter extends ParameterDescriptor {
+
+        private final Encoded value;
+
+        RpcParameter(RpcDirection direction, @Nullable String name, Encoded value) {
+            super(direction, name);
+            this.value = value;
+        }
+
+        @Override
+        void encode(ByteBuf buffer) {
+            RpcEncoding.encodeHeader(buffer, getName(), getDirection(), value.getDataType());
+            buffer.writeBytes(value.getValue());
+            value.getValue().release();
+        }
+
+        @Override
+        int estimateLength() {
+            return 16 + value.getValue().readableBytes();
+        }
+    }
 }
 

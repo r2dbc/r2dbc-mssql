@@ -17,7 +17,6 @@
 package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import io.r2dbc.mssql.util.HexUtils;
@@ -39,11 +38,9 @@ class DecimalCodecUnitTests {
 
         TypeInformation type = TypeInformation.builder().withLengthStrategy(TypeInformation.LengthStrategy.BYTELENTYPE).withServerType(SqlServerType.NUMERIC).withScale(2).withPrecision(5).build();
 
-        Column column = ColumnUtil.createColumn(type);
-
         ByteBuf buffer = HexUtils.decodeToByteBuf("0501690E0000");
 
-        BigDecimal decoded = DecimalCodec.INSTANCE.decode(buffer, column, BigDecimal.class);
+        BigDecimal decoded = DecimalCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), BigDecimal.class);
 
         assertThat(decoded).isEqualTo("36.89");
     }

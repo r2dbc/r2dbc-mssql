@@ -18,6 +18,7 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
@@ -57,7 +58,7 @@ final class LocalDateCodec extends AbstractCodec<LocalDate> {
     }
 
     @Override
-    LocalDate doDecode(ByteBuf buffer, LengthDescriptor length, TypeInformation type, Class<? extends LocalDate> valueType) {
+    LocalDate doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends LocalDate> valueType) {
 
         int days = (buffer.readByte() & 0xFF) | (buffer.readByte() & 0xFF) << 8 | (buffer.readByte() & 0xFF) << 16;
 

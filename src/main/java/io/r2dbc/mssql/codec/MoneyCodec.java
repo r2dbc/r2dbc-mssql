@@ -18,9 +18,10 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.r2dbc.mssql.client.ProtocolException;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
+import io.r2dbc.mssql.message.tds.ProtocolException;
+import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
@@ -65,7 +66,7 @@ final class MoneyCodec extends AbstractCodec<BigDecimal> {
     }
 
     @Override
-    BigDecimal doDecode(ByteBuf buffer, LengthDescriptor length, TypeInformation type, Class<? extends BigDecimal> valueType) {
+    BigDecimal doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends BigDecimal> valueType) {
 
         BigInteger decoded = decode(buffer, length.getLength());
 

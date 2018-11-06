@@ -16,23 +16,26 @@
 
 package io.r2dbc.mssql.codec;
 
-import io.netty.buffer.ByteBuf;
-import reactor.util.annotation.Nullable;
+import io.r2dbc.mssql.message.type.TypeInformation;
 
 /**
- * Registry for {@link Codec}s to encodes and decodes values.
+ * Interface declaring metadata to allow decoding of a related value.
+ *
+ * @author Mark Paluch
  */
-public interface Codecs {
+public interface Decodable {
 
     /**
-     * Decode a data to a value.
+     * Returns the type that is associated with the decodable value.
      *
-     * @param buffer the {@link ByteBuf} to decode.
-     * @param decodable the decodable metadata.
-     * @param type   the type to decode to.
-     * @param <T>    the type of item being returned.
-     * @return the decoded value.
+     * @return the type that is associated with the decodable value.
      */
-    @Nullable
-    <T> T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type);
+    TypeInformation getType();
+
+    /**
+     * Returns the name of the decodable item. This is typically a parameter name or a column name.
+     *
+     * @return the name of the decodable.
+     */
+    String getName();
 }

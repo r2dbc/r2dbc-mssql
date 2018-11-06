@@ -19,10 +19,12 @@ package io.r2dbc.mssql.message.token;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
-import io.r2dbc.mssql.codec.LengthDescriptor;
+import io.r2dbc.mssql.codec.Codecs;
+import io.r2dbc.mssql.codec.Decodable;
 import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.tds.Decode;
+import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import reactor.util.annotation.Nullable;
 
@@ -94,7 +96,7 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
 
         // Preserve length for Codecs
         int beforeLengthDescriptor = buffer.readerIndex();
-        LengthDescriptor length = LengthDescriptor.decode(buffer, type);
+        Length length = Length.decode(buffer, type);
 
         int descriptorLength = buffer.readerIndex() - beforeLengthDescriptor;
         buffer.readerIndex(beforeLengthDescriptor);
@@ -137,13 +139,13 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
 
                 TypeInformation type = TypeInformation.decode(buffer, encryptionSupported);
 
-                if (!LengthDescriptor.canDecode(buffer, type)) {
+                if (!Length.canDecode(buffer, type)) {
                     return false;
                 }
 
-                LengthDescriptor lengthDescriptor = LengthDescriptor.decode(buffer, type);
+                Length length = Length.decode(buffer, type);
 
-                if (buffer.readableBytes() >= lengthDescriptor.getLength()) {
+                if (buffer.readableBytes() >= length.getLength()) {
                     return true;
                 }
             }
@@ -202,6 +204,28 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
 
     public ByteBuf getValue() {
         return this.value;
+    }
+
+    /**
+     * Create a {@link Decodable} from this {@link ReturnValue} to allow decoding.
+     *
+     * @return the {@link Decodable}.
+     * @see Codecs#decode(ByteBuf, Decodable, Class)
+     */
+    public Decodable asDecodable() {
+
+        return new Decodable() {
+
+            @Override
+            public TypeInformation getType() {
+                return getValueType();
+            }
+
+            @Override
+            public String getName() {
+                return getParameterName() == null ? "" : getParameterName();
+            }
+        };
     }
 
     @Override

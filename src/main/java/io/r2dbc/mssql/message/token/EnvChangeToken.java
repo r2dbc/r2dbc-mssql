@@ -18,7 +18,7 @@ package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Decode;
-import io.r2dbc.mssql.message.type.Encoding;
+import io.r2dbc.mssql.message.tds.ServerCharset;
 import reactor.util.annotation.Nullable;
 
 import java.util.Objects;
@@ -119,11 +119,11 @@ public final class EnvChangeToken extends AbstractDataToken {
     }
 
     public String getOldValueString() {
-        return new String(this.oldValue, 0, this.oldValue.length, Encoding.UNICODE.charset());
+        return new String(this.oldValue, 0, this.oldValue.length, ServerCharset.UNICODE.charset());
     }
 
     public String getNewValueString() {
-        return new String(this.newValue, 0, this.newValue.length, Encoding.UNICODE.charset());
+        return new String(this.newValue, 0, this.newValue.length, ServerCharset.UNICODE.charset());
     }
 
     @Override

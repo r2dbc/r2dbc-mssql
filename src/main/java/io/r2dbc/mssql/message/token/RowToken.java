@@ -19,7 +19,7 @@ package io.r2dbc.mssql.message.token;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
-import io.r2dbc.mssql.codec.LengthDescriptor;
+import io.r2dbc.mssql.message.type.Length;
 import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
@@ -109,17 +109,17 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
 
         int startRead = buffer.readerIndex();
 
-        if (!LengthDescriptor.canDecode(buffer, column.getType())) {
+        if (!Length.canDecode(buffer, column.getType())) {
             return false;
         }
 
-        LengthDescriptor lengthDescriptor = LengthDescriptor.decode(buffer, column);
+        Length length = Length.decode(buffer, column.getType());
 
         int endRead = buffer.readerIndex();
         buffer.resetReaderIndex();
 
         int descriptorLength = endRead - startRead;
-        int dataLength = descriptorLength + lengthDescriptor.getLength();
+        int dataLength = descriptorLength + length.getLength();
 
         if (buffer.readableBytes() >= dataLength) {
             buffer.skipBytes(dataLength);
@@ -151,12 +151,12 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
 
         buffer.markReaderIndex();
         int startRead = buffer.readerIndex();
-        LengthDescriptor lengthDescriptor = LengthDescriptor.decode(buffer, column);
+        Length length = Length.decode(buffer, column.getType());
         int endRead = buffer.readerIndex();
         buffer.resetReaderIndex();
 
         int descriptorLength = endRead - startRead;
-        return buffer.readSlice(descriptorLength + lengthDescriptor.getLength());
+        return buffer.readSlice(descriptorLength + length.getLength());
     }
 
     /**

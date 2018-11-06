@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.r2dbc.mssql.client;
+package io.r2dbc.mssql.message.tds;
 
 import io.r2dbc.mssql.AbstractMssqlException;
 import reactor.util.annotation.Nullable;

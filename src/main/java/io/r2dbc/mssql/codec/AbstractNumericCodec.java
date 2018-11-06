@@ -17,8 +17,9 @@
 package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.r2dbc.mssql.client.ProtocolException;
 import io.r2dbc.mssql.message.tds.Decode;
+import io.r2dbc.mssql.message.tds.ProtocolException;
+import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
@@ -69,7 +70,7 @@ abstract class AbstractNumericCodec<T> extends AbstractCodec<T> {
     }
 
     @Override
-    T doDecode(ByteBuf buffer, LengthDescriptor length, TypeInformation typeInformation, Class<? extends T> valueType) {
+    T doDecode(ByteBuf buffer, Length length, TypeInformation typeInformation, Class<? extends T> valueType) {
 
         if (length.isNull()) {
             return null;

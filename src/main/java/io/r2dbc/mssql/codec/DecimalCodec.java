@@ -18,6 +18,7 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.TypeInformation;
 
 import java.math.BigDecimal;
@@ -48,7 +49,7 @@ final class DecimalCodec extends AbstractCodec<BigDecimal> {
     }
 
     @Override
-    BigDecimal doDecode(ByteBuf buffer, LengthDescriptor length, TypeInformation type, Class<? extends BigDecimal> valueType) {
+    BigDecimal doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends BigDecimal> valueType) {
 
         byte signByte = buffer.readByte();
         int sign = (0 == signByte) ? -1 : 1;

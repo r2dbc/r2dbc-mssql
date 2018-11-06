@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Collation;
+import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
@@ -64,7 +65,7 @@ final class StringCodec extends AbstractCodec<String> {
     }
 
     @Override
-    String doDecode(ByteBuf buffer, LengthDescriptor length, TypeInformation typeInformation, Class<? extends String> valueType) {
+    String doDecode(ByteBuf buffer, Length length, TypeInformation typeInformation, Class<? extends String> valueType) {
 
         if (length.isNull()) {
             return null;

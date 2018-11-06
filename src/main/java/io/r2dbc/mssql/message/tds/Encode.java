@@ -18,7 +18,6 @@ package io.r2dbc.mssql.message.tds;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.r2dbc.mssql.message.type.Encoding;
 
 import java.math.BigInteger;
 import java.nio.CharBuffer;
@@ -238,7 +237,7 @@ public final class Encode {
      */
     public static void unicodeStream(ByteBuf buffer, String value) {
 
-        ByteBuf encoded = ByteBufUtil.encodeString(buffer.alloc(), CharBuffer.wrap(value), Encoding.UNICODE.charset());
+        ByteBuf encoded = ByteBufUtil.encodeString(buffer.alloc(), CharBuffer.wrap(value), ServerCharset.UNICODE.charset());
 
         buffer.writeBytes(encoded);
 

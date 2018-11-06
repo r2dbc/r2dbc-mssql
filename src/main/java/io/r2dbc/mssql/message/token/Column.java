@@ -16,17 +16,18 @@
 
 package io.r2dbc.mssql.message.token;
 
+import io.r2dbc.mssql.codec.Decodable;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import reactor.util.annotation.Nullable;
 
 import java.util.Objects;
 
 /**
- * A column within a result set.
+ * A {@link Decodable} column within a result set.
  *
  * @author Mark Paluch
  */
-public class Column {
+public class Column implements Decodable {
 
     private final int index;
 
@@ -65,20 +66,6 @@ public class Column {
     }
 
     /**
-     * Create a {@link Column} from a RPC {@link ReturnValue}. The resulting object does not represent a column in a tabular sense but rather an encapsulated value that can be decoded using the
-     * codec components.
-     *
-     * @param returnValue the returned value.
-     * @return the {@link Column} for {@link ReturnValue}.
-     */
-    public static Column from(ReturnValue returnValue) {
-
-        Objects.requireNonNull(returnValue, "ReturnValue must not be null");
-
-        return new Column(returnValue.getOrdinal(), returnValue.getParameterName(), returnValue.getValueType(), null);
-    }
-
-    /**
      * Returns the column index.
      *
      * @return the column index.
@@ -92,6 +79,7 @@ public class Column {
      *
      * @return the column name.
      */
+    @Override
     public String getName() {
         return this.name;
     }
@@ -101,6 +89,7 @@ public class Column {
      *
      * @return the column {@link TypeInformation type}.
      */
+    @Override
     public TypeInformation getType() {
         return this.type;
     }

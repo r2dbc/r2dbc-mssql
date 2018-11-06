@@ -17,8 +17,8 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
-import io.r2dbc.mssql.client.ProtocolException;
 import io.r2dbc.mssql.message.tds.Decode;
+import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.StringUtils;
 import reactor.util.annotation.Nullable;
@@ -30,7 +30,7 @@ import java.util.Objects;
  *
  * @author Mark Paluch
  */
-final class Identifier {
+public final class Identifier {
 
     @Nullable
     private final String serverName;
@@ -131,7 +131,7 @@ final class Identifier {
         return this.objectName;
     }
 
-    String asEscapedString() {
+    public String asEscapedString() {
 
         StringBuilder fullName = new StringBuilder(256);
 
@@ -184,7 +184,7 @@ final class Identifier {
     /**
      * Builder for {@link Identifier}.
      */
-    static class Builder {
+    public static class Builder {
 
         @Nullable
         private String serverName;

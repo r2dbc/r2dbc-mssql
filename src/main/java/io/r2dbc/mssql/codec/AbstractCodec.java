@@ -18,7 +18,7 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.r2dbc.mssql.message.token.Column;
+import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import reactor.util.annotation.Nullable;
 
@@ -44,24 +44,24 @@ abstract class AbstractCodec<T> implements Codec<T> {
     }
 
     @Override
-    public boolean canDecode(Column column, Class<?> type) {
+    public boolean canDecode(Decodable decodable, Class<?> type) {
 
-        Objects.requireNonNull(column, "Column must not be null");
+        Objects.requireNonNull(decodable, "Decodable must not be null");
         Objects.requireNonNull(type, "Type must not be null");
 
         return type.isAssignableFrom(this.type) &&
-            doCanDecode(column.getType());
+            doCanDecode(decodable.getType());
     }
 
     @Nullable
-    public final T decode(@Nullable ByteBuf buffer, Column column, Class<? extends T> type) {
+    public final T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type) {
 
         if (buffer == null) {
             return null;
         }
 
-        LengthDescriptor length = LengthDescriptor.decode(buffer, column);
-        return doDecode(buffer, length, column.getType(), type);
+        Length length = Length.decode(buffer, decodable.getType());
+        return doDecode(buffer, length, decodable.getType(), type);
     }
 
     @Override
@@ -73,11 +73,11 @@ abstract class AbstractCodec<T> implements Codec<T> {
 
 
         Encoded encoded = doEncode(allocator, typeInformation, value);
-        LengthDescriptor lengthDescriptor = LengthDescriptor.of(encoded.encoded.readableBytes(), encoded.isNull);
+        Length length = Length.of(encoded.encoded.readableBytes(), encoded.isNull);
 
         ByteBuf buffer = allocator.buffer(encoded.encoded.readableBytes() + 2);
 
-        lengthDescriptor.encode(buffer, typeInformation);
+        length.encode(buffer, typeInformation);
         buffer.writeBytes(encoded.encoded);
         encoded.encoded.release();
 
@@ -102,7 +102,7 @@ abstract class AbstractCodec<T> implements Codec<T> {
      * @return the decoded value. Can be {@literal null} if the column value is {@literal null}.
      */
     @Nullable
-    abstract T doDecode(ByteBuf buffer, LengthDescriptor length, TypeInformation type, Class<? extends T> valueType);
+    abstract T doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends T> valueType);
 
     abstract Encoded doEncode(ByteBufAllocator allocator, TypeInformation type, T value);
 

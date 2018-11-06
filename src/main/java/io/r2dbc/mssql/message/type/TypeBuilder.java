@@ -17,8 +17,9 @@
 package io.r2dbc.mssql.message.type;
 
 import io.netty.buffer.ByteBuf;
-import io.r2dbc.mssql.client.ProtocolException;
 import io.r2dbc.mssql.message.tds.Decode;
+import io.r2dbc.mssql.message.tds.ProtocolException;
+import io.r2dbc.mssql.message.tds.ServerCharset;
 import io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import io.r2dbc.mssql.util.Assert;
@@ -301,7 +302,7 @@ enum TypeBuilder {
             typeInfo.displaySize = typeInfo.precision = typeInfo.maxLength / 2;
             typeInfo.serverType = SqlServerType.NCHAR;
             typeInfo.collation = Collation.decode(buffer);
-            typeInfo.charset = Encoding.UNICODE.charset();
+            typeInfo.charset = ServerCharset.UNICODE.charset();
         }
     }),
 
@@ -327,7 +328,7 @@ enum TypeBuilder {
                 throw ProtocolException.invalidTds("Invalid NVARCHAR length");
             }
             typeInfo.collation = Collation.decode(buffer);
-            typeInfo.charset = Encoding.UNICODE.charset();
+            typeInfo.charset = ServerCharset.UNICODE.charset();
         }
     }),
 
@@ -346,7 +347,7 @@ enum TypeBuilder {
             typeInfo.serverType = SqlServerType.NTEXT;
             typeInfo.displaySize = typeInfo.precision = Integer.MAX_VALUE / 2;
             typeInfo.collation = Collation.decode(buffer);
-            typeInfo.charset = Encoding.UNICODE.charset();
+            typeInfo.charset = ServerCharset.UNICODE.charset();
         }
     }),
 

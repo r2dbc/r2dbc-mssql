@@ -18,6 +18,7 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeUtils;
@@ -58,7 +59,7 @@ final class LocalTimeCodec extends AbstractCodec<LocalTime> {
     }
 
     @Override
-    LocalTime doDecode(ByteBuf buffer, LengthDescriptor length, TypeInformation type, Class<? extends LocalTime> valueType) {
+    LocalTime doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends LocalTime> valueType) {
 
         long nanosSinceMidnight = 0;
         int scale = type.getScale();

@@ -17,11 +17,11 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
-import io.r2dbc.mssql.client.ProtocolException;
 import io.r2dbc.mssql.client.ssl.SslState;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TDSVersion;
+import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.Login7;

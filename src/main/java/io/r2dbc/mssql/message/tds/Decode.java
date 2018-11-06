@@ -17,9 +17,9 @@
 package io.r2dbc.mssql.message.tds;
 
 import io.netty.buffer.ByteBuf;
-import io.r2dbc.mssql.message.type.Encoding;
 import reactor.util.annotation.Nullable;
 
+import java.nio.charset.Charset;
 import java.util.Objects;
 
 /**
@@ -201,7 +201,7 @@ public final class Decode {
      * @return
      */
     public static String unicodeUString(ByteBuf buffer) {
-        return as(buffer, buffer.readUnsignedShortLE() * 2, Encoding.UNICODE);
+        return as(buffer, buffer.readUnsignedShortLE() * 2, ServerCharset.UNICODE.charset());
     }
 
     /**
@@ -211,23 +211,23 @@ public final class Decode {
      * @return
      */
     public static String unicodeBString(ByteBuf buffer) {
-        return as(buffer, buffer.readByte() * 2, Encoding.UNICODE);
+        return as(buffer, buffer.readByte() * 2, ServerCharset.UNICODE.charset());
     }
 
     /**
-     * Decode the {@link ByteBuf} using the given {@link Encoding}.
+     * Decode the {@link ByteBuf} using the given {@link Charset}.
      *
-     * @param buffer   the data buffer.
+     * @param buffer  the data buffer.
      * @param length
-     * @param encoding
+     * @param charset
      * @return
      */
-    private static String as(ByteBuf buffer, int length, Encoding encoding) {
+    private static String as(ByteBuf buffer, int length, Charset charset) {
 
         Objects.requireNonNull(buffer, "Buffer must not be null");
-        Objects.requireNonNull(encoding, "Encoding must not be null");
+        Objects.requireNonNull(charset, "Charset must not be null");
 
-        String result = buffer.toString(buffer.readerIndex(), length, encoding.charset());
+        String result = buffer.toString(buffer.readerIndex(), length, charset);
         buffer.skipBytes(length);
         return result;
     }

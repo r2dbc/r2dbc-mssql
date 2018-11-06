@@ -21,6 +21,7 @@ import io.netty.handler.ssl.SslHandler;
 import io.r2dbc.mssql.client.ssl.SslState;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.header.Type;
+import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.Login7;
 import io.r2dbc.mssql.message.token.Prelogin;

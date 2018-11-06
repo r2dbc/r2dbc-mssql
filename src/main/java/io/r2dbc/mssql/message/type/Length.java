@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package io.r2dbc.mssql.codec;
+package io.r2dbc.mssql.message.type;
 
 import io.netty.buffer.ByteBuf;
-import io.r2dbc.mssql.client.ProtocolException;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
-import io.r2dbc.mssql.message.token.Column;
-import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
 /**
@@ -29,7 +27,7 @@ import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
  *
  * @author Mark Paluch
  */
-public final class LengthDescriptor {
+public final class Length {
 
     private static final long PLP_NULL = 0xFFFFFFFFFFFFFFFFL;
 
@@ -41,59 +39,48 @@ public final class LengthDescriptor {
 
     private final boolean isNull;
 
-    private LengthDescriptor(int length, boolean isNull) {
+    private Length(int length, boolean isNull) {
         this.length = length;
         this.isNull = isNull;
     }
 
     /**
-     * Creates a {@link LengthDescriptor} that indicates the value is {@literal null}.
+     * Creates a {@link Length} that indicates the value is {@literal null}.
      *
-     * @return a {@link LengthDescriptor} for {@literal null}.
+     * @return a {@link Length} for {@literal null}.
      */
-    public static LengthDescriptor nullLength() {
-        return new LengthDescriptor(0, true);
+    public static Length nullLength() {
+        return new Length(0, true);
     }
 
     /**
-     * Creates a {@link LengthDescriptor} with a given {@code length}.
+     * Creates a {@link Length} with a given {@code length}.
      *
-     * @return a {@link LengthDescriptor} for a non-{@literal null} value of the given {@code length}.
+     * @return a {@link Length} for a non-{@literal null} value of the given {@code length}.
      */
-    public static LengthDescriptor of(int length) {
-        return new LengthDescriptor(length, false);
+    public static Length of(int length) {
+        return new Length(length, false);
     }
 
     /**
-     * Creates a {@link LengthDescriptor}.
+     * Creates a {@link Length}.
      *
      * @param length value length.
      * @param isNull {@literal true} if the value is {@literal null}.
-     * @return the {@link LengthDescriptor}.
+     * @return the {@link Length}.
      */
-    public static LengthDescriptor of(int length, boolean isNull) {
-        return new LengthDescriptor(length, isNull);
+    public static Length of(int length, boolean isNull) {
+        return new Length(length, isNull);
     }
 
     /**
-     * Decode a {@link LengthDescriptor} for a {@link Column}.
-     *
-     * @param buffer the data buffer.
-     * @param column {@link Column} descriptor.
-     * @return the {@link LengthDescriptor}.
-     */
-    public static LengthDescriptor decode(ByteBuf buffer, Column column) {
-        return decode(buffer, column.getType());
-    }
-
-    /**
-     * Decode a {@link LengthDescriptor} for a {@link TypeInformation}.
+     * Decode a {@link Length} for a {@link TypeInformation}.
      *
      * @param buffer the data buffer.
      * @param type   {@link TypeInformation}.
-     * @return the {@link LengthDescriptor}.
+     * @return the {@link Length}.
      */
-    public static LengthDescriptor decode(ByteBuf buffer, TypeInformation type) {
+    public static Length decode(ByteBuf buffer, TypeInformation type) {
 
         switch (type.getLengthStrategy()) {
 
@@ -102,20 +89,20 @@ public final class LengthDescriptor {
                 long length = buffer.readLong();
                 buffer.resetReaderIndex();
 
-                return new LengthDescriptor(UNKNOWN_STREAM_LENGTH, length == PLP_NULL);
+                return new Length(UNKNOWN_STREAM_LENGTH, length == PLP_NULL);
             }
 
             case FIXEDLENTYPE:
-                return new LengthDescriptor(type.getMaxLength(), type.getMaxLength() == 0);
+                return new Length(type.getMaxLength(), type.getMaxLength() == 0);
 
             case BYTELENTYPE: {
                 int length = Decode.uByte(buffer);
-                return new LengthDescriptor(length, length == 0);
+                return new Length(length, length == 0);
             }
 
             case USHORTLENTYPE: {
                 int length = Decode.uShort(buffer);
-                return new LengthDescriptor(length == USHORT_NULL ? 0 : length, length == USHORT_NULL);
+                return new Length(length == USHORT_NULL ? 0 : length, length == USHORT_NULL);
             }
 
             case LONGLENTYPE: {
@@ -128,7 +115,7 @@ public final class LengthDescriptor {
                     int nullMarker = Decode.uByte(buffer);
 
                     if (nullMarker == 0) {
-                        return new LengthDescriptor(0, true);
+                        return new Length(0, true);
                     }
 
                     // skip(24) is to skip the textptr and timestamp fields
@@ -136,16 +123,16 @@ public final class LengthDescriptor {
                     int valueLength = Decode.asLong(buffer);
 
 
-                    return new LengthDescriptor(valueLength, false);
+                    return new Length(valueLength, false);
                 }
 
                 if (serverType == SqlServerType.SQL_VARIANT) {
                     int valueLength = Decode.intBigEndian(buffer);
-                    return new LengthDescriptor(valueLength, valueLength == 0);
+                    return new Length(valueLength, valueLength == 0);
                 }
 
                 int length = Decode.uShort(buffer);
-                return new LengthDescriptor(length == USHORT_NULL ? 0 : length, length == USHORT_NULL);
+                return new Length(length == USHORT_NULL ? 0 : length, length == USHORT_NULL);
             }
         }
 
@@ -153,11 +140,11 @@ public final class LengthDescriptor {
     }
 
     /**
-     * Check whether the {@link ByteBuf} can be decoded into an {@link LengthDescriptor}.
+     * Check whether the {@link ByteBuf} can be decoded into an {@link Length}.
      *
      * @param buffer the data buffer.
      * @param type   {@link TypeInformation}.
-     * @return {@literal true} if the buffer contains sufficient data to decode a {@link LengthDescriptor}.
+     * @return {@literal true} if the buffer contains sufficient data to decode a {@link Length}.
      */
     public static boolean canDecode(ByteBuf buffer, TypeInformation type) {
 

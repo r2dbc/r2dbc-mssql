@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
+import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
@@ -48,7 +49,7 @@ final class DoubleCodec extends AbstractCodec<Double> {
     }
 
     @Override
-    Double doDecode(ByteBuf buffer, LengthDescriptor length, TypeInformation type, Class<? extends Double> valueType) {
+    Double doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends Double> valueType) {
 
         if (length.isNull()) {
             return null;

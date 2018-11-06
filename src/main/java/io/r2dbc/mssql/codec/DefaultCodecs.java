@@ -17,7 +17,6 @@
 package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.r2dbc.mssql.message.token.Column;
 import reactor.util.annotation.Nullable;
 
 import java.util.Arrays;
@@ -60,9 +59,9 @@ public final class DefaultCodecs implements Codecs {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T> T decode(@Nullable ByteBuf buffer, Column column, Class<? extends T> type) {
+    public <T> T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type) {
 
-        Objects.requireNonNull(column, "Column must not be null");
+        Objects.requireNonNull(decodable, "Decodable must not be null");
         Objects.requireNonNull(type, "Type must not be null");
 
         if (buffer == null) {
@@ -70,11 +69,11 @@ public final class DefaultCodecs implements Codecs {
         }
 
         for (Codec<?> codec : this.codecs) {
-            if (codec.canDecode(column, type)) {
-                return ((Codec<T>) codec).decode(buffer, column, type);
+            if (codec.canDecode(decodable, type)) {
+                return ((Codec<T>) codec).decode(buffer, decodable, type);
             }
         }
 
-        throw new IllegalArgumentException(String.format("Cannot decode value of type [%s] for column [%s], server type [%s]", type.getName(), column.getName(), column.getType().getServerType()));
+        throw new IllegalArgumentException(String.format("Cannot decode value of type [%s], name [%s] server type [%s]", type.getName(), decodable.getName(), decodable.getType().getServerType()));
     }
 }

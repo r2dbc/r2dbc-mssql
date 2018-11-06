@@ -18,6 +18,7 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.TypeInformation;
 
 import java.util.UUID;
@@ -42,7 +43,7 @@ final class UuidCodec extends AbstractCodec<UUID> {
     }
 
     @Override
-    UUID doDecode(ByteBuf buffer, LengthDescriptor length, TypeInformation typeInformation, Class<? extends UUID> valueType) {
+    UUID doDecode(ByteBuf buffer, Length length, TypeInformation typeInformation, Class<? extends UUID> valueType) {
 
         if (length.isNull()) {
             return null;

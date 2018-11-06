@@ -16,23 +16,21 @@
 
 package io.r2dbc.mssql.codec;
 
-import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.message.type.Collation;
 import reactor.util.annotation.Nullable;
 
 /**
- * Registry for {@link Codec}s to encodes and decodes values.
+ * @author Mark Paluch
  */
-public interface Codecs {
+public class RpcParameterContext {
 
-    /**
-     * Decode a data to a value.
-     *
-     * @param buffer the {@link ByteBuf} to decode.
-     * @param decodable the decodable metadata.
-     * @param type   the type to decode to.
-     * @param <T>    the type of item being returned.
-     * @return the decoded value.
-     */
+    private final RpcDirection direction;
+
     @Nullable
-    <T> T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type);
+    private final Collation collation;
+
+    public RpcParameterContext(RpcDirection direction, @Nullable Collation collation) {
+        this.direction = direction;
+        this.collation = collation;
+    }
 }

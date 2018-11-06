@@ -17,10 +17,10 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
-import io.r2dbc.mssql.client.ProtocolException;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.tds.Decode;
+import io.r2dbc.mssql.message.tds.ProtocolException;
 import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;

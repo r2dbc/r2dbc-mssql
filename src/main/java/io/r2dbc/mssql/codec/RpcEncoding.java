@@ -27,21 +27,20 @@ import reactor.util.annotation.Nullable;
  *
  * @author Mark Paluch
  */
-public final class RpcParameters {
+public final class RpcEncoding {
 
-    private RpcParameters() {
+    private RpcEncoding() {
     }
 
     /**
      * Encode a string parameter as {@literal NVARCHAR} or {@literal NTEXT} (depending on the size).
-     *
-     * @param buffer    the data buffer.
-     * @param direction RPC parameter direction (in/out)
+     *  @param buffer    the data buffer.
      * @param name      optional parameter name.
+     * @param direction RPC parameter direction (in/out)
      * @param collation parameter value encoding.
      * @param value     the parameter value, can be {@literal null}.
      */
-    public static void encodeString(ByteBuf buffer, RpcDirection direction, @Nullable String name, Collation collation, @Nullable String value) {
+    public static void encodeString(ByteBuf buffer, @Nullable String name, RpcDirection direction, Collation collation, @Nullable String value) {
 
         TdsDataType dataType = StringCodec.getDataType(direction, value);
 
@@ -51,13 +50,12 @@ public final class RpcParameters {
 
     /**
      * Encode an integer parameter as {@literal INTn}.
-     *
-     * @param buffer    the data buffer.
-     * @param direction RPC parameter direction (in/out)
+     *  @param buffer    the data buffer.
      * @param name      optional parameter name.
+     * @param direction RPC parameter direction (in/out)
      * @param value     the parameter value, can be {@literal null}.
      */
-    public static void encodeInteger(ByteBuf buffer, RpcDirection direction, @Nullable String name, @Nullable Integer value) {
+    public static void encodeInteger(ByteBuf buffer, @Nullable String name, RpcDirection direction, @Nullable Integer value) {
 
         encodeHeader(buffer, name, direction, TdsDataType.INTN);
 
@@ -71,7 +69,7 @@ public final class RpcParameters {
         }
     }
 
-    private static void encodeHeader(ByteBuf buffer, @Nullable String name, RpcDirection direction, TdsDataType dataType) {
+    public static void encodeHeader(ByteBuf buffer, @Nullable String name, RpcDirection direction, TdsDataType dataType) {
 
         if (name != null) {
 

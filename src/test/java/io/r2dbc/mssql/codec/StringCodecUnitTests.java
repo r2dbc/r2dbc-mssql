@@ -18,7 +18,7 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Encode;
-import io.r2dbc.mssql.message.type.Encoding;
+import io.r2dbc.mssql.message.tds.ServerCharset;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
@@ -60,11 +60,11 @@ class StringCodecUnitTests {
     void shouldDecodeVarchar() {
 
         TypeInformation type =
-            builder().withMaxLength(50).withLengthStrategy(LengthStrategy.USHORTLENTYPE).withPrecision(50).withServerType(SqlServerType.VARCHAR).withCharset(Encoding.CP1252.charset()).build();
+            builder().withMaxLength(50).withLengthStrategy(LengthStrategy.USHORTLENTYPE).withPrecision(50).withServerType(SqlServerType.VARCHAR).withCharset(ServerCharset.CP1252.charset()).build();
 
         ByteBuf data = TestByteBufAllocator.TEST.buffer();
         Encode.uShort(data, 6);
-        data.writeCharSequence("foobar", Encoding.CP1252.charset());
+        data.writeCharSequence("foobar", ServerCharset.CP1252.charset());
 
 
         String value = StringCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), String.class);
@@ -76,11 +76,11 @@ class StringCodecUnitTests {
     void shouldDecodeNvarchar() {
 
         TypeInformation type =
-            builder().withMaxLength(100).withLengthStrategy(LengthStrategy.USHORTLENTYPE).withPrecision(50).withServerType(SqlServerType.VARCHAR).withCharset(Encoding.UNICODE.charset()).build();
+            builder().withMaxLength(100).withLengthStrategy(LengthStrategy.USHORTLENTYPE).withPrecision(50).withServerType(SqlServerType.VARCHAR).withCharset(ServerCharset.UNICODE.charset()).build();
 
         ByteBuf data = TestByteBufAllocator.TEST.buffer();
         Encode.uShort(data, 12);
-        data.writeCharSequence("foobar", Encoding.UNICODE.charset());
+        data.writeCharSequence("foobar", ServerCharset.UNICODE.charset());
 
         String value = StringCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), String.class);
 
@@ -91,11 +91,11 @@ class StringCodecUnitTests {
     void shouldEncodeNvarchar() {
 
         TypeInformation type =
-            builder().withMaxLength(100).withLengthStrategy(LengthStrategy.USHORTLENTYPE).withPrecision(50).withServerType(SqlServerType.VARCHAR).withCharset(Encoding.UNICODE.charset()).build();
+            builder().withMaxLength(100).withLengthStrategy(LengthStrategy.USHORTLENTYPE).withPrecision(50).withServerType(SqlServerType.VARCHAR).withCharset(ServerCharset.UNICODE.charset()).build();
 
         ByteBuf data = TestByteBufAllocator.TEST.buffer();
         Encode.uShort(data, 12);
-        data.writeCharSequence("foobar", Encoding.UNICODE.charset());
+        data.writeCharSequence("foobar", ServerCharset.UNICODE.charset());
 
         ByteBuf encoded = StringCodec.INSTANCE.encode(TestByteBufAllocator.TEST, type, "foobar");
 
@@ -106,11 +106,11 @@ class StringCodecUnitTests {
     void shouldDecodeChar() {
 
         TypeInformation type =
-            builder().withMaxLength(20).withLengthStrategy(LengthStrategy.USHORTLENTYPE).withServerType(SqlServerType.CHAR).withCharset(Encoding.CP1252.charset()).build();
+            builder().withMaxLength(20).withLengthStrategy(LengthStrategy.USHORTLENTYPE).withServerType(SqlServerType.CHAR).withCharset(ServerCharset.CP1252.charset()).build();
 
         ByteBuf data = TestByteBufAllocator.TEST.buffer();
         Encode.uShort(data, 20);
-        data.writeCharSequence("foobar              ", Encoding.CP1252.charset());
+        data.writeCharSequence("foobar              ", ServerCharset.CP1252.charset());
 
         String value = StringCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), String.class);
 
@@ -121,7 +121,7 @@ class StringCodecUnitTests {
     void shouldDecodeText() {
 
         TypeInformation type =
-            builder().withMaxLength(2147483647).withLengthStrategy(LengthStrategy.LONGLENTYPE).withServerType(SqlServerType.TEXT).withCharset(Encoding.CP1252.charset()).build();
+            builder().withMaxLength(2147483647).withLengthStrategy(LengthStrategy.LONGLENTYPE).withServerType(SqlServerType.TEXT).withCharset(ServerCharset.CP1252.charset()).build();
 
         // Text value
         ByteBuf data = HexUtils.decodeToByteBuf("10 64" +

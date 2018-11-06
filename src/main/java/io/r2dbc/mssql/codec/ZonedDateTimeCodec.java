@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
+import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeUtils;
@@ -58,7 +59,7 @@ final class ZonedDateTimeCodec extends AbstractCodec<ZonedDateTime> {
     }
 
     @Override
-    ZonedDateTime doDecode(ByteBuf buffer, LengthDescriptor length, TypeInformation type, Class<? extends ZonedDateTime> valueType) {
+    ZonedDateTime doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends ZonedDateTime> valueType) {
 
         LocalTime localTime = LocalTimeCodec.INSTANCE.doDecode(buffer, length, type, LocalTime.class);
         LocalDate localDate = LocalDateCodec.INSTANCE.doDecode(buffer, length, type, LocalDate.class);

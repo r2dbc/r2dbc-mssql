@@ -23,7 +23,6 @@ import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
-import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.message.token.DoneProcToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
@@ -104,9 +103,7 @@ final class CursoredQueryMessageFlow {
 
                     // cursor Id
                     if (returnValue.getOrdinal() == 0) {
-
-                        Column column = Column.from(returnValue);
-                        state.cursorId = codecs.decode(returnValue.getValue(), column, Integer.class);
+                        state.cursorId = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
                     }
 
                     returnValue.release();

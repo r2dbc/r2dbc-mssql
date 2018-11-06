@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.r2dbc.mssql.message.type;
+package io.r2dbc.mssql.message.tds;
 
 import java.nio.charset.Charset;
 
@@ -23,7 +23,7 @@ import java.nio.charset.Charset;
  * <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/intl/encoding.doc.html">https://docs.oracle.com/javase/8/docs/technotes/guides/intl/encoding.doc.html</a>
  * for a complete list of supported encodings with their canonical names.
  */
-public enum Encoding {
+public enum ServerCharset {
 
     // @formatter:off
     UNICODE ("UTF-16LE", true, false),
@@ -57,7 +57,7 @@ public enum Encoding {
 
     private Charset charset;
 
-    Encoding(String charsetName, boolean supportsAsciiConversion, boolean hasAsciiCompatibleSBCS) {
+    ServerCharset(String charsetName, boolean supportsAsciiConversion, boolean hasAsciiCompatibleSBCS) {
 
         this.charsetName = charsetName;
         this.supportsAsciiConversion = supportsAsciiConversion;
@@ -101,14 +101,14 @@ public enum Encoding {
     /**
      * Returns {@literal true} if the collation supports conversion to {@literal true}.
      */
-    boolean supportsAsciiConversion() {
+    public boolean supportsAsciiConversion() {
         return this.supportsAsciiConversion;
     }
 
     /**
      * Returns {@literal true} if the collation supports conversion to {@literal ascii} AND it uses a single-byte character set.
      */
-    boolean hasAsciiCompatibleSBCS() {
+    public boolean hasAsciiCompatibleSBCS() {
         return this.hasAsciiCompatibleSBCS;
     }
 }
