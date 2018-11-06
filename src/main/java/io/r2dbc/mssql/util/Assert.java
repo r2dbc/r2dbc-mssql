@@ -193,6 +193,144 @@ public final class Assert {
         }
     }
 
+    /**
+     * Assert that the provided object is an instance of the provided class.
+     * <pre class="code">Assert.instanceOf(Foo.class, foo, "Foo expected");</pre>
+     *
+     * @param type    the type to check against
+     * @param obj     the object to check
+     * @param message a message which will be prepended to provide further context.
+     *                If it is empty or ends in ":" or ";" or "," or ".", a full exception message
+     *                will be appended. If it ends in a space, the name of the offending object's
+     *                type will be appended. In any other case, a ":" with a space and the name
+     *                of the offending object's type will be appended.
+     * @throws IllegalArgumentException if the object is not an instance of type
+     */
+    public static void isInstanceOf(Class<?> type, @Nullable Object obj, String message) {
+        notNull(type, "Type to check against must not be null");
+        if (!type.isInstance(obj)) {
+            instanceCheckFailed(type, obj, message);
+        }
+    }
+
+    /**
+     * Assert that the provided object is an instance of the provided class.
+     * <pre class="code">
+     * Assert.instanceOf(Foo.class, foo, () -&gt; "Processing " + Foo.class.getSimpleName() + ":");
+     * </pre>
+     *
+     * @param type            the type to check against
+     * @param obj             the object to check
+     * @param messageSupplier a supplier for the exception message to use if the
+     *                        assertion fails. See {@link #isInstanceOf(Class, Object, String)} for details.
+     * @throws IllegalArgumentException if the object is not an instance of type
+     */
+    public static void isInstanceOf(Class<?> type, @Nullable Object obj, Supplier<String> messageSupplier) {
+        notNull(type, "Type to check against must not be null");
+        if (!type.isInstance(obj)) {
+            instanceCheckFailed(type, obj, nullSafeGet(messageSupplier));
+        }
+    }
+
+    /**
+     * Assert that the provided object is an instance of the provided class.
+     * <pre class="code">Assert.instanceOf(Foo.class, foo);</pre>
+     *
+     * @param type the type to check against
+     * @param obj  the object to check
+     * @throws IllegalArgumentException if the object is not an instance of type
+     */
+    public static void isInstanceOf(Class<?> type, @Nullable Object obj) {
+        isInstanceOf(type, obj, "");
+    }
+
+    /**
+     * Assert that {@code superType.isAssignableFrom(subType)} is {@code true}.
+     * <pre class="code">Assert.isAssignable(Number.class, myClass, "Number expected");</pre>
+     *
+     * @param superType the super type to check against
+     * @param subType   the sub type to check
+     * @param message   a message which will be prepended to provide further context.
+     *                  If it is empty or ends in ":" or ";" or "," or ".", a full exception message
+     *                  will be appended. If it ends in a space, the name of the offending sub type
+     *                  will be appended. In any other case, a ":" with a space and the name of the
+     *                  offending sub type will be appended.
+     * @throws IllegalArgumentException if the classes are not assignable
+     */
+    public static void isAssignable(Class<?> superType, @Nullable Class<?> subType, String message) {
+        notNull(superType, "Super type to check against must not be null");
+        if (subType == null || !superType.isAssignableFrom(subType)) {
+            assignableCheckFailed(superType, subType, message);
+        }
+    }
+
+    /**
+     * Assert that {@code superType.isAssignableFrom(subType)} is {@code true}.
+     * <pre class="code">
+     * Assert.isAssignable(Number.class, myClass, () -&gt; "Processing " + myAttributeName + ":");
+     * </pre>
+     *
+     * @param superType       the super type to check against
+     * @param subType         the sub type to check
+     * @param messageSupplier a supplier for the exception message to use if the
+     *                        assertion fails. See {@link #isAssignable(Class, Class, String)} for details.
+     * @throws IllegalArgumentException if the classes are not assignable
+     */
+    public static void isAssignable(Class<?> superType, @Nullable Class<?> subType, Supplier<String> messageSupplier) {
+        notNull(superType, "Super type to check against must not be null");
+        if (subType == null || !superType.isAssignableFrom(subType)) {
+            assignableCheckFailed(superType, subType, nullSafeGet(messageSupplier));
+        }
+    }
+
+    /**
+     * Assert that {@code superType.isAssignableFrom(subType)} is {@code true}.
+     * <pre class="code">Assert.isAssignable(Number.class, myClass);</pre>
+     *
+     * @param superType the super type to check
+     * @param subType   the sub type to check
+     * @throws IllegalArgumentException if the classes are not assignable
+     */
+    public static void isAssignable(Class<?> superType, Class<?> subType) {
+        isAssignable(superType, subType, "");
+    }
+
+
+    private static void instanceCheckFailed(Class<?> type, @Nullable Object obj, @Nullable String msg) {
+        String className = (obj != null ? obj.getClass().getName() : "null");
+        String result = "";
+        boolean defaultMessage = true;
+        if (StringUtils.hasLength(msg)) {
+            if (endsWithSeparator(msg)) {
+                result = msg + " ";
+            } else {
+                result = messageWithTypeName(msg, className);
+                defaultMessage = false;
+            }
+        }
+        if (defaultMessage) {
+            result = result + ("Object of class [" + className + "] must be an instance of " + type);
+        }
+        throw new IllegalArgumentException(result);
+    }
+
+    private static void assignableCheckFailed(Class<?> superType, @Nullable Class<?> subType, @Nullable String msg) {
+        String result = "";
+        boolean defaultMessage = true;
+        if (StringUtils.hasLength(msg)) {
+            if (endsWithSeparator(msg)) {
+                result = msg + " ";
+            } else {
+                result = messageWithTypeName(msg, subType);
+                defaultMessage = false;
+            }
+        }
+        if (defaultMessage) {
+            result = result + (subType + " is not assignable to " + superType);
+        }
+        throw new IllegalArgumentException(result);
+    }
+
     private static boolean endsWithSeparator(String msg) {
         return (msg.endsWith(":") || msg.endsWith(";") || msg.endsWith(",") || msg.endsWith("."));
     }
