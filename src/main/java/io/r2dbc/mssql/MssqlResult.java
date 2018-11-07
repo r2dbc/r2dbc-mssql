@@ -16,7 +16,7 @@
 
 package io.r2dbc.mssql;
 
-import io.netty.util.ReferenceCounted;
+import io.netty.util.ReferenceCountUtil;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
@@ -103,14 +103,9 @@ public final class MssqlResult implements Result {
             .zipWith(columnDescriptions.repeat())
             .map(function((dataToken, columns) -> MssqlRow.toRow(codecs, dataToken, columns)));
 
+        // Release unused tokens directly.
         Mono<Long> rowsUpdated = firstMessages
-            .doOnNext(it -> {
-
-                // Release unused tokens directly.
-                if (it instanceof ReferenceCounted) {
-                    ((ReferenceCounted) it).release();
-                }
-            })
+            .doOnNext(ReferenceCountUtil::release)
             .ofType(AbstractDoneToken.class)
             .filter(AbstractDoneToken::hasCount)
             .map(AbstractDoneToken::getRowCount)

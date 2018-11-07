@@ -78,6 +78,14 @@ public interface Client {
     Optional<Collation> getDatabaseCollation();
 
     /**
+     * @return the required {@link Collation} for the current database.
+     * @throws IllegalStateException if no {@link Collation} is available.
+     */
+    default Collation getRequiredCollation() {
+        return getDatabaseCollation().orElseThrow(() -> new IllegalStateException("Collation not available"));
+    }
+
+    /**
      * Returns whether the server supports column encryption.
      *
      * @return {@literal true} if the server supports column encryption.

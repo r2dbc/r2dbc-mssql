@@ -16,12 +16,16 @@
 
 package io.r2dbc.mssql;
 
-import io.r2dbc.mssql.PreparedMssqlStatement.ParsedVariable;
+import io.r2dbc.mssql.PreparedMssqlStatement.ParsedParameter;
+import io.r2dbc.mssql.client.TestClient;
+import io.r2dbc.mssql.codec.DefaultCodecs;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static io.r2dbc.mssql.PreparedMssqlStatement.ParsedQuery;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Unit tests for {@link PreparedMssqlStatement}.
@@ -43,16 +47,63 @@ class PreparedMssqlStatementUnitTests {
     @Test
     void shouldParseSql() {
 
-        List<ParsedVariable> variables = PreparedMssqlStatement.parse("SELECT * from FOO where firstname = @firstname").getVariables();
+        List<ParsedParameter> variables = ParsedQuery.parse("SELECT * from FOO where firstname = @firstname").getParameters();
 
         assertThat(variables).hasSize(1);
-        assertThat(variables.get(0)).isEqualTo(new ParsedVariable("firstname", 37));
+        assertThat(variables.get(0)).isEqualTo(new ParsedParameter("firstname", 37));
 
 
-        variables = PreparedMssqlStatement.parse("SELECT * from FOO where @p1 = @foo_bar").getVariables();
+        variables = ParsedQuery.parse("SELECT * from FOO where @p1 = @foo_bar").getParameters();
 
         assertThat(variables).hasSize(2);
-        assertThat(variables.get(0)).isEqualTo(new ParsedVariable("p1", 25));
-        assertThat(variables.get(1)).isEqualTo(new ParsedVariable("foo_bar", 31));
+        assertThat(variables.get(0)).isEqualTo(new ParsedParameter("p1", 25));
+        assertThat(variables.get(1)).isEqualTo(new ParsedParameter("foo_bar", 31));
+    }
+
+    @Test
+    void shouldBindParameterByIndex() {
+
+        PreparedMssqlStatement statement = new PreparedMssqlStatement(TestClient.NO_OP, new DefaultCodecs(), "SELECT * from FOO where firstname = @firstname");
+
+        statement.bind(0, "name");
+        assertThat(statement.getBindings().first().getParameters()).containsKeys("firstname");
+    }
+
+    @Test
+    void shouldRejectBindIndexOutOfBounds() {
+
+        PreparedMssqlStatement statement = new PreparedMssqlStatement(TestClient.NO_OP, new DefaultCodecs(), "SELECT * from FOO where firstname = @firstname");
+
+        assertThatThrownBy(() -> statement.bind(-1, "name")).isInstanceOf(IndexOutOfBoundsException.class);
+        assertThatThrownBy(() -> statement.bind(1, "name")).isInstanceOf(IndexOutOfBoundsException.class);
+    }
+
+    @Test
+    void shouldBindParameterByName() {
+
+        PreparedMssqlStatement statement = new PreparedMssqlStatement(TestClient.NO_OP, new DefaultCodecs(), "SELECT * from FOO where firstname = @firstname");
+
+        statement.bind(0, "firstname");
+        assertThat(statement.getBindings().first().getParameters()).containsKeys("firstname");
+    }
+
+    @Test
+    void shouldRejectBindForUnknownParameters() {
+
+        PreparedMssqlStatement statement = new PreparedMssqlStatement(TestClient.NO_OP, new DefaultCodecs(), "SELECT * from FOO where firstname = @firstname");
+
+        assertThatThrownBy(() -> statement.bind("foo", "name")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void shouldRejectBatchOperations() {
+
+        PreparedMssqlStatement statement = new PreparedMssqlStatement(TestClient.NO_OP, new DefaultCodecs(), "SELECT * from FOO where firstname = @firstname");
+
+        statement.bind("firstname", "");
+        statement.add();
+        statement.bind("firstname", "");
+
+        assertThatThrownBy(statement::execute).isInstanceOf(UnsupportedOperationException.class);
     }
 }

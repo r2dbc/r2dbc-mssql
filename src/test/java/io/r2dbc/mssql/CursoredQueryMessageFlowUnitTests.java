@@ -18,6 +18,8 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.CursoredQueryMessageFlow.CursorState;
 import io.r2dbc.mssql.client.Client;
+import io.r2dbc.mssql.codec.DefaultCodecs;
+import io.r2dbc.mssql.codec.RpcParameterContext;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.header.HeaderOptions;
@@ -28,6 +30,7 @@ import io.r2dbc.mssql.message.token.RpcRequest;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.ClientMessageAssert;
 import io.r2dbc.mssql.util.HexUtils;
+import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.FluxSink;
@@ -107,6 +110,45 @@ class CursoredQueryMessageFlowUnitTests {
         RpcRequest rpcRequest = CursoredQueryMessageFlow.spCursorClose(180150003, TransactionDescriptor.empty());
 
         String hex = "FFFF090000000000260404F3DEBC0A";
+
+        ClientMessageAssert.assertThat(rpcRequest).encoded()
+            .hasHeader(HeaderOptions.create(Type.RPC, Status.empty()))
+            .isEncodedAs(expected -> {
+
+                AllHeaders.transactional(TransactionDescriptor.empty(), 1).encode(expected);
+
+                expected.writeBytes(HexUtils.decodeToByteBuf(hex));
+            });
+    }
+
+    @Test
+    void shouldEncodeSpPrepExec() {
+
+        Collation collation = Collation.from(13632521, 52);
+
+        String hex = "ff ff 05 00 00 00 00 01 26 04" +
+            "04 00 00 00 00 00 01 26 04 04 00 00 00 00 00 00" +
+            "e7 40 1f 00 d0 04 09 34 24 00 40 00 50 00 30 00" +
+            "20 00 6e 00 76 00 61 00 72 00 63 00 68 00 61 00" +
+            "72 00 28 00 34 00 30 00 30 00 30 00 29 00 00 00" +
+            "e7 40 1f 00 d0 04 09 34 58 00 55 00 50 00 44 00" +
+            "41 00 54 00 45 00 20 00 6d 00 79 00 5f 00 74 00" +
+            "61 00 62 00 6c 00 65 00 20 00 73 00 65 00 74 00" +
+            "20 00 66 00 69 00 72 00 73 00 74 00 5f 00 6e 00" +
+            "61 00 6d 00 65 00 20 00 3d 00 20 00 40 00 50 00" +
+            "30 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00" +
+            "20 00 00 00 26 04 04 10 10 00 00 00 00 26 04 04" +
+            "01 20 00 00 00 01 26 04 04 00 00 00 00 03 40 00" +
+            "50 00 30 00 00 e7 40 1f 00 d0 04 09 34 08 00 6d" +
+            "00 61 00 72 00 6b 00";
+
+        DefaultCodecs codecs = new DefaultCodecs();
+        String sql = "UPDATE my_table set first_name = @P0        ";
+
+        Binding binding = new Binding();
+        binding.add("P0", codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(collation), "mark"));
+
+        RpcRequest rpcRequest = CursoredQueryMessageFlow.spCursorPrepExec(0, sql, binding, collation, TransactionDescriptor.empty());
 
         ClientMessageAssert.assertThat(rpcRequest).encoded()
             .hasHeader(HeaderOptions.create(Type.RPC, Status.empty()))

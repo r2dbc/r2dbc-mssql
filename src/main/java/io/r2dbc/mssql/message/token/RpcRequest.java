@@ -323,6 +323,23 @@ public final class RpcRequest implements ClientMessage, TokenStream {
         }
 
         /**
+         * Add an {@link Encoded} parameter to this RPC call.
+         *
+         * @param direction RPC parameter direction (in/out).
+         * @param value     the parameter value.
+         * @return {@literal this} {@link Builder}.
+         */
+        public Builder withParameter(RpcDirection direction, Encoded value) {
+
+            Objects.requireNonNull(direction, "RPC direction (in/out) must not be null");
+            Objects.requireNonNull(value, "Encoded parameter name must not be null");
+
+            this.parameterDescriptors.add(new EncodedRpcParameter(direction, null, value));
+
+            return this;
+        }
+
+        /**
          * Add a {@link String} parameter to this RPC call.
          *
          * @param direction RPC parameter direction (in/out).
@@ -350,12 +367,31 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          * @param value     the parameter value, can be {@literal null}.
          * @return {@literal this} {@link Builder}.
          */
-        public Builder withNamedParameter(RpcDirection direction, @Nullable String name, @Nullable Integer value) {
+        public Builder withNamedParameter(RpcDirection direction, String name, @Nullable Integer value) {
 
             Objects.requireNonNull(direction, "RPC direction (in/out) must not be null");
             Objects.requireNonNull(name, "Parameter name must not be null");
 
             this.parameterDescriptors.add(new RpcInt(direction, name, value));
+
+            return this;
+        }
+
+        /**
+         * Add an {@link Encoded} parameter to this RPC call.
+         *
+         * @param direction RPC parameter direction (in/out).
+         * @param name      the parameter name
+         * @param value     the parameter value.
+         * @return {@literal this} {@link Builder}.
+         */
+        public Builder withNamedParameter(RpcDirection direction, String name, Encoded value) {
+
+            Objects.requireNonNull(direction, "RPC direction (in/out) must not be null");
+            Objects.requireNonNull(name, "Parameter name must not be null");
+            Objects.requireNonNull(value, "Encoded parameter name must not be null");
+
+            this.parameterDescriptors.add(new EncodedRpcParameter(direction, name, value));
 
             return this;
         }
@@ -606,13 +642,13 @@ public final class RpcRequest implements ClientMessage, TokenStream {
     }
 
     /**
-     * String RPC parameter.
+     * Integer RPC parameter.
      */
-    static class RpcParameter extends ParameterDescriptor {
+    static class EncodedRpcParameter extends ParameterDescriptor {
 
         private final Encoded value;
 
-        RpcParameter(RpcDirection direction, @Nullable String name, Encoded value) {
+        EncodedRpcParameter(RpcDirection direction, @Nullable String name, Encoded value) {
             super(direction, name);
             this.value = value;
         }
@@ -621,12 +657,43 @@ public final class RpcRequest implements ClientMessage, TokenStream {
         void encode(ByteBuf buffer) {
             RpcEncoding.encodeHeader(buffer, getName(), getDirection(), value.getDataType());
             buffer.writeBytes(value.getValue());
-            value.getValue().release();
+            value.release();
         }
 
         @Override
         int estimateLength() {
-            return 16 + value.getValue().readableBytes();
+
+            int estimate = 2 + (getName() != null ? (getName().length() + 1) * 2 : 0);
+            estimate += this.value.getValue().readableBytes();
+
+            return estimate;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof RpcInt)) {
+                return false;
+            }
+            RpcInt rpcInt = (RpcInt) o;
+            return Objects.equals(this.value, rpcInt.value);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(this.value);
+        }
+
+        @Override
+        public String toString() {
+            final StringBuffer sb = new StringBuffer();
+            sb.append(getClass().getSimpleName());
+            sb.append(" [name='").append(getName()).append('\'');
+            sb.append(", value=").append(this.value);
+            sb.append(']');
+            return sb.toString();
         }
     }
 }

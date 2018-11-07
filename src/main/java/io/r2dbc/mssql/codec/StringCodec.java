@@ -92,6 +92,10 @@ final class StringCodec extends AbstractCodec<String> {
 
         doEncode(buffer, context.getDirection(), context.getCollation(), value);
 
+        if (dataType == TdsDataType.NVARCHAR) {
+            return new NvarcharEncoded(dataType, buffer);
+        }
+        
         return Encoded.of(dataType, buffer);
     }
 
@@ -201,6 +205,20 @@ final class StringCodec extends AbstractCodec<String> {
             // For v*max types with known length, length is <totallength8><chunklength4>
             // We're sending same total length as chunk length (as we're sending 1 chunk).
             Encode.uLongLong(buffer, headerLength);
+        }
+    }
+
+    static class NvarcharEncoded extends Encoded {
+
+        private final int maxLength = TypeUtils.SHORT_VARTYPE_MAX_BYTES / 2;
+
+        public NvarcharEncoded(TdsDataType dataType, ByteBuf value) {
+            super(dataType, value);
+        }
+
+        @Override
+        public String getFormalType() {
+            return super.getFormalType() + "(" + maxLength + ")";
         }
     }
 }

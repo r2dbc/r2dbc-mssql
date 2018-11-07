@@ -19,7 +19,6 @@ package io.r2dbc.mssql.message.type;
 import io.netty.buffer.ByteBuf;
 import reactor.util.annotation.Nullable;
 
-import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.util.Objects;
 
@@ -397,37 +396,37 @@ public interface TypeInformation {
 
         // @formatter:off
         UNKNOWN(Category.UNKNOWN, "unknown"),
-        TINYINT(Category.NUMERIC, "tinyint"),
-        BIT(Category.NUMERIC, "bit"),
-        SMALLINT(Category.NUMERIC, "smallint"),
-        INTEGER(Category.NUMERIC, "int"),
-        BIGINT(Category.NUMERIC, "bigint"),
-        FLOAT(Category.NUMERIC, "float"),
-        REAL(Category.NUMERIC, "real"),
-        SMALLDATETIME(Category.DATETIME, "smalldatetime"),
-        DATETIME(Category.DATETIME, "datetime"),
-        DATE(Category.DATE, "date"),
-        TIME(Category.TIME, "time"),
-        DATETIME2(Category.DATETIME2, "datetime2"),
-        DATETIMEOFFSET(Category.DATETIMEOFFSET, "datetimeoffset"),
-        SMALLMONEY(Category.NUMERIC, "smallmoney"),
-        MONEY(Category.NUMERIC, "money"),
+        TINYINT(Category.NUMERIC, "tinyint", TdsDataType.BIT1, TdsDataType.INT1),
+        BIT(Category.NUMERIC, "bit",TdsDataType.BIT1, TdsDataType.INT1),
+        SMALLINT(Category.NUMERIC, "smallint", TdsDataType.INT2),
+        INTEGER(Category.NUMERIC, "int", TdsDataType.INT4),
+        BIGINT(Category.NUMERIC, "bigint", TdsDataType.INT8),
+        FLOAT(Category.NUMERIC, "float", TdsDataType.FLOAT8),
+        REAL(Category.NUMERIC, "real", TdsDataType.FLOAT4),
+        SMALLDATETIME(Category.DATETIME, "smalldatetime", TdsDataType.DATETIME4),
+        DATETIME(Category.DATETIME, "datetime", TdsDataType.DATETIME8),
+        DATE(Category.DATE, "date", TdsDataType.DATEN),
+        TIME(Category.TIME, "time", TdsDataType.TIMEN),
+        DATETIME2(Category.DATETIME2, "datetime2", TdsDataType.DATETIME4, TdsDataType.DATETIME2N),
+        DATETIMEOFFSET(Category.DATETIMEOFFSET, "datetimeoffset", TdsDataType.DATETIMEOFFSETN),
+        SMALLMONEY(Category.NUMERIC, "smallmoney", TdsDataType.MONEY4),
+        MONEY(Category.NUMERIC, "money", TdsDataType.MONEY8),
         CHAR(Category.CHARACTER, "char"),
         VARCHAR(Category.CHARACTER, "varchar"),
         VARCHARMAX(Category.LONG_CHARACTER, "varchar"),
-        TEXT(Category.LONG_CHARACTER, "text"),
+        TEXT(Category.LONG_CHARACTER, "text", TdsDataType.TEXT),
         NCHAR(Category.NCHARACTER, "nchar"),
-        NVARCHAR(Category.NCHARACTER, "nvarchar"),
+        NVARCHAR(Category.NCHARACTER, "nvarchar", TdsDataType.NVARCHAR),
         NVARCHARMAX(Category.LONG_NCHARACTER, "nvarchar"),
-        NTEXT(Category.LONG_NCHARACTER, "ntext"),
+        NTEXT(Category.LONG_NCHARACTER, "ntext", TdsDataType.NTEXT),
         BINARY(Category.BINARY, "binary"),
         VARBINARY(Category.BINARY, "varbinary"),
         VARBINARYMAX(Category.LONG_BINARY, "varbinary"),
-        IMAGE(Category.LONG_BINARY, "image"),
-        DECIMAL(Category.NUMERIC, "decimal"),
-        NUMERIC(Category.NUMERIC, "numeric"),
-        GUID(Category.GUID, "uniqueidentifier"),
-        SQL_VARIANT(Category.SQL_VARIANT, "sql_variant"),
+        IMAGE(Category.LONG_BINARY, "image", TdsDataType.IMAGE),
+        DECIMAL(Category.NUMERIC, "decimal", TdsDataType.DECIMALN),
+        NUMERIC(Category.NUMERIC, "numeric", TdsDataType.NUMERICN),
+        GUID(Category.GUID, "uniqueidentifier", TdsDataType.GUID),
+        SQL_VARIANT(Category.SQL_VARIANT, "sql_variant", TdsDataType.SQL_VARIANT),
         UDT(Category.UDT, "udt"),
         XML(Category.XML, "xml"),
         TIMESTAMP(Category.TIMESTAMP, "timestamp"),
@@ -439,17 +438,12 @@ public interface TypeInformation {
 
         private final String name;
 
-        public static final BigDecimal MAX_VALUE_MONEY = new BigDecimal("922337203685477.5807");
+        private final TdsDataType tdsTypes[];
 
-        public static final BigDecimal MIN_VALUE_MONEY = new BigDecimal("-922337203685477.5808");
-
-        public static final BigDecimal MAX_VALUE_SMALLMONEY = new BigDecimal("214748.3647");
-
-        public static final BigDecimal MIN_VALUE_SMALLMONEY = new BigDecimal("-214748.3648");
-
-        SqlServerType(Category category, String name) {
+        SqlServerType(Category category, String name, TdsDataType... tdsDataTypes) {
             this.category = category;
             this.name = name;
+            this.tdsTypes = tdsDataTypes;
         }
 
         /**
@@ -459,6 +453,10 @@ public interface TypeInformation {
          */
         public String toString() {
             return this.name;
+        }
+
+        public TdsDataType[] getTdsTypes() {
+            return tdsTypes;
         }
 
         /**

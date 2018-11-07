@@ -87,7 +87,7 @@ public final class RpcEncoding {
 
         if (name != null) {
 
-            Encode.asByte(buffer, (name.length() + 1) * 2);
+            Encode.asByte(buffer, name.length() + 1);
 
             char at = '@';
             writeChar(buffer, at);
@@ -110,7 +110,6 @@ public final class RpcEncoding {
         buffer.writeByte((byte) ((ch >> 8) & 0xFF));
     }
 
-
     /**
      * Encode a RPC parameter that declares length and max-length attributes.
      *
@@ -129,7 +128,7 @@ public final class RpcEncoding {
 
         valueEncoder.accept(buffer, value);
 
-        return Encoded.of(dataType, buffer);
+        return new LengthEncoded(dataType, buffer, maxLength);
     }
 
     /**
@@ -155,7 +154,7 @@ public final class RpcEncoding {
         return Encoded.of(dataType, buffer);
     }
 
-    private static ByteBuf prepareBuffer(ByteBufAllocator allocator, LengthStrategy lengthStrategy, int maxLength, int length) {
+    protected static ByteBuf prepareBuffer(ByteBufAllocator allocator, LengthStrategy lengthStrategy, int maxLength, int length) {
 
         ByteBuf buffer;
         switch (lengthStrategy) {
@@ -188,6 +187,21 @@ public final class RpcEncoding {
                 return buffer;
             default:
                 throw new UnsupportedOperationException(lengthStrategy.toString());
+        }
+    }
+
+    static class LengthEncoded extends Encoded {
+
+        private final int length;
+
+        public LengthEncoded(TdsDataType dataType, ByteBuf value, int length) {
+            super(dataType, value);
+            this.length = length;
+        }
+
+        @Override
+        public String getFormalType() {
+            return super.getFormalType() + "(" + length + ")";
         }
     }
 }

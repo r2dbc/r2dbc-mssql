@@ -130,6 +130,10 @@ public final class MssqlConnection implements Connection {
         Objects.requireNonNull(sql, "SQL must not be null");
         this.logger.debug("Creating statement for SQL: [{}]", sql);
 
+        if (PreparedMssqlStatement.supports(sql)) {
+            return new PreparedMssqlStatement(this.client, this.codecs, sql);
+        }
+        
         if (SimpleCursoredMssqlStatement.supports(sql)) {
             return new SimpleCursoredMssqlStatement(this.client, this.codecs, sql);
         }

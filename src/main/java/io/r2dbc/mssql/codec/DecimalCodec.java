@@ -71,7 +71,11 @@ final class DecimalCodec extends AbstractCodec<BigDecimal> {
 
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, BigDecimal value) {
-        return RpcEncoding.encode(allocator, TdsDataType.DECIMALN, 0x11, MAX_PRECISION, value, DecimalCodec::encodeBigDecimal);
+
+        ByteBuf buffer = RpcEncoding.prepareBuffer(allocator, TdsDataType.DECIMALN.getLengthStrategy(), 0, 0);
+
+        encodeBigDecimal(buffer, value);
+        return new DecimalEncoded(TdsDataType.DECIMALN, buffer, MAX_PRECISION, value.scale()); 
     }
 
     private static void encodeBigDecimal(ByteBuf buffer, BigDecimal value) {
@@ -92,6 +96,24 @@ final class DecimalCodec extends AbstractCodec<BigDecimal> {
 
         for (int i = unscaledBytes.length - 1; i >= 0; i--) {
             Encode.asByte(buffer, unscaledBytes[i]);
+        }
+    }
+
+    static class DecimalEncoded extends Encoded {
+
+        private final int length;
+
+        private final int scale;
+
+        public DecimalEncoded(TdsDataType dataType, ByteBuf value, int length, int scale) {
+            super(dataType, value);
+            this.length = length;
+            this.scale = scale;
+        }
+
+        @Override
+        public String getFormalType() {
+            return super.getFormalType() + "(" + length + "," + scale + ")";
         }
     }
 }

@@ -19,6 +19,7 @@ package io.r2dbc.mssql;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.Encoded;
+import io.r2dbc.mssql.codec.RpcParameterContext;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Statement;
 import reactor.core.publisher.Flux;
@@ -30,7 +31,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 /**
  * Prepared {@link Statement} with parameter markers executed against a Microsoft SQL Server database.
@@ -46,22 +46,22 @@ import java.util.stream.Stream;
  *
  * @author Mark Paluch
  */
-public final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatement> {
+final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatement> {
 
     private static final Pattern PARAMETER_MATCHER = Pattern.compile("@([\\p{Alpha}@][@$\\d\\w_]{0,127})");
+
+    private final Client client;
+
+    private final Codecs codecs;
 
     private final ParsedQuery parsedQuery;
 
     private final Bindings bindings = new Bindings();
 
-    private final Codecs codecs;
-
-    private final Client client;
-
-    public PreparedMssqlStatement(ParsedQuery parsedQuery, Codecs codecs, Client client) {
-        this.parsedQuery = parsedQuery;
-        this.codecs = codecs;
+    PreparedMssqlStatement(Client client, Codecs codecs, String sql) {
         this.client = client;
+        this.codecs = codecs;
+        this.parsedQuery = ParsedQuery.parse(sql);
     }
 
     @Override
@@ -72,7 +72,17 @@ public final class PreparedMssqlStatement implements MssqlStatement<PreparedMssq
 
     @Override
     public Flux<MssqlResult> execute() {
-        return null;
+
+        if (this.bindings.bindings.size() > 1) {
+            throw new UnsupportedOperationException("Parametrized batch operations not yet supported");
+        }
+
+        return Flux.fromIterable(this.bindings.bindings).flatMap(it -> {
+
+            return CursoredQueryMessageFlow.exchange(this.client, this.codecs, it, this.parsedQuery.sql, 128);
+
+        }).windowUntil(it -> false) //
+            .map(it -> MssqlResult.toResult(this.codecs, it));
     }
 
     @Override
@@ -81,7 +91,11 @@ public final class PreparedMssqlStatement implements MssqlStatement<PreparedMssq
         Objects.requireNonNull(identifier, "identifier must not be null");
         Assert.isInstanceOf(String.class, identifier, "identifier must be a String");
 
-        // this.bindings.getCurrent().add((String) identifier, this.codecs.encode(type, client.getDatabaseCollation().get()));
+        Encoded encoded = this.codecs.encode(client.getByteBufAllocator(), RpcParameterContext.in(client.getRequiredCollation()), value);
+
+        String parameterName = (String) identifier;
+        validateParameterName(parameterName);
+        this.bindings.getCurrent().add(parameterName, encoded);
         return this;
     }
 
@@ -90,7 +104,7 @@ public final class PreparedMssqlStatement implements MssqlStatement<PreparedMssq
 
         Objects.requireNonNull(value, "value must not be null");
 
-        return bind(getVariableName(index), value);
+        return bind(getParameterName(index), value);
     }
 
     @Override
@@ -109,15 +123,30 @@ public final class PreparedMssqlStatement implements MssqlStatement<PreparedMssq
 
         Objects.requireNonNull(type, "Type must not be null");
 
-        this.bindings.getCurrent().add(getVariableName(index), this.codecs.encodeNull(type));
+        this.bindings.getCurrent().add(getParameterName(index), this.codecs.encodeNull(type));
         return this;
     }
 
-    private String getVariableName(int index) {
+    /**
+     * Returns the {@link Bindings}.
+     *
+     * @return the {@link Bindings}.
+     */
+    Bindings getBindings() {
+        return bindings;
+    }
 
-        Assert.isTrue(index >= 0 && index < this.parsedQuery.getVariableCount(), () -> String.format("Index must be greater [0] and less than [%d]", this.parsedQuery.getVariableCount()));
+    /**
+     * Validate the parameter name exists.
+     *
+     * @param parameterName the parameter name.
+     */
+    private void validateParameterName(String parameterName) {
+        this.parsedQuery.getParameter(parameterName);
+    }
 
-        return this.parsedQuery.getVariableName(index);
+    private String getParameterName(int index) {
+        return this.parsedQuery.getParameterName(index);
     }
 
     /**
@@ -130,38 +159,6 @@ public final class PreparedMssqlStatement implements MssqlStatement<PreparedMssq
 
         Objects.requireNonNull(sql, "SQL must not be null");
         return PARAMETER_MATCHER.matcher(sql).find();
-    }
-
-    /**
-     * Parse the {@code sql} query and resolve variable parameters.
-     *
-     * @param sql the SQL query to parse.
-     * @return the parsed query.
-     */
-    static ParsedQuery parse(String sql) {
-
-        Objects.requireNonNull(sql, "SQL must not be null");
-
-        List<ParsedVariable> variables = new ArrayList<>();
-
-        int offset = 0;
-        while (offset != -1) {
-
-            offset = findCharacter('@', sql, offset);
-
-            if (offset != -1) {
-
-                Matcher matcher = PARAMETER_MATCHER.matcher(sql.substring(offset));
-                offset++;
-                if (matcher.find()) {
-
-                    String name = matcher.group(1);
-                    variables.add(new ParsedVariable(name, offset));
-                }
-            }
-        }
-
-        return new ParsedQuery(sql, variables);
     }
 
     /**
@@ -260,27 +257,101 @@ public final class PreparedMssqlStatement implements MssqlStatement<PreparedMssq
 
         private final String sql;
 
-        private final List<ParsedVariable> variables;
+        private final List<ParsedParameter> parameters;
 
-        public ParsedQuery(String sql, List<ParsedVariable> variables) {
+        private final Map<String, ParsedParameter> parametersByName = new LinkedHashMap<>();
+
+        ParsedQuery(String sql, List<ParsedParameter> parameters) {
+            
             this.sql = sql;
-            this.variables = variables;
+            this.parameters = parameters;
+
+            for (ParsedParameter parameter : parameters) {
+                this.parametersByName.put(parameter.getName(), parameter);
+            }
+        }
+
+        /**
+         * Parse the {@code sql} query and resolve variable parameters.
+         *
+         * @param sql the SQL query to parse.
+         * @return the parsed query.
+         */
+        static ParsedQuery parse(String sql) {
+
+            Objects.requireNonNull(sql, "SQL must not be null");
+
+            List<ParsedParameter> variables = new ArrayList<>();
+
+            int offset = 0;
+            while (offset != -1) {
+
+                offset = findCharacter('@', sql, offset);
+
+                if (offset != -1) {
+
+                    Matcher matcher = PARAMETER_MATCHER.matcher(sql.substring(offset));
+                    offset++;
+                    if (matcher.find()) {
+
+                        String name = matcher.group(1);
+                        variables.add(new ParsedParameter(name, offset));
+                    }
+                }
+            }
+
+            return new ParsedQuery(sql, variables);
+        }
+
+        /**
+         * Returns the  {@link ParsedParameter} by {@code name}.
+         *
+         * @param name the parameter name.
+         * @return the {@link ParsedParameter} whose name matches {@code name}.
+         */
+        ParsedParameter getParameter(String name) {
+
+            ParsedParameter parsedParameter = this.parametersByName.get(name);
+
+            if (parsedParameter == null) {
+                throw new IllegalArgumentException(String.format("Parameter [%s] does not exist in query [%s]", name, this.sql));
+            }
+
+            return parsedParameter;
+        }
+
+        /**
+         * Returns the parameter name at the positional {@code index}.
+         *
+         * @param index
+         * @return
+         */
+        public String getParameterName(int index) {
+
+            if (index < 0) {
+                throw new IndexOutOfBoundsException("Index must be greater or equal to zero");
+            }
+
+            if (index >= getParameterCount()) {
+                throw new IndexOutOfBoundsException(String.format("No such parameter with index [%d]  in query [%s]", index, this.sql));
+            }
+
+            return this.parameters.get(index).getName();
         }
 
         public String getSql() {
             return sql;
         }
 
-        public int getVariableCount() {
-            return this.variables.size();
+        /**
+         * @return the number of parameters.
+         */
+        public int getParameterCount() {
+            return this.parameters.size();
         }
 
-        public String getVariableName(int index) {
-            return this.variables.get(index).getName();
-        }
-
-        public List<ParsedVariable> getVariables() {
-            return variables;
+        public List<ParsedParameter> getParameters() {
+            return parameters;
         }
 
         @Override
@@ -293,12 +364,12 @@ public final class PreparedMssqlStatement implements MssqlStatement<PreparedMssq
             }
             ParsedQuery that = (ParsedQuery) o;
             return Objects.equals(sql, that.sql) &&
-                Objects.equals(variables, that.variables);
+                Objects.equals(parameters, that.parameters);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(sql, variables);
+            return Objects.hash(sql, parameters);
         }
 
         @Override
@@ -306,25 +377,26 @@ public final class PreparedMssqlStatement implements MssqlStatement<PreparedMssq
             final StringBuffer sb = new StringBuffer();
             sb.append(getClass().getSimpleName());
             sb.append(" [sql='").append(sql).append('\'');
-            sb.append(", variables=").append(variables);
+            sb.append(", variables=").append(parameters);
             sb.append(']');
             return sb.toString();
         }
     }
 
     /**
-     * A SQL variable within a SQL query.
+     * A SQL parameter within a SQL query.
      */
-    static class ParsedVariable {
+    static class ParsedParameter {
 
         private final String name;
 
         private final int position;
 
-        public ParsedVariable(String name, int position) {
+        ParsedParameter(String name, int position) {
             this.name = name;
             this.position = position;
         }
+
 
         public String getName() {
             return name;
@@ -339,10 +411,10 @@ public final class PreparedMssqlStatement implements MssqlStatement<PreparedMssq
             if (this == o) {
                 return true;
             }
-            if (!(o instanceof ParsedVariable)) {
+            if (!(o instanceof ParsedParameter)) {
                 return false;
             }
-            ParsedVariable that = (ParsedVariable) o;
+            ParsedParameter that = (ParsedParameter) o;
             return position == that.position &&
                 Objects.equals(name, that.name);
         }
@@ -363,99 +435,27 @@ public final class PreparedMssqlStatement implements MssqlStatement<PreparedMssq
         }
     }
 
-    private static final class Bindings {
+    static final class Bindings {
 
         private final List<Binding> bindings = new ArrayList<>();
 
         private Binding current;
 
-        @Override
-        public String toString() {
-            return "Bindings{" +
-                "bindings=" + this.bindings +
-                ", current=" + this.current +
-                '}';
-        }
-
         private void finish() {
             this.current = null;
         }
 
-        private Binding first() {
+        Binding first() {
             return this.bindings.stream().findFirst().orElseThrow(() -> new IllegalStateException("No parameters have been bound"));
         }
 
-        private Binding getCurrent() {
+        Binding getCurrent() {
             if (this.current == null) {
                 this.current = new Binding();
                 this.bindings.add(this.current);
             }
 
             return this.current;
-        }
-
-        private Stream<Binding> stream() {
-            return this.bindings.stream();
-        }
-    }
-
-    /**
-     * A collection of {@link Parameter}s for a single bind invocation of a prepared statement.
-     */
-    static class Binding {
-
-        private final Map<String, Encoded> parameters = new LinkedHashMap<>();
-
-        /**
-         * Add a {@link Parameter} to the binding.
-         *
-         * @param name      the name of the {@link Parameter}
-         * @param parameter the {@link Parameter}
-         * @return this {@link Binding}
-         * @throws NullPointerException if {@code index} or {@code parameter} is {@code null}
-         */
-        public Binding add(String name, Encoded parameter) {
-            Objects.requireNonNull(name, "Name must not be null");
-            Objects.requireNonNull(parameter, "parameter must not be null");
-
-            this.parameters.put(name, parameter);
-
-            return this;
-        }
-
-        public Map<String, Encoded> getParameters() {
-            return parameters;
-        }
-
-        private int size() {
-            return this.parameters.size();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            Binding that = (Binding) o;
-            return Objects.equals(this.parameters, that.parameters);
-        }
-
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(this.parameters);
-        }
-
-        @Override
-        public String toString() {
-            final StringBuffer sb = new StringBuffer();
-            sb.append(getClass().getSimpleName());
-            sb.append(" [parameters=").append(parameters);
-            sb.append(']');
-            return sb.toString();
         }
     }
 }
