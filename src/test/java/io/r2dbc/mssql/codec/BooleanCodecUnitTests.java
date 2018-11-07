@@ -18,7 +18,9 @@ package io.r2dbc.mssql.codec;
 
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
+import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
+import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.Test;
 
 import static io.r2dbc.mssql.message.type.TypeInformation.builder;
@@ -78,6 +80,12 @@ class BooleanCodecUnitTests {
 
         assertThat(BooleanCodec.INSTANCE.decode(HexUtils.decodeToByteBuf("01"), ColumnUtil.createColumn(type), Boolean.class)).isTrue();
         assertThat(BooleanCodec.INSTANCE.decode(HexUtils.decodeToByteBuf("00"), ColumnUtil.createColumn(type), Boolean.class)).isFalse();
+    }
+
+    @Test
+    void shouldEncodeBoolean() {
+
+        EncodedAssert.assertThat(BooleanCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), true)).isEqualToHex("01");
     }
 
     private TypeInformation createType(int length, SqlServerType serverType) {

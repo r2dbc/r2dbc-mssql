@@ -18,7 +18,9 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Length;
+import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 
 import java.math.BigDecimal;
@@ -37,6 +39,10 @@ import java.math.BigInteger;
  */
 final class DecimalCodec extends AbstractCodec<BigDecimal> {
 
+    private final static int MAX_LENGTH = 0x11;
+
+    private final static int MAX_PRECISION = 38;
+    
     static final DecimalCodec INSTANCE = new DecimalCodec();
 
     private DecimalCodec() {
@@ -64,7 +70,28 @@ final class DecimalCodec extends AbstractCodec<BigDecimal> {
     }
 
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, TypeInformation type, BigDecimal value) {
-        return null;
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, BigDecimal value) {
+        return RpcEncoding.encode(allocator, TdsDataType.DECIMALN, 0x11, MAX_PRECISION, value, DecimalCodec::encodeBigDecimal);
+    }
+
+    private static void encodeBigDecimal(ByteBuf buffer, BigDecimal value) {
+
+        boolean isNegative = (value.signum() < 0);
+
+        BigInteger valueToUse = value.unscaledValue();
+
+        if (isNegative) {
+            valueToUse = valueToUse.negate();
+        }
+
+        byte[] unscaledBytes = valueToUse.toByteArray();
+
+        Encode.asByte(buffer, value.scale());
+        Encode.asByte(buffer, unscaledBytes.length + 1); // data length + sign
+        Encode.asByte(buffer, isNegative ? 0 : 1);   // 1 = +ve, 0 = -ve
+
+        for (int i = unscaledBytes.length - 1; i >= 0; i--) {
+            Encode.asByte(buffer, unscaledBytes[i]);
+        }
     }
 }

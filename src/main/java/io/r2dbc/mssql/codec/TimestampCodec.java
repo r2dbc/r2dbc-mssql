@@ -57,10 +57,12 @@ final class TimestampCodec extends AbstractCodec<byte[]> {
     }
 
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, TypeInformation type, byte[] value) {
+    public boolean canEncode(Object value) {
+        return false;
+    }
 
-        ByteBuf buffer = allocator.buffer(value.length);
-        buffer.writeBytes(value);
-        return Encoded.of(buffer);
+    @Override
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, byte[] value) {
+        throw new UnsupportedOperationException();
     }
 }

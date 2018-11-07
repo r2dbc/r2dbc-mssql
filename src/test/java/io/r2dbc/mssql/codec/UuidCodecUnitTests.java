@@ -50,10 +50,8 @@ class UuidCodecUnitTests {
     @Test
     void shouldEncodeUuid() {
 
-        TypeInformation type = builder().withMaxLength(16).withLengthStrategy(LengthStrategy.FIXEDLENTYPE).withPrecision(16).withServerType(SqlServerType.GUID).build();
-
         UUID uuid = UUID.fromString("C70D7BF1-E5C7-40C5-98C7-A12F7E686724");
-        ByteBuf encoded = UuidCodec.INSTANCE.encode(TestByteBufAllocator.TEST, type, uuid);
-        EncodedAssert.assertThat(encoded).isEqualToHex("F17B0DC7C7E5C54098C7A12F7E686724");
+        Encoded encoded = UuidCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), uuid);
+        EncodedAssert.assertThat(encoded).isEqualToHex("10 10 F17B0DC7C7E5C54098C7A12F7E686724");
     }
 }

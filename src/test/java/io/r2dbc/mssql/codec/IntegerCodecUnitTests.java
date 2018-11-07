@@ -96,8 +96,6 @@ class IntegerCodecUnitTests {
     @Test
     void shouldEncodeInteger() {
 
-        TypeInformation type = createType(4, SqlServerType.INTEGER);
-
-        EncodedAssert.assertThat(IntegerCodec.INSTANCE.encode(TestByteBufAllocator.TEST, type, 16777217)).isEqualToHex("0100000100000000");
+        EncodedAssert.assertThat(IntegerCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), 16777217)).isEqualToHex("01 00 00 01");
     }
 }

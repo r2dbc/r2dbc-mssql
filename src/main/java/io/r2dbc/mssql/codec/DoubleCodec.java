@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Length;
+import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
@@ -63,19 +64,7 @@ final class DoubleCodec extends AbstractCodec<Double> {
     }
 
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, TypeInformation type, Double value) {
-
-        if (type.getServerType() == SqlServerType.REAL) {
-
-            ByteBuf buffer = allocator.buffer(4);
-            Encode.asFloat(buffer, value.floatValue());
-
-            return Encoded.of(buffer);
-        }
-
-        ByteBuf buffer = allocator.buffer(8);
-        Encode.asDouble(buffer, value);
-
-        return Encoded.of(buffer);
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Double value) {
+        return RpcEncoding.encode(allocator, TdsDataType.FLOAT8, value, Encode::asDouble);
     }
 }

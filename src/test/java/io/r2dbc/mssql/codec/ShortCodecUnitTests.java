@@ -96,8 +96,6 @@ class ShortCodecUnitTests {
     @Test
     void shouldEncodeShort() {
 
-        TypeInformation type = createType(2, SqlServerType.SMALLINT);
-
-        EncodedAssert.assertThat(ShortCodec.INSTANCE.encode(TestByteBufAllocator.TEST, type, (short) 258)).isEqualToHex("0201");
+        EncodedAssert.assertThat(ShortCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), (short) 258)).isEqualToHex("0201");
     }
 }

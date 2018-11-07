@@ -29,9 +29,14 @@ public final class Encoded extends AbstractReferenceCounted {
 
     private final ByteBuf value;
 
-    public Encoded(TdsDataType dataType, ByteBuf value) {
+
+    private Encoded(TdsDataType dataType, ByteBuf value) {
         this.dataType = dataType;
         this.value = value;
+    }
+
+    public static Encoded of(TdsDataType dataType, ByteBuf value) {
+        return new Encoded(dataType, value);
     }
 
     public TdsDataType getDataType() {
@@ -41,6 +46,7 @@ public final class Encoded extends AbstractReferenceCounted {
     public ByteBuf getValue() {
         return value;
     }
+
 
     @Override
     public Encoded touch(Object hint) {

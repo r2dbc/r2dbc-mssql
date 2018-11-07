@@ -57,8 +57,11 @@ class LocalDateTimeCodecUnitTests {
 
         LocalDateTime value = LocalDateTime.parse("2018-06-04T01:02");
 
-        ByteBuf encoded = LocalDateTimeCodec.INSTANCE.encode(TestByteBufAllocator.TEST, SMALLDATETIME, value);
-        EncodedAssert.assertThat(encoded).isEqualToHex("04F5A83E00");
+        ByteBuf encoded = TestByteBufAllocator.TEST.buffer();
+
+        LocalDateTimeCodec.INSTANCE.doEncode(encoded, SqlServerType.SMALLDATETIME, 0, value);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("F5A83E00");
     }
 
     @Test
@@ -76,8 +79,9 @@ class LocalDateTimeCodecUnitTests {
 
         LocalDateTime value = LocalDateTime.parse("2018-10-27T15:40:57.1");
 
-        ByteBuf encoded = LocalDateTimeCodec.INSTANCE.encode(TestByteBufAllocator.TEST, DATETIME, value);
-        EncodedAssert.assertThat(encoded).isEqualToHex("0886A90000AA700201");
+        ByteBuf encoded = TestByteBufAllocator.TEST.buffer();
+        LocalDateTimeCodec.INSTANCE.doEncode(encoded, SqlServerType.DATETIME, 0, value);
+        EncodedAssert.assertThat(encoded).isEqualToHex("86A90000AA700201");
     }
 
     @Test
@@ -95,7 +99,7 @@ class LocalDateTimeCodecUnitTests {
 
         LocalDateTime value = LocalDateTime.parse("2018-10-27T15:41:00.162");
 
-        ByteBuf encoded = LocalDateTimeCodec.INSTANCE.encode(TestByteBufAllocator.TEST, DATETIME2, value);
-        EncodedAssert.assertThat(encoded).isEqualToHex("082006E17483E13E0B");
+        Encoded encoded = LocalDateTimeCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), value);
+        EncodedAssert.assertThat(encoded).isEqualToHex("07 08 20 06 E1 74 83 E1 3E 0B");
     }
 }

@@ -16,10 +16,9 @@
 
 package io.r2dbc.mssql.codec;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.tds.Encode;
-import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.message.type.TdsDataType;
 
 /**
  * Codec for numeric values that are represented as {@link Short}.
@@ -44,11 +43,7 @@ final class ShortCodec extends AbstractNumericCodec<Short> {
     }
 
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, TypeInformation type, Short value) {
-
-        ByteBuf buffer = allocator.buffer(SIZE_SMALL_INT);
-        Encode.smallInt(buffer, value);
-
-        return Encoded.of(buffer);
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Short value) {
+        return RpcEncoding.encode(allocator, TdsDataType.INT2, value, Encode::smallInt);
     }
 }

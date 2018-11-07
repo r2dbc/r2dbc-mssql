@@ -18,7 +18,9 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Length;
+import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
@@ -56,7 +58,7 @@ final class FloatCodec extends AbstractCodec<Float> {
     }
 
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, TypeInformation type, Float value) {
-        return DoubleCodec.INSTANCE.doEncode(allocator, type, value.doubleValue());
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Float value) {
+        return RpcEncoding.encode(allocator, TdsDataType.FLOAT4, value, Encode::asFloat);
     }
 }

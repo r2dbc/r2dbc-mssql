@@ -29,11 +29,11 @@ import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
  */
 public final class Length {
 
-    private static final long PLP_NULL = 0xFFFFFFFFFFFFFFFFL;
+    public static final long PLP_NULL = 0xFFFFFFFFFFFFFFFFL;
 
-    private static final int USHORT_NULL = 65535;
+    public static final int USHORT_NULL = 65535;
 
-    private static final int UNKNOWN_STREAM_LENGTH = -1;
+    public static final int UNKNOWN_STREAM_LENGTH = -1;
 
     private final int length;
 

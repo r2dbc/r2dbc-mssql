@@ -20,7 +20,9 @@ import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
+import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
+import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.Test;
 
 import static io.r2dbc.mssql.message.type.TypeInformation.builder;
@@ -64,5 +66,13 @@ class FloatCodecUnitTests {
         ByteBuf buffer = HexUtils.decodeToByteBuf("0437423146");
 
         assertThat(FloatCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), Float.class)).isEqualTo((float) 11344.554);
+    }
+
+    @Test
+    void shouldEncodeFloat() {
+
+        Encoded encoded = FloatCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), 11344.554f);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("37 42 31 46");
     }
 }

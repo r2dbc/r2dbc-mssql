@@ -19,6 +19,7 @@ package io.r2dbc.mssql.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.type.Length;
+import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeUtils;
@@ -76,31 +77,22 @@ final class LocalTimeCodec extends AbstractCodec<LocalTime> {
     }
 
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, TypeInformation type, LocalTime value) {
-
-        int scale = type.getScale();
-
-        Assert.isTrue(scale >= 0 && scale <= TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, "Invalid fractional scale");
-
-        int valueLength = TypeUtils.getTimeValueLength(scale);
-        ByteBuf buffer = allocator.buffer(valueLength);
-
-        doEncode(buffer, scale, valueLength, value);
-
-        return Encoded.of(buffer);
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, LocalTime value) {
+        return RpcEncoding.encode(allocator, TdsDataType.TIMEN, TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, TypeUtils.getTimeValueLength(TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE), value, (buffer,
+                                                                                                                                                                                      localTime) -> doEncode(buffer,
+            TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, localTime));
     }
 
-    void doEncode(ByteBuf buffer, TypeInformation type, LocalTime value) {
+    static void doEncode(ByteBuf buffer, int scale, LocalTime value) {
 
-        int scale = type.getScale();
         int valueLength = TypeUtils.getTimeValueLength(scale);
         doEncode(buffer, scale, valueLength, value);
     }
 
-    private void doEncode(ByteBuf buffer, int scale, int valueLength, LocalTime value) {
+    private static void doEncode(ByteBuf buffer, int scale, int valueLength, LocalTime value) {
 
         long nanosSinceMidnight = value.toNanoOfDay();
-        nanosSinceMidnight /= SCALED_MULTIPLIERS[scale];
+        nanosSinceMidnight /= SCALED_MULTIPLIERS[valueLength];
 
         for (int i = 0; i < valueLength; i++) {
             buffer.writeByte((byte) ((nanosSinceMidnight >> (8 * i)) & 0xFF));

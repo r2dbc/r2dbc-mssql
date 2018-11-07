@@ -18,7 +18,6 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.message.type.Length;
@@ -28,7 +27,6 @@ import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeUtils;
 import reactor.util.annotation.Nullable;
 
-import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.EnumSet;
 import java.util.Locale;
@@ -86,11 +84,15 @@ final class StringCodec extends AbstractCodec<String> {
     }
 
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, TypeInformation type, String value) {
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, String value) {
 
-        Charset charset = type.getCharset();
 
-        return new Encoded(ByteBufUtil.encodeString(allocator, CharBuffer.wrap(value), charset), false);
+        TdsDataType dataType = getDataType(context.getDirection(), value);
+        ByteBuf buffer = allocator.buffer((value.length() * 2) + 7);
+
+        doEncode(buffer, context.getDirection(), context.getCollation(), value);
+
+        return Encoded.of(dataType, buffer);
     }
 
     static TdsDataType getDataType(RpcDirection direction, @Nullable String value) {

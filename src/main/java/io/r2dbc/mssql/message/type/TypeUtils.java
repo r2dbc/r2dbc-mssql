@@ -87,9 +87,9 @@ public final class TypeUtils {
 
     public static final int MAX_FRACTIONAL_SECONDS_SCALE = 7;
 
-    static final int DAYS_INTO_CE_LENGTH = 3;
+    public static final int DAYS_INTO_CE_LENGTH = 3;
 
-    static final int MINUTES_OFFSET_LENGTH = 2;
+    public static final int MINUTES_OFFSET_LENGTH = 2;
 
     // Number of days in a "normal" (non-leap) year according to SQL Server.
     static final int DAYS_PER_YEAR = 365;

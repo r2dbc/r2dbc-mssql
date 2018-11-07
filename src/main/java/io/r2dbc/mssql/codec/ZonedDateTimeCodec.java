@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Length;
+import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeUtils;
@@ -71,17 +72,23 @@ final class ZonedDateTimeCodec extends AbstractCodec<ZonedDateTime> {
     }
 
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, TypeInformation type, ZonedDateTime value) {
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, ZonedDateTime value) {
 
-        ByteBuf buffer = allocator.buffer(TypeUtils.getDateTimeValueLength(type.getScale()) + 2);
+        ByteBuf buffer = allocator.buffer(12);
+        buffer.writeByte(7);
+        buffer.writeByte(0x0a);
+        doEncode(buffer, value);
 
-        LocalTimeCodec.INSTANCE.doEncode(buffer, type, value.toLocalTime());
-        LocalDateCodec.INSTANCE.doEncode(buffer, value.toLocalDate());
+        return Encoded.of(TdsDataType.DATETIMEOFFSETN, buffer);
+    }
+
+    static void doEncode(ByteBuf buffer, ZonedDateTime value) {
+
+        LocalTimeCodec.doEncode(buffer, TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, value.toLocalTime());
+        LocalDateCodec.doEncode(buffer, value.toLocalDate());
 
         int localMinutesOffset = value.getOffset().getTotalSeconds() / 60;
 
         Encode.uShort(buffer, localMinutesOffset);
-
-        return Encoded.of(buffer);
     }
 }

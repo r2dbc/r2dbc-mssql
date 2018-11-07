@@ -17,22 +17,49 @@
 package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.ReferenceCounted;
+import io.r2dbc.mssql.message.token.Column;
+import io.r2dbc.mssql.message.token.ReturnValue;
+import io.r2dbc.mssql.message.token.RowToken;
 import reactor.util.annotation.Nullable;
 
 /**
- * Registry for {@link Codec}s to encodes and decodes values.
+ * Registry for {@link Codec}s to encode RPC parameters and decode tabular values.
+ *
+ * @see ReturnValue
+ * @see Column
+ * @see RowToken
  */
 public interface Codecs {
 
     /**
      * Decode a data to a value.
      *
-     * @param buffer the {@link ByteBuf} to decode.
+     * @param buffer    the {@link ByteBuf} to decode.
      * @param decodable the decodable metadata.
-     * @param type   the type to decode to.
-     * @param <T>    the type of item being returned.
-     * @return the decoded value.
+     * @param type      the type to decode to.
+     * @param <T>       the type of item being returned.
+     * @return the decoded value. Can be {@literal null} if the column value is {@literal NULL}.
      */
     @Nullable
     <T> T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type);
+
+    /**
+     * Encode a {@literal null} value for a specific {@link Class type}.
+     *
+     * @param type the type to represent {@literal null}.
+     * @return the encoded {@literal null} value.
+     */
+    Encoded encodeNull(Class<?> type);
+
+    /**
+     * Encode a non-{@literal null} {@code value} as RPC parameter.
+     *
+     * @param allocator the allocator to allocate encoding buffers.
+     * @param context   parameter context.
+     * @param value     the {@literal null} {@code value}.
+     * @return the encoded value. Must be {@link ReferenceCounted#release() released} after usage.
+     */
+    Encoded encode(ByteBufAllocator allocator, RpcParameterContext context, Object value);
 }

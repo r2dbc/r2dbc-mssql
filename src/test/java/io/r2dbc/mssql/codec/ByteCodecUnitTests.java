@@ -92,9 +92,7 @@ class ByteCodecUnitTests {
     @Test
     void shouldEncodeByte() {
 
-        TypeInformation type = createType(1, SqlServerType.TINYINT);
-
-        EncodedAssert.assertThat(ByteCodec.INSTANCE.encode(TestByteBufAllocator.TEST, type, (byte) 2)).isEqualToHex("02");
+        EncodedAssert.assertThat(ByteCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), (byte) 2)).isEqualToHex("02");
     }
 
     private TypeInformation createType(int length, SqlServerType serverType) {

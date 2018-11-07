@@ -18,8 +18,7 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.Codecs;
-import io.r2dbc.mssql.message.rpc.EncodedRpcParameter;
-import io.r2dbc.mssql.message.rpc.RpcDirection;
+import io.r2dbc.mssql.codec.Encoded;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Statement;
 import reactor.core.publisher.Flux;
@@ -96,19 +95,21 @@ public final class PreparedMssqlStatement implements MssqlStatement<PreparedMssq
 
     @Override
     public PreparedMssqlStatement bindNull(Object identifier, Class<?> type) {
-        Objects.requireNonNull(identifier, "identifier must not be null");
-        Assert.isInstanceOf(String.class, identifier, "identifier must be a String");
+
+        Objects.requireNonNull(identifier, "Identifier must not be null");
+        Assert.isInstanceOf(String.class, identifier, "Identifier must be a String");
         Objects.requireNonNull(type, "type must not be null");
 
-        this.bindings.getCurrent().add((String) identifier, this.codecs.encodeNull(RpcDirection.OUT, type));
+        this.bindings.getCurrent().add((String) identifier, this.codecs.encodeNull(type));
         return this;
     }
 
     @Override
     public PreparedMssqlStatement bindNull(int index, Class<?> type) {
-        Objects.requireNonNull(type, "type must not be null");
 
-        this.bindings.getCurrent().add(getVariableName(index), this.codecs.encodeNull(RpcDirection.OUT, type));
+        Objects.requireNonNull(type, "Type must not be null");
+
+        this.bindings.getCurrent().add(getVariableName(index), this.codecs.encodeNull(type));
         return this;
     }
 
@@ -403,7 +404,7 @@ public final class PreparedMssqlStatement implements MssqlStatement<PreparedMssq
      */
     static class Binding {
 
-        private final Map<String, EncodedRpcParameter> parameters = new LinkedHashMap<>();
+        private final Map<String, Encoded> parameters = new LinkedHashMap<>();
 
         /**
          * Add a {@link Parameter} to the binding.
@@ -413,7 +414,7 @@ public final class PreparedMssqlStatement implements MssqlStatement<PreparedMssq
          * @return this {@link Binding}
          * @throws NullPointerException if {@code index} or {@code parameter} is {@code null}
          */
-        public Binding add(String name, EncodedRpcParameter parameter) {
+        public Binding add(String name, Encoded parameter) {
             Objects.requireNonNull(name, "Name must not be null");
             Objects.requireNonNull(parameter, "parameter must not be null");
 
@@ -422,7 +423,7 @@ public final class PreparedMssqlStatement implements MssqlStatement<PreparedMssq
             return this;
         }
 
-        public Map<String, EncodedRpcParameter> getParameters() {
+        public Map<String, Encoded> getParameters() {
             return parameters;
         }
 

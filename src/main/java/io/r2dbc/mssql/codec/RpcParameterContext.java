@@ -19,18 +19,107 @@ package io.r2dbc.mssql.codec;
 import io.r2dbc.mssql.message.type.Collation;
 import reactor.util.annotation.Nullable;
 
+import java.util.Objects;
+
 /**
+ * Parameter context for RPC parameters. Encapsulated {@link RpcDirection} and an optional {@link Collation}.
+ *
  * @author Mark Paluch
  */
-public class RpcParameterContext {
+public final class RpcParameterContext {
+
+    private static final RpcParameterContext IN = new RpcParameterContext(RpcDirection.IN, null);
+
+    private static final RpcParameterContext OUT = new RpcParameterContext(RpcDirection.OUT, null);
 
     private final RpcDirection direction;
 
     @Nullable
     private final Collation collation;
 
-    public RpcParameterContext(RpcDirection direction, @Nullable Collation collation) {
+    private RpcParameterContext(RpcDirection direction, @Nullable Collation collation) {
         this.direction = direction;
         this.collation = collation;
+    }
+
+    /**
+     * Returns a context for in (client to server) parameters.
+     *
+     * @return a context for in (client to server) parameters.
+     * @see RpcDirection#IN
+     */
+    public static RpcParameterContext in() {
+        return IN;
+    }
+
+    /**
+     * Returns a context for in (client to server) parameters with the associated {@link Collation}.
+     *
+     * @param collation the collation for character values.
+     * @return a context for in (client to server) parameters with the associated {@link Collation}.
+     * @see RpcDirection#IN
+     */
+    public static RpcParameterContext in(Collation collation) {
+        return new RpcParameterContext(RpcDirection.IN, Objects.requireNonNull(collation, "Collation must not be null"));
+    }
+
+    /**
+     * Returns a context for out (server to client) parameters.
+     *
+     * @return a context for out (server to client) parameters.
+     * @see RpcDirection#OUT
+     */
+    public static RpcParameterContext out() {
+        return OUT;
+    }
+
+    /**
+     * Returns a context for out (server to client) parameters with the associated {@link Collation}.
+     *
+     * @param collation the collation for character values.
+     * @return a context for out (server to client) parameters with the associated {@link Collation}.
+     * @see RpcDirection#IN
+     */
+    public static RpcParameterContext out(Collation collation) {
+        return new RpcParameterContext(RpcDirection.OUT, Objects.requireNonNull(collation, "Collation must not be null"));
+    }
+
+    /**
+     * @return the RPC direction.
+     */
+    public RpcDirection getDirection() {
+        return direction;
+    }
+
+    /**
+     * @return {@literal true} if this parameter is a in parameter.
+     */
+    public boolean isIn() {
+        return this.direction == RpcDirection.IN;
+    }
+
+    /**
+     * @return {@literal true} if this parameter is a out parameter.
+     */
+    public boolean isOut() {
+        return this.direction == RpcDirection.OUT;
+    }
+
+    /**
+     * @return the collation, can be {@literal null}.
+     */
+    @Nullable
+    public Collation getCollation() {
+        return collation;
+    }
+
+    @Override
+    public String toString() {
+        final StringBuffer sb = new StringBuffer();
+        sb.append(getClass().getSimpleName());
+        sb.append(" [direction=").append(direction);
+        sb.append(", collation=").append(collation);
+        sb.append(']');
+        return sb.toString();
     }
 }

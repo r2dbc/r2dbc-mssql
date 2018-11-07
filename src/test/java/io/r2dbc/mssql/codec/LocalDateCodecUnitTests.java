@@ -54,7 +54,7 @@ class LocalDateCodecUnitTests {
 
         LocalDate value = LocalDate.parse("2018-10-23");
 
-        ByteBuf encoded = LocalDateCodec.INSTANCE.encode(TestByteBufAllocator.TEST, DATE, value);
-        EncodedAssert.assertThat(encoded).isEqualToHex("03DD3E0B");
+        Encoded encoded = LocalDateCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), value);
+        EncodedAssert.assertThat(encoded).isEqualToHex("03 DD 3E 0B");
     }
 }

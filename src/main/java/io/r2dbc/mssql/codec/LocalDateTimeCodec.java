@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Length;
+import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeUtils;
@@ -97,16 +98,21 @@ final class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
             return localTime.atDate(localDate);
         }
 
-
         throw new UnsupportedOperationException(String.format("Cannot decode value from server type [%s]", type.getServerType()));
     }
 
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, TypeInformation type, LocalDateTime value) {
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, LocalDateTime value) {
 
-        if (type.getServerType() == SqlServerType.SMALLDATETIME) {
+        return RpcEncoding.encode(allocator, TdsDataType.DATETIME2N, TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, 8, value,
+            (buffer, localDateTime) -> {
+                doEncode(buffer, SqlServerType.DATETIME2, TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, localDateTime);
+            });
+    }
 
-            ByteBuf buffer = allocator.buffer(4);
+    void doEncode(ByteBuf buffer, SqlServerType type, int scale, LocalDateTime value) {
+
+        if (type == SqlServerType.SMALLDATETIME) {
 
             LocalDateTime midnight = value.truncatedTo(ChronoUnit.DAYS);
             int daysSinceBaseDate = Math.toIntExact(Duration.between(DATETIME_ZERO, midnight).toDays());
@@ -115,12 +121,10 @@ final class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
             Encode.uShort(buffer, daysSinceBaseDate);
             Encode.uShort(buffer, minutesSinceMidnight);
 
-            return Encoded.of(buffer);
+            return;
         }
 
-        if (type.getServerType() == SqlServerType.DATETIME) {
-
-            ByteBuf buffer = allocator.buffer(8);
+        if (type == SqlServerType.DATETIME) {
 
             LocalDateTime midnight = value.truncatedTo(ChronoUnit.DAYS);
             int daysSinceBaseDate = Math.toIntExact(Duration.between(DATETIME_ZERO, midnight).toDays());
@@ -132,19 +136,17 @@ final class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
             Encode.asInt(buffer, daysSinceBaseDate);
             Encode.asInt(buffer, (int) ticksSinceMidnight);
 
-            return Encoded.of(buffer);
+            return;
         }
 
-        if (type.getServerType() == SqlServerType.DATETIME2) {
+        if (type == SqlServerType.DATETIME2) {
 
-            ByteBuf buffer = allocator.buffer(TypeUtils.getDateTimeValueLength(type.getScale()));
+            LocalTimeCodec.doEncode(buffer, scale, value.toLocalTime());
+            LocalDateCodec.doEncode(buffer, value.toLocalDate());
 
-            LocalTimeCodec.INSTANCE.doEncode(buffer, type, value.toLocalTime());
-            LocalDateCodec.INSTANCE.doEncode(buffer, value.toLocalDate());
-
-            return Encoded.of(buffer);
+            return;
         }
 
-        throw new UnsupportedOperationException(String.format("Cannot encode [%s] to server type [%s]", value, type.getServerType()));
+        throw new UnsupportedOperationException(String.format("Cannot encode [%s] to server type [%s]", value, type));
     }
 }

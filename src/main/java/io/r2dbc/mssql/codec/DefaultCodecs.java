@@ -17,6 +17,7 @@
 package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import reactor.util.annotation.Nullable;
 
 import java.util.Arrays;
@@ -75,5 +76,36 @@ public final class DefaultCodecs implements Codecs {
         }
 
         throw new IllegalArgumentException(String.format("Cannot decode value of type [%s], name [%s] server type [%s]", type.getName(), decodable.getName(), decodable.getType().getServerType()));
+    }
+
+    @Override
+    public Encoded encodeNull(Class<?> type) {
+
+        Objects.requireNonNull(type, "Type must not be null");
+
+        for (Codec<?> codec : this.codecs) {
+            if (codec.canEncodeNull(type)) {
+                return codec.encodeNull();
+            }
+        }
+
+        throw new IllegalArgumentException(String.format("Cannot encode [null] parameter of type [%s]", type.getName()));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtpes"})
+    @Override
+    public Encoded encode(ByteBufAllocator allocator, RpcParameterContext context, Object value) {
+
+        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        Objects.requireNonNull(context, "RpcParameterContext must not be null");
+        Objects.requireNonNull(value, "Value must not be null");
+
+        for (Codec<?> codec : this.codecs) {
+            if (codec.canEncode(value)) {
+                return ((Codec) codec).encode(allocator, context, value);
+            }
+        }
+
+        throw new IllegalArgumentException(String.format("Cannot encode [%s] parameter of type [%s]", value, value.getClass().getName()));
     }
 }

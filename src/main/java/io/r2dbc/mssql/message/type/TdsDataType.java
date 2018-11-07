@@ -16,6 +16,8 @@
 
 package io.r2dbc.mssql.message.type;
 
+import io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
+
 /**
  * SQL Server data types as represented within TDS.
  */
@@ -23,49 +25,49 @@ public enum TdsDataType {
 
     // @formatter:off
     // FIXEDLEN types
-    BIT1(0x32), // 50
-    INT8(0x7F), // 127
-    INT4(0x38), // 56
-    INT2(0x34), // 52
-    INT1(0x30), // 48
-    FLOAT4(0x3B), // 59
-    FLOAT8(0x3E), // 62
-    DATETIME4(0x3A), // 58
-    DATETIME8(0x3D), // 61
-    MONEY4(0x7A), // 122
-    MONEY8(0x3C), // 60
+    BIT1(0x32, LengthStrategy.FIXEDLENTYPE), // 50
+    INT8(0x7F, LengthStrategy.FIXEDLENTYPE), // 127
+    INT4(0x38, LengthStrategy.FIXEDLENTYPE), // 56
+    INT2(0x34, LengthStrategy.FIXEDLENTYPE), // 52
+    INT1(0x30, LengthStrategy.FIXEDLENTYPE), // 48
+    FLOAT4(0x3B, LengthStrategy.FIXEDLENTYPE), // 59
+    FLOAT8(0x3E, LengthStrategy.FIXEDLENTYPE), // 62
+    DATETIME4(0x3A, LengthStrategy.FIXEDLENTYPE), // 58
+    DATETIME8(0x3D, LengthStrategy.FIXEDLENTYPE), // 61
+    MONEY4(0x7A, LengthStrategy.FIXEDLENTYPE), // 122
+    MONEY8(0x3C, LengthStrategy.FIXEDLENTYPE), // 60
 
     // BYTELEN types
-    BITN(0x68), // 104
-    INTN(0x26), // 38
-    DECIMALN(0x6A), // 106
-    NUMERICN(0x6C), // 108
-    FLOATN(0x6D), // 109
-    MONEYN(0x6E), // 110
-    DATETIMEN(0x6F), // 111
-    GUID(0x24), // 36
-    DATEN(0x28), // 40
-    TIMEN(0x29), // 41
-    DATETIME2N(0x2a), // 42
-    DATETIMEOFFSETN(0x2b), // 43
+    BITN(0x68, LengthStrategy.BYTELENTYPE), // 104
+    INTN(0x26, LengthStrategy.BYTELENTYPE), // 38
+    DECIMALN(0x6A, LengthStrategy.BYTELENTYPE), // 106
+    NUMERICN(0x6C, LengthStrategy.BYTELENTYPE), // 108
+    FLOATN(0x6D, LengthStrategy.BYTELENTYPE), // 109
+    MONEYN(0x6E, LengthStrategy.BYTELENTYPE), // 110
+    DATETIMEN(0x6F, LengthStrategy.BYTELENTYPE), // 111
+    GUID(0x24, LengthStrategy.BYTELENTYPE), // 36
+    DATEN(0x28, LengthStrategy.BYTELENTYPE), // 40
+    TIMEN(0x29, LengthStrategy.BYTELENTYPE), // 41
+    DATETIME2N(0x2a, LengthStrategy.BYTELENTYPE), // 42
+    DATETIMEOFFSETN(0x2b, LengthStrategy.BYTELENTYPE), // 43
 
     // USHORTLEN type
-    BIGCHAR(0xAF), // -81
-    BIGVARCHAR(0xA7), // -89
-    BIGBINARY(0xAD), // -83
-    BIGVARBINARY(0xA5), // -91
-    NCHAR(0xEF), // -17
-    NVARCHAR(0xE7), // -15
+    BIGCHAR(0xAF, LengthStrategy.USHORTLENTYPE), // -81
+    BIGVARCHAR(0xA7, LengthStrategy.USHORTLENTYPE), // -89
+    BIGBINARY(0xAD, LengthStrategy.USHORTLENTYPE), // -83
+    BIGVARBINARY(0xA5, LengthStrategy.USHORTLENTYPE), // -91
+    NCHAR(0xEF, LengthStrategy.USHORTLENTYPE), // -17
+    NVARCHAR(0xE7, LengthStrategy.USHORTLENTYPE), // -15
 
     // PARTLEN types
-    IMAGE(0x22), // 34
-    TEXT(0x23), // 35
-    NTEXT(0x63), // 99
-    UDT(0xF0), // -16
-    XML(0xF1), // -15
+    IMAGE(0x22, LengthStrategy.PARTLENTYPE), // 34
+    TEXT(0x23, LengthStrategy.PARTLENTYPE), // 35
+    NTEXT(0x63, LengthStrategy.PARTLENTYPE), // 99
+    UDT(0xF0, LengthStrategy.PARTLENTYPE), // -16
+    XML(0xF1, LengthStrategy.PARTLENTYPE), // -15
 
     // LONGLEN types
-    SQL_VARIANT(0x62); // 98
+    SQL_VARIANT(0x62, LengthStrategy.LONGLENTYPE); // 98
 
     // @formatter:on
 
@@ -75,17 +77,24 @@ public enum TdsDataType {
 
     private final int value;
 
+    private final LengthStrategy lengthStrategy;
+
     static {
         for (TdsDataType s : values())
             cache[s.value] = s;
     }
 
-    TdsDataType(int value) {
+    TdsDataType(int value, LengthStrategy lengthStrategy) {
         this.value = value;
+        this.lengthStrategy = lengthStrategy;
     }
 
     public byte getValue() {
         return (byte) this.value;
+    }
+
+    public LengthStrategy getLengthStrategy() {
+        return lengthStrategy;
     }
 
     /**

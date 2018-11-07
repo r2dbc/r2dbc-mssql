@@ -19,8 +19,10 @@ package io.r2dbc.mssql.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.type.Length;
+import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
+import io.r2dbc.mssql.message.type.TypeUtils;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -66,13 +68,13 @@ final class LocalDateCodec extends AbstractCodec<LocalDate> {
     }
 
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, TypeInformation type, LocalDate value) {
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, LocalDate value) {
 
-        ByteBuf buffer = allocator.buffer(3);
-
+        ByteBuf buffer = allocator.buffer(4);
+        buffer.writeByte(TypeUtils.DAYS_INTO_CE_LENGTH);
         doEncode(buffer, value);
 
-        return Encoded.of(buffer);
+        return Encoded.of(TdsDataType.DATEN, buffer);
     }
 
     /**
@@ -81,7 +83,7 @@ final class LocalDateCodec extends AbstractCodec<LocalDate> {
      * @param buffer
      * @param value
      */
-    void doEncode(ByteBuf buffer, LocalDate value) {
+    static void doEncode(ByteBuf buffer, LocalDate value) {
 
         long days = ChronoUnit.DAYS.between(DATE_ZERO, value);
 

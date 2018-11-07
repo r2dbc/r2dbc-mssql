@@ -18,6 +18,7 @@ package io.r2dbc.mssql.util;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.r2dbc.mssql.codec.Encoded;
 import org.assertj.core.api.AbstractObjectAssert;
 import org.assertj.core.api.Assertions;
 
@@ -43,6 +44,16 @@ public final class EncodedAssert extends AbstractObjectAssert<EncodedAssert, Byt
     public static EncodedAssert assertThat(ByteBuf actual) {
         return new EncodedAssert(actual);
     }
+
+    /**
+     * Create an assertion for a {@link ByteBuf}.
+     *
+     * @param actual
+     */
+    public static EncodedAssert assertThat(Encoded actual) {
+        return new EncodedAssert(actual.getValue());
+    }
+    
 
     /**
      * Assert that the actual {@link ByteBuf data buffer} contains the expected string by converting the buffer using the default {@link Charset}.

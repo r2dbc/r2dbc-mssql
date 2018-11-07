@@ -44,13 +44,29 @@ abstract class AbstractCodec<T> implements Codec<T> {
     }
 
     @Override
-    public boolean canDecode(Decodable decodable, Class<?> type) {
+    public final boolean canDecode(Decodable decodable, Class<?> type) {
 
         Objects.requireNonNull(decodable, "Decodable must not be null");
         Objects.requireNonNull(type, "Type must not be null");
 
         return type.isAssignableFrom(this.type) &&
             doCanDecode(decodable.getType());
+    }
+
+    @Override
+    public final boolean canEncodeNull(Class<?> type) {
+
+        Objects.requireNonNull(type, "Type must not be null");
+
+        return this.type.isAssignableFrom(type);
+    }
+
+    @Override
+    public boolean canEncode(Object value) {
+
+        Objects.requireNonNull(value, "Value must not be null");
+
+        return this.type.isInstance(value);
     }
 
     @Nullable
@@ -65,23 +81,18 @@ abstract class AbstractCodec<T> implements Codec<T> {
     }
 
     @Override
-    public ByteBuf encode(ByteBufAllocator allocator, TypeInformation typeInformation, T value) {
+    public final Encoded encode(ByteBufAllocator allocator, RpcParameterContext parameterContext, T value) {
 
         Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
-        Objects.requireNonNull(typeInformation, "TypeInformation must not be null");
+        Objects.requireNonNull(parameterContext, "RpcParameterContext must not be null");
         Objects.requireNonNull(value, "Value must not be null");
 
+        return doEncode(allocator, parameterContext, value);
+    }
 
-        Encoded encoded = doEncode(allocator, typeInformation, value);
-        Length length = Length.of(encoded.encoded.readableBytes(), encoded.isNull);
-
-        ByteBuf buffer = allocator.buffer(encoded.encoded.readableBytes() + 2);
-
-        length.encode(buffer, typeInformation);
-        buffer.writeBytes(encoded.encoded);
-        encoded.encoded.release();
-
-        return buffer;
+    @Override
+    public Encoded encodeNull() {
+        return null;
     }
 
     /**
@@ -104,28 +115,6 @@ abstract class AbstractCodec<T> implements Codec<T> {
     @Nullable
     abstract T doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends T> valueType);
 
-    abstract Encoded doEncode(ByteBufAllocator allocator, TypeInformation type, T value);
+    abstract Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, T value);
 
-    /**
-     * Wrapper for encoded values.
-     */
-    static class Encoded {
-
-        ByteBuf encoded;
-
-        boolean isNull;
-
-        private Encoded(ByteBuf encoded) {
-            this(encoded, false);
-        }
-
-        Encoded(ByteBuf encoded, boolean isNull) {
-            this.encoded = encoded;
-            this.isNull = isNull;
-        }
-
-        static Encoded of(ByteBuf encoded) {
-            return new Encoded(encoded);
-        }
-    }
 }

@@ -20,7 +20,9 @@ import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
+import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
+import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.Test;
 
 import static io.r2dbc.mssql.message.type.TypeInformation.builder;
@@ -65,5 +67,13 @@ class DoubleCodecUnitTests {
         ByteBuf buffer = HexUtils.decodeToByteBuf("0437423146");
 
         assertThat(DoubleCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), Double.class)).isCloseTo(11344.554, offset(0.01));
+    }
+
+    @Test
+    void shouldEncodeDouble() {
+
+        Encoded encoded = DoubleCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), 11344.554);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("FE D4 78 E9 46 28 C6 40");
     }
 }

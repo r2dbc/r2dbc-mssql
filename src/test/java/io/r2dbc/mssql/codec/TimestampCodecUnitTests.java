@@ -19,12 +19,12 @@ package io.r2dbc.mssql.codec;
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
-import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Unit tests for {@link TimestampCodec}.
@@ -48,12 +48,8 @@ class TimestampCodecUnitTests {
     @Test
     void shouldEncodeTimestamp() {
 
-        TypeInformation type = TypeInformation.builder().withLengthStrategy(LengthStrategy.USHORTLENTYPE).withServerType(TypeInformation.SqlServerType.TIMESTAMP).build();
-
         byte[] value = new byte[]{0, 0, 0, 0, 0, 0, 7, -47};
 
-        ByteBuf encoded = TimestampCodec.INSTANCE.encode(TestByteBufAllocator.TEST, type, value);
-
-        EncodedAssert.assertThat(encoded).isEqualToHex("080000000000000007D1");
+        assertThatThrownBy(() -> TimestampCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), value)).isInstanceOf(UnsupportedOperationException.class);
     }
 }

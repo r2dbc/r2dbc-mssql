@@ -19,6 +19,7 @@ package io.r2dbc.mssql.codec;
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ServerCharset;
+import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
@@ -90,16 +91,29 @@ class StringCodecUnitTests {
     @Test
     void shouldEncodeNvarchar() {
 
-        TypeInformation type =
-            builder().withMaxLength(100).withLengthStrategy(LengthStrategy.USHORTLENTYPE).withPrecision(50).withServerType(SqlServerType.VARCHAR).withCharset(ServerCharset.UNICODE.charset()).build();
+        Collation collation = Collation.from(13632521, 52);
 
         ByteBuf data = TestByteBufAllocator.TEST.buffer();
         Encode.uShort(data, 12);
         data.writeCharSequence("foobar", ServerCharset.UNICODE.charset());
 
-        ByteBuf encoded = StringCodec.INSTANCE.encode(TestByteBufAllocator.TEST, type, "foobar");
+        Encoded encoded = StringCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(collation), "foobar");
 
-        EncodedAssert.assertThat(encoded).isEncodedAs(expected -> expected.writeBytes(data));
+        EncodedAssert.assertThat(encoded).isEncodedAs(expected ->
+        {
+            expected.writeShortLE(8000); // max size
+
+            // collation windows-1252
+            expected.writeByte(0x00);
+            expected.writeByte(0xD0);
+            expected.writeByte(0x04);
+            expected.writeByte(0x09);
+            expected.writeByte(0x34);
+
+            expected.writeShortLE(12); // actual size
+
+            expected.writeCharSequence("foobar", ServerCharset.UNICODE.charset());
+        });
     }
 
     @Test

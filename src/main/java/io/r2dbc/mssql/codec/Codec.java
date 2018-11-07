@@ -26,7 +26,6 @@ import reactor.util.annotation.Nullable;
  * Codecs can decode one or more {@link TypeInformation.SqlServerType server-specific data types} and represent them as a specific Java {@link Class type}. The type parameter of {@link Codec}
  * indicates the interchange type that is handled by this codec.
  * <p/>
- * <p>
  * Codecs that can decode various types (e.g. {@literal uniqueidentifier} and {@literal char}) use the most appropriate method to represent the value by casting or using the
  * {@link Object#toString() toString} method.
  *
@@ -41,29 +40,54 @@ interface Codec<T> {
      * {@link Decodable} represents typically a column or RPC return value.
      *
      * @param decodable the decodable metadata.
-     * @param type   the desired value type.
+     * @param type      the desired value type.
      * @return {@literal true} if this codec is able to decode values of {@link TypeInformation}.
      */
     boolean canDecode(Decodable decodable, Class<?> type);
 
     /**
+     * Determine whether this {@link Codec} is capable of encoding a {@literal null} value for the given {@link Class} type.
+     *
+     * @param type the desired value type.
+     * @return {@literal true} if this {@link Codec} is able to encode {@literal null} values for the given {@link Class} type.
+     * @see #encodeNull()
+     */
+    boolean canEncodeNull(Class<?> type);
+
+    /**
+     * Determine whether this {@link Codec} is capable of encoding the {@code value}.
+     *
+     * @param value the parameter value.
+     * @return {@literal true} if this {@link Codec} is able to encode the {@code value}.
+     * @see #encodeNull()
+     */
+    boolean canEncode(Object value);
+
+    /**
      * Decode the {@link ByteBuf data} and return it as the requested {@link Class type}.
      *
      * @param buffer    the data buffer.
-     * @param decodable      the decodable descriptor.
-     * @param valueType the desired value type.
+     * @param decodable the decodable descriptor.
+     * @param type      the desired value type.
      * @return the decoded value. Can be {@literal null} if the value is {@literal null}.
      */
     @Nullable
     T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type);
 
     /**
-     * Encode the value.
+     * Encode a {@literal null} value.
+     *
+     * @return the encoded {@literal null} value.
+     */
+    Encoded encodeNull();
+
+    /**
+     * Encode the value to be used as RPC parameter.
      *
      * @param allocator
-     * @param typeInformation
+     * @param parameterContext
      * @param value
      * @return
      */
-    ByteBuf encode(ByteBufAllocator allocator, TypeInformation typeInformation, T value);
+    Encoded encode(ByteBufAllocator allocator, RpcParameterContext parameterContext, T value);
 }

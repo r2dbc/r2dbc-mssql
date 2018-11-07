@@ -19,6 +19,7 @@ package io.r2dbc.mssql.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.type.Length;
+import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 
 import java.util.UUID;
@@ -58,18 +59,18 @@ final class UuidCodec extends AbstractCodec<UUID> {
         return new UUID(msb, lsb);
     }
 
+
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, TypeInformation type, UUID value) {
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, UUID value) {
 
-        ByteBuf buffer = allocator.buffer(16);
+        return RpcEncoding.encode(allocator, TdsDataType.GUID, 16, 16, value, (buffer, uuid) -> {
 
-        long msb = value.getMostSignificantBits();
-        long lsb = value.getLeastSignificantBits();
+            long msb = value.getMostSignificantBits();
+            long lsb = value.getLeastSignificantBits();
 
-
-        buffer.writeBytes(swapForWrite(msb));
-        buffer.writeLong(lsb);
-        return new Encoded(buffer, false);
+            buffer.writeBytes(swapForWrite(msb));
+            buffer.writeLong(lsb);
+        });
     }
 
     /**

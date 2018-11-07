@@ -16,10 +16,9 @@
 
 package io.r2dbc.mssql.codec;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.tds.Encode;
-import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.message.type.TdsDataType;
 
 /**
  * Codec for numeric values that are represented as {@link Integer}.
@@ -44,11 +43,7 @@ final class IntegerCodec extends AbstractNumericCodec<Integer> {
     }
 
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, TypeInformation type, Integer value) {
-
-        ByteBuf buffer = allocator.buffer(SIZE_INT);
-        Encode.bigint(buffer, value);
-
-        return Encoded.of(buffer);
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Integer value) {
+        return RpcEncoding.encode(allocator, TdsDataType.INT4, value, Encode::asInt);
     }
 }

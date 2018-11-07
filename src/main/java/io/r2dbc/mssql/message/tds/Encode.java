@@ -44,6 +44,16 @@ public final class Encode {
     }
 
     /**
+     * Encode a byte. SQL server type {@code BYTE}.
+     *
+     * @param buffer the data buffer.
+     * @param value  the value to encode.
+     */
+    public static void asByte(ByteBuf buffer, byte value) {
+        buffer.writeByte(value);
+    }
+
+    /**
      * Encode a float. SQL server type {@code REAL}.
      *
      * @param buffer the data buffer.

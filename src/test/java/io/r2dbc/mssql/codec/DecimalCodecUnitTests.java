@@ -19,7 +19,9 @@ package io.r2dbc.mssql.codec;
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
+import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
+import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -43,5 +45,13 @@ class DecimalCodecUnitTests {
         BigDecimal decoded = DecimalCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), BigDecimal.class);
 
         assertThat(decoded).isEqualTo("36.89");
+    }
+
+    @Test
+    void shouldEncodeNumeric5x2() {
+
+        Encoded encoded = DecimalCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), new BigDecimal("36.89"));
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("11 26 02 03 01 69 0E");
     }
 }

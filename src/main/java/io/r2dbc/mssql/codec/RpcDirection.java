@@ -17,7 +17,7 @@
 package io.r2dbc.mssql.codec;
 
 /**
- * Parameter direction.
+ * Direction for RPC parameters
  *
  * @author Mark Paluch
  */
