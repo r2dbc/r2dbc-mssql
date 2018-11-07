@@ -55,6 +55,8 @@ class LocalTimeCodecUnitTests {
         LocalTime value = LocalTime.parse("18:13:14");
 
         Encoded encoded = LocalTimeCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), value);
+
         EncodedAssert.assertThat(encoded).isEqualToHex("07 05 00 19 12 B9 98");
+        assertThat(encoded.getFormalType()).isEqualTo("time");
     }
 }

@@ -52,6 +52,7 @@ class DecimalCodecUnitTests {
 
         Encoded encoded = DecimalCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), new BigDecimal("36.89"));
 
-        EncodedAssert.assertThat(encoded).isEqualToHex("11 26 02 03 01 69 0E");
+        EncodedAssert.assertThat(encoded).isEqualToHex("0000020301690e");
+        assertThat(encoded.getFormalType()).isEqualTo("decimal(38,2)");
     }
 }

@@ -89,13 +89,16 @@ class ShortCodecUnitTests {
         assertThat(ShortCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), Short.class)).isEqualTo((short) 1);
     }
 
-    private TypeInformation createType(int length, SqlServerType serverType) {
-        return builder().withMaxLength(length).withLengthStrategy(LengthStrategy.FIXEDLENTYPE).withPrecision(length).withServerType(serverType).build();
-    }
-
     @Test
     void shouldEncodeShort() {
 
-        EncodedAssert.assertThat(ShortCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), (short) 258)).isEqualToHex("0201");
+        Encoded encoded = ShortCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), (short) 258);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("0201");
+        assertThat(encoded.getFormalType()).isEqualTo("smallint");
+    }
+
+    private TypeInformation createType(int length, SqlServerType serverType) {
+        return builder().withMaxLength(length).withLengthStrategy(LengthStrategy.FIXEDLENTYPE).withPrecision(length).withServerType(serverType).build();
     }
 }

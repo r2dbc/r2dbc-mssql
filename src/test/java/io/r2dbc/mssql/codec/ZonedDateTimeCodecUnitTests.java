@@ -55,6 +55,8 @@ class ZonedDateTimeCodecUnitTests {
         ZonedDateTime value = ZonedDateTime.parse("2018-08-27T17:41:14.890+00:45[UT+00:45]");
 
         Encoded encoded = ZonedDateTimeCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), value);
+
         EncodedAssert.assertThat(encoded).isEqualToHex("07 0A A0 26 31 41 94 A4 3E 0B 2D 00");
+        assertThat(encoded.getFormalType()).isEqualTo("datetimeoffset");
     }
 }

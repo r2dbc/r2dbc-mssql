@@ -52,6 +52,8 @@ class UuidCodecUnitTests {
 
         UUID uuid = UUID.fromString("C70D7BF1-E5C7-40C5-98C7-A12F7E686724");
         Encoded encoded = UuidCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), uuid);
+
         EncodedAssert.assertThat(encoded).isEqualToHex("10 10 F17B0DC7C7E5C54098C7A12F7E686724");
+        assertThat(encoded.getFormalType()).isEqualTo("uniqueidentifier");
     }
 }

@@ -53,7 +53,6 @@ public final class EncodedAssert extends AbstractObjectAssert<EncodedAssert, Byt
     public static EncodedAssert assertThat(Encoded actual) {
         return new EncodedAssert(actual.getValue());
     }
-    
 
     /**
      * Assert that the actual {@link ByteBuf data buffer} contains the expected string by converting the buffer using the default {@link Charset}.

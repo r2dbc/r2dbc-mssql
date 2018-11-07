@@ -96,6 +96,9 @@ class IntegerCodecUnitTests {
     @Test
     void shouldEncodeInteger() {
 
-        EncodedAssert.assertThat(IntegerCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), 16777217)).isEqualToHex("01 00 00 01");
+        Encoded encoded = IntegerCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), 16777217);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("01 00 00 01");
+        assertThat(encoded.getFormalType()).isEqualTo("int");
     }
 }

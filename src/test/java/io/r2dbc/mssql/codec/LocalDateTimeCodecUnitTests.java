@@ -100,6 +100,8 @@ class LocalDateTimeCodecUnitTests {
         LocalDateTime value = LocalDateTime.parse("2018-10-27T15:41:00.162");
 
         Encoded encoded = LocalDateTimeCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), value);
+
         EncodedAssert.assertThat(encoded).isEqualToHex("07 08 20 06 E1 74 83 E1 3E 0B");
+        assertThat(encoded.getFormalType()).isEqualTo("datetime2");
     }
 }

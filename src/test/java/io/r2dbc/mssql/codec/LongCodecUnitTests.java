@@ -92,7 +92,10 @@ class LongCodecUnitTests {
     @Test
     void shouldEncodeLong() {
 
-        EncodedAssert.assertThat(LongCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), 72057594037927937L)).isEqualToHex("0100000000000001");
+        Encoded encoded = LongCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), 72057594037927937L);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("0100000000000001");
+        assertThat(encoded.getFormalType()).isEqualTo("bigint");
     }
 
     private TypeInformation createType(int length, SqlServerType serverType) {

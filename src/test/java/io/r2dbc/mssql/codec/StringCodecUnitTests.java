@@ -114,6 +114,7 @@ class StringCodecUnitTests {
 
             expected.writeCharSequence("foobar", ServerCharset.UNICODE.charset());
         });
+        assertThat(encoded.getFormalType()).isEqualTo("nvarchar(4000)");
     }
 
     @Test

@@ -74,5 +74,6 @@ class FloatCodecUnitTests {
         Encoded encoded = FloatCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), 11344.554f);
 
         EncodedAssert.assertThat(encoded).isEqualToHex("37 42 31 46");
+        assertThat(encoded.getFormalType()).isEqualTo("real");
     }
 }
