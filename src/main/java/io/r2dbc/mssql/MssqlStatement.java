@@ -21,6 +21,12 @@ import reactor.core.publisher.Flux;
 
 /**
  * A strongly typed implementation of {@link Statement} for a Microsoft SQL Server database.
+ * <p/>
+ * Microsoft SQL Server uses named parameters for parametrized statements:
+ * <pre class="code">
+ * INSERT INTO person (id, first_name, last_name) VALUES(@id, @firstname, @lastname)
+ * </pre>
+ * Use {@link #bind(Object, Object)} and {@link #bindNull(Object, Class)} over positional ({@link #bind(int, Object)}) binding.
  *
  * @author Mark Paluch
  */
@@ -38,7 +44,7 @@ public interface MssqlStatement<SELF extends MssqlStatement<SELF>> extends State
     /**
      * {@inheritDoc}
      *
-     * @throws IllegalArgumentException if {@code identifier} is not a {@link String} like {@code @foo}, {@code @foo},
+     * @throws IllegalArgumentException if {@code identifier} is not a {@link String} like {@code @foo}, {@code @bar},
      *                                  etc.
      */
     @Override

@@ -72,6 +72,24 @@ MssqlConnectionFactory factory = new MssqlConnectionFactory(configuration);
 Mono<MssqlConnection> connectionMono = factory.create();
 ```
 
+Microsoft SQL Server uses named parameters that are prefixed with `@`. The following SQL statement makes use of parameters:
+
+```sql
+INSERT INTO person (id, first_name, last_name) VALUES(@id, @firstname, @lastname)
+```
+
+Parameters are referenced without the `@` prefix when binding these:
+
+```java
+connection.createStatement("INSERT INTO person (id, first_name, last_name) VALUES(@id, @firstname, @lastname)")
+            .bind("id", 1)
+            .bind("firstname", "Walter")
+            .bind("lastname", "White")
+            .execute()
+``` 
+
+Binding also allows positional index (zero-based) references. The parameter index is derived from the parameter discovery order when parsing the query.
+
 ## License
 This project is released under version 2.0 of the [Apache License][l].
 

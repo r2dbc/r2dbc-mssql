@@ -38,6 +38,9 @@ import java.util.regex.Pattern;
  * {@link Connection} to a Microsoft SQL Server.
  *
  * @author Mark Paluch
+ * @see MssqlConnection
+ * @see MssqlResult
+ * @see MssqlException
  */
 public final class MssqlConnection implements Connection {
 
