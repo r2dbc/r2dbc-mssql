@@ -24,9 +24,9 @@ package io.r2dbc.mssql;
 interface PreparedStatementCache {
 
     /**
-     * Marker for no prepared statement found.
+     * Marker for no prepared statement found/no prepared statement.
      */
-    int NOT_FOUND = 0;
+    int UNPREPARED = 0;
 
     /**
      * Returns a prepared statement handle for the given {@code sql} query and the {@link Binding}.
@@ -34,7 +34,23 @@ interface PreparedStatementCache {
      * @param sql     the SQL query.
      * @param binding bound parameters. Parameter types impact the prepared query.
      * @return the prepared statement handle. {@value 0} has a specific meaning as it indicates that no cached SQL statement was found.
-     * @see #NOT_FOUND
+     * @see #UNPREPARED
      */
-    int getName(String sql, Binding binding);
+    int getHandle(String sql, Binding binding);
+
+    /**
+     * Returns a prepared statement {@code handle} for the given {@code sql} query and the {@link Binding}.
+     *
+     * @param handle  the prepared statement handle.
+     * @param sql     the SQL query.
+     * @param binding bound parameters. Parameter types impact the prepared query.
+     */
+    void putHandle(int handle, String sql, Binding binding);
+
+    /**
+     * Returns the number of cached prepared statement handles in this cache.
+     *
+     * @return the number of prepared statement handles in this cache.
+     */
+    int size();
 }

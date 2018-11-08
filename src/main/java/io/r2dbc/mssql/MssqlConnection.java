@@ -45,6 +45,8 @@ public final class MssqlConnection implements Connection {
     
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    private final PreparedStatementCache statementCache = new IndefinitePreparedStatementCache(); 
+
     private final Client client;
 
     private final Codecs codecs;
@@ -131,7 +133,7 @@ public final class MssqlConnection implements Connection {
         this.logger.debug("Creating statement for SQL: [{}]", sql);
 
         if (PreparedMssqlStatement.supports(sql)) {
-            return new PreparedMssqlStatement(this.client, this.codecs, sql);
+            return new PreparedMssqlStatement(this.statementCache, this.client, this.codecs, sql);
         }
         
         if (SimpleCursoredMssqlStatement.supports(sql)) {

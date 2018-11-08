@@ -141,6 +141,32 @@ class MssqlConnectionIntegrationTests {
             .verifyComplete();
     }
 
+    @Test
+    void shouldReusePreparedStatements() {
+
+        createTable(connection);
+
+        connection.createStatement("INSERT INTO r2dbc_example VALUES(@id, @firstname, @lastname)")
+            .bind("id", 1)
+            .bind("firstname", "Walter")
+            .bind("lastname", "White")
+            .execute()
+            .flatMap(MssqlResult::getRowsUpdated)
+            .as(StepVerifier::create)
+            .expectNext(1)
+            .verifyComplete();
+
+        connection.createStatement("INSERT INTO r2dbc_example VALUES(@id, @firstname, @lastname)")
+            .bind("id", 2)
+            .bind("firstname", "Walter")
+            .bind("lastname", "White")
+            .execute()
+            .flatMap(MssqlResult::getRowsUpdated)
+            .as(StepVerifier::create)
+            .expectNext(1)
+            .verifyComplete();
+    }
+
     private void createTable(MssqlConnection connection) {
 
         connection.createStatement("DROP TABLE r2dbc_example").execute()

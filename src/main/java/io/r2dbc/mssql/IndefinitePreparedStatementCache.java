@@ -1,0 +1,67 @@
+/*
+ * Copyright 2018 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.r2dbc.mssql;
+
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Cache that stores prepared statement handles eternally.
+ *
+ * @author Mark Paluch
+ */
+class IndefinitePreparedStatementCache implements PreparedStatementCache {
+
+    private final Map<String, Integer> preparedStatements = new ConcurrentHashMap<>();
+
+    @Override
+    public int getHandle(String sql, Binding binding) {
+
+        Objects.requireNonNull(sql, "SQL query must not be null");
+        Objects.requireNonNull(binding, "Binding query must not be null");
+
+        return this.preparedStatements.getOrDefault(createKey(sql, binding), UNPREPARED);
+    }
+
+    @Override
+    public void putHandle(int handle, String sql, Binding binding) {
+
+        Objects.requireNonNull(sql, "SQL query must not be null");
+        Objects.requireNonNull(binding, "Binding query must not be null");
+
+        this.preparedStatements.put(createKey(sql, binding), handle);
+    }
+
+    @Override
+    public int size() {
+        return this.preparedStatements.size();
+    }
+
+    private static String createKey(String sql, Binding binding) {
+        return sql + "-" + binding.getFormalParameters();
+    }
+
+    @Override
+    public String toString() {
+        final StringBuffer sb = new StringBuffer();
+        sb.append(getClass().getSimpleName());
+        sb.append(" [preparedStatements=").append(preparedStatements);
+        sb.append(']');
+        return sb.toString();
+    }
+}

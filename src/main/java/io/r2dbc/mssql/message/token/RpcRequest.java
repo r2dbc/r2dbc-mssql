@@ -200,6 +200,15 @@ public final class RpcRequest implements ClientMessage, TokenStream {
         }
     }
 
+    @Nullable
+    public String getProcName() {
+        return procName;
+    }
+
+    public Integer getProcId() {
+        return procId;
+    }
+
     @Override
     public String getName() {
         return "RPCRequest";

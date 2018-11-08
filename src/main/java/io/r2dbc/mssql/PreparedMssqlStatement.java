@@ -50,6 +50,8 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
 
     private static final Pattern PARAMETER_MATCHER = Pattern.compile("@([\\p{Alpha}@][@$\\d\\w_]{0,127})");
 
+    private final PreparedStatementCache statementCache;
+
     private final Client client;
 
     private final Codecs codecs;
@@ -58,7 +60,9 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
 
     private final Bindings bindings = new Bindings();
 
-    PreparedMssqlStatement(Client client, Codecs codecs, String sql) {
+    PreparedMssqlStatement(PreparedStatementCache statementCache, Client client, Codecs codecs, String sql) {
+
+        this.statementCache = statementCache;
         this.client = client;
         this.codecs = codecs;
         this.parsedQuery = ParsedQuery.parse(sql);
@@ -79,7 +83,7 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
 
         return Flux.fromIterable(this.bindings.bindings).flatMap(it -> {
 
-            return CursoredQueryMessageFlow.exchange(this.client, this.codecs, it, this.parsedQuery.sql, 128);
+            return CursoredQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, this.parsedQuery.sql, it, 128);
 
         }).windowUntil(it -> false) //
             .map(it -> MssqlResult.toResult(this.codecs, it));

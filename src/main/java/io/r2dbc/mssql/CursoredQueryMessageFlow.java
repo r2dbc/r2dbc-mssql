@@ -131,13 +131,15 @@ final class CursoredQueryMessageFlow {
     /**
      * Execute a cursored query with RPC parameters.
      *
-     * @param client    the {@link Client} to exchange messages with.
-     * @param codecs    the codecs to decode {@link ReturnValue}s from RPC calls.
-     * @param query     the query to execute.
-     * @param fetchSize the number of rows to fetch. TODO: Try to determine fetch size from current demand and apply demand function.
+     * @param statementCache the {@link PreparedStatementCache} to keep track of prepared statement handles.
+     * @param client         the {@link Client} to exchange messages with.
+     * @param codecs         the codecs to decode {@link ReturnValue}s from RPC calls.
+     * @param query          the query to execute.
+     * @param binding        parameter bindings.
+     * @param fetchSize      the number of rows to fetch. TODO: Try to determine fetch size from current demand and apply demand function.
      * @return the messages received in response to this exchange.
      */
-    static Flux<Message> exchange(Client client, Codecs codecs, Binding binding, String query, int fetchSize) {
+    static Flux<Message> exchange(PreparedStatementCache statementCache, Client client, Codecs codecs, String query, Binding binding, int fetchSize) {
 
         Objects.requireNonNull(client, "Client must not be null");
         Objects.requireNonNull(query, "Query must not be null");
@@ -147,7 +149,19 @@ final class CursoredQueryMessageFlow {
 
         CursorState state = new CursorState();
 
-        return client.exchange(emitterProcessor.startWith(spCursorPrepExec(0, query, binding, client.getRequiredCollation(), client.getTransactionDescriptor()))) //
+        int handle = statementCache.getHandle(query, binding);
+        boolean needsPrepare;
+        RpcRequest rpcRequest;
+
+        if (handle == PreparedStatementCache.UNPREPARED) {
+            rpcRequest = spCursorPrepExec(PreparedStatementCache.UNPREPARED, query, binding, client.getRequiredCollation(), client.getTransactionDescriptor());
+            needsPrepare = true;
+        } else {
+            rpcRequest = spCursorExec(handle, binding, client.getTransactionDescriptor());
+            needsPrepare = false;
+        }
+
+        return client.exchange(emitterProcessor.startWith(rpcRequest)) //
             .doOnSubscribe(ignore -> QueryLogger.logQuery(query))
             .doOnNext(it -> {
 
@@ -155,9 +169,24 @@ final class CursoredQueryMessageFlow {
 
                     ReturnValue returnValue = (ReturnValue) it;
 
-                    // cursor Id
-                    if (returnValue.getOrdinal() == 1) {
-                        state.cursorId = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
+                    if (needsPrepare) {
+
+                        // prepared statement handle
+                        if (returnValue.getOrdinal() == 0) {
+
+                            int preparedStatementHandle = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
+                            statementCache.putHandle(preparedStatementHandle, query, binding);
+                        }
+
+                        // cursor Id
+                        if (returnValue.getOrdinal() == 1) {
+                            state.cursorId = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
+                        }
+                    } else {
+                        // cursor Id
+                        if (returnValue.getOrdinal() == 0) {
+                            state.cursorId = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
+                        }
                     }
                 }
 
@@ -328,6 +357,41 @@ final class CursoredQueryMessageFlow {
             .withParameter(RpcDirection.OUT, 0) // cursor
             .withParameter(RpcDirection.IN, collation, binding.getFormalParameters()) // formal parameter defn
             .withParameter(RpcDirection.IN, collation, query) // statement
+            .withParameter(RpcDirection.IN, resultSetScrollOpt) // scrollopt
+            .withParameter(RpcDirection.IN, resultSetCCOpt) // ccopt
+            .withParameter(RpcDirection.OUT, 0);// rowcount
+
+        binding.forEach((name, encoded) -> {
+            builder.withNamedParameter(RpcDirection.IN, name, encoded);
+        });
+
+        return builder.build();
+    }
+
+    /**
+     * Creates a {@link RpcRequest} for {@link RpcRequest#Sp_CursorExecute} to and execute prepared statement.
+     *
+     * @param preparedStatementHandle handle to a previously prepared statement.
+     * @param binding                 bound parameters
+     * @param transactionDescriptor   transaction descriptor.
+     * @return {@link RpcRequest} for {@link RpcRequest#Sp_CursorFetch}.
+     */
+    static RpcRequest spCursorExec(int preparedStatementHandle, Binding binding, TransactionDescriptor transactionDescriptor) {
+
+        Assert.isTrue(preparedStatementHandle != PreparedStatementCache.UNPREPARED, "Invalid PreparedStatement handle");
+
+        int resultSetScrollOpt = SCROLLOPT_FAST_FORWARD;
+        int resultSetCCOpt = CCOPT_READ_ONLY | CCOPT_ALLOW_DIRECT;
+
+        RpcRequest.Builder builder = RpcRequest.builder() //
+            .withProcId(RpcRequest.Sp_CursorExecute) //
+            .withTransactionDescriptor(transactionDescriptor) //
+
+            // <prepared handle>
+            // IN (reprepare): Old handle to unprepare before repreparing
+            // OUT: The newly prepared handle
+            .withParameter(RpcDirection.IN, preparedStatementHandle)
+            .withParameter(RpcDirection.OUT, 0) // cursor
             .withParameter(RpcDirection.IN, resultSetScrollOpt) // scrollopt
             .withParameter(RpcDirection.IN, resultSetCCOpt) // ccopt
             .withParameter(RpcDirection.OUT, 0);// rowcount

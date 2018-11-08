@@ -131,24 +131,52 @@ class CursoredQueryMessageFlowUnitTests {
             "e7 40 1f 00 d0 04 09 34 24 00 40 00 50 00 30 00" +
             "20 00 6e 00 76 00 61 00 72 00 63 00 68 00 61 00" +
             "72 00 28 00 34 00 30 00 30 00 30 00 29 00 00 00" +
-            "e7 40 1f 00 d0 04 09 34 58 00 55 00 50 00 44 00" +
+            "e7 40 1f 00 d0 04 09 34 48 00 55 00 50 00 44 00" +
             "41 00 54 00 45 00 20 00 6d 00 79 00 5f 00 74 00" +
             "61 00 62 00 6c 00 65 00 20 00 73 00 65 00 74 00" +
             "20 00 66 00 69 00 72 00 73 00 74 00 5f 00 6e 00" +
             "61 00 6d 00 65 00 20 00 3d 00 20 00 40 00 50 00" +
-            "30 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00" +
-            "20 00 00 00 26 04 04 10 10 00 00 00 00 26 04 04" +
+            "30 00 00 00 26 04 04 10 10 00 00 00 00 26 04 04" +
             "01 20 00 00 00 01 26 04 04 00 00 00 00 03 40 00" +
             "50 00 30 00 00 e7 40 1f 00 d0 04 09 34 08 00 6d" +
             "00 61 00 72 00 6b 00";
 
         DefaultCodecs codecs = new DefaultCodecs();
-        String sql = "UPDATE my_table set first_name = @P0        ";
+        String sql = "UPDATE my_table set first_name = @P0";
 
         Binding binding = new Binding();
         binding.add("P0", codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(collation), "mark"));
 
         RpcRequest rpcRequest = CursoredQueryMessageFlow.spCursorPrepExec(0, sql, binding, collation, TransactionDescriptor.empty());
+
+        ClientMessageAssert.assertThat(rpcRequest).encoded()
+            .hasHeader(HeaderOptions.create(Type.RPC, Status.empty()))
+            .isEncodedAs(expected -> {
+
+                AllHeaders.transactional(TransactionDescriptor.empty(), 1).encode(expected);
+
+                expected.writeBytes(HexUtils.decodeToByteBuf(hex));
+            });
+    }
+
+    @Test
+    void shouldEncodeSpCursorExec() {
+
+        Collation collation = Collation.from(13632521, 52);
+
+        String hex = "ff ff 04 00 00 00 00 00 26 04" +
+            "04 02 00 00 00 00 01 26 04 04 00 00 00 00 00 00" +
+            "26 04 04 10 00 00 00 00 00 26 04 04 01 20 00 00" +
+            "00 01 26 04 04 00 00 00 00 03 40 00 50 00 30 00" +
+            "00 e7 40 1f 00 d0 04 09 34 08 00 6d 00 61 00 72" +
+            "00 6b 00";
+
+        DefaultCodecs codecs = new DefaultCodecs();
+
+        Binding binding = new Binding();
+        binding.add("P0", codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(collation), "mark"));
+
+        RpcRequest rpcRequest = CursoredQueryMessageFlow.spCursorExec(2, binding, TransactionDescriptor.empty());
 
         ClientMessageAssert.assertThat(rpcRequest).encoded()
             .hasHeader(HeaderOptions.create(Type.RPC, Status.empty()))

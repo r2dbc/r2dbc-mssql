@@ -67,7 +67,7 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
      * @param type          type descriptor of this value.
      * @param value         the actual value.
      */
-    private ReturnValue(int ordinal, @Nullable String parameterName, byte status, TypeInformation type, ByteBuf value) {
+    public ReturnValue(int ordinal, @Nullable String parameterName, byte status, TypeInformation type, ByteBuf value) {
 
         super();
 
