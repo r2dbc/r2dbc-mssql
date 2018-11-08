@@ -21,8 +21,12 @@ import io.netty.buffer.ByteBufAllocator;
 import reactor.util.annotation.Nullable;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+
+import static io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
 /**
  * The default {@link Codec} implementation.  Delegates to type-specific codec implementations.
@@ -30,6 +34,8 @@ import java.util.Objects;
 public final class DefaultCodecs implements Codecs {
 
     private final List<Codec<?>> codecs;
+
+    private final Map<SqlServerType, Codec<?>> codecPreferences = new HashMap<>();
 
     /**
      * Creates a new instance of {@link DefaultCodecs}.
@@ -57,6 +63,15 @@ public final class DefaultCodecs implements Codecs {
             TimestampCodec.INSTANCE,
             ZonedDateTimeCodec.INSTANCE
         );
+
+        codecPreferences.put(SqlServerType.BIT, BooleanCodec.INSTANCE);
+        codecPreferences.put(SqlServerType.TINYINT, ByteCodec.INSTANCE);
+        codecPreferences.put(SqlServerType.SMALLINT, ShortCodec.INSTANCE);
+        codecPreferences.put(SqlServerType.INTEGER, IntegerCodec.INSTANCE);
+        codecPreferences.put(SqlServerType.BIGINT, LongCodec.INSTANCE);
+        codecPreferences.put(SqlServerType.REAL, FloatCodec.INSTANCE);
+        codecPreferences.put(SqlServerType.FLOAT, DoubleCodec.INSTANCE);
+        codecPreferences.put(SqlServerType.GUID, UuidCodec.INSTANCE);
     }
 
     @SuppressWarnings({"unchecked", "rawtpes"})
@@ -102,12 +117,22 @@ public final class DefaultCodecs implements Codecs {
             return null;
         }
 
+        Codec<?> preferredCodec = codecPreferences.get(decodable.getType().getServerType());
+        if (preferredCodec != null && preferredCodec.canDecode(decodable, type)) {
+            return doDecode((Codec<T>) preferredCodec, buffer, decodable, type);
+        }
+
         for (Codec<?> codec : this.codecs) {
             if (codec.canDecode(decodable, type)) {
-                return ((Codec<T>) codec).decode(buffer, decodable, type);
+                return doDecode((Codec<T>) codec, buffer, decodable, type);
             }
         }
 
         throw new IllegalArgumentException(String.format("Cannot decode value of type [%s], name [%s] server type [%s]", type.getName(), decodable.getName(), decodable.getType().getServerType()));
+    }
+
+    @Nullable
+    private <T> T doDecode(Codec<T> codec, @Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type) {
+        return codec.decode(buffer, decodable, type);
     }
 }

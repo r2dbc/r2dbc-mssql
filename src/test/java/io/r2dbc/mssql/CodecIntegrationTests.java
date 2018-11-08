@@ -68,7 +68,7 @@ class CodecIntegrationTests {
 
     @Test
     void shouldEncodeBooleanAsTinyint() {
-        testType(connection, "TINYINT", true);
+        testType(connection, "TINYINT", true, (byte) 1);
     }
 
     @Test
@@ -152,6 +152,10 @@ class CodecIntegrationTests {
     }
 
     private void testType(MssqlConnection connection, String columnType, Object value) {
+        testType(connection, columnType, value, value);
+    }
+
+    private void testType(MssqlConnection connection, String columnType, Object value, Object expectedGetObjectValue) {
 
         createTable(connection, columnType);
 
@@ -174,7 +178,7 @@ class CodecIntegrationTests {
             .execute()
             .flatMap(it -> it.map((row, rowMetadata) -> row.get("my_col")))
             .as(StepVerifier::create)
-            .expectNext(value)
+            .expectNext(expectedGetObjectValue)
             .verifyComplete();
 
         connection.createStatement("UPDATE codec_test SET my_col = @P0")
