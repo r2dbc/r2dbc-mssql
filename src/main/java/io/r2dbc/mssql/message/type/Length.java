@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ProtocolException;
-import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
 /**
  * Descriptor for data length in row results.

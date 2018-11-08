@@ -23,15 +23,13 @@ import io.r2dbc.mssql.codec.Encoded;
 import io.r2dbc.mssql.codec.RpcParameterContext;
 import io.r2dbc.mssql.message.token.ReturnValue;
 import io.r2dbc.mssql.message.token.RpcRequest;
-import io.r2dbc.mssql.message.type.TypeInformation;
-import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
+import io.r2dbc.mssql.util.Types;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 import static io.r2dbc.mssql.PreparedMssqlStatement.ParsedQuery;
-import static io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -123,18 +121,13 @@ class PreparedMssqlStatementUnitTests {
         Encoded encodedPreparedStatementHandle = new DefaultCodecs().encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), 1);
         encodedPreparedStatementHandle.getValue().skipBytes(1); // skip maxlen byte
 
-        TypeInformation type = TypeInformation.builder()
-            .withServerType(SqlServerType.INTEGER)
-            .withLengthStrategy(LengthStrategy.BYTELENTYPE)
-            .build();
-
         TestClient testClient = TestClient.builder()
             .assertNextRequestWith(it -> {
                 assertThat(it).isInstanceOf(RpcRequest.class);
                 RpcRequest request = (RpcRequest) it;
                 assertThat(request.getProcId()).isEqualTo(RpcRequest.Sp_CursorPrepExec);
             })
-            .thenRespond(new ReturnValue(0, null, (byte) 0, type,
+            .thenRespond(new ReturnValue(0, null, (byte) 0, Types.integer(),
                 encodedPreparedStatementHandle.getValue()))
             .build();
 
@@ -156,18 +149,13 @@ class PreparedMssqlStatementUnitTests {
         Encoded cursorId = new DefaultCodecs().encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), 123);
         cursorId.getValue().skipBytes(1); // skip maxlen byte
 
-        TypeInformation type = TypeInformation.builder()
-            .withServerType(SqlServerType.INTEGER)
-            .withLengthStrategy(LengthStrategy.BYTELENTYPE)
-            .build();
-
         TestClient testClient = TestClient.builder()
             .assertNextRequestWith(it -> {
                 assertThat(it).isInstanceOf(RpcRequest.class);
                 RpcRequest request = (RpcRequest) it;
                 assertThat(request.getProcId()).isEqualTo(RpcRequest.Sp_CursorExecute);
             })
-            .thenRespond(new ReturnValue(0, null, (byte) 0, type,
+            .thenRespond(new ReturnValue(0, null, (byte) 0, Types.integer(),
                 cursorId.getValue()))
             .build();
 

@@ -18,9 +18,8 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AbstractReferenceCounted;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TdsDataType;
-
-import static io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
 /**
  * @author Mark Paluch

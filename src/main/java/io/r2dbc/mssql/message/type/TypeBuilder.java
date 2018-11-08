@@ -20,8 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.tds.ServerCharset;
-import io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
-import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import io.r2dbc.mssql.util.Assert;
 
 import java.util.EnumMap;

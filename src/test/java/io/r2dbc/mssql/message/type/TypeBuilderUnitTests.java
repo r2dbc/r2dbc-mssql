@@ -34,8 +34,8 @@ class TypeBuilderUnitTests {
         TypeInformation typeInformation = TypeBuilder.decode(buffer, true);
 
         assertThat(typeInformation.getMaxLength()).isEqualTo(4);
-        assertThat(typeInformation.getServerType()).isEqualTo(TypeInformation.SqlServerType.INTEGER);
-        assertThat(typeInformation.getLengthStrategy()).isEqualTo(TypeInformation.LengthStrategy.FIXEDLENTYPE);
+        assertThat(typeInformation.getServerType()).isEqualTo(SqlServerType.INTEGER);
+        assertThat(typeInformation.getLengthStrategy()).isEqualTo(LengthStrategy.FIXEDLENTYPE);
         assertThat(typeInformation.getDisplaySize()).isEqualTo(11);
     }
 

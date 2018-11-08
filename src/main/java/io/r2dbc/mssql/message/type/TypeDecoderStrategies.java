@@ -19,8 +19,6 @@ package io.r2dbc.mssql.message.type;
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.ProtocolException;
-import io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
-import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
 /**
  * Typical type parsing strategies.

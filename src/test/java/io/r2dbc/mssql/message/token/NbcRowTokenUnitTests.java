@@ -19,13 +19,12 @@ package io.r2dbc.mssql.message.token;
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.HexUtils;
+import io.r2dbc.mssql.util.Types;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
-import static io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
-import static io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -35,9 +34,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class NbcRowTokenUnitTests {
 
-    TypeInformation integerType = TypeInformation.builder().withServerType(SqlServerType.INTEGER).withLengthStrategy(LengthStrategy.FIXEDLENTYPE).withMaxLength(4).build();
+    TypeInformation integerType = Types.integer();
 
-    TypeInformation stringType = TypeInformation.builder().withServerType(SqlServerType.VARCHAR).withLengthStrategy(LengthStrategy.USHORTLENTYPE).withMaxLength(255).build();
+    TypeInformation stringType = Types.varchar(255);
 
     List<Column> columns = Arrays.asList(new Column(0, "id", integerType),
         new Column(1, "first_name", stringType),
@@ -50,7 +49,7 @@ class NbcRowTokenUnitTests {
     @Test
     void shouldDecodeNbcRow() {
 
-        ByteBuf data = HexUtils.decodeToByteBuf("D2 1C 01 00 00 00 01 00 61 02 00 78 61 01 00 00 00");
+        ByteBuf data = HexUtils.decodeToByteBuf("D2 1C 04 01 00 00 00 01 00 61 02 00 78 61 04 01 00 00 00");
 
         assertThat(data.readByte()).isEqualTo(NbcRowToken.TYPE);
 
@@ -68,7 +67,7 @@ class NbcRowTokenUnitTests {
     @Test
     void canDecodeShouldReportDecodability() {
 
-        String data = "1C 01 00 00 00 01 00 61 02 00 78 61 01 00 00 00";
+        String data = "1C 04 01 00 00 00 01 00 61 02 00 78 61 04 01 00 00 00";
 
         CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), buffer -> NbcRowToken.canDecode(buffer, columns));
     }

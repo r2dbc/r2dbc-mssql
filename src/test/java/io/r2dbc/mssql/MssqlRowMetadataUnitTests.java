@@ -21,13 +21,13 @@ import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.token.RowToken;
+import io.r2dbc.mssql.message.type.LengthStrategy;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
-import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
-import static io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
 import static io.r2dbc.mssql.message.type.TypeInformation.builder;
 import static org.assertj.core.api.Assertions.assertThat;
 

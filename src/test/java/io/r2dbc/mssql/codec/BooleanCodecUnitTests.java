@@ -16,8 +16,9 @@
 
 package io.r2dbc.mssql.codec;
 
+import io.r2dbc.mssql.message.type.LengthStrategy;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
-import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
@@ -100,6 +101,6 @@ class BooleanCodecUnitTests {
     }
 
     private TypeInformation createType(int length, SqlServerType serverType) {
-        return builder().withMaxLength(length).withLengthStrategy(TypeInformation.LengthStrategy.FIXEDLENTYPE).withPrecision(length).withServerType(serverType).build();
+        return builder().withMaxLength(length).withLengthStrategy(LengthStrategy.FIXEDLENTYPE).withPrecision(length).withServerType(serverType).build();
     }
 }

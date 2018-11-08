@@ -30,8 +30,9 @@ import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.message.token.RowTokenFactory;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.message.token.Tabular;
+import io.r2dbc.mssql.message.type.LengthStrategy;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
-import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import io.r2dbc.spi.ColumnMetadata;
 import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
@@ -46,7 +47,6 @@ import java.util.List;
 import java.util.Map;
 
 import static io.r2dbc.mssql.message.type.TypeInformation.Builder;
-import static io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**

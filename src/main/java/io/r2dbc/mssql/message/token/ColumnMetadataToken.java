@@ -18,6 +18,7 @@ package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Decode;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 
 import java.util.ArrayList;
@@ -127,8 +128,8 @@ public final class ColumnMetadataToken extends AbstractDataToken {
         TypeInformation typeInfo = TypeInformation.decode(buffer, true);
         Identifier tableName = null;
 
-        if (typeInfo.getServerType() == TypeInformation.SqlServerType.TEXT || typeInfo.getServerType() == TypeInformation.SqlServerType.NTEXT
-            || typeInfo.getServerType() == TypeInformation.SqlServerType.IMAGE) {
+        if (typeInfo.getServerType() == SqlServerType.TEXT || typeInfo.getServerType() == SqlServerType.NTEXT
+            || typeInfo.getServerType() == SqlServerType.IMAGE) {
             // Yukon and later, table names are returned as multi-part SQL identifiers.
             tableName = Identifier.decode(buffer);
         }

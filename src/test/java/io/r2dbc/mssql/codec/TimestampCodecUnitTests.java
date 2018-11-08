@@ -17,8 +17,9 @@
 package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.message.type.LengthStrategy;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
-import io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
 import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.Test;
@@ -44,7 +45,7 @@ class TimestampCodecUnitTests {
     @Test
     void shouldDecodeTimestamp() {
 
-        TypeInformation type = TypeInformation.builder().withLengthStrategy(LengthStrategy.USHORTLENTYPE).withServerType(TypeInformation.SqlServerType.TIMESTAMP).build();
+        TypeInformation type = TypeInformation.builder().withLengthStrategy(LengthStrategy.USHORTLENTYPE).withServerType(SqlServerType.TIMESTAMP).build();
 
         ByteBuf buffer = HexUtils.decodeToByteBuf("080000000000000007D1");
 

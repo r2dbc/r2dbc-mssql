@@ -17,7 +17,8 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
-import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.message.type.LengthStrategy;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
 import org.junit.jupiter.api.Test;
@@ -44,8 +45,8 @@ class ReturnValueUnitTests {
         assertThat(returnValue.getOrdinal()).isEqualTo(0);
         assertThat(returnValue.getParameterName()).isEqualTo("");
         assertThat(returnValue.getStatus()).isEqualTo((byte) 1);
-        assertThat(returnValue.getValueType().getServerType()).isEqualTo(TypeInformation.SqlServerType.INTEGER);
-        assertThat(returnValue.getValueType().getLengthStrategy()).isEqualTo(TypeInformation.LengthStrategy.BYTELENTYPE);
+        assertThat(returnValue.getValueType().getServerType()).isEqualTo(SqlServerType.INTEGER);
+        assertThat(returnValue.getValueType().getLengthStrategy()).isEqualTo(LengthStrategy.BYTELENTYPE);
         assertThat(returnValue.getValueType().getPrecision()).isEqualTo(10);
         assertThat(buffer.readerIndex()).isEqualTo(buffer.writerIndex());
 

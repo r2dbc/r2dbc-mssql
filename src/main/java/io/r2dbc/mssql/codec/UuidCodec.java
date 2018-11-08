@@ -19,11 +19,10 @@ package io.r2dbc.mssql.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.type.Length;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 
 import java.util.UUID;
-
-import static io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
 /**
  * @author Mark Paluch

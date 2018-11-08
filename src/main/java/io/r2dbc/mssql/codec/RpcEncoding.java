@@ -20,16 +20,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Collation;
+import io.r2dbc.mssql.message.type.LengthStrategy;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TdsDataType;
-import io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.StringUtils;
 import reactor.util.annotation.Nullable;
 
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
-
-import static io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
 /**
  * Utility methods to encode RPC parameters.

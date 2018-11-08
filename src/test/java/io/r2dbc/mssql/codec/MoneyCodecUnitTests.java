@@ -19,6 +19,8 @@ package io.r2dbc.mssql.codec;
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.token.Column;
+import io.r2dbc.mssql.message.type.LengthStrategy;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
@@ -59,7 +61,7 @@ class MoneyCodecUnitTests {
     void shouldDecodeBigMoney() {
 
         Column column =
-            createColumn(TypeInformation.builder().withLengthStrategy(TypeInformation.LengthStrategy.BYTELENTYPE).withServerType(TypeInformation.SqlServerType.MONEY).withMaxLength(8).build());
+            createColumn(TypeInformation.builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withServerType(SqlServerType.MONEY).withMaxLength(8).build());
 
         ByteBuf buffer = TestByteBufAllocator.TEST.buffer(9);
         buffer.writeByte(8);
@@ -74,7 +76,7 @@ class MoneyCodecUnitTests {
     void shouldDecodeSmallMoney() {
 
         Column column =
-            createColumn(TypeInformation.builder().withLengthStrategy(TypeInformation.LengthStrategy.BYTELENTYPE).withServerType(TypeInformation.SqlServerType.SMALLMONEY).withMaxLength(4).build());
+            createColumn(TypeInformation.builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withServerType(SqlServerType.SMALLMONEY).withMaxLength(4).build());
 
         ByteBuf buffer = HexUtils.decodeToByteBuf("0420A10500");
 

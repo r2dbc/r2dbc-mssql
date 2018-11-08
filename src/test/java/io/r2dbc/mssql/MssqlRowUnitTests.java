@@ -22,8 +22,7 @@ import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.message.type.TypeInformation;
-import io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
-import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
+import io.r2dbc.mssql.util.Types;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -38,11 +37,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class MssqlRowUnitTests {
 
-    TypeInformation integer = TypeInformation.builder().withScale(4).withMaxLength(4).withLengthStrategy(LengthStrategy.FIXEDLENTYPE).withServerType(SqlServerType.INTEGER).build();
+    TypeInformation integer = Types.integer();
 
     Column column = new Column(0, "foo", integer, null);
 
-    ByteBuf data = Unpooled.wrappedBuffer(new byte[]{(byte) 0x42, 0, 0, 0});
+    ByteBuf data = Unpooled.wrappedBuffer(new byte[]{(byte) 0x4, 0x42, 0, 0, 0});
 
     RowToken rowToken = RowToken.decode(data, Collections.singletonList(column));
 

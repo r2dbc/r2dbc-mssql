@@ -17,6 +17,8 @@
 package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.message.type.LengthStrategy;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
@@ -25,8 +27,6 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 
-import static io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
-import static io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import static io.r2dbc.mssql.message.type.TypeInformation.builder;
 import static org.assertj.core.api.Assertions.assertThat;
 

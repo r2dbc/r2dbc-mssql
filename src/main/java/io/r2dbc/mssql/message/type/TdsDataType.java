@@ -16,8 +16,6 @@
 
 package io.r2dbc.mssql.message.type;
 
-import io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
-
 /**
  * SQL Server data types as represented within TDS.
  */

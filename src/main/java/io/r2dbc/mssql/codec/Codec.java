@@ -18,12 +18,13 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import reactor.util.annotation.Nullable;
 
 /**
  * Codec to encode and decode values based on Server types and Java value types.<p/>
- * Codecs can decode one or more {@link TypeInformation.SqlServerType server-specific data types} and represent them as a specific Java {@link Class type}. The type parameter of {@link Codec}
+ * Codecs can decode one or more {@link SqlServerType server-specific data types} and represent them as a specific Java {@link Class type}. The type parameter of {@link Codec}
  * indicates the interchange type that is handled by this codec.
  * <p/>
  * Codecs that can decode various types (e.g. {@literal uniqueidentifier} and {@literal char}) use the most appropriate method to represent the value by casting or using the
@@ -31,7 +32,7 @@ import reactor.util.annotation.Nullable;
  *
  * @param <T> the type that is handled by this codec.
  * @see TypeInformation
- * @see TypeInformation.SqlServerType
+ * @see SqlServerType
  */
 interface Codec<T> {
 
