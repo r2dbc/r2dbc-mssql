@@ -37,6 +37,8 @@ import static io.r2dbc.mssql.util.PredicateUtils.or;
 
 /**
  * A utility class that encapsulates the Login message flow.
+ *
+ * @author Mark Paluch
  */
 final class LoginFlow {
 

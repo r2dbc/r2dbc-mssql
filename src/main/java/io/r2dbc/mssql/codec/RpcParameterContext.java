@@ -88,7 +88,7 @@ public final class RpcParameterContext {
      * @return the RPC direction.
      */
     public RpcDirection getDirection() {
-        return direction;
+        return this.direction;
     }
 
     /**
@@ -110,15 +110,15 @@ public final class RpcParameterContext {
      */
     @Nullable
     public Collation getCollation() {
-        return collation;
+        return this.collation;
     }
 
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [direction=").append(direction);
-        sb.append(", collation=").append(collation);
+        sb.append(" [direction=").append(this.direction);
+        sb.append(", collation=").append(this.collation);
         sb.append(']');
         return sb.toString();
     }

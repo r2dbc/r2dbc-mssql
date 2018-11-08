@@ -25,6 +25,8 @@ import java.util.Objects;
 
 /**
  * An implementation of {@link ConnectionFactory} for creating connections to a Microsoft SQL Server database.
+ *
+ * @author Mark Paluch
  */
 public final class MssqlConnectionFactory implements ConnectionFactory {
 
@@ -66,7 +68,10 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
 
     @Override
     public String toString() {
-        return "MssqlConnectionFactory{" + "clientFactory=" + this.clientFactory + ", configuration=" + this.configuration
-            + '}';
+        final StringBuffer sb = new StringBuffer();
+        sb.append(getClass().getSimpleName());
+        sb.append(" [configuration=").append(this.configuration);
+        sb.append(']');
+        return sb.toString();
     }
 }

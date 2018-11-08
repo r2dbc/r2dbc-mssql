@@ -131,7 +131,7 @@ final class DecimalCodec extends AbstractCodec<BigDecimal> {
 
         @Override
         public String getFormalType() {
-            return super.getFormalType() + "(" + length + "," + scale + ")";
+            return super.getFormalType() + "(" + this.length + "," + this.scale + ")";
         }
     }
 }

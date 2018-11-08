@@ -51,8 +51,6 @@ public final class Prelogin implements TokenStream, ClientMessage {
 
     private static final HeaderOptions HEADER_OPTIONS = HeaderOptions.create(Type.PRE_LOGIN, Status.of(StatusBit.EOM));
 
-    private final int size;
-
     private final List<? extends Token> tokens;
 
     /**
@@ -63,8 +61,6 @@ public final class Prelogin implements TokenStream, ClientMessage {
     public Prelogin(List<? extends Token> tokens) {
 
         Objects.requireNonNull(tokens, "Tokens must not be null");
-
-        this.size = getSize(tokens);
         this.tokens = tokens;
     }
 
@@ -167,17 +163,6 @@ public final class Prelogin implements TokenStream, ClientMessage {
             () -> new IllegalArgumentException(String.format("No token of type [%s] available", tokenType.getName())));
     }
 
-    private static int getSize(List<? extends Token> tokens) {
-
-        int size = Header.LENGTH;
-
-        for (Token token : tokens) {
-            size += token.getTotalLength();
-        }
-
-        return size;
-    }
-
     @Override
     public String getName() {
         return "PRELOGIN";
@@ -190,7 +175,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
 
         return Mono.fromSupplier(() -> {
 
-            ByteBuf buffer = allocator.buffer(this.size);
+            ByteBuf buffer = allocator.buffer(getSize(this.tokens));
 
             encode(buffer);
 
@@ -234,13 +219,12 @@ public final class Prelogin implements TokenStream, ClientMessage {
             return false;
         }
         Prelogin prelogin = (Prelogin) o;
-        return this.size == prelogin.size &&
-            Objects.equals(this.tokens, prelogin.tokens);
+        return Objects.equals(this.tokens, prelogin.tokens);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.size, this.tokens);
+        return Objects.hash(this.tokens);
     }
 
     @Override
@@ -248,9 +232,19 @@ public final class Prelogin implements TokenStream, ClientMessage {
         final StringBuffer sb = new StringBuffer();
         sb.append(getName());
         sb.append(" [tokens=").append(this.tokens);
-        sb.append(", size=").append(this.size);
         sb.append(']');
         return sb.toString();
+    }
+
+    private static int getSize(List<? extends Token> tokens) {
+
+        int size = Header.LENGTH;
+
+        for (Token token : tokens) {
+            size += token.getTotalLength();
+        }
+
+        return size;
     }
 
     /**
@@ -423,54 +417,6 @@ public final class Prelogin implements TokenStream, ClientMessage {
         }
 
         /**
-         * Returns the token type.
-         *
-         * @return the token type.
-         */
-        byte getType() {
-            return this.type;
-        }
-
-        /**
-         * Returns the token length.
-         *
-         * @return the token data length.
-         */
-        int getLength() {
-            return this.length;
-        }
-
-        public void encodeToken(ByteBuf buffer, int position) {
-
-            Encode.asByte(buffer, this.type);
-            Encode.uShortBE(buffer, position);
-            Encode.uShortBE(buffer, this.length);
-        }
-
-        public abstract void encodeStream(ByteBuf buffer);
-
-        /**
-         * @return total length in bytes (including token header).
-         */
-        final int getTotalLength() {
-            return getDataLength() + getTokenHeaderLength();
-        }
-
-        /**
-         * @return token header length in bytes.
-         */
-        int getTokenHeaderLength() {
-            return 5;
-        }
-
-        /**
-         * @return length of data bytes.
-         */
-        int getDataLength() {
-            return this.length;
-        }
-
-        /**
          * Apply functional token decoding.
          *
          * @param toDecode  the decoding state.
@@ -504,18 +450,66 @@ public final class Prelogin implements TokenStream, ClientMessage {
             toDecode.afterTokenDecoded();
             return result;
         }
+
+        public void encodeToken(ByteBuf buffer, int position) {
+
+            Encode.asByte(buffer, this.type);
+            Encode.uShortBE(buffer, position);
+            Encode.uShortBE(buffer, this.length);
+        }
+
+        /**
+         * Returns the token type.
+         *
+         * @return the token type.
+         */
+        byte getType() {
+            return this.type;
+        }
+
+        /**
+         * Returns the token length.
+         *
+         * @return the token data length.
+         */
+        int getLength() {
+            return this.length;
+        }
+
+        public abstract void encodeStream(ByteBuf buffer);
+
+        /**
+         * @return total length in bytes (including token header).
+         */
+        final int getTotalLength() {
+            return getDataLength() + getTokenHeaderLength();
+        }
+
+        /**
+         * @return token header length in bytes.
+         */
+        int getTokenHeaderLength() {
+            return 5;
+        }
+
+        /**
+         * @return length of data bytes.
+         */
+        int getDataLength() {
+            return this.length;
+        }
     }
 
     /**
      * Terminating token indicating the end of prelogin tokens.
      */
-    public static class Terminator extends Token {
+    static class Terminator extends Token {
 
         public static final Terminator INSTANCE = new Terminator();
 
         public static final byte TYPE = (byte) 0xFF;
 
-        public Terminator() {
+        Terminator() {
             super(TYPE, 0);
         }
 
@@ -559,10 +553,22 @@ public final class Prelogin implements TokenStream, ClientMessage {
          */
         private final short subbuild;
 
+        /**
+         * Creates a new {@link Version} given major {@code version} and the {@code subbuild}.
+         *
+         * @param version  the server major version.
+         * @param subbuild the server subbuild.
+         */
         public Version(int version, int subbuild) {
             this(version, (byte) subbuild);
         }
 
+        /**
+         * Creates a new {@link Version} given major {@code version} and the {@code subbuild}.
+         *
+         * @param version  the server major version.
+         * @param subbuild the server subbuild.
+         */
         public Version(int version, short subbuild) {
 
             super(TYPE, 6);
@@ -635,13 +641,23 @@ public final class Prelogin implements TokenStream, ClientMessage {
          */
         private final byte[] instanceName;
 
+        /**
+         * Request SQL server instance name validation.
+         *
+         * @param instanceName the requested instance name.
+         */
         public InstanceValidation(String instanceName) {
             this(toBytes(instanceName));
         }
 
+        /**
+         * Request SQL server instance name validation.
+         *
+         * @param instanceName the requested instance name.
+         */
         private InstanceValidation(byte[] instanceName) {
 
-            super(TYPE, instanceName.length);
+            super(TYPE, Objects.requireNonNull(instanceName, "Instance name must not be null").length);
             this.instanceName = instanceName;
         }
 
@@ -676,6 +692,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
             return sb.toString();
         }
 
+        // TODO: find an approach to use Encode.as(…)
         private static byte[] toBytes(String instanceName) {
 
             Objects.requireNonNull(instanceName, "Instance name must not be null");
@@ -716,6 +733,11 @@ public final class Prelogin implements TokenStream, ClientMessage {
 
         private final byte encryption;
 
+        /**
+         * Create a new {@link Encryption} token.
+         *
+         * @param encryption encryption capability flag.
+         */
         public Encryption(byte encryption) {
 
             super(TYPE, 1);
@@ -755,15 +777,20 @@ public final class Prelogin implements TokenStream, ClientMessage {
         }
 
         /**
-         * Returns {@literal true} if the login phase requires a SSL handshake.
+         * Returns {@literal true} if the subsequent communication requires a SSL handshake.
          *
-         * @return {@literal true} if the login phase requires a SSL handshake.
+         * @return {@literal true} if the subsequent communication requires a SSL handshake.
          */
         public boolean requiresSslHanshake() {
             return getEncryption() == Prelogin.Encryption.ENCRYPT_REQ || getEncryption() == Prelogin.Encryption.ENCRYPT_OFF
                 || getEncryption() == Prelogin.Encryption.ENCRYPT_ON;
         }
 
+        /**
+         * Returns {@literal true} if a SSL handshake is required to enable SSL for sending the Login packet only.
+         *
+         * @return {@literal true} if a SSL handshake is required to enable SSL for sending the Login packet only.}
+         */
         public boolean requiresLoginSslHanshake() {
             return getEncryption() == Prelogin.Encryption.ENCRYPT_OFF;
         }
@@ -790,6 +817,11 @@ public final class Prelogin implements TokenStream, ClientMessage {
          */
         private final int threadId;
 
+        /**
+         * Create a new {@link ThreadId} given the application {@code threadId}.
+         *
+         * @param threadId application thread Id.
+         */
         public ThreadId(int threadId) {
 
             super(TYPE, 4);
@@ -835,6 +867,13 @@ public final class Prelogin implements TokenStream, ClientMessage {
         @Nullable
         private final int activitySequence;
 
+        /**
+         * Create a {@link TraceId} to associate trace Ids with the connection.
+         *
+         * @param connectionId
+         * @param activityId
+         * @param activitySequence
+         */
         public TraceId(@Nullable UUID connectionId, @Nullable UUID activityId, int activitySequence) {
 
             super(0x05, 36);
@@ -863,7 +902,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
                 buffer.writeLong(0);
             }
 
-            buffer.writeInt(this.activitySequence);
+            Encode.intBigEndian(buffer, this.activitySequence);
         }
 
         @Override
@@ -883,7 +922,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
      */
     public static class UnknownToken extends Token {
 
-        public UnknownToken(int type, int length) {
+        UnknownToken(int type, int length) {
             super(type, length);
         }
 

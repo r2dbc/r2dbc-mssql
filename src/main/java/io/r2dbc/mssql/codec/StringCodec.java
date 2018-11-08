@@ -231,7 +231,7 @@ final class StringCodec extends AbstractCodec<String> {
 
         @Override
         public String getFormalType() {
-            return super.getFormalType() + "(" + maxLength + ")";
+            return super.getFormalType() + "(" + this.maxLength + ")";
         }
     }
 }

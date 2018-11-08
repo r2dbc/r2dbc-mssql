@@ -10,12 +10,12 @@ This driver provides the following features:
 * Login with username/password with temporary SSL encryption
 * Transaction Control
 * Simple (un-cursored) execution of SQL batches
-* Read support for all data types except binary types (BLOB)
+* Execution of prepared statements
 * Execution of SQL cursored statements
+* Read support for all data types except binary types (BLOB)
 
 Next steps:
 
-* Execution of prepared statements
 * Full SSL encryption support.
 * Add encoding for remaining codecs (VARBINARY, XML, UDT)
 * Execution of stored procedures 
@@ -55,6 +55,21 @@ Artifacts can bound found at the following repositories.
         <enabled>false</enabled>
     </snapshots>
 </repository>
+```
+
+## Usage
+
+```java
+MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+    .host("…")
+    .username("…")
+    .password("…")
+    .database("…")
+    .build();
+
+MssqlConnectionFactory factory = new MssqlConnectionFactory(configuration);
+
+Mono<MssqlConnection> connectionMono = factory.create();
 ```
 
 ## License

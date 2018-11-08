@@ -56,26 +56,6 @@ public final class MssqlResult implements Result {
         this.rowsUpdated = rowsUpdated;
     }
 
-    @Override
-    public Mono<Integer> getRowsUpdated() {
-        return this.rowsUpdated.map(Long::intValue);
-    }
-
-    @Override
-    public <T> Flux<T> map(BiFunction<Row, RowMetadata, ? extends T> f) {
-
-        Objects.requireNonNull(f, "Mapping function must not be null");
-
-        return this.rows
-            .map((row) -> {
-                try {
-                    return f.apply(row, new MssqlRowMetadata(row));
-                } finally {
-                    row.release();
-                }
-            });
-    }
-
     /**
      * Create a non-cursored {@link MssqlResult}.
      *
@@ -117,5 +97,25 @@ public final class MssqlResult implements Result {
             .subscribe(processor);
 
         return new MssqlResult(rows, rowsUpdated);
+    }
+
+    @Override
+    public Mono<Integer> getRowsUpdated() {
+        return this.rowsUpdated.map(Long::intValue);
+    }
+
+    @Override
+    public <T> Flux<T> map(BiFunction<Row, RowMetadata, ? extends T> f) {
+
+        Objects.requireNonNull(f, "Mapping function must not be null");
+
+        return this.rows
+            .map((row) -> {
+                try {
+                    return f.apply(row, new MssqlRowMetadata(row));
+                } finally {
+                    row.release();
+                }
+            });
     }
 }

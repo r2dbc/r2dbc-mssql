@@ -64,14 +64,14 @@ public final class DefaultCodecs implements Codecs {
             ZonedDateTimeCodec.INSTANCE
         );
 
-        codecPreferences.put(SqlServerType.BIT, BooleanCodec.INSTANCE);
-        codecPreferences.put(SqlServerType.TINYINT, ByteCodec.INSTANCE);
-        codecPreferences.put(SqlServerType.SMALLINT, ShortCodec.INSTANCE);
-        codecPreferences.put(SqlServerType.INTEGER, IntegerCodec.INSTANCE);
-        codecPreferences.put(SqlServerType.BIGINT, LongCodec.INSTANCE);
-        codecPreferences.put(SqlServerType.REAL, FloatCodec.INSTANCE);
-        codecPreferences.put(SqlServerType.FLOAT, DoubleCodec.INSTANCE);
-        codecPreferences.put(SqlServerType.GUID, UuidCodec.INSTANCE);
+        this.codecPreferences.put(SqlServerType.BIT, BooleanCodec.INSTANCE);
+        this.codecPreferences.put(SqlServerType.TINYINT, ByteCodec.INSTANCE);
+        this.codecPreferences.put(SqlServerType.SMALLINT, ShortCodec.INSTANCE);
+        this.codecPreferences.put(SqlServerType.INTEGER, IntegerCodec.INSTANCE);
+        this.codecPreferences.put(SqlServerType.BIGINT, LongCodec.INSTANCE);
+        this.codecPreferences.put(SqlServerType.REAL, FloatCodec.INSTANCE);
+        this.codecPreferences.put(SqlServerType.FLOAT, DoubleCodec.INSTANCE);
+        this.codecPreferences.put(SqlServerType.GUID, UuidCodec.INSTANCE);
     }
 
     @SuppressWarnings({"unchecked", "rawtpes"})
@@ -117,7 +117,7 @@ public final class DefaultCodecs implements Codecs {
             return null;
         }
 
-        Codec<?> preferredCodec = codecPreferences.get(decodable.getType().getServerType());
+        Codec<?> preferredCodec = this.codecPreferences.get(decodable.getType().getServerType());
         if (preferredCodec != null && preferredCodec.canDecode(decodable, type)) {
             return doDecode((Codec<T>) preferredCodec, buffer, decodable, type);
         }

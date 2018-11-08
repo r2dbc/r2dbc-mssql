@@ -507,16 +507,16 @@ public interface TypeInformation {
 
 
         public int getMaxLength() {
-            return maxLength;
+            return this.maxLength;
         }
 
         @Nullable
         public TdsDataType getNullableType() {
-            return nullableType;
+            return this.nullableType;
         }
 
         public TdsDataType[] getFixedTypes() {
-            return fixedTypes;
+            return this.fixedTypes;
         }
 
         /**

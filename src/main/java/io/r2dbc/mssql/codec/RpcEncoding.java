@@ -23,6 +23,7 @@ import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation.LengthStrategy;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.mssql.util.StringUtils;
 import reactor.util.annotation.Nullable;
 
 import java.util.function.BiConsumer;
@@ -89,7 +90,7 @@ public final class RpcEncoding {
      */
     public static void encodeHeader(ByteBuf buffer, @Nullable String name, RpcDirection direction, TdsDataType dataType) {
 
-        if (name != null) {
+        if (StringUtils.hasText(name)) {
 
             Encode.asByte(buffer, name.length() + 1);
 
@@ -260,7 +261,7 @@ public final class RpcEncoding {
 
         @Override
         public String getFormalType() {
-            return sqlServerType.toString();
+            return this.sqlServerType.toString();
         }
     }
 }

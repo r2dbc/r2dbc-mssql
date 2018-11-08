@@ -16,8 +16,10 @@
 
 package io.r2dbc.mssql;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Hooks;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Mark Paluch
@@ -25,7 +27,7 @@ import reactor.core.publisher.Hooks;
 final class MssqlConnectionFactoryIntegrationTests {
 
     @Test
-        //@Disabled("Requires running SQL server")
+    @Disabled("Requires running SQL server")
     void shouldConnectToSqlServer() throws InterruptedException {
 
         Hooks.onOperatorDebug();
@@ -37,6 +39,8 @@ final class MssqlConnectionFactoryIntegrationTests {
             .build();
 
         MssqlConnectionFactory factory = new MssqlConnectionFactory(configuration);
+
+        Mono<MssqlConnection> connectionMono = factory.create();
 
         MssqlConnection connection = factory.create().block();
 

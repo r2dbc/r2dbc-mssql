@@ -59,16 +59,18 @@ public final class MssqlBatch implements Batch<MssqlBatch> {
 
     @Override
     public Flux<MssqlResult> execute() {
-        return new SimpleMssqlStatement(this.client, codecs, String.join("; ", this.statements))
+        return new SimpleMssqlStatement(this.client, this.codecs, String.join("; ", this.statements))
             .execute();
     }
 
     @Override
     public String toString() {
-        return "PostgresqlBatch{" +
-            "client=" + this.client +
-            ", codecs=" + this.codecs +
-            ", statements=" + this.statements +
-            '}';
+        final StringBuffer sb = new StringBuffer();
+        sb.append(getClass().getSimpleName());
+        sb.append(" [client=").append(this.client);
+        sb.append(", codecs=").append(this.codecs);
+        sb.append(", statements=").append(this.statements);
+        sb.append(']');
+        return sb.toString();
     }
 }

@@ -41,11 +41,11 @@ public class Encoded extends AbstractReferenceCounted {
     }
 
     public TdsDataType getDataType() {
-        return dataType;
+        return this.dataType;
     }
 
     public ByteBuf getValue() {
-        return value;
+        return this.value;
     }
 
     @Override

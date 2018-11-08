@@ -655,9 +655,9 @@ public final class RpcRequest implements ClientMessage, TokenStream {
 
         @Override
         void encode(ByteBuf buffer) {
-            RpcEncoding.encodeHeader(buffer, getName(), getDirection(), value.getDataType());
-            buffer.writeBytes(value.getValue());
-            value.release();
+            RpcEncoding.encodeHeader(buffer, getName(), getDirection(), this.value.getDataType());
+            buffer.writeBytes(this.value.getValue());
+            this.value.release();
         }
 
         @Override

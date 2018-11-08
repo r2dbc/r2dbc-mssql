@@ -115,7 +115,7 @@ public class NbcRowToken extends RowToken {
 
     @Override
     public ByteBuf getColumnData(int index) {
-        return nullMarker[index] ? null : super.getColumnData(index);
+        return this.nullMarker[index] ? null : super.getColumnData(index);
     }
 
     private static NbcRowToken doDecode(ByteBuf buffer, List<Column> columns) {
@@ -179,7 +179,7 @@ public class NbcRowToken extends RowToken {
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getName());
-        sb.append(" [nullMarker=").append(Arrays.toString(nullMarker));
+        sb.append(" [nullMarker=").append(Arrays.toString(this.nullMarker));
         sb.append(']');
         return sb.toString();
     }

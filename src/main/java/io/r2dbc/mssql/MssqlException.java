@@ -86,39 +86,28 @@ public final class MssqlException extends AbstractMssqlException {
         this.lineNumber = lineNumber;
     }
 
-    private static String generateStateCode(
-        int errNum,
-        int databaseState) {
-
-        switch (errNum) {
-            // case 18456: return "08001"; //username password wrong at login
-            case 8152:
-                return "22001"; // String data right truncation
-            case 515: // 2.2705
-            case 547:
-                return "23000";  // Integrity constraint violation
-            case 2601:
-                return "23000";  // Integrity constraint violation
-            case 2714:
-                return "S0001"; // table already exists
-            case 208:
-                return "S0002";  // table not found
-            case 1205:
-                return "40001"; // deadlock detected
-            case 2627:
-                return "23000"; // DPM 4.04. Primary key violation
-        }
-        return "S000" + databaseState;
-    }
-
+    /**
+     * Handle {@link Message}s and inspect for {@link ErrorToken} to emit a {@link MssqlException}.
+     *
+     * @param message the message.
+     * @param sink    the outbound sink.
+     */
     static void handleErrorResponse(Message message, SynchronousSink<Message> sink) {
+
         if (message instanceof ErrorToken) {
-            sink.error(MssqlException.create((ErrorToken) message));
+            sink.error(create((ErrorToken) message));
         } else {
             sink.next(message);
         }
     }
 
+    /**
+     * Creates an exception from an {@link AbstractInfoToken}.
+     *
+     * @param token the token that contains the error details.
+     * @return the {@link MssqlException}.
+     * @see ErrorToken
+     */
     static MssqlException create(AbstractInfoToken token) {
 
         return new MssqlException(token.getMessage(), token.getNumber(), token.getState(), token.getInfoClass(), token.getServerName(), token.getProcName(), token.getLineNumber());
@@ -179,5 +168,31 @@ public final class MssqlException extends AbstractMssqlException {
      */
     public long getLineNumber() {
         return this.lineNumber;
+    }
+
+    private static String generateStateCode(
+
+        int errNum,
+        int databaseState) {
+
+        switch (errNum) {
+            // case 18456: return "08001"; //username password wrong at login
+            case 8152:
+                return "22001"; // String data right truncation
+            case 515: // 2.2705
+            case 547:
+                return "23000";  // Integrity constraint violation
+            case 2601:
+                return "23000";  // Integrity constraint violation
+            case 2714:
+                return "S0001"; // table already exists
+            case 208:
+                return "S0002";  // table not found
+            case 1205:
+                return "40001"; // deadlock detected
+            case 2627:
+                return "23000"; // DPM 4.04. Primary key violation
+        }
+        return "S000" + databaseState;
     }
 }

@@ -16,6 +16,7 @@
 
 package io.r2dbc.mssql;
 
+import io.r2dbc.mssql.util.StringUtils;
 import reactor.util.annotation.Nullable;
 
 import java.net.InetAddress;
@@ -26,6 +27,9 @@ import java.util.UUID;
 
 /**
  * Connection configuration information for connecting to a Microsoft SQL database.
+ * Allows configuration of the connection endpoint, login credentials, database and trace details such as application name and connection Id.
+ *
+ * @author Mark Paluch
  */
 public final class MssqlConnectionConfiguration {
 
@@ -86,7 +90,7 @@ public final class MssqlConnectionConfiguration {
         return this.connectionId;
     }
 
-    public Optional<String> getDatabase() {
+    Optional<String> getDatabase() {
         return Optional.ofNullable(this.database);
     }
 
@@ -119,22 +123,20 @@ public final class MssqlConnectionConfiguration {
     /**
      * Looks up local hostname of client machine.
      *
-     * @return hostname string or ip of host if hostname cannot be resolved. If neither hostname or ip found returns ""
-     * per spec.
-     * @throws UnknownHostException if local hostname is not found.
+     * @return hostname string or IP of host if hostname cannot be resolved. If neither hostname or IP found returns an empty string.
      */
     private static String lookupHostName() {
 
         try {
             InetAddress localAddress = InetAddress.getLocalHost();
-            if (null != localAddress) {
+            if (localAddress != null) {
                 String value = localAddress.getHostName();
-                if (null != value && value.length() > 0) {
+                if (StringUtils.hasText(value)) {
                     return value;
                 }
 
                 value = localAddress.getHostAddress();
-                if (null != value && value.length() > 0) {
+                if (StringUtils.hasText(value)) {
                     return value;
                 }
             }
@@ -259,7 +261,5 @@ public final class MssqlConnectionConfiguration {
             return new MssqlConnectionConfiguration(this.connectionId, this.database, this.host, this.password, this.port,
                 this.username, this.appName);
         }
-
     }
-
 }

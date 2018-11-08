@@ -17,13 +17,14 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.message.token.Login7;
+import io.r2dbc.mssql.util.StringUtils;
 import reactor.util.annotation.Nullable;
 
 import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Login configuration properties.
+ * Login configuration properties. Used to build a {@link Login7} message.
  *
  * @author Mark Paluch
  */
@@ -45,8 +46,8 @@ final class LoginConfiguration {
     @Nullable
     private final UUID connectionId;
 
-    public LoginConfiguration(String username, String password, String database, String hostname, String appName,
-                              String serverName, @Nullable UUID connectionId) {
+    LoginConfiguration(String username, String password, String database, String hostname, String appName,
+                       String serverName, @Nullable UUID connectionId) {
         this.username = Objects.requireNonNull(username, "Username must not be null");
         this.password = Objects.requireNonNull(password, "Password must not be null");
         this.database = Objects.requireNonNull(database, "Database must not be null");
@@ -66,7 +67,7 @@ final class LoginConfiguration {
         Login7.Builder builder = Login7.builder().username(this.username).password(this.password).database(this.database)
             .hostName(this.hostname).serverName(this.serverName);
 
-        if (this.appName != null) {
+        if (StringUtils.hasText(this.appName)) {
             builder.appName(this.appName);
         }
         return builder;

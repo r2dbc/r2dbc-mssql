@@ -100,7 +100,7 @@ class Binding {
     }
 
     public Map<String, Encoded> getParameters() {
-        return parameters;
+        return this.parameters;
     }
 
     /**
@@ -142,7 +142,7 @@ class Binding {
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [parameters=").append(parameters);
+        sb.append(" [parameters=").append(this.parameters);
         sb.append(']');
         return sb.toString();
     }

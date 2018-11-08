@@ -91,7 +91,7 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
         Objects.requireNonNull(identifier, "identifier must not be null");
         Assert.isInstanceOf(String.class, identifier, "identifier must be a String");
 
-        Encoded encoded = this.codecs.encode(client.getByteBufAllocator(), RpcParameterContext.in(client.getRequiredCollation()), value);
+        Encoded encoded = this.codecs.encode(this.client.getByteBufAllocator(), RpcParameterContext.in(this.client.getRequiredCollation()), value);
 
         String parameterName = (String) identifier;
         validateParameterName(parameterName);
@@ -133,7 +133,7 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
      * @return the {@link Bindings}.
      */
     Bindings getBindings() {
-        return bindings;
+        return this.bindings;
     }
 
     /**
@@ -340,7 +340,7 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
         }
 
         public String getSql() {
-            return sql;
+            return this.sql;
         }
 
         /**
@@ -351,7 +351,7 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
         }
 
         public List<ParsedParameter> getParameters() {
-            return parameters;
+            return this.parameters;
         }
 
         @Override
@@ -363,21 +363,21 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
                 return false;
             }
             ParsedQuery that = (ParsedQuery) o;
-            return Objects.equals(sql, that.sql) &&
-                Objects.equals(parameters, that.parameters);
+            return Objects.equals(this.sql, that.sql) &&
+                Objects.equals(this.parameters, that.parameters);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(sql, parameters);
+            return Objects.hash(this.sql, this.parameters);
         }
 
         @Override
         public String toString() {
             final StringBuffer sb = new StringBuffer();
             sb.append(getClass().getSimpleName());
-            sb.append(" [sql='").append(sql).append('\'');
-            sb.append(", variables=").append(parameters);
+            sb.append(" [sql='").append(this.sql).append('\'');
+            sb.append(", variables=").append(this.parameters);
             sb.append(']');
             return sb.toString();
         }
@@ -399,11 +399,11 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
 
 
         public String getName() {
-            return name;
+            return this.name;
         }
 
         public int getPosition() {
-            return position;
+            return this.position;
         }
 
         @Override
@@ -415,21 +415,21 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
                 return false;
             }
             ParsedParameter that = (ParsedParameter) o;
-            return position == that.position &&
-                Objects.equals(name, that.name);
+            return this.position == that.position &&
+                Objects.equals(this.name, that.name);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(name, position);
+            return Objects.hash(this.name, this.position);
         }
 
         @Override
         public String toString() {
             final StringBuffer sb = new StringBuffer();
             sb.append(getClass().getSimpleName());
-            sb.append(" [name='").append(name).append('\'');
-            sb.append(", position=").append(position);
+            sb.append(" [name='").append(this.name).append('\'');
+            sb.append(", position=").append(this.position);
             sb.append(']');
             return sb.toString();
         }

@@ -94,7 +94,7 @@ public enum TdsDataType {
     }
 
     public LengthStrategy getLengthStrategy() {
-        return lengthStrategy;
+        return this.lengthStrategy;
     }
 
     /**

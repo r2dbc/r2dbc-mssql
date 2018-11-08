@@ -53,7 +53,7 @@ public final class MssqlConnection implements Connection {
         this(client, new DefaultCodecs());
     }
 
-    MssqlConnection(Client client, Codecs codecs) {
+    private MssqlConnection(Client client, Codecs codecs) {
 
         this.client = Objects.requireNonNull(client, "Client must not be null");
         this.codecs = Objects.requireNonNull(codecs, "Codecs must not be null");
