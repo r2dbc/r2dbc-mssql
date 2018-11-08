@@ -503,7 +503,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
     /**
      * Terminating token indicating the end of prelogin tokens.
      */
-    static class Terminator extends Token {
+    public static class Terminator extends Token {
 
         public static final Terminator INSTANCE = new Terminator();
 

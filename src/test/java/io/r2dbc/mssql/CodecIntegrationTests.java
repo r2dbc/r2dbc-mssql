@@ -17,9 +17,11 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.codec.DefaultCodecs;
+import io.r2dbc.mssql.util.MsSqlServerExtension;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -38,6 +40,9 @@ import java.util.UUID;
  */
 class CodecIntegrationTests {
 
+    @RegisterExtension
+    static final MsSqlServerExtension SERVER = new MsSqlServerExtension();
+
     private static MssqlConnectionFactory connectionFactory;
 
     private static MssqlConnection connection;
@@ -46,10 +51,10 @@ class CodecIntegrationTests {
     static void setUp() {
 
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
-            .host("localhost")
-            .username("sa")
-            .password("my1.password")
-            .database("foo")
+            .host(SERVER.getHost())
+            .port(SERVER.getPort())
+            .username(SERVER.getUsername())
+            .password(SERVER.getPassword())
             .build();
 
         connectionFactory = new MssqlConnectionFactory(configuration);
@@ -58,7 +63,10 @@ class CodecIntegrationTests {
 
     @AfterAll
     static void afterAll() {
-        connection.close().subscribe();
+
+        if (connection != null) {
+            connection.close().subscribe();
+        }
     }
 
     @Test

@@ -42,7 +42,7 @@
         <r2dbc-spi.version>1.0.0.BUILD-SNAPSHOT</r2dbc-spi.version>
         <reactor.version>Californium-RELEASE</reactor.version>
         <slf4j.version>1.7.25</slf4j.version>
-        <spring-boot.version>2.0.5.RELEASE</spring-boot.version>
+        <spring-boot.version>2.1.0.RELEASE</spring-boot.version>
         <testcontainers.version>1.9.1</testcontainers.version>
     </properties>
 
@@ -95,21 +95,12 @@
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
-
-        <dependency>
-            <groupId>com.microsoft.sqlserver</groupId>
-            <artifactId>mssql-jdbc</artifactId>
-            <version>6.4.0.jre8</version>
-            <scope>test</scope>
-        </dependency>
-
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
             <version>${jsr305.version}</version>
             <scope>provided</scope>
         </dependency>
-
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
@@ -152,6 +143,17 @@
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mssqlserver</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+            <version>7.0.0.jre8</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -240,10 +242,34 @@
                 <version>2.22.0</version>
                 <configuration>
                     <runOrder>random</runOrder>
+                    <excludes>
+                        <exclude>**/**IntegrationTests.java</exclude>
+                    </excludes>
                     <includes>
                         <include>**/*Example.java</include>
-                        <include>**/*Test.java</include>
+                        <include>**/*Tests.java</include>
                     </includes>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.22.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <runOrder>random</runOrder>
+                    <includes>
+                        <include>**/**IntegrationTests.java</include>
+                    </includes>
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
                 </configuration>
             </plugin>
         </plugins>

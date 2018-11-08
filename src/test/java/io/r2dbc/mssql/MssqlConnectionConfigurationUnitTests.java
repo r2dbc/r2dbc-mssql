@@ -16,13 +16,12 @@
 
 package io.r2dbc.mssql;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNullPointerException;
-
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
 import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 /**
  * Unit tests for {@link  MssqlConnectionConfiguration}.
@@ -75,7 +74,7 @@ final class MssqlConnectionConfigurationUnitTests {
 
         assertThat(configuration)
             .hasFieldOrPropertyWithValue("connectionId", connectionId)
-            .hasFieldOrPropertyWithValue("database", Optional.of("test-database"))
+            .hasFieldOrPropertyWithValue("database", "test-database")
             .hasFieldOrPropertyWithValue("host", "test-host")
             .hasFieldOrPropertyWithValue("password", "test-password")
             .hasFieldOrPropertyWithValue("port", 100)
@@ -94,7 +93,7 @@ final class MssqlConnectionConfigurationUnitTests {
 
         assertThat(configuration)
             .hasFieldOrPropertyWithValue("appName", "r2dbc")
-            .hasFieldOrPropertyWithValue("database", Optional.of("test-database"))
+            .hasFieldOrPropertyWithValue("database", "test-database")
             .hasFieldOrPropertyWithValue("host", "test-host")
             .hasFieldOrPropertyWithValue("password", "test-password")
             .hasFieldOrPropertyWithValue("port", 1433)

@@ -1,0 +1,120 @@
+/*
+ * Copyright 2018 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.r2dbc.mssql;
+
+import io.r2dbc.mssql.util.MsSqlServerExtension;
+import io.r2dbc.spi.ColumnMetadata;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * Integration tests for {@link MssqlConnection} and {@link MssqlStatement}.
+ *
+ * @author Mark Paluch
+ */
+class MssqlConnectionIntegrationTests {
+
+    @RegisterExtension
+    static final MsSqlServerExtension SERVER = new MsSqlServerExtension();
+
+    private static MssqlConnectionFactory connectionFactory;
+
+    private static MssqlConnection connection;
+
+    @BeforeAll
+    static void setUp() {
+
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+            .host(SERVER.getHost())
+            .port(SERVER.getPort())
+            .username(SERVER.getUsername())
+            .password(SERVER.getPassword())
+            .build();
+
+        connectionFactory = new MssqlConnectionFactory(configuration);
+        connection = connectionFactory.create().block();
+    }
+
+    @AfterAll
+    static void afterAll() {
+
+        if (connection != null) {
+            connection.close().subscribe();
+        }
+    }
+
+    @Test
+    void shouldInsertAndSelect() {
+
+        createTable(connection);
+
+        connection.createStatement("INSERT INTO r2dbc_example VALUES(@id, @firstname, @lastname)")
+            .bind("id", 1)
+            .bind("firstname", "Walter")
+            .bind("lastname", "White")
+            .execute()
+            .flatMap(MssqlResult::getRowsUpdated)
+            .as(StepVerifier::create)
+            .expectNext(1)
+            .verifyComplete();
+
+        connection.createStatement("SELECT * FROM r2dbc_example")
+            .execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> {
+
+                Map<String, Object> values = new LinkedHashMap<>();
+
+                for (ColumnMetadata column : rowMetadata.getColumnMetadatas()) {
+                    values.put(column.getName(), row.get(column.getName()));
+                }
+
+                return values;
+            }))
+            .as(StepVerifier::create)
+            .consumeNextWith(actual -> {
+
+                assertThat(actual)
+                    .containsEntry("id", 1)
+                    .containsEntry("first_name", "Walter")
+                    .containsEntry("last_name", "White");
+            })
+            .verifyComplete();
+    }
+
+    private void createTable(MssqlConnection connection) {
+
+        connection.createStatement("DROP TABLE r2dbc_example").execute()
+            .flatMap(MssqlResult::getRowsUpdated)
+            .onErrorResume(e -> Mono.empty())
+            .thenMany(connection.createStatement("CREATE TABLE r2dbc_example (" +
+                "id int PRIMARY KEY, " +
+                "first_name varchar(255), " +
+                "last_name varchar(255))")
+                .execute().flatMap(MssqlResult::getRowsUpdated))
+            .as(StepVerifier::create)
+            .verifyComplete();
+    }
+}
