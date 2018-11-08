@@ -25,6 +25,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.net.ConnectException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -64,6 +65,42 @@ class MssqlConnectionIntegrationTests {
         if (connection != null) {
             connection.close().subscribe();
         }
+    }
+
+    @Test
+    void shouldFailOnConnectionRefused() {
+
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+            .host(SERVER.getHost())
+            .port(123)
+            .username(SERVER.getUsername())
+            .password(SERVER.getPassword())
+            .build();
+
+        MssqlConnectionFactory connectionFactory = new MssqlConnectionFactory(configuration);
+
+        connectionFactory.create()
+            .as(StepVerifier::create)
+            .expectError(ConnectException.class)
+            .verify();
+    }
+
+    @Test
+    void shouldFailOnLoginFailedRefused() {
+
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+            .host(SERVER.getHost())
+            .port(SERVER.getPort())
+            .username(SERVER.getUsername())
+            .password("foobar")
+            .build();
+
+        MssqlConnectionFactory connectionFactory = new MssqlConnectionFactory(configuration);
+
+        connectionFactory.create()
+            .as(StepVerifier::create)
+            .expectError(MssqlException.class)
+            .verify();
     }
 
     @Test

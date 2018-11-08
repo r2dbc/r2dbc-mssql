@@ -57,7 +57,10 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
 
         LoginConfiguration loginConfiguration = this.configuration.getLoginConfiguration();
 
-        return this.clientFactory.delayUntil(client -> LoginFlow.exchange(client, loginConfiguration))
+        return this.clientFactory.delayUntil(client -> {
+            return LoginFlow.exchange(client, loginConfiguration)
+                .doOnError(e -> client.close().subscribe());
+        })
             .map(MssqlConnection::new);
     }
 

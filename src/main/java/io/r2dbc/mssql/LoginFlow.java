@@ -109,7 +109,6 @@ final class LoginFlow {
                 } catch (Exception e) {
                     requests.error(e);
                     sink.error(e);
-                    client.close().subscribe();
                 }
             });
     }
