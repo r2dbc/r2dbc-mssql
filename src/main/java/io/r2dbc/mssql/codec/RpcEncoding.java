@@ -42,7 +42,8 @@ public final class RpcEncoding {
 
     /**
      * Encode a string parameter as {@literal NVARCHAR} or {@literal NTEXT} (depending on the size).
-     *  @param buffer    the data buffer.
+     *
+     * @param buffer    the data buffer.
      * @param name      optional parameter name.
      * @param direction RPC parameter direction (in/out)
      * @param collation parameter value encoding.
@@ -58,7 +59,8 @@ public final class RpcEncoding {
 
     /**
      * Encode an integer parameter as {@literal INTn}.
-     *  @param buffer    the data buffer.
+     *
+     * @param buffer    the data buffer.
      * @param name      optional parameter name.
      * @param direction RPC parameter direction (in/out)
      * @param value     the parameter value, can be {@literal null}.
@@ -113,29 +115,10 @@ public final class RpcEncoding {
     }
 
     /**
-     * Encode a RPC parameter that declares length and max-length attributes.
+     * Encode a RPC parameter that uses a fixed-length, nullable data type.
      *
-     * @param allocator
-     * @param dataType
-     * @param maxLength
-     * @param length
-     * @param value        the value to encode.
-     * @param valueEncoder encoder function. Using a {@link BiFunction} to allow non-capturing lambdas.
-     * @param <T>
-     * @return
-     */
-    public static <T> Encoded encode(ByteBufAllocator allocator, TdsDataType dataType, int maxLength, int length, T value, BiConsumer<ByteBuf, T> valueEncoder) {
-
-        ByteBuf buffer = prepareBuffer(allocator, dataType.getLengthStrategy(), maxLength, length);
-
-        valueEncoder.accept(buffer, value);
-
-        return new Encoded(dataType, buffer);
-    }
-
-    /**
-     * Encode a RPC parameter that declares length and max-length attributes.
-     *
+     * @param allocator    the allocator to allocate encoding buffers.
+     * @param serverType   the server type. Used to derive the nullable {@link TdsDataType}.
      * @param value        the value to encode.
      * @param valueEncoder encoder function. Using a {@link BiFunction} to allow non-capturing lambdas.
      * @param <T>
@@ -143,31 +126,32 @@ public final class RpcEncoding {
      */
     public static <T> Encoded encodeFixed(ByteBufAllocator allocator, SqlServerType serverType, T value, BiConsumer<ByteBuf, T> valueEncoder) {
 
-        Assert.isTrue(serverType.getFixedTypes().length > 0, "Server type does not contain a fixed type assignment.");
-
-        ByteBuf buffer = prepareBuffer(allocator, LengthStrategy.FIXEDLENTYPE, serverType.getMaxLength(), serverType.getMaxLength());
+        Assert.notNull(serverType.getNullableType(), "Server type provides no nullable type");
+        LengthStrategy lengthStrategy = serverType.getNullableType().getLengthStrategy();
+        ByteBuf buffer = prepareBuffer(allocator, lengthStrategy, serverType.getMaxLength(), serverType.getMaxLength());
 
         valueEncoder.accept(buffer, value);
 
-        return new HintedEncoded(serverType.getFixedTypes()[0], serverType, buffer);
+        return new HintedEncoded(serverType.getNullableType(), serverType, buffer);
     }
 
     /**
      * Encode a RPC parameter that declares length and max-length attributes and apply a {@link SqlServerType} hint.
      *
-     * @param allocator
-     * @param dataType
-     * @param serverType
-     * @param maxLength
-     * @param length
+     * @param allocator    the allocator to allocate encoding buffers.
+     * @param serverType   the server data type. Used to derive the nullable {@link TdsDataType}.
+     * @param length       actual data length.
      * @param value        the value to encode.
      * @param valueEncoder encoder function. Using a {@link BiFunction} to allow non-capturing lambdas.
      * @param <T>
      * @return
      */
-    public static <T> Encoded encode(ByteBufAllocator allocator, TdsDataType dataType, SqlServerType serverType, int maxLength, int length, T value, BiConsumer<ByteBuf, T> valueEncoder) {
+    public static <T> Encoded encode(ByteBufAllocator allocator, SqlServerType serverType, int length, T value, BiConsumer<ByteBuf, T> valueEncoder) {
 
-        ByteBuf buffer = prepareBuffer(allocator, dataType.getLengthStrategy(), maxLength, length);
+        Assert.notNull(serverType.getNullableType(), "Server type provides no nullable type");
+
+        TdsDataType dataType = serverType.getNullableType();
+        ByteBuf buffer = prepareBuffer(allocator, dataType.getLengthStrategy(), serverType.getMaxLength(), length);
 
         valueEncoder.accept(buffer, value);
 
@@ -176,8 +160,12 @@ public final class RpcEncoding {
 
     /**
      * Encode a {@literal null} RPC parameter that declares length and max-length attributes and apply a {@link SqlServerType} hint.
+     *
+     * @param allocator  the allocator to allocate encoding buffers.
+     * @param serverType the server data type. Used to derive the nullable {@link TdsDataType}.
+     * @return the encoded {@literal null} value.
      */
-    public static <T> Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
+    public static Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
 
         Assert.isTrue(serverType.getMaxLength() > 0, "Server type does not declare a max length");
         Assert.notNull(serverType.getNullableType(), "Server type does not declare a nullable type");
@@ -188,8 +176,12 @@ public final class RpcEncoding {
 
     /**
      * Encode a temporal typed {@literal null} RPC parameter.
+     *
+     * @param allocator  the allocator to allocate encoding buffers.
+     * @param serverType the server data type. Used to derive the nullable {@link TdsDataType}.
+     * @return the encoded {@literal null} value.
      */
-    public static <T> Encoded encodeTemporalNull(ByteBufAllocator allocator, SqlServerType serverType) {
+    public static Encoded encodeTemporalNull(ByteBufAllocator allocator, SqlServerType serverType) {
 
         Assert.notNull(serverType.getNullableType(), "Server type does not declare a nullable type");
         ByteBuf buffer = allocator.buffer(1);
@@ -200,29 +192,25 @@ public final class RpcEncoding {
     }
 
     /**
-     * Encode a RPC parameter with a fixed length.
+     * Encode a temporal scaled {@literal null} RPC parameter.
      *
-     * @param allocator
-     * @param dataType     TDS data type.
-     * @param value        the value to encode.
-     * @param valueEncoder encoder function. Using a {@link BiFunction} to allow non-capturing lambdas.
-     * @param <T>
-     * @return
-     * @throws IllegalArgumentException if the length strategy is not fixes.
-     * @see LengthStrategy#FIXEDLENTYPE
+     * @param allocator  the allocator to allocate encoding buffers.
+     * @param serverType the server data type. Used to derive the nullable {@link TdsDataType}.
+     * @param scale      type scale.
+     * @return the encoded {@literal null} value.
      */
-    public static <T> Encoded encode(ByteBufAllocator allocator, TdsDataType dataType, T value, BiConsumer<ByteBuf, T> valueEncoder) {
+    public static <T> Encoded encodeTemporalNull(ByteBufAllocator allocator, SqlServerType serverType, int scale) {
 
-        Assert.isTrue(dataType.getLengthStrategy() == LengthStrategy.FIXEDLENTYPE, "Data type is not a FIXEDLENGTH type");
+        Assert.notNull(serverType.getNullableType(), "Server type does not declare a nullable type");
+        ByteBuf buffer = allocator.buffer(1);
 
-        ByteBuf buffer = prepareBuffer(allocator, dataType.getLengthStrategy(), 0, 0);
+        Encode.asByte(buffer, scale);
+        Encode.asByte(buffer, 0); // value length
 
-        valueEncoder.accept(buffer, value);
-
-        return Encoded.of(dataType, buffer);
+        return new HintedEncoded(serverType.getNullableType(), serverType, buffer);
     }
 
-    protected static ByteBuf prepareBuffer(ByteBufAllocator allocator, LengthStrategy lengthStrategy, int maxLength, int length) {
+    static ByteBuf prepareBuffer(ByteBufAllocator allocator, LengthStrategy lengthStrategy, int maxLength, int length) {
 
         ByteBuf buffer;
         switch (lengthStrategy) {

@@ -1,0 +1,40 @@
+/*
+ * Copyright 2018 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.r2dbc.mssql;
+
+/**
+ * Cache for prepared statements.
+ *
+ * @author Mark Paluch
+ */
+interface PreparedStatementCache {
+
+    /**
+     * Marker for no prepared statement found.
+     */
+    int NOT_FOUND = 0;
+
+    /**
+     * Returns a prepared statement handle for the given {@code sql} query and the {@link Binding}.
+     *
+     * @param sql     the SQL query.
+     * @param binding bound parameters. Parameter types impact the prepared query.
+     * @return the prepared statement handle. {@value 0} has a specific meaning as it indicates that no cached SQL statement was found.
+     * @see #NOT_FOUND
+     */
+    int getName(String sql, Binding binding);
+}

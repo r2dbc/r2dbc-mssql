@@ -77,18 +77,18 @@ interface Codec<T> {
     /**
      * Encode a {@literal null} value.
      *
-     * @param allocator the allocator to allocate encoding buffers. 
+     * @param allocator the allocator to allocate encoding buffers.
      * @return the encoded {@literal null} value.
      */
     Encoded encodeNull(ByteBufAllocator allocator);
 
     /**
-     * Encode the value to be used as RPC parameter.
+     * Encode the {@code value} to be used as RPC parameter.
      *
      * @param allocator the allocator to allocate encoding buffers.
-     * @param parameterContext
-     * @param value
-     * @return
+     * @param context   parameter context.
+     * @param value     the {@literal null} {@code value}.
+     * @return the encoded value.
      */
-    Encoded encode(ByteBufAllocator allocator, RpcParameterContext parameterContext, T value);
+    Encoded encode(ByteBufAllocator allocator, RpcParameterContext context, T value);
 }

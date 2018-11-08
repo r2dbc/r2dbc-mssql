@@ -21,7 +21,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Length;
-import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeUtils;
@@ -72,6 +71,10 @@ final class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
     @Override
     LocalDateTime doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends LocalDateTime> valueType) {
 
+        if (length.isNull()) {
+            return null;
+        }
+        
         if (type.getServerType() == SqlServerType.SMALLDATETIME) {
 
             int daysSinceBaseDate = Decode.uShort(buffer);
@@ -103,13 +106,13 @@ final class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
 
     @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.DATETIME2);
+        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.DATETIME2, 7);
     }
 
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, LocalDateTime value) {
 
-        return RpcEncoding.encode(allocator, TdsDataType.DATETIME2N, SqlServerType.DATETIME2, TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, 8, value,
+        return RpcEncoding.encode(allocator, SqlServerType.DATETIME2, 8, value,
             (buffer, localDateTime) -> {
                 doEncode(buffer, SqlServerType.DATETIME2, TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, localDateTime);
             });

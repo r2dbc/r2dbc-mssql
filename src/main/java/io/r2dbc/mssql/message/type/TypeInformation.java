@@ -397,8 +397,8 @@ public interface TypeInformation {
 
         // @formatter:off
         UNKNOWN(Category.UNKNOWN,           "unknown"),
-        TINYINT(Category.NUMERIC,           "tinyint",          1, TdsDataType.INTN, TdsDataType.BIT1, TdsDataType.INT1),
-        BIT(Category.NUMERIC,               "bit",              1, TdsDataType.BITN, TdsDataType.BIT1, TdsDataType.INT1),
+        TINYINT(Category.NUMERIC,           "tinyint",          1, TdsDataType.INTN, TdsDataType.INT1),
+        BIT(Category.NUMERIC,               "bit",              1, TdsDataType.INTN, TdsDataType.INT1),
         SMALLINT(Category.NUMERIC,          "smallint",         2, TdsDataType.INTN, TdsDataType.INT2),
         INTEGER(Category.NUMERIC,           "int",              4, TdsDataType.INTN, TdsDataType.INT4),
         BIGINT(Category.NUMERIC,            "bigint",           8, TdsDataType.INTN, TdsDataType.INT8),

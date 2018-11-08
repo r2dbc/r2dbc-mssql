@@ -62,27 +62,33 @@ final class ZonedDateTimeCodec extends AbstractCodec<ZonedDateTime> {
     @Override
     ZonedDateTime doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends ZonedDateTime> valueType) {
 
+        if (length.isNull()) {
+            return null;
+        }
+        
         LocalTime localTime = LocalTimeCodec.INSTANCE.doDecode(buffer, length, type, LocalTime.class);
         LocalDate localDate = LocalDateCodec.INSTANCE.doDecode(buffer, length, type, LocalDate.class);
 
         int localMinutesOffset = Decode.uShort(buffer);
         ZoneOffset offset = ZoneOffset.ofTotalSeconds(localMinutesOffset * 60);
 
-        return ZonedDateTime.ofStrict(localTime.atDate(localDate), offset, ZoneId.ofOffset("UT", offset));
+        return ZonedDateTime.ofStrict(localTime.atDate(localDate), offset, ZoneId.ofOffset("UT", offset)).plusMinutes(localMinutesOffset);
     }
 
     @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.DATETIMEOFFSET);
+        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.DATETIMEOFFSET, 7);
     }
 
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, ZonedDateTime value) {
 
         ByteBuf buffer = allocator.buffer(12);
-        buffer.writeByte(7);
-        buffer.writeByte(0x0a);
-        doEncode(buffer, value);
+
+        Encode.asByte(buffer, 7); // scale
+        Encode.asByte(buffer, 0x0a); // length
+
+        doEncode(buffer, value.minusSeconds(value.getOffset().getTotalSeconds()));
 
         return new RpcEncoding.HintedEncoded(TdsDataType.DATETIMEOFFSETN, SqlServerType.DATETIMEOFFSET, buffer);
     }

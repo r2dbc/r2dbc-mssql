@@ -41,12 +41,13 @@ public final class DefaultCodecs implements Codecs {
             // Prioritized Codecs
             StringCodec.INSTANCE,
 
+            BooleanCodec.INSTANCE,
+            ByteCodec.INSTANCE,
+            ShortCodec.INSTANCE,
             FloatCodec.INSTANCE,
+            DoubleCodec.INSTANCE,
             IntegerCodec.INSTANCE,
             LongCodec.INSTANCE,
-            ShortCodec.INSTANCE,
-            ByteCodec.INSTANCE,
-            BooleanCodec.INSTANCE,
             LocalTimeCodec.INSTANCE,
             LocalDateCodec.INSTANCE,
             LocalDateTimeCodec.INSTANCE,

@@ -37,16 +37,26 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class LocalTimeCodecUnitTests {
 
-    static final TypeInformation TIME = builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withServerType(SqlServerType.TIME).build();
+    static final TypeInformation TIME = builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withScale(7).withServerType(SqlServerType.TIME).build();
 
     @Test
-    void shouldDecodeTime() {
+    void shouldDecodeNull() {
 
-        ByteBuf buffer = HexUtils.decodeToByteBuf("03A81664");
+        ByteBuf buffer = HexUtils.decodeToByteBuf("00");
 
         LocalTime decoded = LocalTimeCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(TIME), LocalTime.class);
 
-        assertThat(decoded).isEqualTo("18:13:14");
+        assertThat(decoded).isNull();
+    }
+    
+    @Test
+    void shouldDecodeTime() {
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("05 c0 c9 b1 61 5d");
+
+        LocalTime decoded = LocalTimeCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(TIME), LocalTime.class);
+
+        assertThat(decoded).isEqualTo("11:08:27.100");
     }
 
     @Test
@@ -54,7 +64,7 @@ class LocalTimeCodecUnitTests {
 
         Encoded encoded = LocalTimeCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
 
-        EncodedAssert.assertThat(encoded).isEqualToHex("00");
+        EncodedAssert.assertThat(encoded).isEqualToHex("07 00");
         assertThat(encoded.getFormalType()).isEqualTo("time");
     }
 

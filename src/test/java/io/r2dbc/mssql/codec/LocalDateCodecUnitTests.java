@@ -40,6 +40,16 @@ class LocalDateCodecUnitTests {
     static final TypeInformation DATE = builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withServerType(SqlServerType.DATE).build();
 
     @Test
+    void shouldDecodeNull() {
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("00");
+
+        LocalDate decoded = LocalDateCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(DATE), LocalDate.class);
+
+        assertThat(decoded).isNull();
+    }
+    
+    @Test
     void shouldDecodeDate() {
 
         ByteBuf buffer = HexUtils.decodeToByteBuf("03DD3E0B");

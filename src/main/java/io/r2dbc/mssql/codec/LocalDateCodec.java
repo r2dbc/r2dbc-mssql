@@ -62,6 +62,10 @@ final class LocalDateCodec extends AbstractCodec<LocalDate> {
     @Override
     LocalDate doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends LocalDate> valueType) {
 
+        if (length.isNull()) {
+            return null;
+        }
+        
         int days = (buffer.readByte() & 0xFF) | (buffer.readByte() & 0xFF) << 8 | (buffer.readByte() & 0xFF) << 16;
 
         return DATE_ZERO.plusDays(days);

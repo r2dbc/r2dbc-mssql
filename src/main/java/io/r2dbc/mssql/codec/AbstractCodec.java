@@ -81,16 +81,6 @@ abstract class AbstractCodec<T> implements Codec<T> {
     }
 
     @Override
-    public final Encoded encode(ByteBufAllocator allocator, RpcParameterContext parameterContext, T value) {
-
-        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
-        Objects.requireNonNull(parameterContext, "RpcParameterContext must not be null");
-        Objects.requireNonNull(value, "Value must not be null");
-
-        return doEncode(allocator, parameterContext, value);
-    }
-
-    @Override
     public final Encoded encodeNull(ByteBufAllocator allocator) {
 
         Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
@@ -98,8 +88,14 @@ abstract class AbstractCodec<T> implements Codec<T> {
         return doEncodeNull(allocator);
     }
 
-    public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return null;
+    @Override
+    public final Encoded encode(ByteBufAllocator allocator, RpcParameterContext context, T value) {
+
+        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        Objects.requireNonNull(context, "RpcParameterContext must not be null");
+        Objects.requireNonNull(value, "Value must not be null");
+
+        return doEncode(allocator, context, value);
     }
 
     /**
@@ -122,6 +118,19 @@ abstract class AbstractCodec<T> implements Codec<T> {
     @Nullable
     abstract T doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends T> valueType);
 
-    abstract Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, T value);
+    /**
+     * Encode a {@literal null} value.
+     *
+     * @param allocator the allocator to allocate encoding buffers.
+     * @return
+     */
+    protected abstract Encoded doEncodeNull(ByteBufAllocator allocator);
 
+    /**
+     * @param allocator the allocator to allocate encoding buffers.
+     * @param context   parameter context.
+     * @param value     the {@literal null} {@code value}.
+     * @return the encoded value.
+     */
+    abstract Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, T value);
 }

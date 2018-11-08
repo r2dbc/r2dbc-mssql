@@ -23,10 +23,8 @@ import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
-import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.message.token.DoneProcToken;
-import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.ReturnValue;
 import io.r2dbc.mssql.message.token.RowToken;
@@ -124,9 +122,7 @@ final class CursoredQueryMessageFlow {
             .handle(MssqlException::handleErrorResponse)
             .handle((message, sink) -> {
 
-                if (DoneToken.isDone(message) || !(message instanceof AbstractDoneToken)) {
-                    sink.next(message);
-                }
+                sink.next(message);
 
                 handleStateChange(client, fetchSize, requests, state, message, sink);
             });
@@ -176,10 +172,7 @@ final class CursoredQueryMessageFlow {
             .handle(MssqlException::handleErrorResponse)
             .handle((message, sink) -> {
 
-                if (DoneToken.isDone(message) || !(message instanceof AbstractDoneToken)) {
-                    sink.next(message);
-                }
-
+                sink.next(message);
                 handleStateChange(client, fetchSize, requests, state, message, sink);
             });
     }
@@ -216,7 +209,7 @@ final class CursoredQueryMessageFlow {
                 state.phase = Phase.CLOSED;
                 return;
             }
-            
+
             if ((state.hasMore && phase == Phase.NONE) || state.hasSeenRows) {
                 if (phase == Phase.NONE) {
                     state.phase = Phase.FETCHING;

@@ -40,7 +40,7 @@ class LocalDateTimeCodecUnitTests {
 
     static final TypeInformation DATETIME = TypeInformation.builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withServerType(SqlServerType.DATETIME).build();
 
-    static final TypeInformation DATETIME2 = TypeInformation.builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withScale(5).withServerType(SqlServerType.DATETIME2).build();
+    static final TypeInformation DATETIME2 = TypeInformation.builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withScale(7).withServerType(SqlServerType.DATETIME2).build();
 
     @Test
     void shouldDecodeSmallDateTime() {
@@ -110,7 +110,7 @@ class LocalDateTimeCodecUnitTests {
 
         Encoded encoded = LocalDateTimeCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
 
-        EncodedAssert.assertThat(encoded).isEqualToHex("00");
+        EncodedAssert.assertThat(encoded).isEqualToHex("07 00");
         assertThat(encoded.getFormalType()).isEqualTo("datetime2");
     }
 }

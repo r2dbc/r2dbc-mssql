@@ -36,12 +36,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ZonedDateTimeCodecUnitTests {
 
-    static final TypeInformation DATETIMEOFFSET = TypeInformation.builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withScale(5).withServerType(SqlServerType.DATETIMEOFFSET).build();
+    static final TypeInformation DATETIMEOFFSET = TypeInformation.builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withScale(7).withServerType(SqlServerType.DATETIMEOFFSET).build();
 
     @Test
     void shouldDecodeDateTimeOffset() {
 
-        ByteBuf buffer = HexUtils.decodeToByteBuf("0AA026314194A43E0B2D00");
+        ByteBuf buffer = HexUtils.decodeToByteBuf("0a a0 d8 dd f7 8d a4 3e 0b 2d 00");
 
         ZonedDateTime decoded = ZonedDateTimeCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(DATETIMEOFFSET), ZonedDateTime.class);
 
@@ -53,19 +53,18 @@ class ZonedDateTimeCodecUnitTests {
 
         Encoded encoded = ZonedDateTimeCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
 
-        EncodedAssert.assertThat(encoded).isEqualToHex("00");
+        EncodedAssert.assertThat(encoded).isEqualToHex("07 00");
         assertThat(encoded.getFormalType()).isEqualTo("datetimeoffset");
     }
 
     @Test
-    void shouldEncodeSmallDateTime() {
+    void shouldEncodeDatetimeoffset() {
 
-        // TODO: Needs to be in UTC?
         ZonedDateTime value = ZonedDateTime.parse("2018-08-27T17:41:14.890+00:45[UT+00:45]");
 
         Encoded encoded = ZonedDateTimeCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), value);
 
-        EncodedAssert.assertThat(encoded).isEqualToHex("07 0A A0 26 31 41 94 A4 3E 0B 2D 00");
+        EncodedAssert.assertThat(encoded).isEqualToHex("07 0a a0 d8 dd f7 8d a4 3e 0b 2d 00");
         assertThat(encoded.getFormalType()).isEqualTo("datetimeoffset");
     }
 }

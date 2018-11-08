@@ -103,7 +103,7 @@ class LongCodecUnitTests {
 
         Encoded encoded = LongCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), 72057594037927937L);
 
-        EncodedAssert.assertThat(encoded).isEqualToHex("0100000000000001");
+        EncodedAssert.assertThat(encoded).isEqualToHex("08 08 01 00 00 00 00 0 00 0 01");
         assertThat(encoded.getFormalType()).isEqualTo("bigint");
     }
 

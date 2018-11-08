@@ -83,7 +83,7 @@ class DoubleCodecUnitTests {
 
         Encoded encoded = DoubleCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), 11344.554);
 
-        EncodedAssert.assertThat(encoded).isEqualToHex("FE D4 78 E9 46 28 C6 40");
+        EncodedAssert.assertThat(encoded).isEqualToHex("08 08 FE D4 78 E9 46 28 C6 40");
         assertThat(encoded.getFormalType()).isEqualTo("float");
     }
 }

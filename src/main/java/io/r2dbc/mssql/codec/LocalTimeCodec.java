@@ -19,7 +19,6 @@ package io.r2dbc.mssql.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.type.Length;
-import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeUtils;
@@ -56,34 +55,38 @@ final class LocalTimeCodec extends AbstractCodec<LocalTime> {
 
     @Override
     boolean doCanDecode(TypeInformation typeInformation) {
-        return typeInformation.getServerType() == SqlServerType.DATE;
+        return typeInformation.getServerType() == SqlServerType.TIME;
     }
 
     @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.TIME);
+        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.TIME, 7);
     }
 
     @Override
     LocalTime doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends LocalTime> valueType) {
 
-        long nanosSinceMidnight = 0;
+        if (length.isNull()) {
+            return null;
+        }
+
+        long hundredNanosSinceMidnight = 0;
         int scale = type.getScale();
 
         Assert.isTrue(scale >= 0 && scale <= TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, "Invalid fractional scale");
 
         int valueLength = TypeUtils.getTimeValueLength(scale);
         for (int i = 0; i < valueLength; i++) {
-            nanosSinceMidnight |= (buffer.readByte() & 0xFFL) << (8 * i);
+            hundredNanosSinceMidnight |= (buffer.readByte() & 0xFFL) << (8 * i);
         }
-        nanosSinceMidnight *= SCALED_MULTIPLIERS[scale];
+        hundredNanosSinceMidnight *= SCALED_MULTIPLIERS[scale];
 
-        return LocalTime.ofNanoOfDay(nanosSinceMidnight);
+        return LocalTime.ofNanoOfDay(hundredNanosSinceMidnight * 100);
     }
 
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, LocalTime value) {
-        return RpcEncoding.encode(allocator, TdsDataType.TIMEN, SqlServerType.TIME, TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, TypeUtils.getTimeValueLength(TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE),
+        return RpcEncoding.encode(allocator, SqlServerType.TIME, TypeUtils.getTimeValueLength(TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE),
             value, (buffer,
                     localTime) -> doEncode(buffer,
                 TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, localTime));

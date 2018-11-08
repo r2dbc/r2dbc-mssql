@@ -103,7 +103,7 @@ class ShortCodecUnitTests {
 
         Encoded encoded = ShortCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), (short) 258);
 
-        EncodedAssert.assertThat(encoded).isEqualToHex("02 01");
+        EncodedAssert.assertThat(encoded).isEqualToHex("02 02 02 01");
         assertThat(encoded.getFormalType()).isEqualTo("smallint");
     }
 

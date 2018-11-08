@@ -103,7 +103,7 @@ class ByteCodecUnitTests {
 
         Encoded encoded = ByteCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), (byte) 2);
 
-        EncodedAssert.assertThat(encoded).isEqualToHex("02");
+        EncodedAssert.assertThat(encoded).isEqualToHex("01 01 02");
         assertThat(encoded.getFormalType()).isEqualTo("tinyint");
     }
 

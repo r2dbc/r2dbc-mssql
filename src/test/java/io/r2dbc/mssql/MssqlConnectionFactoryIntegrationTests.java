@@ -16,7 +16,6 @@
 
 package io.r2dbc.mssql;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Hooks;
 
@@ -26,7 +25,7 @@ import reactor.core.publisher.Hooks;
 final class MssqlConnectionFactoryIntegrationTests {
 
     @Test
-    @Disabled("Requires running SQL server")
+        //@Disabled("Requires running SQL server")
     void shouldConnectToSqlServer() throws InterruptedException {
 
         Hooks.onOperatorDebug();
@@ -41,6 +40,9 @@ final class MssqlConnectionFactoryIntegrationTests {
 
         MssqlConnection connection = factory.create().block();
 
+        connection.createStatement("SELECT * from my_table where first_name = @P0").bind("P0", "mark").execute()
+            .flatMap(MssqlResult::getRowsUpdated).doOnNext(System.out::println).blockLast();
+        
        /* MssqlStatement<?> statement = connection.createStatement("SELECT * FROM my_table");
         statement.execute().flatMap(it -> it.map((r, md) -> r.get(0, Integer.class))).doOnNext(System.out::println).blockLast();
 

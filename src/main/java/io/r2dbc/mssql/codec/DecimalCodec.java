@@ -57,6 +57,10 @@ final class DecimalCodec extends AbstractCodec<BigDecimal> {
     @Override
     BigDecimal doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends BigDecimal> valueType) {
 
+        if (length.isNull()) {
+            return null;
+        }
+        
         byte signByte = buffer.readByte();
         int sign = (0 == signByte) ? -1 : 1;
         byte[] magnitude = new byte[length.getLength() - 1];
@@ -85,7 +89,7 @@ final class DecimalCodec extends AbstractCodec<BigDecimal> {
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, BigDecimal value) {
 
-        ByteBuf buffer = RpcEncoding.prepareBuffer(allocator, TdsDataType.DECIMALN.getLengthStrategy(), 0, 0);
+        ByteBuf buffer = RpcEncoding.prepareBuffer(allocator, TdsDataType.DECIMALN.getLengthStrategy(), 0x11, SqlServerType.DECIMAL.getMaxLength());
 
         encodeBigDecimal(buffer, value);
         return new DecimalEncoded(TdsDataType.DECIMALN, buffer, MAX_PRECISION, value.scale());
