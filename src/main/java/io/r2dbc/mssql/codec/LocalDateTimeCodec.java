@@ -102,9 +102,14 @@ final class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
     }
 
     @Override
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.DATETIME2);
+    }
+
+    @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, LocalDateTime value) {
 
-        return RpcEncoding.encode(allocator, TdsDataType.DATETIME2N, TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, 8, value,
+        return RpcEncoding.encode(allocator, TdsDataType.DATETIME2N, SqlServerType.DATETIME2, TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, 8, value,
             (buffer, localDateTime) -> {
                 doEncode(buffer, SqlServerType.DATETIME2, TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, localDateTime);
             });

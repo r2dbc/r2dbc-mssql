@@ -50,6 +50,15 @@ class LocalTimeCodecUnitTests {
     }
 
     @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = LocalTimeCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("00");
+        assertThat(encoded.getFormalType()).isEqualTo("time");
+    }
+
+    @Test
     void shouldEncodeTime() {
 
         LocalTime value = LocalTime.parse("18:13:14");

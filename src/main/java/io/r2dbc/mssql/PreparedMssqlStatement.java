@@ -114,7 +114,7 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
         Assert.isInstanceOf(String.class, identifier, "Identifier must be a String");
         Objects.requireNonNull(type, "type must not be null");
 
-        this.bindings.getCurrent().add((String) identifier, this.codecs.encodeNull(type));
+        this.bindings.getCurrent().add((String) identifier, this.codecs.encodeNull(this.client.getByteBufAllocator(), type));
         return this;
     }
 
@@ -123,7 +123,7 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
 
         Objects.requireNonNull(type, "Type must not be null");
 
-        this.bindings.getCurrent().add(getParameterName(index), this.codecs.encodeNull(type));
+        this.bindings.getCurrent().add(getParameterName(index), this.codecs.encodeNull(this.client.getByteBufAllocator(), type));
         return this;
     }
 

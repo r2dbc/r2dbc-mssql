@@ -32,8 +32,8 @@ class EncodedUnitTests {
     @Test
     void shouldReportSqlServerType() {
 
-        Encoded encoded = Encoded.of(TdsDataType.NVARCHAR, Unpooled.EMPTY_BUFFER);
+        Encoded encoded = Encoded.of(TdsDataType.INT1, Unpooled.EMPTY_BUFFER);
 
-        assertThat(encoded.getFormalType()).isEqualTo("nvarchar");
+        assertThat(encoded.getFormalType()).isEqualTo("tinyint");
     }
 }

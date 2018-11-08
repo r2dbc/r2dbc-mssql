@@ -83,11 +83,20 @@ class BooleanCodecUnitTests {
     }
 
     @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = BooleanCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("01 00");
+        assertThat(encoded.getFormalType()).isEqualTo("bit");
+    }
+
+    @Test
     void shouldEncodeBoolean() {
 
         Encoded encoded = BooleanCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), true);
         EncodedAssert.assertThat(encoded).isEqualToHex("01");
-        assertThat(encoded.getFormalType()).isEqualTo("tinyint");
+        assertThat(encoded.getFormalType()).isEqualTo("bit");
     }
 
     private TypeInformation createType(int length, SqlServerType serverType) {

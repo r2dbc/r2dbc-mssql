@@ -18,7 +18,8 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.tds.Encode;
-import io.r2dbc.mssql.message.type.TdsDataType;
+
+import static io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
 /**
  * Codec for numeric values that are represented as {@link Boolean}.
@@ -42,9 +43,13 @@ final class BooleanCodec extends AbstractNumericCodec<Boolean> {
         super(Boolean.class, value -> value != 0);
     }
 
-
+    @Override
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeNull(allocator, SqlServerType.BIT);
+    }
+    
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Boolean value) {
-        return RpcEncoding.encode(allocator, TdsDataType.BIT1, value, (buffer, b) -> Encode.asByte(buffer, b ? 1 : 0));
+        return RpcEncoding.encodeFixed(allocator, SqlServerType.BIT, value, (buffer, b) -> Encode.asByte(buffer, b ? 1 : 0));
     }
 }

@@ -104,4 +104,13 @@ class LocalDateTimeCodecUnitTests {
         EncodedAssert.assertThat(encoded).isEqualToHex("07 08 20 06 E1 74 83 E1 3E 0B");
         assertThat(encoded.getFormalType()).isEqualTo("datetime2");
     }
+
+    @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = LocalDateTimeCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("00");
+        assertThat(encoded.getFormalType()).isEqualTo("datetime2");
+    }
 }

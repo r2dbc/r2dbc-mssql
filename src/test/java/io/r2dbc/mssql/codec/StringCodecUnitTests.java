@@ -148,4 +148,13 @@ class StringCodecUnitTests {
 
         assertThat(value).isEqualTo("mytextvalue");
     }
+
+    @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = StringCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("40 1f 00 00 00 00 00 ff ff");
+        assertThat(encoded.getFormalType()).isEqualTo("nvarchar(4000)");
+    }
 }

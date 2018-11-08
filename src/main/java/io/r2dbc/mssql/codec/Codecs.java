@@ -27,6 +27,7 @@ import reactor.util.annotation.Nullable;
 /**
  * Registry for {@link Codec}s to encode RPC parameters and decode tabular values.
  *
+ * @see Codec
  * @see ReturnValue
  * @see Column
  * @see RowToken
@@ -48,10 +49,11 @@ public interface Codecs {
     /**
      * Encode a {@literal null} value for a specific {@link Class type}.
      *
+     * @param allocator the allocator to allocate encoding buffers.
      * @param type the type to represent {@literal null}.
      * @return the encoded {@literal null} value.
      */
-    Encoded encodeNull(Class<?> type);
+    Encoded encodeNull(ByteBufAllocator allocator, Class<?> type);
 
     /**
      * Encode a non-{@literal null} {@code value} as RPC parameter.

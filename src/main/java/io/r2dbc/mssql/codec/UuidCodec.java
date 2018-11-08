@@ -24,6 +24,8 @@ import io.r2dbc.mssql.message.type.TypeInformation;
 
 import java.util.UUID;
 
+import static io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
+
 /**
  * @author Mark Paluch
  */
@@ -40,7 +42,7 @@ final class UuidCodec extends AbstractCodec<UUID> {
 
     @Override
     boolean doCanDecode(TypeInformation typeInformation) {
-        return typeInformation.getServerType() == TypeInformation.SqlServerType.GUID;
+        return typeInformation.getServerType() == SqlServerType.GUID;
     }
 
     @Override
@@ -59,11 +61,15 @@ final class UuidCodec extends AbstractCodec<UUID> {
         return new UUID(msb, lsb);
     }
 
+    @Override
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeNull(allocator, SqlServerType.GUID);
+    }
 
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, UUID value) {
 
-        return RpcEncoding.encode(allocator, TdsDataType.GUID, 16, 16, value, (buffer, uuid) -> {
+        return RpcEncoding.encode(allocator, TdsDataType.GUID, SqlServerType.GUID, 16, 16, value, (buffer, uuid) -> {
 
             long msb = value.getMostSignificantBits();
             long lsb = value.getLeastSignificantBits();

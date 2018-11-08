@@ -90,6 +90,15 @@ class LongCodecUnitTests {
     }
 
     @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = LongCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("08 00");
+        assertThat(encoded.getFormalType()).isEqualTo("bigint");
+    }
+    
+    @Test
     void shouldEncodeLong() {
 
         Encoded encoded = LongCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), 72057594037927937L);

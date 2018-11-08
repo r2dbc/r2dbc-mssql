@@ -50,7 +50,7 @@ interface Codec<T> {
      *
      * @param type the desired value type.
      * @return {@literal true} if this {@link Codec} is able to encode {@literal null} values for the given {@link Class} type.
-     * @see #encodeNull()
+     * @see #encodeNull
      */
     boolean canEncodeNull(Class<?> type);
 
@@ -59,7 +59,7 @@ interface Codec<T> {
      *
      * @param value the parameter value.
      * @return {@literal true} if this {@link Codec} is able to encode the {@code value}.
-     * @see #encodeNull()
+     * @see #encodeNull
      */
     boolean canEncode(Object value);
 
@@ -77,14 +77,15 @@ interface Codec<T> {
     /**
      * Encode a {@literal null} value.
      *
+     * @param allocator the allocator to allocate encoding buffers. 
      * @return the encoded {@literal null} value.
      */
-    Encoded encodeNull();
+    Encoded encodeNull(ByteBufAllocator allocator);
 
     /**
      * Encode the value to be used as RPC parameter.
      *
-     * @param allocator
+     * @param allocator the allocator to allocate encoding buffers.
      * @param parameterContext
      * @param value
      * @return

@@ -55,4 +55,13 @@ class DecimalCodecUnitTests {
         EncodedAssert.assertThat(encoded).isEqualToHex("0000020301690e");
         assertThat(encoded.getFormalType()).isEqualTo("decimal(38,2)");
     }
+
+    @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = DecimalCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("11 26 00 00");
+        assertThat(encoded.getFormalType()).isEqualTo("decimal(38,0)");
+    }
 }

@@ -69,6 +69,15 @@ class FloatCodecUnitTests {
     }
 
     @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = FloatCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("04 00");
+        assertThat(encoded.getFormalType()).isEqualTo("real");
+    }
+
+    @Test
     void shouldEncodeFloat() {
 
         Encoded encoded = FloatCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), 11344.554f);

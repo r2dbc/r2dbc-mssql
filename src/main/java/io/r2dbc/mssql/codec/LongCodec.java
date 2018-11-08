@@ -18,7 +18,7 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.tds.Encode;
-import io.r2dbc.mssql.message.type.TdsDataType;
+import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
 /**
  * Codec for numeric values that are represented as {@link Long}.
@@ -43,7 +43,12 @@ final class LongCodec extends AbstractNumericCodec<Long> {
     }
 
     @Override
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeNull(allocator, SqlServerType.BIGINT);
+    }
+
+    @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Long value) {
-        return RpcEncoding.encode(allocator, TdsDataType.INT8, value, Encode::bigint);
+        return RpcEncoding.encodeFixed(allocator, SqlServerType.BIGINT, value, Encode::bigint);
     }
 }

@@ -79,13 +79,14 @@ public final class DefaultCodecs implements Codecs {
     }
 
     @Override
-    public Encoded encodeNull(Class<?> type) {
+    public Encoded encodeNull(ByteBufAllocator allocator, Class<?> type) {
 
+        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
         Objects.requireNonNull(type, "Type must not be null");
 
         for (Codec<?> codec : this.codecs) {
             if (codec.canEncodeNull(type)) {
-                return codec.encodeNull();
+                return codec.encodeNull(allocator);
             }
         }
 

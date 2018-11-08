@@ -49,6 +49,15 @@ class ZonedDateTimeCodecUnitTests {
     }
 
     @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = ZonedDateTimeCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("00");
+        assertThat(encoded.getFormalType()).isEqualTo("datetimeoffset");
+    }
+
+    @Test
     void shouldEncodeSmallDateTime() {
 
         // TODO: Needs to be in UTC?

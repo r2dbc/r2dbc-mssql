@@ -22,7 +22,6 @@ import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.type.Length;
-import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
@@ -93,7 +92,12 @@ final class MoneyCodec extends AbstractCodec<BigDecimal> {
     }
 
     @Override
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeNull(allocator, SqlServerType.MONEY);
+    }
+
+    @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, BigDecimal value) {
-        return RpcEncoding.encode(allocator, TdsDataType.MONEY8, value, (buffer, bigDecimal) -> Encode.money(buffer, bigDecimal.unscaledValue()));
+        return RpcEncoding.encodeFixed(allocator, SqlServerType.MONEY, value, (buffer, bigDecimal) -> Encode.money(buffer, bigDecimal.unscaledValue()));
     }
 }

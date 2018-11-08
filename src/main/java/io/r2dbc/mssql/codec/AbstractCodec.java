@@ -91,7 +91,14 @@ abstract class AbstractCodec<T> implements Codec<T> {
     }
 
     @Override
-    public Encoded encodeNull() {
+    public final Encoded encodeNull(ByteBufAllocator allocator) {
+
+        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+
+        return doEncodeNull(allocator);
+    }
+
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
         return null;
     }
 

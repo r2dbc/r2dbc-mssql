@@ -17,6 +17,7 @@
 package io.r2dbc.mssql.message.type;
 
 import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
 import java.nio.charset.Charset;
@@ -395,68 +396,96 @@ public interface TypeInformation {
     enum SqlServerType {
 
         // @formatter:off
-        UNKNOWN(Category.UNKNOWN, "unknown"),
-        TINYINT(Category.NUMERIC, "tinyint", TdsDataType.BIT1, TdsDataType.INT1),
-        BIT(Category.NUMERIC, "bit",TdsDataType.BIT1, TdsDataType.INT1),
-        SMALLINT(Category.NUMERIC, "smallint", TdsDataType.INT2),
-        INTEGER(Category.NUMERIC, "int", TdsDataType.INT4),
-        BIGINT(Category.NUMERIC, "bigint", TdsDataType.INT8),
-        FLOAT(Category.NUMERIC, "float", TdsDataType.FLOAT8),
-        REAL(Category.NUMERIC, "real", TdsDataType.FLOAT4),
-        SMALLDATETIME(Category.DATETIME, "smalldatetime", TdsDataType.DATETIME4),
-        DATETIME(Category.DATETIME, "datetime", TdsDataType.DATETIME8),
-        DATE(Category.DATE, "date", TdsDataType.DATEN),
-        TIME(Category.TIME, "time", TdsDataType.TIMEN),
-        DATETIME2(Category.DATETIME2, "datetime2", TdsDataType.DATETIME4, TdsDataType.DATETIME2N),
-        DATETIMEOFFSET(Category.DATETIMEOFFSET, "datetimeoffset", TdsDataType.DATETIMEOFFSETN),
-        SMALLMONEY(Category.NUMERIC, "smallmoney", TdsDataType.MONEY4),
-        MONEY(Category.NUMERIC, "money", TdsDataType.MONEY8),
-        CHAR(Category.CHARACTER, "char"),
-        VARCHAR(Category.CHARACTER, "varchar"),
+        UNKNOWN(Category.UNKNOWN,           "unknown"),
+        TINYINT(Category.NUMERIC,           "tinyint",          1, TdsDataType.INTN, TdsDataType.BIT1, TdsDataType.INT1),
+        BIT(Category.NUMERIC,               "bit",              1, TdsDataType.BITN, TdsDataType.BIT1, TdsDataType.INT1),
+        SMALLINT(Category.NUMERIC,          "smallint",         2, TdsDataType.INTN, TdsDataType.INT2),
+        INTEGER(Category.NUMERIC,           "int",              4, TdsDataType.INTN, TdsDataType.INT4),
+        BIGINT(Category.NUMERIC,            "bigint",           8, TdsDataType.INTN, TdsDataType.INT8),
+        FLOAT(Category.NUMERIC,             "float",            8, TdsDataType.FLOATN, TdsDataType.FLOAT8),
+        REAL(Category.NUMERIC,              "real",             4, TdsDataType.FLOATN, TdsDataType.FLOAT4),
+        SMALLDATETIME(Category.DATETIME,    "smalldatetime",    4, TdsDataType.DATETIMEN, TdsDataType.DATETIME4),
+        DATETIME(Category.DATETIME,         "datetime",         8, TdsDataType.DATETIMEN, TdsDataType.DATETIME8),
+        DATE(Category.DATE,                 "date",             3, TdsDataType.DATEN),
+        TIME(Category.TIME,                 "time",             7, TdsDataType.TIMEN),
+        DATETIME2(Category.DATETIME2,       "datetime2",        7, TdsDataType.DATETIME2N),
+        DATETIMEOFFSET(Category.DATETIMEOFFSET, "datetimeoffset", 7, TdsDataType.DATETIMEOFFSETN),
+        SMALLMONEY(Category.NUMERIC,        "smallmoney",       4, TdsDataType.MONEYN, TdsDataType.MONEY4),
+        MONEY(Category.NUMERIC,             "money",            8, TdsDataType.MONEYN, TdsDataType.MONEY8),
+        CHAR(Category.CHARACTER,            "char"),
+        VARCHAR(Category.CHARACTER,         "varchar"),
         VARCHARMAX(Category.LONG_CHARACTER, "varchar"),
-        TEXT(Category.LONG_CHARACTER, "text", TdsDataType.TEXT),
-        NCHAR(Category.NCHARACTER, "nchar"),
-        NVARCHAR(Category.NCHARACTER, "nvarchar", TdsDataType.NVARCHAR),
+        TEXT(Category.LONG_CHARACTER,       "text",                 TdsDataType.TEXT),
+        NCHAR(Category.NCHARACTER,          "nchar"),
+        NVARCHAR(Category.NCHARACTER,       "nvarchar",         4000, TdsDataType.NVARCHAR),
         NVARCHARMAX(Category.LONG_NCHARACTER, "nvarchar"),
-        NTEXT(Category.LONG_NCHARACTER, "ntext", TdsDataType.NTEXT),
-        BINARY(Category.BINARY, "binary"),
-        VARBINARY(Category.BINARY, "varbinary"),
-        VARBINARYMAX(Category.LONG_BINARY, "varbinary"),
-        IMAGE(Category.LONG_BINARY, "image", TdsDataType.IMAGE),
-        DECIMAL(Category.NUMERIC, "decimal", TdsDataType.DECIMALN),
-        NUMERIC(Category.NUMERIC, "numeric", TdsDataType.NUMERICN),
-        GUID(Category.GUID, "uniqueidentifier", TdsDataType.GUID),
-        SQL_VARIANT(Category.SQL_VARIANT, "sql_variant", TdsDataType.SQL_VARIANT),
-        UDT(Category.UDT, "udt"),
-        XML(Category.XML, "xml"),
-        TIMESTAMP(Category.TIMESTAMP, "timestamp"),
-        GEOMETRY(Category.UDT, "geometry"),
-        GEOGRAPHY(Category.UDT, "geography");
+        NTEXT(Category.LONG_NCHARACTER,     "ntext", TdsDataType.NTEXT),
+        BINARY(Category.BINARY,             "binary"),
+        VARBINARY(Category.BINARY,          "varbinary"),
+        VARBINARYMAX(Category.LONG_BINARY,  "varbinary"),
+        IMAGE(Category.LONG_BINARY,         "image", TdsDataType.IMAGE),
+        DECIMAL(Category.NUMERIC,           "decimal",          38, TdsDataType.DECIMALN),
+        NUMERIC(Category.NUMERIC,           "numeric",          38, TdsDataType.NUMERICN),
+        GUID(Category.GUID,                 "uniqueidentifier", 16, TdsDataType.GUID),
+        SQL_VARIANT(Category.SQL_VARIANT,   "sql_variant", TdsDataType.SQL_VARIANT),
+        UDT(Category.UDT,                   "udt"),
+        XML(Category.XML,                   "xml"),
+        TIMESTAMP(Category.TIMESTAMP,       "timestamp", 8, TdsDataType.BIGBINARY),
+        GEOMETRY(Category.UDT,              "geometry"),
+        GEOGRAPHY(Category.UDT,             "geography");
         // @formatter:on
 
         private final Category category;
 
         private final String name;
 
-        private final TdsDataType tdsTypes[];
+        private final int maxLength;
 
-        SqlServerType(Category category, String name, TdsDataType... tdsDataTypes) {
-            this.category = category;
-            this.name = name;
-            this.tdsTypes = tdsDataTypes;
+        @Nullable
+        private final TdsDataType nullableType;
+
+        private final TdsDataType fixedTypes[];
+
+        /**
+         * @param category     type category.
+         * @param name         SQL server type name.
+         * @param nullableType the nullable {@link TdsDataType}.
+         * @param fixedTypes   zero or many fixed-length {@link TdsDataType}s.
+         */
+        SqlServerType(Category category, String name, TdsDataType nullableType, TdsDataType... fixedTypes) {
+            this(category, name, 0, nullableType, fixedTypes);
         }
 
         /**
-         * Returns the type name.
-         *
-         * @return the type name.
+         * @param category     type category.
+         * @param name         SQL server type name.
+         * @param maxLength    maximal type length.
+         * @param nullableType the nullable {@link TdsDataType}.
+         * @param fixedTypes   zero or many fixed-length {@link TdsDataType}s.
          */
-        public String toString() {
-            return this.name;
+        SqlServerType(Category category, String name, int maxLength, TdsDataType nullableType, TdsDataType... fixedTypes) {
+
+            Assert.isTrue(nullableType.getLengthStrategy() != LengthStrategy.FIXEDLENTYPE, String.format("Type [%s] specified a fixed-length strategy in its nullable type", name));
+
+            for (TdsDataType fixedType : fixedTypes) {
+                Assert.isTrue(fixedType.getLengthStrategy() == LengthStrategy.FIXEDLENTYPE, String.format("Type [%s] specified [%s] in its fixed length type [%s] ", name,
+                    fixedType.getLengthStrategy(), fixedType));
+            }
+
+            this.category = category;
+            this.name = name;
+            this.maxLength = maxLength;
+            this.nullableType = nullableType;
+            this.fixedTypes = fixedTypes;
         }
 
-        public TdsDataType[] getTdsTypes() {
-            return tdsTypes;
+        SqlServerType(Category category, String name) {
+            
+            this.category = category;
+            this.name = name;
+            this.maxLength = 0;
+            this.nullableType = null;
+            this.fixedTypes = new TdsDataType[0];
         }
 
         /**
@@ -474,6 +503,30 @@ public interface TypeInformation {
                 }
 
             throw new IllegalArgumentException(String.format("Unknown type: %s", typeName));
+        }
+
+
+        public int getMaxLength() {
+            return maxLength;
+        }
+
+        @Nullable
+        public TdsDataType getNullableType() {
+            return nullableType;
+        }
+
+        public TdsDataType[] getFixedTypes() {
+            return fixedTypes;
+        }
+
+        /**
+         * Returns the type name.
+         *
+         * @return the type name.
+         */
+        @Override
+        public String toString() {
+            return this.name;
         }
 
         /**

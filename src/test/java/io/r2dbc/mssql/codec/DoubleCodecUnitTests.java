@@ -70,6 +70,15 @@ class DoubleCodecUnitTests {
     }
 
     @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = DoubleCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("08 00");
+        assertThat(encoded.getFormalType()).isEqualTo("float");
+    }
+    
+    @Test
     void shouldEncodeDouble() {
 
         Encoded encoded = DoubleCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), 11344.554);

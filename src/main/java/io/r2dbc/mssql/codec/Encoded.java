@@ -20,8 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.AbstractReferenceCounted;
 import io.r2dbc.mssql.message.type.TdsDataType;
 
-import java.util.Arrays;
-
 import static io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
 
 /**
@@ -69,8 +67,11 @@ public class Encoded extends AbstractReferenceCounted {
     public String getFormalType() {
 
         for (SqlServerType serverType : SqlServerType.values()) {
-            if (Arrays.binarySearch(serverType.getTdsTypes(), this.dataType) >= 0) {
-                return serverType.toString();
+
+            for (TdsDataType tdsType : serverType.getFixedTypes()) {
+                if (tdsType == this.dataType) {
+                    return serverType.toString();
+                }
             }
         }
 

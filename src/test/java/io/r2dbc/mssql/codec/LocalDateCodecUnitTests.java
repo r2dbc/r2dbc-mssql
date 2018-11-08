@@ -50,6 +50,15 @@ class LocalDateCodecUnitTests {
     }
 
     @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = LocalDateCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("00");
+        assertThat(encoded.getFormalType()).isEqualTo("date");
+    }
+
+    @Test
     void shouldEncodeDate() {
 
         LocalDate value = LocalDate.parse("2018-10-23");

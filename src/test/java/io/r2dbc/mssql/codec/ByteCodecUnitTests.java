@@ -90,6 +90,15 @@ class ByteCodecUnitTests {
     }
 
     @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = ByteCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("01 00");
+        assertThat(encoded.getFormalType()).isEqualTo("tinyint");
+    }
+
+    @Test
     void shouldEncodeByte() {
 
         Encoded encoded = ByteCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), (byte) 2);

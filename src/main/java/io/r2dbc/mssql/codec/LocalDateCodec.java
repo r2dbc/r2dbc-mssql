@@ -68,13 +68,18 @@ final class LocalDateCodec extends AbstractCodec<LocalDate> {
     }
 
     @Override
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.DATE);
+    }
+
+    @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, LocalDate value) {
 
         ByteBuf buffer = allocator.buffer(4);
         buffer.writeByte(TypeUtils.DAYS_INTO_CE_LENGTH);
         doEncode(buffer, value);
 
-        return Encoded.of(TdsDataType.DATEN, buffer);
+        return new RpcEncoding.HintedEncoded(TdsDataType.DATEN, SqlServerType.DATE, buffer);
     }
 
     /**

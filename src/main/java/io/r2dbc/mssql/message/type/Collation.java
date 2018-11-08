@@ -42,6 +42,8 @@ import java.util.Objects;
 @SuppressWarnings("unused")
 public final class Collation {
 
+    public static final Collation RAW = Collation.from(0, 0);
+    
     private static final int UTF8_IN_TDSCOLLATION = 0x4000000;
 
     // Index from of windows locales by their LangIDs for fast lookup
@@ -77,11 +79,16 @@ public final class Collation {
         this.lcid = lcid;
         this.sortId = sortId;
 
-        if (UTF8_IN_TDSCOLLATION == (lcid & UTF8_IN_TDSCOLLATION)) {
-            this.serverCharset = ServerCharset.UTF8;
+        if (lcid != 0 || sortId != 0) {
+
+            if (UTF8_IN_TDSCOLLATION == (lcid & UTF8_IN_TDSCOLLATION)) {
+                this.serverCharset = ServerCharset.UTF8;
+            } else {
+                // For a SortId==0 collation, the LCID bits correspond to a LocaleId
+                this.serverCharset = (0 == sortId) ? getEncodingFromLCID() : getEncodingFromSortId();
+            }
         } else {
-            // For a SortId==0 collation, the LCID bits correspond to a LocaleId
-            this.serverCharset = (0 == sortId) ? getEncodingFromLCID() : getEncodingFromSortId();
+            this.serverCharset = ServerCharset.CP1252;
         }
     }
 

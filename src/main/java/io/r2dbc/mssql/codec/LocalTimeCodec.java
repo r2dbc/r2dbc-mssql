@@ -60,6 +60,11 @@ final class LocalTimeCodec extends AbstractCodec<LocalTime> {
     }
 
     @Override
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.TIME);
+    }
+
+    @Override
     LocalTime doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends LocalTime> valueType) {
 
         long nanosSinceMidnight = 0;
@@ -78,18 +83,19 @@ final class LocalTimeCodec extends AbstractCodec<LocalTime> {
 
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, LocalTime value) {
-        return RpcEncoding.encode(allocator, TdsDataType.TIMEN, TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, TypeUtils.getTimeValueLength(TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE), value, (buffer,
-                                                                                                                                                                                      localTime) -> doEncode(buffer,
-            TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, localTime));
+        return RpcEncoding.encode(allocator, TdsDataType.TIMEN, SqlServerType.TIME, TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, TypeUtils.getTimeValueLength(TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE),
+            value, (buffer,
+                    localTime) -> doEncode(buffer,
+                TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, localTime));
     }
 
     static void doEncode(ByteBuf buffer, int scale, LocalTime value) {
 
         int valueLength = TypeUtils.getTimeValueLength(scale);
-        doEncode(buffer, scale, valueLength, value);
+        doEncodeValue(buffer, valueLength, value);
     }
 
-    private static void doEncode(ByteBuf buffer, int scale, int valueLength, LocalTime value) {
+    private static void doEncodeValue(ByteBuf buffer, int valueLength, LocalTime value) {
 
         long nanosSinceMidnight = value.toNanoOfDay();
         nanosSinceMidnight /= SCALED_MULTIPLIERS[valueLength];

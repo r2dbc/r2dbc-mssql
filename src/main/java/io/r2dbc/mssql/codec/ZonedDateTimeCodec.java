@@ -72,6 +72,11 @@ final class ZonedDateTimeCodec extends AbstractCodec<ZonedDateTime> {
     }
 
     @Override
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.DATETIMEOFFSET);
+    }
+
+    @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, ZonedDateTime value) {
 
         ByteBuf buffer = allocator.buffer(12);
@@ -79,7 +84,7 @@ final class ZonedDateTimeCodec extends AbstractCodec<ZonedDateTime> {
         buffer.writeByte(0x0a);
         doEncode(buffer, value);
 
-        return Encoded.of(TdsDataType.DATETIMEOFFSETN, buffer);
+        return new RpcEncoding.HintedEncoded(TdsDataType.DATETIMEOFFSETN, SqlServerType.DATETIMEOFFSET, buffer);
     }
 
     static void doEncode(ByteBuf buffer, ZonedDateTime value) {

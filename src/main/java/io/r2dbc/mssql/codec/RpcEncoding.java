@@ -28,6 +28,8 @@ import reactor.util.annotation.Nullable;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
+import static io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
+
 /**
  * Utility methods to encode RPC parameters.
  *
@@ -128,7 +130,73 @@ public final class RpcEncoding {
 
         valueEncoder.accept(buffer, value);
 
-        return new LengthEncoded(dataType, buffer, maxLength);
+        return new Encoded(dataType, buffer);
+    }
+
+    /**
+     * Encode a RPC parameter that declares length and max-length attributes.
+     *
+     * @param value        the value to encode.
+     * @param valueEncoder encoder function. Using a {@link BiFunction} to allow non-capturing lambdas.
+     * @param <T>
+     * @return
+     */
+    public static <T> Encoded encodeFixed(ByteBufAllocator allocator, SqlServerType serverType, T value, BiConsumer<ByteBuf, T> valueEncoder) {
+
+        Assert.isTrue(serverType.getFixedTypes().length > 0, "Server type does not contain a fixed type assignment.");
+
+        ByteBuf buffer = prepareBuffer(allocator, LengthStrategy.FIXEDLENTYPE, serverType.getMaxLength(), serverType.getMaxLength());
+
+        valueEncoder.accept(buffer, value);
+
+        return new HintedEncoded(serverType.getFixedTypes()[0], serverType, buffer);
+    }
+
+    /**
+     * Encode a RPC parameter that declares length and max-length attributes and apply a {@link SqlServerType} hint.
+     *
+     * @param allocator
+     * @param dataType
+     * @param serverType
+     * @param maxLength
+     * @param length
+     * @param value        the value to encode.
+     * @param valueEncoder encoder function. Using a {@link BiFunction} to allow non-capturing lambdas.
+     * @param <T>
+     * @return
+     */
+    public static <T> Encoded encode(ByteBufAllocator allocator, TdsDataType dataType, SqlServerType serverType, int maxLength, int length, T value, BiConsumer<ByteBuf, T> valueEncoder) {
+
+        ByteBuf buffer = prepareBuffer(allocator, dataType.getLengthStrategy(), maxLength, length);
+
+        valueEncoder.accept(buffer, value);
+
+        return new HintedEncoded(dataType, serverType, buffer);
+    }
+
+    /**
+     * Encode a {@literal null} RPC parameter that declares length and max-length attributes and apply a {@link SqlServerType} hint.
+     */
+    public static <T> Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
+
+        Assert.isTrue(serverType.getMaxLength() > 0, "Server type does not declare a max length");
+        Assert.notNull(serverType.getNullableType(), "Server type does not declare a nullable type");
+        ByteBuf buffer = prepareBuffer(allocator, serverType.getNullableType().getLengthStrategy(), serverType.getMaxLength(), 0);
+
+        return new HintedEncoded(serverType.getNullableType(), serverType, buffer);
+    }
+
+    /**
+     * Encode a temporal typed {@literal null} RPC parameter.
+     */
+    public static <T> Encoded encodeTemporalNull(ByteBufAllocator allocator, SqlServerType serverType) {
+
+        Assert.notNull(serverType.getNullableType(), "Server type does not declare a nullable type");
+        ByteBuf buffer = allocator.buffer(1);
+
+        Encode.asByte(buffer, 0);
+
+        return new HintedEncoded(serverType.getNullableType(), serverType, buffer);
     }
 
     /**
@@ -190,18 +258,21 @@ public final class RpcEncoding {
         }
     }
 
-    static class LengthEncoded extends Encoded {
+    /**
+     * Extension to {@link Encoded} that applies a {@link SqlServerType} hint.
+     */
+    static class HintedEncoded extends Encoded {
 
-        private final int length;
+        private final SqlServerType sqlServerType;
 
-        public LengthEncoded(TdsDataType dataType, ByteBuf value, int length) {
+        public HintedEncoded(TdsDataType dataType, SqlServerType sqlServerType, ByteBuf value) {
             super(dataType, value);
-            this.length = length;
+            this.sqlServerType = sqlServerType;
         }
 
         @Override
         public String getFormalType() {
-            return super.getFormalType() + "(" + length + ")";
+            return sqlServerType.toString();
         }
     }
 }

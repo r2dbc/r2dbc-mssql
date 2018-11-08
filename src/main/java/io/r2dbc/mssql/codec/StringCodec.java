@@ -84,6 +84,18 @@ final class StringCodec extends AbstractCodec<String> {
     }
 
     @Override
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+
+        ByteBuf buffer = allocator.buffer();
+
+        Encode.uShort(buffer, TypeUtils.SHORT_VARTYPE_MAX_BYTES);
+        Collation.RAW.encode(buffer);
+        Encode.uShort(buffer, -1);
+
+        return new NvarcharEncoded(TdsDataType.NVARCHAR, buffer);
+    }
+
+    @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, String value) {
 
 
@@ -95,7 +107,7 @@ final class StringCodec extends AbstractCodec<String> {
         if (dataType == TdsDataType.NVARCHAR) {
             return new NvarcharEncoded(dataType, buffer);
         }
-        
+
         return Encoded.of(dataType, buffer);
     }
 
@@ -208,12 +220,12 @@ final class StringCodec extends AbstractCodec<String> {
         }
     }
 
-    static class NvarcharEncoded extends Encoded {
+    static class NvarcharEncoded extends RpcEncoding.HintedEncoded {
 
         private final int maxLength = TypeUtils.SHORT_VARTYPE_MAX_BYTES / 2;
 
-        public NvarcharEncoded(TdsDataType dataType, ByteBuf value) {
-            super(dataType, value);
+        NvarcharEncoded(TdsDataType dataType, ByteBuf value) {
+            super(dataType, SqlServerType.NVARCHAR, value);
         }
 
         @Override

@@ -66,6 +66,15 @@ class MoneyCodecUnitTests {
     }
 
     @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = MoneyCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("08 00");
+        assertThat(encoded.getFormalType()).isEqualTo("money");
+    }
+
+    @Test
     void shouldEncodeMoney() {
 
         Encoded encoded = MoneyCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), new BigDecimal("7301494.4032"));

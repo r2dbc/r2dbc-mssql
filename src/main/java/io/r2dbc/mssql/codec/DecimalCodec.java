@@ -26,6 +26,8 @@ import io.r2dbc.mssql.message.type.TypeInformation;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import static io.r2dbc.mssql.message.type.TypeInformation.SqlServerType;
+
 /**
  * Codec for fixed floating-point values that are represented as {@link BigDecimal}.
  *
@@ -39,8 +41,6 @@ import java.math.BigInteger;
  */
 final class DecimalCodec extends AbstractCodec<BigDecimal> {
 
-    private final static int MAX_LENGTH = 0x11;
-
     private final static int MAX_PRECISION = 38;
     
     static final DecimalCodec INSTANCE = new DecimalCodec();
@@ -51,7 +51,7 @@ final class DecimalCodec extends AbstractCodec<BigDecimal> {
 
     @Override
     boolean doCanDecode(TypeInformation typeInformation) {
-        return typeInformation.getServerType() == TypeInformation.SqlServerType.DECIMAL || typeInformation.getServerType() == TypeInformation.SqlServerType.NUMERIC;
+        return typeInformation.getServerType() == SqlServerType.DECIMAL || typeInformation.getServerType() == SqlServerType.NUMERIC;
     }
 
     @Override
@@ -70,12 +70,25 @@ final class DecimalCodec extends AbstractCodec<BigDecimal> {
     }
 
     @Override
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+
+        ByteBuf buffer = allocator.buffer(4);
+
+        Encode.asByte(buffer, 0x11);
+        Encode.asByte(buffer, SqlServerType.DECIMAL.getMaxLength());
+        Encode.asByte(buffer, 0); // scale
+        Encode.asByte(buffer, 0); // length
+
+        return new DecimalEncoded(TdsDataType.DECIMALN, buffer, MAX_PRECISION, 0);
+    }
+
+    @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, BigDecimal value) {
 
         ByteBuf buffer = RpcEncoding.prepareBuffer(allocator, TdsDataType.DECIMALN.getLengthStrategy(), 0, 0);
 
         encodeBigDecimal(buffer, value);
-        return new DecimalEncoded(TdsDataType.DECIMALN, buffer, MAX_PRECISION, value.scale()); 
+        return new DecimalEncoded(TdsDataType.DECIMALN, buffer, MAX_PRECISION, value.scale());
     }
 
     private static void encodeBigDecimal(ByteBuf buffer, BigDecimal value) {
@@ -99,14 +112,14 @@ final class DecimalCodec extends AbstractCodec<BigDecimal> {
         }
     }
 
-    static class DecimalEncoded extends Encoded {
+    static class DecimalEncoded extends RpcEncoding.HintedEncoded {
 
         private final int length;
 
         private final int scale;
 
-        public DecimalEncoded(TdsDataType dataType, ByteBuf value, int length, int scale) {
-            super(dataType, value);
+        DecimalEncoded(TdsDataType dataType, ByteBuf value, int length, int scale) {
+            super(dataType, SqlServerType.DECIMAL, value);
             this.length = length;
             this.scale = scale;
         }
