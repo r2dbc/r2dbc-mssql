@@ -34,6 +34,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 class BooleanCodecUnitTests {
 
     @Test
+    void shouldEncodeBoolean() {
+
+        Encoded encoded = BooleanCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), true);
+        EncodedAssert.assertThat(encoded).isEqualToHex("01 01 01");
+        assertThat(encoded.getFormalType()).isEqualTo("tinyint");
+    }
+
+    @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = BooleanCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("01 00");
+        assertThat(encoded.getFormalType()).isEqualTo("tinyint");
+    }
+
+    @Test
     void shouldBeAbleToDecode() {
 
         TypeInformation tinyint =
@@ -80,23 +97,6 @@ class BooleanCodecUnitTests {
 
         assertThat(BooleanCodec.INSTANCE.decode(HexUtils.decodeToByteBuf("01"), ColumnUtil.createColumn(type), Boolean.class)).isTrue();
         assertThat(BooleanCodec.INSTANCE.decode(HexUtils.decodeToByteBuf("00"), ColumnUtil.createColumn(type), Boolean.class)).isFalse();
-    }
-
-    @Test
-    void shouldEncodeNull() {
-
-        Encoded encoded = BooleanCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
-
-        EncodedAssert.assertThat(encoded).isEqualToHex("01 00");
-        assertThat(encoded.getFormalType()).isEqualTo("tinyint");
-    }
-
-    @Test
-    void shouldEncodeBoolean() {
-
-        Encoded encoded = BooleanCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), true);
-        EncodedAssert.assertThat(encoded).isEqualToHex("01 01 01");
-        assertThat(encoded.getFormalType()).isEqualTo("tinyint");
     }
 
     private TypeInformation createType(int length, SqlServerType serverType) {

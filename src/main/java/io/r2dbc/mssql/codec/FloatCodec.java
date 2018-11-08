@@ -43,6 +43,16 @@ final class FloatCodec extends AbstractCodec<Float> {
     }
 
     @Override
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Float value) {
+        return RpcEncoding.encodeFixed(allocator, SqlServerType.REAL, value, Encode::asFloat);
+    }
+
+    @Override
+    Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeNull(allocator, SqlServerType.REAL);
+    }
+
+    @Override
     boolean doCanDecode(TypeInformation typeInformation) {
         return DoubleCodec.INSTANCE.doCanDecode(typeInformation);
     }
@@ -55,13 +65,4 @@ final class FloatCodec extends AbstractCodec<Float> {
             : value.floatValue();
     }
 
-    @Override
-    public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.REAL);
-    }
-
-    @Override
-    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Float value) {
-        return RpcEncoding.encodeFixed(allocator, SqlServerType.REAL, value, Encode::asFloat);
-    }
 }

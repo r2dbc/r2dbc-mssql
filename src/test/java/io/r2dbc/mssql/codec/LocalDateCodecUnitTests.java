@@ -40,23 +40,14 @@ class LocalDateCodecUnitTests {
     static final TypeInformation DATE = builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withServerType(SqlServerType.DATE).build();
 
     @Test
-    void shouldDecodeNull() {
+    void shouldEncodeDate() {
 
-        ByteBuf buffer = HexUtils.decodeToByteBuf("00");
+        LocalDate value = LocalDate.parse("2018-10-23");
 
-        LocalDate decoded = LocalDateCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(DATE), LocalDate.class);
+        Encoded encoded = LocalDateCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), value);
 
-        assertThat(decoded).isNull();
-    }
-    
-    @Test
-    void shouldDecodeDate() {
-
-        ByteBuf buffer = HexUtils.decodeToByteBuf("03DD3E0B");
-
-        LocalDate decoded = LocalDateCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(DATE), LocalDate.class);
-
-        assertThat(decoded).isEqualTo("2018-10-23");
+        EncodedAssert.assertThat(encoded).isEqualToHex("03 DD 3E 0B");
+        assertThat(encoded.getFormalType()).isEqualTo("date");
     }
 
     @Test
@@ -69,13 +60,22 @@ class LocalDateCodecUnitTests {
     }
 
     @Test
-    void shouldEncodeDate() {
+    void shouldDecodeNull() {
 
-        LocalDate value = LocalDate.parse("2018-10-23");
+        ByteBuf buffer = HexUtils.decodeToByteBuf("00");
 
-        Encoded encoded = LocalDateCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), value);
+        LocalDate decoded = LocalDateCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(DATE), LocalDate.class);
 
-        EncodedAssert.assertThat(encoded).isEqualToHex("03 DD 3E 0B");
-        assertThat(encoded.getFormalType()).isEqualTo("date");
+        assertThat(decoded).isNull();
+    }
+
+    @Test
+    void shouldDecodeDate() {
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("03DD3E0B");
+
+        LocalDate decoded = LocalDateCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(DATE), LocalDate.class);
+
+        assertThat(decoded).isEqualTo("2018-10-23");
     }
 }

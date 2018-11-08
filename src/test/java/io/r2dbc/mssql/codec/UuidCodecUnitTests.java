@@ -38,16 +38,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class UuidCodecUnitTests {
 
     @Test
-    void shouldDecodeUuid() {
-
-        TypeInformation type = builder().withMaxLength(16).withLengthStrategy(LengthStrategy.FIXEDLENTYPE).withPrecision(16).withServerType(SqlServerType.GUID).build();
-        ByteBuf buffer = HexUtils.decodeToByteBuf("F17B0DC7C7E5C54098C7A12F7E686724");
-
-        UUID decoded = UuidCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), UUID.class);
-        assertThat(decoded).isEqualTo(UUID.fromString("C70D7BF1-E5C7-40C5-98C7-A12F7E686724"));
-    }
-
-    @Test
     void shouldEncodeUuid() {
 
         UUID uuid = UUID.fromString("C70D7BF1-E5C7-40C5-98C7-A12F7E686724");
@@ -55,5 +45,24 @@ class UuidCodecUnitTests {
 
         EncodedAssert.assertThat(encoded).isEqualToHex("10 10 F17B0DC7C7E5C54098C7A12F7E686724");
         assertThat(encoded.getFormalType()).isEqualTo("uniqueidentifier");
+    }
+
+    @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = UuidCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("10 00");
+        assertThat(encoded.getFormalType()).isEqualTo("uniqueidentifier");
+    }
+
+    @Test
+    void shouldDecodeUuid() {
+
+        TypeInformation type = builder().withMaxLength(16).withLengthStrategy(LengthStrategy.FIXEDLENTYPE).withPrecision(16).withServerType(SqlServerType.GUID).build();
+        ByteBuf buffer = HexUtils.decodeToByteBuf("F17B0DC7C7E5C54098C7A12F7E686724");
+
+        UUID decoded = UuidCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), UUID.class);
+        assertThat(decoded).isEqualTo(UUID.fromString("C70D7BF1-E5C7-40C5-98C7-A12F7E686724"));
     }
 }

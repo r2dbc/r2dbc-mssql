@@ -43,23 +43,6 @@ abstract class AbstractCodec<T> implements Codec<T> {
         this.type = Objects.requireNonNull(type, "Type must not be null");
     }
 
-    @Override
-    public final boolean canDecode(Decodable decodable, Class<?> type) {
-
-        Objects.requireNonNull(decodable, "Decodable must not be null");
-        Objects.requireNonNull(type, "Type must not be null");
-
-        return type.isAssignableFrom(this.type) &&
-            doCanDecode(decodable.getType());
-    }
-
-    @Override
-    public final boolean canEncodeNull(Class<?> type) {
-
-        Objects.requireNonNull(type, "Type must not be null");
-
-        return this.type.isAssignableFrom(type);
-    }
 
     @Override
     public boolean canEncode(Object value) {
@@ -67,25 +50,6 @@ abstract class AbstractCodec<T> implements Codec<T> {
         Objects.requireNonNull(value, "Value must not be null");
 
         return this.type.isInstance(value);
-    }
-
-    @Nullable
-    public final T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type) {
-
-        if (buffer == null) {
-            return null;
-        }
-
-        Length length = Length.decode(buffer, decodable.getType());
-        return doDecode(buffer, length, decodable.getType(), type);
-    }
-
-    @Override
-    public final Encoded encodeNull(ByteBufAllocator allocator) {
-
-        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
-
-        return doEncodeNull(allocator);
     }
 
     @Override
@@ -97,6 +61,62 @@ abstract class AbstractCodec<T> implements Codec<T> {
 
         return doEncode(allocator, context, value);
     }
+
+    @Override
+    public final boolean canEncodeNull(Class<?> type) {
+
+        Objects.requireNonNull(type, "Type must not be null");
+
+        return this.type.isAssignableFrom(type);
+    }
+
+    @Override
+    public final Encoded encodeNull(ByteBufAllocator allocator) {
+
+        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+
+        return doEncodeNull(allocator);
+    }
+
+    @Override
+    public final boolean canDecode(Decodable decodable, Class<?> type) {
+
+        Objects.requireNonNull(decodable, "Decodable must not be null");
+        Objects.requireNonNull(type, "Type must not be null");
+
+        return type.isAssignableFrom(this.type) &&
+            doCanDecode(decodable.getType());
+    }
+
+    @Nullable
+    public final T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type) {
+
+        Objects.requireNonNull(decodable, "Decodable must not be null");
+        Objects.requireNonNull(type, "Type must not be null");
+
+        if (buffer == null) {
+            return null;
+        }
+
+        Length length = Length.decode(buffer, decodable.getType());
+        return doDecode(buffer, length, decodable.getType(), type);
+    }
+
+    /**
+     * @param allocator the allocator to allocate encoding buffers.
+     * @param context   parameter context.
+     * @param value     the {@literal null} {@code value}.
+     * @return the encoded value.
+     */
+    abstract Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, T value);
+
+    /**
+     * Encode a {@literal null} value.
+     *
+     * @param allocator the allocator to allocate encoding buffers.
+     * @return the encoded {@literal null} value.
+     */
+    abstract Encoded doEncodeNull(ByteBufAllocator allocator);
 
     /**
      * Determine whether this {@link Codec} is capable of decoding column values based on the given {@link TypeInformation}.
@@ -118,19 +138,4 @@ abstract class AbstractCodec<T> implements Codec<T> {
     @Nullable
     abstract T doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends T> valueType);
 
-    /**
-     * Encode a {@literal null} value.
-     *
-     * @param allocator the allocator to allocate encoding buffers.
-     * @return
-     */
-    protected abstract Encoded doEncodeNull(ByteBufAllocator allocator);
-
-    /**
-     * @param allocator the allocator to allocate encoding buffers.
-     * @param context   parameter context.
-     * @param value     the {@literal null} {@code value}.
-     * @return the encoded value.
-     */
-    abstract Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, T value);
 }

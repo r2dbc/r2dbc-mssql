@@ -44,12 +44,12 @@ final class BooleanCodec extends AbstractNumericCodec<Boolean> {
     }
 
     @Override
-    public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.TINYINT);
-    }
-    
-    @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Boolean value) {
         return RpcEncoding.encodeFixed(allocator, SqlServerType.TINYINT, value, (buffer, b) -> Encode.asByte(buffer, b ? 1 : 0));
+    }
+
+    @Override
+    Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeNull(allocator, SqlServerType.TINYINT);
     }
 }

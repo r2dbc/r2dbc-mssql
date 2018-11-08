@@ -39,13 +39,14 @@ class ZonedDateTimeCodecUnitTests {
     static final TypeInformation DATETIMEOFFSET = TypeInformation.builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withScale(7).withServerType(SqlServerType.DATETIMEOFFSET).build();
 
     @Test
-    void shouldDecodeDateTimeOffset() {
+    void shouldEncodeDatetimeoffset() {
 
-        ByteBuf buffer = HexUtils.decodeToByteBuf("0a a0 d8 dd f7 8d a4 3e 0b 2d 00");
+        ZonedDateTime value = ZonedDateTime.parse("2018-08-27T17:41:14.890+00:45[UT+00:45]");
 
-        ZonedDateTime decoded = ZonedDateTimeCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(DATETIMEOFFSET), ZonedDateTime.class);
+        Encoded encoded = ZonedDateTimeCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), value);
 
-        assertThat(decoded).isEqualTo("2018-08-27T17:41:14.890+00:45[UT+00:45]");
+        EncodedAssert.assertThat(encoded).isEqualToHex("07 0a a0 d8 dd f7 8d a4 3e 0b 2d 00");
+        assertThat(encoded.getFormalType()).isEqualTo("datetimeoffset");
     }
 
     @Test
@@ -58,13 +59,12 @@ class ZonedDateTimeCodecUnitTests {
     }
 
     @Test
-    void shouldEncodeDatetimeoffset() {
+    void shouldDecodeDateTimeOffset() {
 
-        ZonedDateTime value = ZonedDateTime.parse("2018-08-27T17:41:14.890+00:45[UT+00:45]");
+        ByteBuf buffer = HexUtils.decodeToByteBuf("0a a0 d8 dd f7 8d a4 3e 0b 2d 00");
 
-        Encoded encoded = ZonedDateTimeCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), value);
+        ZonedDateTime decoded = ZonedDateTimeCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(DATETIMEOFFSET), ZonedDateTime.class);
 
-        EncodedAssert.assertThat(encoded).isEqualToHex("07 0a a0 d8 dd f7 8d a4 3e 0b 2d 00");
-        assertThat(encoded.getFormalType()).isEqualTo("datetimeoffset");
+        assertThat(decoded).isEqualTo("2018-08-27T17:41:14.890+00:45[UT+00:45]");
     }
 }

@@ -34,6 +34,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class TimestampCodecUnitTests {
 
     @Test
+    void shouldEncodeTimestamp() {
+
+        byte[] value = new byte[]{0, 0, 0, 0, 0, 0, 7, -47};
+
+        assertThatThrownBy(() -> TimestampCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), value)).isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
     void shouldDecodeTimestamp() {
 
         TypeInformation type = TypeInformation.builder().withLengthStrategy(LengthStrategy.USHORTLENTYPE).withServerType(TypeInformation.SqlServerType.TIMESTAMP).build();
@@ -43,13 +51,5 @@ class TimestampCodecUnitTests {
         byte[] decoded = TimestampCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), byte[].class);
 
         assertThat(decoded).containsSequence(0, 0, 0, 0, 0, 0, 7, -47);
-    }
-
-    @Test
-    void shouldEncodeTimestamp() {
-
-        byte[] value = new byte[]{0, 0, 0, 0, 0, 0, 7, -47};
-
-        assertThatThrownBy(() -> TimestampCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), value)).isInstanceOf(UnsupportedOperationException.class);
     }
 }

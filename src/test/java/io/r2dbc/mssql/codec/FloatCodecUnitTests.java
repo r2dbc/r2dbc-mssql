@@ -36,6 +36,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 class FloatCodecUnitTests {
 
     @Test
+    void shouldEncodeFloat() {
+
+        Encoded encoded = FloatCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), 11344.554f);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("04 04 37 42 31 46");
+        assertThat(encoded.getFormalType()).isEqualTo("real");
+    }
+
+    @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = FloatCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("04 00");
+        assertThat(encoded.getFormalType()).isEqualTo("real");
+    }
+
+    @Test
     void shouldBeAbleToDecode() {
 
         TypeInformation floatType =
@@ -66,23 +84,5 @@ class FloatCodecUnitTests {
         ByteBuf buffer = HexUtils.decodeToByteBuf("0437423146");
 
         assertThat(FloatCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), Float.class)).isEqualTo((float) 11344.554);
-    }
-
-    @Test
-    void shouldEncodeNull() {
-
-        Encoded encoded = FloatCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
-
-        EncodedAssert.assertThat(encoded).isEqualToHex("04 00");
-        assertThat(encoded.getFormalType()).isEqualTo("real");
-    }
-
-    @Test
-    void shouldEncodeFloat() {
-
-        Encoded encoded = FloatCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), 11344.554f);
-
-        EncodedAssert.assertThat(encoded).isEqualToHex("04 04 37 42 31 46");
-        assertThat(encoded.getFormalType()).isEqualTo("real");
     }
 }

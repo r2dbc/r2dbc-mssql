@@ -64,6 +64,20 @@ final class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
     }
 
     @Override
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, LocalDateTime value) {
+
+        return RpcEncoding.encode(allocator, SqlServerType.DATETIME2, 8, value,
+            (buffer, localDateTime) -> {
+                encode(buffer, SqlServerType.DATETIME2, TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, localDateTime);
+            });
+    }
+
+    @Override
+    Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.DATETIME2, 7);
+    }
+
+    @Override
     boolean doCanDecode(TypeInformation typeInformation) {
         return typeInformation.getServerType() == SqlServerType.SMALLDATETIME || typeInformation.getServerType() == SqlServerType.DATETIME || typeInformation.getServerType() == SqlServerType.DATETIME2;
     }
@@ -74,7 +88,7 @@ final class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
         if (length.isNull()) {
             return null;
         }
-        
+
         if (type.getServerType() == SqlServerType.SMALLDATETIME) {
 
             int daysSinceBaseDate = Decode.uShort(buffer);
@@ -104,21 +118,7 @@ final class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
         throw new UnsupportedOperationException(String.format("Cannot decode value from server type [%s]", type.getServerType()));
     }
 
-    @Override
-    public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.DATETIME2, 7);
-    }
-
-    @Override
-    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, LocalDateTime value) {
-
-        return RpcEncoding.encode(allocator, SqlServerType.DATETIME2, 8, value,
-            (buffer, localDateTime) -> {
-                doEncode(buffer, SqlServerType.DATETIME2, TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, localDateTime);
-            });
-    }
-
-    void doEncode(ByteBuf buffer, SqlServerType type, int scale, LocalDateTime value) {
+    static void encode(ByteBuf buffer, SqlServerType type, int scale, LocalDateTime value) {
 
         if (type == SqlServerType.SMALLDATETIME) {
 
@@ -150,7 +150,7 @@ final class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
         if (type == SqlServerType.DATETIME2) {
 
             LocalTimeCodec.doEncode(buffer, scale, value.toLocalTime());
-            LocalDateCodec.doEncode(buffer, value.toLocalDate());
+            LocalDateCodec.encode(buffer, value.toLocalDate());
 
             return;
         }

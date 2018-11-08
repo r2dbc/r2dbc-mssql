@@ -36,6 +36,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ByteCodecUnitTests {
 
     @Test
+    void shouldEncodeByte() {
+
+        Encoded encoded = ByteCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), (byte) 2);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("01 01 02");
+        assertThat(encoded.getFormalType()).isEqualTo("tinyint");
+    }
+
+    @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = ByteCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("01 00");
+        assertThat(encoded.getFormalType()).isEqualTo("tinyint");
+    }
+
+    @Test
     void shouldBeAbleToDecode() {
 
         TypeInformation tinyint =
@@ -87,24 +105,6 @@ class ByteCodecUnitTests {
         ByteBuf buffer = HexUtils.decodeToByteBuf("01");
 
         assertThat(ByteCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), Byte.class)).isEqualTo((byte) 1);
-    }
-
-    @Test
-    void shouldEncodeNull() {
-
-        Encoded encoded = ByteCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
-
-        EncodedAssert.assertThat(encoded).isEqualToHex("01 00");
-        assertThat(encoded.getFormalType()).isEqualTo("tinyint");
-    }
-
-    @Test
-    void shouldEncodeByte() {
-
-        Encoded encoded = ByteCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), (byte) 2);
-
-        EncodedAssert.assertThat(encoded).isEqualToHex("01 01 02");
-        assertThat(encoded.getFormalType()).isEqualTo("tinyint");
     }
 
     private TypeInformation createType(int length, SqlServerType serverType) {

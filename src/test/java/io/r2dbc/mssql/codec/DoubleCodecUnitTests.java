@@ -37,6 +37,24 @@ import static org.assertj.core.api.Assertions.offset;
 class DoubleCodecUnitTests {
 
     @Test
+    void shouldEncodeDouble() {
+
+        Encoded encoded = DoubleCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), 11344.554);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("08 08 FE D4 78 E9 46 28 C6 40");
+        assertThat(encoded.getFormalType()).isEqualTo("float");
+    }
+
+    @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = DoubleCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("08 00");
+        assertThat(encoded.getFormalType()).isEqualTo("float");
+    }
+
+    @Test
     void shouldBeAbleToDecode() {
 
         TypeInformation floatType =
@@ -67,23 +85,5 @@ class DoubleCodecUnitTests {
         ByteBuf buffer = HexUtils.decodeToByteBuf("0437423146");
 
         assertThat(DoubleCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), Double.class)).isCloseTo(11344.554, offset(0.01));
-    }
-
-    @Test
-    void shouldEncodeNull() {
-
-        Encoded encoded = DoubleCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
-
-        EncodedAssert.assertThat(encoded).isEqualToHex("08 00");
-        assertThat(encoded.getFormalType()).isEqualTo("float");
-    }
-    
-    @Test
-    void shouldEncodeDouble() {
-
-        Encoded encoded = DoubleCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), 11344.554);
-
-        EncodedAssert.assertThat(encoded).isEqualToHex("08 08 FE D4 78 E9 46 28 C6 40");
-        assertThat(encoded.getFormalType()).isEqualTo("float");
     }
 }

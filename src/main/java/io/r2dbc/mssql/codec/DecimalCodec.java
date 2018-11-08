@@ -49,32 +49,18 @@ final class DecimalCodec extends AbstractCodec<BigDecimal> {
         super(BigDecimal.class);
     }
 
+
     @Override
-    boolean doCanDecode(TypeInformation typeInformation) {
-        return typeInformation.getServerType() == SqlServerType.DECIMAL || typeInformation.getServerType() == SqlServerType.NUMERIC;
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, BigDecimal value) {
+
+        ByteBuf buffer = RpcEncoding.prepareBuffer(allocator, TdsDataType.DECIMALN.getLengthStrategy(), 0x11, SqlServerType.DECIMAL.getMaxLength());
+
+        encodeBigDecimal(buffer, value);
+        return new DecimalEncoded(TdsDataType.DECIMALN, buffer, MAX_PRECISION, value.scale());
     }
 
     @Override
-    BigDecimal doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends BigDecimal> valueType) {
-
-        if (length.isNull()) {
-            return null;
-        }
-        
-        byte signByte = buffer.readByte();
-        int sign = (0 == signByte) ? -1 : 1;
-        byte[] magnitude = new byte[length.getLength() - 1];
-
-        // read magnitude LE
-        for (int i = 0; i < magnitude.length; i++) {
-            magnitude[magnitude.length - 1 - i] = buffer.readByte();
-        }
-
-        return new BigDecimal(new BigInteger(sign, magnitude), type.getScale());
-    }
-
-    @Override
-    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+    Encoded doEncodeNull(ByteBufAllocator allocator) {
 
         ByteBuf buffer = allocator.buffer(4);
 
@@ -87,12 +73,27 @@ final class DecimalCodec extends AbstractCodec<BigDecimal> {
     }
 
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, BigDecimal value) {
+    boolean doCanDecode(TypeInformation typeInformation) {
+        return typeInformation.getServerType() == SqlServerType.DECIMAL || typeInformation.getServerType() == SqlServerType.NUMERIC;
+    }
 
-        ByteBuf buffer = RpcEncoding.prepareBuffer(allocator, TdsDataType.DECIMALN.getLengthStrategy(), 0x11, SqlServerType.DECIMAL.getMaxLength());
+    @Override
+    BigDecimal doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends BigDecimal> valueType) {
 
-        encodeBigDecimal(buffer, value);
-        return new DecimalEncoded(TdsDataType.DECIMALN, buffer, MAX_PRECISION, value.scale());
+        if (length.isNull()) {
+            return null;
+        }
+
+        byte signByte = buffer.readByte();
+        int sign = (0 == signByte) ? -1 : 1;
+        byte[] magnitude = new byte[length.getLength() - 1];
+
+        // read magnitude LE
+        for (int i = 0; i < magnitude.length; i++) {
+            magnitude[magnitude.length - 1 - i] = buffer.readByte();
+        }
+
+        return new BigDecimal(new BigInteger(sign, magnitude), type.getScale());
     }
 
     private static void encodeBigDecimal(ByteBuf buffer, BigDecimal value) {

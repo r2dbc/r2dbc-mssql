@@ -36,14 +36,23 @@ import reactor.util.annotation.Nullable;
 interface Codec<T> {
 
     /**
-     * Determine whether this {@link Codec} is capable of decoding a value for the given {@link Decodable} and whether it can represent the decoded value as the desired {@link Class type}.
-     * {@link Decodable} represents typically a column or RPC return value.
+     * Determine whether this {@link Codec} is capable of encoding the {@code value}.
      *
-     * @param decodable the decodable metadata.
-     * @param type      the desired value type.
-     * @return {@literal true} if this codec is able to decode values of {@link TypeInformation}.
+     * @param value the parameter value.
+     * @return {@literal true} if this {@link Codec} is able to encode the {@code value}.
+     * @see #encodeNull
      */
-    boolean canDecode(Decodable decodable, Class<?> type);
+    boolean canEncode(Object value);
+
+    /**
+     * Encode the {@code value} to be used as RPC parameter.
+     *
+     * @param allocator the allocator to allocate encoding buffers.
+     * @param context   parameter context.
+     * @param value     the {@literal null} {@code value}.
+     * @return the encoded value.
+     */
+    Encoded encode(ByteBufAllocator allocator, RpcParameterContext context, T value);
 
     /**
      * Determine whether this {@link Codec} is capable of encoding a {@literal null} value for the given {@link Class} type.
@@ -55,13 +64,22 @@ interface Codec<T> {
     boolean canEncodeNull(Class<?> type);
 
     /**
-     * Determine whether this {@link Codec} is capable of encoding the {@code value}.
+     * Encode a {@literal null} value.
      *
-     * @param value the parameter value.
-     * @return {@literal true} if this {@link Codec} is able to encode the {@code value}.
-     * @see #encodeNull
+     * @param allocator the allocator to allocate encoding buffers.
+     * @return the encoded {@literal null} value.
      */
-    boolean canEncode(Object value);
+    Encoded encodeNull(ByteBufAllocator allocator);
+
+    /**
+     * Determine whether this {@link Codec} is capable of decoding a value for the given {@link Decodable} and whether it can represent the decoded value as the desired {@link Class type}.
+     * {@link Decodable} represents typically a column or RPC return value.
+     *
+     * @param decodable the decodable metadata.
+     * @param type      the desired value type.
+     * @return {@literal true} if this codec is able to decode values of {@link TypeInformation}.
+     */
+    boolean canDecode(Decodable decodable, Class<?> type);
 
     /**
      * Decode the {@link ByteBuf data} and return it as the requested {@link Class type}.
@@ -73,22 +91,4 @@ interface Codec<T> {
      */
     @Nullable
     T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type);
-
-    /**
-     * Encode a {@literal null} value.
-     *
-     * @param allocator the allocator to allocate encoding buffers.
-     * @return the encoded {@literal null} value.
-     */
-    Encoded encodeNull(ByteBufAllocator allocator);
-
-    /**
-     * Encode the {@code value} to be used as RPC parameter.
-     *
-     * @param allocator the allocator to allocate encoding buffers.
-     * @param context   parameter context.
-     * @param value     the {@literal null} {@code value}.
-     * @return the encoded value.
-     */
-    Encoded encode(ByteBufAllocator allocator, RpcParameterContext context, T value);
 }

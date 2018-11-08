@@ -59,6 +59,38 @@ public final class DefaultCodecs implements Codecs {
         );
     }
 
+    @SuppressWarnings({"unchecked", "rawtpes"})
+    @Override
+    public Encoded encode(ByteBufAllocator allocator, RpcParameterContext context, Object value) {
+
+        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        Objects.requireNonNull(context, "RpcParameterContext must not be null");
+        Objects.requireNonNull(value, "Value must not be null");
+
+        for (Codec<?> codec : this.codecs) {
+            if (codec.canEncode(value)) {
+                return ((Codec) codec).encode(allocator, context, value);
+            }
+        }
+
+        throw new IllegalArgumentException(String.format("Cannot encode [%s] parameter of type [%s]", value, value.getClass().getName()));
+    }
+
+    @Override
+    public Encoded encodeNull(ByteBufAllocator allocator, Class<?> type) {
+
+        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        Objects.requireNonNull(type, "Type must not be null");
+
+        for (Codec<?> codec : this.codecs) {
+            if (codec.canEncodeNull(type)) {
+                return codec.encodeNull(allocator);
+            }
+        }
+
+        throw new IllegalArgumentException(String.format("Cannot encode [null] parameter of type [%s]", type.getName()));
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public <T> T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type) {
@@ -77,37 +109,5 @@ public final class DefaultCodecs implements Codecs {
         }
 
         throw new IllegalArgumentException(String.format("Cannot decode value of type [%s], name [%s] server type [%s]", type.getName(), decodable.getName(), decodable.getType().getServerType()));
-    }
-
-    @Override
-    public Encoded encodeNull(ByteBufAllocator allocator, Class<?> type) {
-
-        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
-        Objects.requireNonNull(type, "Type must not be null");
-
-        for (Codec<?> codec : this.codecs) {
-            if (codec.canEncodeNull(type)) {
-                return codec.encodeNull(allocator);
-            }
-        }
-
-        throw new IllegalArgumentException(String.format("Cannot encode [null] parameter of type [%s]", type.getName()));
-    }
-
-    @SuppressWarnings({"unchecked", "rawtpes"})
-    @Override
-    public Encoded encode(ByteBufAllocator allocator, RpcParameterContext context, Object value) {
-
-        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
-        Objects.requireNonNull(context, "RpcParameterContext must not be null");
-        Objects.requireNonNull(value, "Value must not be null");
-
-        for (Codec<?> codec : this.codecs) {
-            if (codec.canEncode(value)) {
-                return ((Codec) codec).encode(allocator, context, value);
-            }
-        }
-
-        throw new IllegalArgumentException(String.format("Cannot encode [%s] parameter of type [%s]", value, value.getClass().getName()));
     }
 }

@@ -39,6 +39,44 @@ import static org.assertj.core.api.Assertions.assertThat;
 class StringCodecUnitTests {
 
     @Test
+    void shouldEncodeNvarchar() {
+
+        Collation collation = Collation.from(13632521, 52);
+
+        ByteBuf data = TestByteBufAllocator.TEST.buffer();
+        Encode.uShort(data, 12);
+        data.writeCharSequence("foobar", ServerCharset.UNICODE.charset());
+
+        Encoded encoded = StringCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(collation), "foobar");
+
+        EncodedAssert.assertThat(encoded).isEncodedAs(expected ->
+        {
+            expected.writeShortLE(8000); // max size
+
+            // collation windows-1252
+            expected.writeByte(0x00);
+            expected.writeByte(0xD0);
+            expected.writeByte(0x04);
+            expected.writeByte(0x09);
+            expected.writeByte(0x34);
+
+            expected.writeShortLE(12); // actual size
+
+            expected.writeCharSequence("foobar", ServerCharset.UNICODE.charset());
+        });
+        assertThat(encoded.getFormalType()).isEqualTo("nvarchar(4000)");
+    }
+
+    @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = StringCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("40 1f 00 00 00 00 00 ff ff");
+        assertThat(encoded.getFormalType()).isEqualTo("nvarchar(4000)");
+    }
+
+    @Test
     void shouldBeAbleToDecodeUuid() {
 
         TypeInformation type = builder().withMaxLength(16).withLengthStrategy(LengthStrategy.FIXEDLENTYPE).withPrecision(16).withServerType(SqlServerType.GUID).build();
@@ -89,35 +127,6 @@ class StringCodecUnitTests {
     }
 
     @Test
-    void shouldEncodeNvarchar() {
-
-        Collation collation = Collation.from(13632521, 52);
-
-        ByteBuf data = TestByteBufAllocator.TEST.buffer();
-        Encode.uShort(data, 12);
-        data.writeCharSequence("foobar", ServerCharset.UNICODE.charset());
-
-        Encoded encoded = StringCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(collation), "foobar");
-
-        EncodedAssert.assertThat(encoded).isEncodedAs(expected ->
-        {
-            expected.writeShortLE(8000); // max size
-
-            // collation windows-1252
-            expected.writeByte(0x00);
-            expected.writeByte(0xD0);
-            expected.writeByte(0x04);
-            expected.writeByte(0x09);
-            expected.writeByte(0x34);
-
-            expected.writeShortLE(12); // actual size
-
-            expected.writeCharSequence("foobar", ServerCharset.UNICODE.charset());
-        });
-        assertThat(encoded.getFormalType()).isEqualTo("nvarchar(4000)");
-    }
-
-    @Test
     void shouldDecodeChar() {
 
         TypeInformation type =
@@ -147,14 +156,5 @@ class StringCodecUnitTests {
         String value = StringCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), String.class);
 
         assertThat(value).isEqualTo("mytextvalue");
-    }
-
-    @Test
-    void shouldEncodeNull() {
-
-        Encoded encoded = StringCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
-
-        EncodedAssert.assertThat(encoded).isEqualToHex("40 1f 00 00 00 00 00 ff ff");
-        assertThat(encoded.getFormalType()).isEqualTo("nvarchar(4000)");
     }
 }

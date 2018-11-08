@@ -44,12 +44,12 @@ final class ShortCodec extends AbstractNumericCodec<Short> {
     }
 
     @Override
-    public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.SMALLINT);
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Short value) {
+        return RpcEncoding.encodeFixed(allocator, SqlServerType.SMALLINT, value, Encode::smallInt);
     }
 
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Short value) {
-        return RpcEncoding.encodeFixed(allocator, SqlServerType.SMALLINT, value, Encode::smallInt);
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeNull(allocator, SqlServerType.SMALLINT);
     }
 }

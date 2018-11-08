@@ -44,12 +44,12 @@ final class IntegerCodec extends AbstractNumericCodec<Integer> {
     }
 
     @Override
-    public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.INTEGER);
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Integer value) {
+        return RpcEncoding.encodeFixed(allocator, SqlServerType.INTEGER, value, Encode::asInt);
     }
 
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Integer value) {
-        return RpcEncoding.encodeFixed(allocator, SqlServerType.INTEGER, value, Encode::asInt);
+    Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeNull(allocator, SqlServerType.INTEGER);
     }
 }

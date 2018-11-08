@@ -55,6 +55,21 @@ final class LocalDateCodec extends AbstractCodec<LocalDate> {
     }
 
     @Override
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, LocalDate value) {
+
+        ByteBuf buffer = allocator.buffer(4);
+        buffer.writeByte(TypeUtils.DAYS_INTO_CE_LENGTH);
+        encode(buffer, value);
+
+        return new RpcEncoding.HintedEncoded(TdsDataType.DATEN, SqlServerType.DATE, buffer);
+    }
+
+    @Override
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.DATE);
+    }
+
+    @Override
     boolean doCanDecode(TypeInformation typeInformation) {
         return typeInformation.getServerType() == SqlServerType.DATE;
     }
@@ -65,34 +80,16 @@ final class LocalDateCodec extends AbstractCodec<LocalDate> {
         if (length.isNull()) {
             return null;
         }
-        
+
         int days = (buffer.readByte() & 0xFF) | (buffer.readByte() & 0xFF) << 8 | (buffer.readByte() & 0xFF) << 16;
 
         return DATE_ZERO.plusDays(days);
     }
 
-    @Override
-    public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.DATE);
-    }
-
-    @Override
-    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, LocalDate value) {
-
-        ByteBuf buffer = allocator.buffer(4);
-        buffer.writeByte(TypeUtils.DAYS_INTO_CE_LENGTH);
-        doEncode(buffer, value);
-
-        return new RpcEncoding.HintedEncoded(TdsDataType.DATEN, SqlServerType.DATE, buffer);
-    }
-
     /**
      * Write the {@link LocalDate} value to the {@link ByteBuf data buffer}.
-     *
-     * @param buffer
-     * @param value
      */
-    static void doEncode(ByteBuf buffer, LocalDate value) {
+    static void encode(ByteBuf buffer, LocalDate value) {
 
         long days = ChronoUnit.DAYS.between(DATE_ZERO, value);
 

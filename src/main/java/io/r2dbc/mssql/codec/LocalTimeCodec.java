@@ -54,13 +54,21 @@ final class LocalTimeCodec extends AbstractCodec<LocalTime> {
     }
 
     @Override
-    boolean doCanDecode(TypeInformation typeInformation) {
-        return typeInformation.getServerType() == SqlServerType.TIME;
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, LocalTime value) {
+        return RpcEncoding.encode(allocator, SqlServerType.TIME, TypeUtils.getTimeValueLength(TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE),
+            value, (buffer,
+                    localTime) -> doEncode(buffer,
+                TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, localTime));
     }
 
     @Override
-    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+    Encoded doEncodeNull(ByteBufAllocator allocator) {
         return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.TIME, 7);
+    }
+
+    @Override
+    boolean doCanDecode(TypeInformation typeInformation) {
+        return typeInformation.getServerType() == SqlServerType.TIME;
     }
 
     @Override
@@ -84,13 +92,6 @@ final class LocalTimeCodec extends AbstractCodec<LocalTime> {
         return LocalTime.ofNanoOfDay(hundredNanosSinceMidnight * 100);
     }
 
-    @Override
-    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, LocalTime value) {
-        return RpcEncoding.encode(allocator, SqlServerType.TIME, TypeUtils.getTimeValueLength(TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE),
-            value, (buffer,
-                    localTime) -> doEncode(buffer,
-                TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, localTime));
-    }
 
     static void doEncode(ByteBuf buffer, int scale, LocalTime value) {
 

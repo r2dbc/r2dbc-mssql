@@ -36,15 +36,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DecimalCodecUnitTests {
 
     @Test
-    void shouldDecodeNumeric5x2() {
+    void shouldEncodeNull() {
 
-        TypeInformation type = TypeInformation.builder().withLengthStrategy(TypeInformation.LengthStrategy.BYTELENTYPE).withServerType(SqlServerType.NUMERIC).withScale(2).withPrecision(5).build();
+        Encoded encoded = DecimalCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
 
-        ByteBuf buffer = HexUtils.decodeToByteBuf("0501690E0000");
-
-        BigDecimal decoded = DecimalCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), BigDecimal.class);
-
-        assertThat(decoded).isEqualTo("36.89");
+        EncodedAssert.assertThat(encoded).isEqualToHex("11 26 00 00");
+        assertThat(encoded.getFormalType()).isEqualTo("decimal(38,0)");
     }
 
     @Test
@@ -57,11 +54,14 @@ class DecimalCodecUnitTests {
     }
 
     @Test
-    void shouldEncodeNull() {
+    void shouldDecodeNumeric5x2() {
 
-        Encoded encoded = DecimalCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+        TypeInformation type = TypeInformation.builder().withLengthStrategy(TypeInformation.LengthStrategy.BYTELENTYPE).withServerType(SqlServerType.NUMERIC).withScale(2).withPrecision(5).build();
 
-        EncodedAssert.assertThat(encoded).isEqualToHex("11 26 00 00");
-        assertThat(encoded.getFormalType()).isEqualTo("decimal(38,0)");
+        ByteBuf buffer = HexUtils.decodeToByteBuf("0501690E0000");
+
+        BigDecimal decoded = DecimalCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), BigDecimal.class);
+
+        assertThat(decoded).isEqualTo("36.89");
     }
 }

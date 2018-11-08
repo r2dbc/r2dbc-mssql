@@ -57,6 +57,35 @@ final class StringCodec extends AbstractCodec<String> {
         super(String.class);
     }
 
+
+    @Override
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, String value) {
+
+
+        TdsDataType dataType = getDataType(context.getDirection(), value);
+        ByteBuf buffer = allocator.buffer((value.length() * 2) + 7);
+
+        doEncode(buffer, context.getDirection(), context.getCollation(), value);
+
+        if (dataType == TdsDataType.NVARCHAR) {
+            return new NvarcharEncoded(dataType, buffer);
+        }
+
+        return Encoded.of(dataType, buffer);
+    }
+
+    @Override
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+
+        ByteBuf buffer = allocator.buffer();
+
+        Encode.uShort(buffer, TypeUtils.SHORT_VARTYPE_MAX_BYTES);
+        Collation.RAW.encode(buffer);
+        Encode.uShort(buffer, -1);
+
+        return new NvarcharEncoded(TdsDataType.NVARCHAR, buffer);
+    }
+
     @Override
     boolean doCanDecode(TypeInformation typeInformation) {
         return SUPPORTED_TYPES.contains(typeInformation.getServerType());
@@ -81,34 +110,6 @@ final class StringCodec extends AbstractCodec<String> {
         buffer.skipBytes(length.getLength());
 
         return valueType.cast(value);
-    }
-
-    @Override
-    public Encoded doEncodeNull(ByteBufAllocator allocator) {
-
-        ByteBuf buffer = allocator.buffer();
-
-        Encode.uShort(buffer, TypeUtils.SHORT_VARTYPE_MAX_BYTES);
-        Collation.RAW.encode(buffer);
-        Encode.uShort(buffer, -1);
-
-        return new NvarcharEncoded(TdsDataType.NVARCHAR, buffer);
-    }
-
-    @Override
-    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, String value) {
-
-
-        TdsDataType dataType = getDataType(context.getDirection(), value);
-        ByteBuf buffer = allocator.buffer((value.length() * 2) + 7);
-
-        doEncode(buffer, context.getDirection(), context.getCollation(), value);
-
-        if (dataType == TdsDataType.NVARCHAR) {
-            return new NvarcharEncoded(dataType, buffer);
-        }
-
-        return Encoded.of(dataType, buffer);
     }
 
     static TdsDataType getDataType(RpcDirection direction, @Nullable String value) {

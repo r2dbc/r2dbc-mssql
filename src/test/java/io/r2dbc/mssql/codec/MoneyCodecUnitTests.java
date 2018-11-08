@@ -38,6 +38,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MoneyCodecUnitTests {
 
     @Test
+    void shouldEncodeMoney() {
+
+        Encoded encoded = MoneyCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), new BigDecimal("7301494.4032"));
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("08 08 11 00 00 00 20 a1 07 00");
+        assertThat(encoded.getFormalType()).isEqualTo("money");
+    }
+
+    @Test
+    void shouldEncodeNull() {
+
+        Encoded encoded = MoneyCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("08 00");
+        assertThat(encoded.getFormalType()).isEqualTo("money");
+    }
+    
+    @Test
     void shouldDecodeBigMoney() {
 
         Column column =
@@ -63,23 +81,5 @@ class MoneyCodecUnitTests {
         BigDecimal decoded = MoneyCodec.INSTANCE.decode(buffer, column, BigDecimal.class);
 
         assertThat(decoded).isEqualTo("36.8928");
-    }
-
-    @Test
-    void shouldEncodeNull() {
-
-        Encoded encoded = MoneyCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
-
-        EncodedAssert.assertThat(encoded).isEqualToHex("08 00");
-        assertThat(encoded.getFormalType()).isEqualTo("money");
-    }
-
-    @Test
-    void shouldEncodeMoney() {
-
-        Encoded encoded = MoneyCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), new BigDecimal("7301494.4032"));
-
-        EncodedAssert.assertThat(encoded).isEqualToHex("08 08 11 00 00 00 20 a1 07 00");
-        assertThat(encoded.getFormalType()).isEqualTo("money");
     }
 }

@@ -49,15 +49,25 @@ final class MoneyCodec extends AbstractCodec<BigDecimal> {
     /**
      * Value length of {@link SqlServerType#MONEY}.
      */
-    public static final int BIG_MONEY_LENGTH = 8;
+    private static final int BIG_MONEY_LENGTH = 8;
 
     /**
      * Value length of {@link SqlServerType#SMALLMONEY}.
      */
-    public static final int SMALL_MONEY_LENGTH = 4;
+    private static final int SMALL_MONEY_LENGTH = 4;
 
     private MoneyCodec() {
         super(BigDecimal.class);
+    }
+
+    @Override
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, BigDecimal value) {
+        return RpcEncoding.encodeFixed(allocator, SqlServerType.MONEY, value, (buffer, bigDecimal) -> Encode.money(buffer, bigDecimal.unscaledValue()));
+    }
+
+    @Override
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeNull(allocator, SqlServerType.MONEY);
     }
 
     @Override
@@ -73,7 +83,7 @@ final class MoneyCodec extends AbstractCodec<BigDecimal> {
         return new BigDecimal(decoded, 4);
     }
 
-    private BigInteger decode(ByteBuf buffer, int length) {
+    private static BigInteger decode(ByteBuf buffer, int length) {
 
         switch (length) {
             case BIG_MONEY_LENGTH:
@@ -89,15 +99,5 @@ final class MoneyCodec extends AbstractCodec<BigDecimal> {
             default:
                 throw ProtocolException.invalidTds(String.format("Unexpected value length: %d", length));
         }
-    }
-
-    @Override
-    public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.MONEY);
-    }
-
-    @Override
-    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, BigDecimal value) {
-        return RpcEncoding.encodeFixed(allocator, SqlServerType.MONEY, value, (buffer, bigDecimal) -> Encode.money(buffer, bigDecimal.unscaledValue()));
     }
 }

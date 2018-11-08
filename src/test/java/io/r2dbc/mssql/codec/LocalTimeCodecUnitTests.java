@@ -40,23 +40,14 @@ class LocalTimeCodecUnitTests {
     static final TypeInformation TIME = builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withScale(7).withServerType(SqlServerType.TIME).build();
 
     @Test
-    void shouldDecodeNull() {
+    void shouldEncodeTime() {
 
-        ByteBuf buffer = HexUtils.decodeToByteBuf("00");
+        LocalTime value = LocalTime.parse("18:13:14");
 
-        LocalTime decoded = LocalTimeCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(TIME), LocalTime.class);
+        Encoded encoded = LocalTimeCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), value);
 
-        assertThat(decoded).isNull();
-    }
-    
-    @Test
-    void shouldDecodeTime() {
-
-        ByteBuf buffer = HexUtils.decodeToByteBuf("05 c0 c9 b1 61 5d");
-
-        LocalTime decoded = LocalTimeCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(TIME), LocalTime.class);
-
-        assertThat(decoded).isEqualTo("11:08:27.100");
+        EncodedAssert.assertThat(encoded).isEqualToHex("07 05 00 19 12 B9 98");
+        assertThat(encoded.getFormalType()).isEqualTo("time");
     }
 
     @Test
@@ -69,13 +60,22 @@ class LocalTimeCodecUnitTests {
     }
 
     @Test
-    void shouldEncodeTime() {
+    void shouldDecodeTime() {
 
-        LocalTime value = LocalTime.parse("18:13:14");
+        ByteBuf buffer = HexUtils.decodeToByteBuf("05 c0 c9 b1 61 5d");
 
-        Encoded encoded = LocalTimeCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), value);
+        LocalTime decoded = LocalTimeCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(TIME), LocalTime.class);
 
-        EncodedAssert.assertThat(encoded).isEqualToHex("07 05 00 19 12 B9 98");
-        assertThat(encoded.getFormalType()).isEqualTo("time");
+        assertThat(decoded).isEqualTo("11:08:27.100");
+    }
+
+    @Test
+    void shouldDecodeNull() {
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("00");
+
+        LocalTime decoded = LocalTimeCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(TIME), LocalTime.class);
+
+        assertThat(decoded).isNull();
     }
 }

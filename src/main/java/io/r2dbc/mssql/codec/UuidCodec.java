@@ -40,6 +40,24 @@ final class UuidCodec extends AbstractCodec<UUID> {
     }
 
     @Override
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, UUID value) {
+
+        return RpcEncoding.encode(allocator, SqlServerType.GUID, 16, value, (buffer, uuid) -> {
+
+            long msb = value.getMostSignificantBits();
+            long lsb = value.getLeastSignificantBits();
+
+            buffer.writeBytes(swapForWrite(msb));
+            buffer.writeLong(lsb);
+        });
+    }
+
+    @Override
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeNull(allocator, SqlServerType.GUID);
+    }
+
+    @Override
     boolean doCanDecode(TypeInformation typeInformation) {
         return typeInformation.getServerType() == SqlServerType.GUID;
     }
@@ -58,24 +76,6 @@ final class UuidCodec extends AbstractCodec<UUID> {
         long lsb = buffer.readLong();
 
         return new UUID(msb, lsb);
-    }
-
-    @Override
-    public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.GUID);
-    }
-
-    @Override
-    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, UUID value) {
-
-        return RpcEncoding.encode(allocator, SqlServerType.GUID, 16, value, (buffer, uuid) -> {
-
-            long msb = value.getMostSignificantBits();
-            long lsb = value.getLeastSignificantBits();
-
-            buffer.writeBytes(swapForWrite(msb));
-            buffer.writeLong(lsb);
-        });
     }
 
     /**

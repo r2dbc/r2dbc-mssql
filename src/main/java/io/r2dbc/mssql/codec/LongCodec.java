@@ -43,12 +43,12 @@ final class LongCodec extends AbstractNumericCodec<Long> {
     }
 
     @Override
-    public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.BIGINT);
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Long value) {
+        return RpcEncoding.encodeFixed(allocator, SqlServerType.BIGINT, value, Encode::bigint);
     }
 
     @Override
-    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Long value) {
-        return RpcEncoding.encodeFixed(allocator, SqlServerType.BIGINT, value, Encode::bigint);
+    public Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeNull(allocator, SqlServerType.BIGINT);
     }
 }

@@ -42,6 +42,21 @@ final class TimestampCodec extends AbstractCodec<byte[]> {
     }
 
     @Override
+    public boolean canEncode(Object value) {
+        return false;
+    }
+
+    @Override
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, byte[] value) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Encoded doEncodeNull(ByteBufAllocator allocator) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     boolean doCanDecode(TypeInformation typeInformation) {
         return typeInformation.getServerType() == SqlServerType.TIMESTAMP;
     }
@@ -56,18 +71,4 @@ final class TimestampCodec extends AbstractCodec<byte[]> {
         return value;
     }
 
-    @Override
-    protected Encoded doEncodeNull(ByteBufAllocator allocator) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean canEncode(Object value) {
-        return false;
-    }
-
-    @Override
-    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, byte[] value) {
-        throw new UnsupportedOperationException();
-    }
 }

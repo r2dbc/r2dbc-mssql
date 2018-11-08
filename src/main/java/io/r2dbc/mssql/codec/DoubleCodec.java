@@ -44,6 +44,16 @@ final class DoubleCodec extends AbstractCodec<Double> {
     }
 
     @Override
+    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Double value) {
+        return RpcEncoding.encodeFixed(allocator, SqlServerType.FLOAT, value, Encode::asDouble);
+    }
+
+    @Override
+    Encoded doEncodeNull(ByteBufAllocator allocator) {
+        return RpcEncoding.encodeNull(allocator, SqlServerType.FLOAT);
+    }
+    
+    @Override
     boolean doCanDecode(TypeInformation typeInformation) {
         return typeInformation.getServerType() == SqlServerType.FLOAT || typeInformation.getServerType() == SqlServerType.REAL;
     }
@@ -60,15 +70,5 @@ final class DoubleCodec extends AbstractCodec<Double> {
         }
 
         return Decode.asDouble(buffer);
-    }
-
-    @Override
-    public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.FLOAT);
-    }
-
-    @Override
-    Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Double value) {
-        return RpcEncoding.encodeFixed(allocator, SqlServerType.FLOAT, value, Encode::asDouble);
     }
 }

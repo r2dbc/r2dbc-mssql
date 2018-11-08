@@ -59,7 +59,7 @@ class LocalDateTimeCodecUnitTests {
 
         ByteBuf encoded = TestByteBufAllocator.TEST.buffer();
 
-        LocalDateTimeCodec.INSTANCE.doEncode(encoded, SqlServerType.SMALLDATETIME, 0, value);
+        LocalDateTimeCodec.encode(encoded, SqlServerType.SMALLDATETIME, 0, value);
 
         EncodedAssert.assertThat(encoded).isEqualToHex("F5A83E00");
     }
@@ -80,7 +80,7 @@ class LocalDateTimeCodecUnitTests {
         LocalDateTime value = LocalDateTime.parse("2018-10-27T15:40:57.1");
 
         ByteBuf encoded = TestByteBufAllocator.TEST.buffer();
-        LocalDateTimeCodec.INSTANCE.doEncode(encoded, SqlServerType.DATETIME, 0, value);
+        LocalDateTimeCodec.encode(encoded, SqlServerType.DATETIME, 0, value);
         EncodedAssert.assertThat(encoded).isEqualToHex("86A90000AA700201");
     }
 
