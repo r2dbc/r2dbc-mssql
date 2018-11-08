@@ -1,0 +1,20 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: r2dbc/r2dbc-mssql
+
+inputs:
+- name: r2dbc-mssql
+- name: r2dbc-spi-artifactory
+
+outputs:
+- name: r2dbc-mssql-artifactory
+
+caches:
+- path: maven
+
+run:
+  path: r2dbc-mssql/ci/build.sh
