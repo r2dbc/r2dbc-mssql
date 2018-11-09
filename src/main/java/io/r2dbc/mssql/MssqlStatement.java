@@ -21,7 +21,7 @@ import reactor.core.publisher.Flux;
 
 /**
  * A strongly typed implementation of {@link Statement} for a Microsoft SQL Server database.
- * <p/>
+ * <p>
  * Microsoft SQL Server uses named parameters for parametrized statements:
  * <pre class="code">
  * INSERT INTO person (id, first_name, last_name) VALUES(@id, @firstname, @lastname)
