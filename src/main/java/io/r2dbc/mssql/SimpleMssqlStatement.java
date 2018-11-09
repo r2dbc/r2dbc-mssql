@@ -21,11 +21,11 @@ import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
 import java.util.Objects;
-
-import static io.r2dbc.mssql.util.PredicateUtils.or;
 
 /**
  * Simple SQL statement without SQL parameter (variables) using direct ({@link SqlBatch}) execution.
@@ -33,6 +33,8 @@ import static io.r2dbc.mssql.util.PredicateUtils.or;
  * @author Mark Paluch
  */
 class SimpleMssqlStatement implements MssqlStatement<SimpleMssqlStatement> {
+
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     final Client client;
 
@@ -92,8 +94,13 @@ class SimpleMssqlStatement implements MssqlStatement<SimpleMssqlStatement> {
     @Override
     public Flux<MssqlResult> execute() {
 
-        return QueryMessageFlow.exchange(this.client, this.sql) //
-            .windowUntil(or(AbstractDoneToken.class::isInstance)) //
-            .map(it -> MssqlResult.toResult(this.codecs, it));
+        return Flux.defer(() -> {
+
+            logger.debug("Start exchange for {}", sql);
+
+            return QueryMessageFlow.exchange(this.client, this.sql) //
+                .windowUntil(AbstractDoneToken.class::isInstance) //
+                .map(it -> MssqlResult.toResult(this.codecs, it));
+        });
     }
 }

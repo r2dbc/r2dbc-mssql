@@ -104,19 +104,11 @@ class MssqlConnectionIntegrationTests {
     }
 
     @Test
-    void shouldInsertAndSelect() {
+    void shouldInsertAndSelectUsingMap() {
 
         createTable(connection);
 
-        connection.createStatement("INSERT INTO r2dbc_example VALUES(@id, @firstname, @lastname)")
-            .bind("id", 1)
-            .bind("firstname", "Walter")
-            .bind("lastname", "White")
-            .execute()
-            .flatMap(MssqlResult::getRowsUpdated)
-            .as(StepVerifier::create)
-            .expectNext(1)
-            .verifyComplete();
+        insertRecord(1);
 
         connection.createStatement("SELECT * FROM r2dbc_example")
             .execute()
@@ -142,29 +134,64 @@ class MssqlConnectionIntegrationTests {
     }
 
     @Test
+    void shouldInsertAndSelectUsingRowCount() {
+
+        createTable(connection);
+
+        insertRecord(1);
+        insertRecord(2);
+        insertRecord(3);
+
+        connection.createStatement("SELECT * FROM r2dbc_example")
+            .execute()
+            .flatMap(MssqlResult::getRowsUpdated)
+            .as(StepVerifier::create)
+            .expectNext(3)
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldInsertAndSelectCompoundStatement() {
+
+        createTable(connection);
+
+        connection.createStatement("SELECT * FROM r2dbc_example;SELECT * FROM r2dbc_example")
+            .execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> {
+                return new Object();   // just a marker
+            }).collectList())
+            .as(StepVerifier::create)
+            .consumeNextWith(actual -> assertThat(actual).isEmpty())
+            .consumeNextWith(actual -> assertThat(actual).isEmpty())
+            .verifyComplete();
+
+        insertRecord(1);
+
+        connection.createStatement("SELECT * FROM r2dbc_example;SELECT * FROM r2dbc_example")
+            .execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> {
+
+                Map<String, Object> values = new LinkedHashMap<>();
+
+                for (ColumnMetadata column : rowMetadata.getColumnMetadatas()) {
+                    values.put(column.getName(), row.get(column.getName()));
+                }
+
+                return values;
+            }).collectList())
+            .as(StepVerifier::create)
+            .consumeNextWith(actual -> assertThat(actual).hasSize(1))
+            .consumeNextWith(actual -> assertThat(actual).hasSize(1))
+            .verifyComplete();
+    }
+
+    @Test
     void shouldReusePreparedStatements() {
 
         createTable(connection);
 
-        connection.createStatement("INSERT INTO r2dbc_example VALUES(@id, @firstname, @lastname)")
-            .bind("id", 1)
-            .bind("firstname", "Walter")
-            .bind("lastname", "White")
-            .execute()
-            .flatMap(MssqlResult::getRowsUpdated)
-            .as(StepVerifier::create)
-            .expectNext(1)
-            .verifyComplete();
-
-        connection.createStatement("INSERT INTO r2dbc_example VALUES(@id, @firstname, @lastname)")
-            .bind("id", 2)
-            .bind("firstname", "Walter")
-            .bind("lastname", "White")
-            .execute()
-            .flatMap(MssqlResult::getRowsUpdated)
-            .as(StepVerifier::create)
-            .expectNext(1)
-            .verifyComplete();
+        insertRecord(1);
+        insertRecord(2);
     }
 
     private void createTable(MssqlConnection connection) {
@@ -176,8 +203,21 @@ class MssqlConnectionIntegrationTests {
                 "id int PRIMARY KEY, " +
                 "first_name varchar(255), " +
                 "last_name varchar(255))")
-                .execute().flatMap(MssqlResult::getRowsUpdated))
+                .execute().flatMap(MssqlResult::getRowsUpdated).then())
             .as(StepVerifier::create)
+            .verifyComplete();
+    }
+
+    private void insertRecord(int id) {
+
+        connection.createStatement("INSERT INTO r2dbc_example VALUES(@id, @firstname, @lastname)")
+            .bind("id", id)
+            .bind("firstname", "Walter")
+            .bind("lastname", "White")
+            .execute()
+            .flatMap(MssqlResult::getRowsUpdated)
+            .as(StepVerifier::create)
+            .expectNext(1)
             .verifyComplete();
     }
 }

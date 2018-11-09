@@ -95,7 +95,7 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
      * @param currentCommand the current command counter.
      * @param rowCount       number of columns if {@link #hasCount()} is set.
      */
-    AbstractDoneToken(byte type, int status, int currentCommand, long rowCount) {
+    protected AbstractDoneToken(byte type, int status, int currentCommand, long rowCount) {
 
         super(type);
 
@@ -214,6 +214,7 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
         sb.append(", hasCount=").append(hasCount());
         sb.append(", rowCount=").append(getRowCount());
         sb.append(", hasMore=").append(hasMore());
+        sb.append(", currentCommand=").append(getCurrentCommand());
         sb.append(']');
         return sb.toString();
     }

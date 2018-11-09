@@ -18,7 +18,10 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.Codecs;
+import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.message.token.RpcRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
 import java.util.Locale;
@@ -31,6 +34,8 @@ import java.util.Locale;
 final class SimpleCursoredMssqlStatement extends SimpleMssqlStatement {
 
     public static final int FETCH_SIZE = 128;
+
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     /**
      * Creates a new {@link SimpleCursoredMssqlStatement}.
@@ -45,9 +50,14 @@ final class SimpleCursoredMssqlStatement extends SimpleMssqlStatement {
     @Override
     public Flux<MssqlResult> execute() {
 
-        return CursoredQueryMessageFlow.exchange(this.client, this.codecs, this.sql, FETCH_SIZE) //
-            .windowUntil(it -> false) //
-            .map(it -> MssqlResult.toResult(this.codecs, it));
+        return Flux.defer(() -> {
+
+            logger.debug("Start exchange for {}", sql);
+
+            return CursoredQueryMessageFlow.exchange(this.client, this.codecs, this.sql, FETCH_SIZE) //
+                .windowUntil(DoneInProcToken.class::isInstance) //
+                .map(it -> MssqlResult.toResult(this.codecs, it));
+        });
     }
 
     /**

@@ -20,8 +20,11 @@ import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.Encoded;
 import io.r2dbc.mssql.codec.RpcParameterContext;
+import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Statement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
@@ -48,6 +51,8 @@ import java.util.regex.Pattern;
  */
 final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatement> {
 
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    
     private static final Pattern PARAMETER_MATCHER = Pattern.compile("@([\\p{Alpha}@][@$\\d\\w_]{0,127})");
 
     private final PreparedStatementCache statementCache;
@@ -83,9 +88,10 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
 
         return Flux.fromIterable(this.bindings.bindings).flatMap(it -> {
 
+            logger.debug("Start exchange for {}", this.parsedQuery.sql);
             return CursoredQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, this.parsedQuery.sql, it, 128);
 
-        }).windowUntil(it -> false) //
+        }).windowUntil(DoneInProcToken.class::isInstance) //
             .map(it -> MssqlResult.toResult(this.codecs, it));
     }
 

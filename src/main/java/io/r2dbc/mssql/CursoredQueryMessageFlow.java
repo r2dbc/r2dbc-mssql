@@ -23,6 +23,9 @@ import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
+import io.r2dbc.mssql.message.token.AbstractDoneToken;
+import io.r2dbc.mssql.message.token.AbstractInfoToken;
+import io.r2dbc.mssql.message.token.ColumnMetadataToken;
 import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.message.token.DoneProcToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
@@ -31,12 +34,18 @@ import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.message.token.RpcRequest;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.SynchronousSink;
 
+import javax.annotation.processing.Completion;
 import java.util.Objects;
+import java.util.function.Predicate;
+
+import static io.r2dbc.mssql.util.PredicateUtils.or;
 
 /**
  * Query message flow using cursors. The cursored query message flow uses {@link RpcRequest RPC} calls to open, fetch and close cursors.
@@ -45,6 +54,8 @@ import java.util.Objects;
  * @see RpcRequest
  */
 final class CursoredQueryMessageFlow {
+
+    static final Logger LOG = LoggerFactory.getLogger(CursoredQueryMessageFlow.class);
 
     static final RpcRequest.OptionFlags NO_METADATA = RpcRequest.OptionFlags.empty().disableMetadata();
 
@@ -105,7 +116,7 @@ final class CursoredQueryMessageFlow {
 
                     // cursor Id
                     if (returnValue.getOrdinal() == 0) {
-                        state.cursorId = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
+                        state.cursorId = parseCursorId(codecs, state, returnValue);
                     }
 
                     returnValue.release();
@@ -120,12 +131,10 @@ final class CursoredQueryMessageFlow {
                 }
             })
             .handle(MssqlException::handleErrorResponse)
-            .handle((message, sink) -> {
-
-                sink.next(message);
-
-                handleStateChange(client, fetchSize, requests, state, message, sink);
-            });
+            .<Message>handle((message, sink) -> {
+                handleMessage(client, fetchSize, requests, state, message, sink);
+            })
+            .filter(filterForWindow());
     }
 
     /**
@@ -175,17 +184,18 @@ final class CursoredQueryMessageFlow {
                         if (returnValue.getOrdinal() == 0) {
 
                             int preparedStatementHandle = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
+                            LOG.debug("Prepared statement with handle: {}", preparedStatementHandle);
                             statementCache.putHandle(preparedStatementHandle, query, binding);
                         }
 
                         // cursor Id
                         if (returnValue.getOrdinal() == 1) {
-                            state.cursorId = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
+                            state.cursorId = parseCursorId(codecs, state, returnValue);
                         }
                     } else {
                         // cursor Id
                         if (returnValue.getOrdinal() == 0) {
-                            state.cursorId = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
+                            state.cursorId = parseCursorId(codecs, state, returnValue);
                         }
                     }
                 }
@@ -199,22 +209,59 @@ final class CursoredQueryMessageFlow {
                 }
             })
             .handle(MssqlException::handleErrorResponse)
-            .handle((message, sink) -> {
-
-                sink.next(message);
-                handleStateChange(client, fetchSize, requests, state, message, sink);
-            });
+            .<Message>handle((message, sink) -> {
+                handleMessage(client, fetchSize, requests, state, message, sink);
+            })
+            .filter(filterForWindow());
     }
 
-    private static void handleStateChange(Client client, int fetchSize, FluxSink<ClientMessage> requests, CursorState state, Message message, SynchronousSink<Message> sink) {
+    private static int parseCursorId(Codecs codecs, CursorState state, ReturnValue returnValue) {
+
+        Integer cursorId = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
+        LOG.debug("CursorId: {}", cursorId);
+        return cursorId;
+    }
+
+    private static Predicate<Message> filterForWindow() {
+
+        return or(RowToken.class::isInstance,
+            ColumnMetadataToken.class::isInstance,
+            DoneInProcToken.class::isInstance,
+            IntermediateCount.class::isInstance,
+            AbstractInfoToken.class::isInstance,
+            Completion.class::isInstance);
+    }
+
+    private static void handleMessage(Client client, int fetchSize, FluxSink<ClientMessage> requests, CursorState state, Message message, SynchronousSink<Message> sink) {
+
+        if (message instanceof ColumnMetadataToken && ((ColumnMetadataToken) message).getColumns().isEmpty()) {
+            return;
+        }
+
+        if (message instanceof AbstractInfoToken) {
+
+            // direct mode
+            if (((AbstractInfoToken) message).getNumber() == 16954) {
+                state.directMode = true;
+            }
+        }
 
         if (message instanceof DoneInProcToken) {
 
             DoneInProcToken doneToken = (DoneInProcToken) message;
             state.hasMore = doneToken.hasMore();
+
+            if (!state.directMode) {
+
+                if (state.phase == Phase.FETCHING && doneToken.hasCount()) {
+                    sink.next(new IntermediateCount(doneToken));
+                }
+                return;
+            }
         }
 
         if (!(message instanceof DoneProcToken)) {
+            sink.next(message);
             return;
         }
 
@@ -223,18 +270,18 @@ final class CursoredQueryMessageFlow {
         }
 
         if (DoneProcToken.isDone(message)) {
-            onDone(client, fetchSize, requests, state, sink::complete);
+            onDone(client, fetchSize, requests, state, sink);
         }
     }
 
-    static void onDone(Client client, int fetchSize, FluxSink<ClientMessage> requests, CursorState state, Runnable completeSignal) {
+    static void onDone(Client client, int fetchSize, FluxSink<ClientMessage> requests, CursorState state, SynchronousSink<Message> sink) {
 
         Phase phase = state.phase;
 
         if (phase == Phase.NONE || phase == Phase.FETCHING) {
 
             if (state.cursorId == 0) {
-                completeSignal.run();
+                sink.complete();
                 state.phase = Phase.CLOSED;
                 return;
             }
@@ -251,11 +298,12 @@ final class CursoredQueryMessageFlow {
             }
 
             state.hasSeenRows = false;
+            return;
         }
 
         if (phase == Phase.ERROR || phase == Phase.CLOSING) {
 
-            completeSignal.run();
+            sink.complete();
             state.phase = Phase.CLOSED;
         }
     }
@@ -418,10 +466,24 @@ final class CursoredQueryMessageFlow {
 
         volatile boolean hasSeenError;
 
+        volatile boolean directMode;
+
         Phase phase = Phase.NONE;
 
         enum Phase {
             NONE, FETCHING, CLOSING, CLOSED, ERROR
+        }
+    }
+
+    static class IntermediateCount extends AbstractDoneToken {
+
+        public IntermediateCount(DoneInProcToken token) {
+            super(token.getType(), token.getStatus(), token.getCurrentCommand(), token.getRowCount());
+        }
+
+        @Override
+        public String getName() {
+            return "INTERMEDIATE_COUNT";
         }
     }
 }

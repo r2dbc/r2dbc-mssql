@@ -25,6 +25,8 @@ import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.spi.Result;
 import io.r2dbc.spi.Row;
 import io.r2dbc.spi.RowMetadata;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -41,6 +43,8 @@ import static reactor.function.TupleUtils.function;
  */
 public final class MssqlResult implements Result {
 
+    private static final Logger logger = LoggerFactory.getLogger(MssqlResult.class);
+    
     private final Flux<MssqlRow> rows;
 
     private final Mono<Long> rowsUpdated;
@@ -68,12 +72,15 @@ public final class MssqlResult implements Result {
         Objects.requireNonNull(codecs, "Codecs must not be null");
         Objects.requireNonNull(messages, "Messages must not be null");
 
+        logger.debug("Creating new result");
         EmitterProcessor<Message> processor = EmitterProcessor.create(false);
 
-        Flux<Message> firstMessages = processor.take(3).cache();
+        Flux<Message> firstMessages = processor.cache();
 
         Mono<ColumnMetadataToken> columnDescriptions = firstMessages
             .ofType(ColumnMetadataToken.class)
+            .filter(it -> !it.getColumns().isEmpty())
+            .doOnNext(it -> logger.debug("Result column definition: {}", it))
             .singleOrEmpty()
             .cache();
 
@@ -88,8 +95,22 @@ public final class MssqlResult implements Result {
             .doOnNext(ReferenceCountUtil::release)
             .ofType(AbstractDoneToken.class)
             .filter(AbstractDoneToken::hasCount)
+            .doOnNext(it -> logger.debug("Incoming row count: {}", it))
             .map(AbstractDoneToken::getRowCount)
-            .singleOrEmpty();
+            .collectList()
+            .handle((longs, sink) -> {
+
+                if (!longs.isEmpty()) {
+
+                    long sum = 0;
+
+                    for (Long count : longs) {
+                        sum += count;
+                    }
+
+                    sink.next(sum);
+                }
+            });
 
         messages
             .handle(MssqlException::handleErrorResponse)

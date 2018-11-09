@@ -21,6 +21,7 @@ import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.codec.RpcParameterContext;
 import io.r2dbc.mssql.message.ClientMessage;
+import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.header.HeaderOptions;
 import io.r2dbc.mssql.message.header.Status;
@@ -34,6 +35,7 @@ import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.FluxSink;
+import reactor.core.publisher.SynchronousSink;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -51,9 +53,9 @@ class CursoredQueryMessageFlowUnitTests {
 
     Client client = mock(Client.class);
 
-    Runnable completion = mock(Runnable.class);
-
     FluxSink<ClientMessage> requests = mock(FluxSink.class);
+
+    SynchronousSink<Message> sink = mock(SynchronousSink.class);
 
     @BeforeEach
     void setUp() {
@@ -195,11 +197,11 @@ class CursoredQueryMessageFlowUnitTests {
         state.cursorId = 42;
         state.hasMore = true;
 
-        CursoredQueryMessageFlow.onDone(client, 128, requests, state, completion);
+        CursoredQueryMessageFlow.onDone(client, 128, requests, state, sink);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.FETCHING);
         verify(requests).next(CursoredQueryMessageFlow.spCursorFetch(state.cursorId, CursoredQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
-        verifyZeroInteractions(completion);
+        verifyZeroInteractions(sink);
     }
 
     @Test
@@ -210,11 +212,11 @@ class CursoredQueryMessageFlowUnitTests {
         state.phase = CursorState.Phase.FETCHING;
         state.hasSeenRows = true;
 
-        CursoredQueryMessageFlow.onDone(client, 128, requests, state, completion);
+        CursoredQueryMessageFlow.onDone(client, 128, requests, state, sink);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.FETCHING);
         verify(requests).next(CursoredQueryMessageFlow.spCursorFetch(state.cursorId, CursoredQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
-        verifyZeroInteractions(completion);
+        verifyZeroInteractions(sink);
     }
 
     @Test
@@ -224,11 +226,11 @@ class CursoredQueryMessageFlowUnitTests {
         state.cursorId = 42;
         state.phase = CursorState.Phase.FETCHING;
 
-        CursoredQueryMessageFlow.onDone(client, 128, requests, state, completion);
+        CursoredQueryMessageFlow.onDone(client, 128, requests, state, sink);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSING);
         verify(requests).next(CursoredQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
-        verifyZeroInteractions(completion);
+        verifyZeroInteractions(sink);
     }
 
     @Test
@@ -237,11 +239,11 @@ class CursoredQueryMessageFlowUnitTests {
         CursorState state = new CursorState();
         state.cursorId = 42;
 
-        CursoredQueryMessageFlow.onDone(client, 128, requests, state, completion);
+        CursoredQueryMessageFlow.onDone(client, 128, requests, state, sink);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSING);
         verify(requests).next(CursoredQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
-        verifyZeroInteractions(completion);
+        verifyZeroInteractions(sink);
     }
 
     @Test
@@ -251,10 +253,10 @@ class CursoredQueryMessageFlowUnitTests {
         state.cursorId = 42;
         state.phase = CursorState.Phase.CLOSING;
 
-        CursoredQueryMessageFlow.onDone(client, 128, requests, state, completion);
+        CursoredQueryMessageFlow.onDone(client, 128, requests, state, sink);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSED);
         verifyZeroInteractions(requests);
-        verify(completion).run();
+        verify(sink).complete();
     }
 }
