@@ -31,6 +31,7 @@ import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.tds.ContextualTdsFragment;
 import io.r2dbc.mssql.message.tds.TdsFragment;
+import reactor.util.annotation.Nullable;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -59,13 +60,16 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
     private final PacketIdProvider packetIdProvider;
 
-    private volatile ChannelHandlerContext context;
+    private ChannelHandlerContext context;
 
-    private volatile ByteBuf outputBuffer;
+    private ByteBuf outputBuffer;
 
-    private volatile SslState state = SslState.OFF;
+    private SslState state = SslState.OFF;
 
-    private volatile boolean handshakeDone;
+    private boolean handshakeDone;
+
+    @Nullable
+    private Chunk chunk;
 
     /**
      * Creates a new {@link TdsSslHandler}.
@@ -161,6 +165,12 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         this.sslHandler.channelInactive(ctx);
+
+        Chunk chunk = this.chunk;
+        if (chunk != null) {
+            chunk.buffer.release();
+            this.chunk = null;
+        }
     }
 
     /**
@@ -283,17 +293,39 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
             ByteBuf buffer = (ByteBuf) msg;
 
-            if (Header.canDecode(buffer)) {
+            Chunk chunk = this.chunk;
+            if (chunk != null || Header.canDecode(buffer)) {
 
-                buffer.markReaderIndex();
+                Header header;
+                if (chunk == null) {
 
-                Header decode = Header.decode(buffer);
+                    header = Header.decode(buffer);
 
-                if (decode.getType() == Type.PRE_LOGIN) {
+                    // sub-chunk read
+                    if (!Chunk.isCompletePacketAvailable(header, buffer)) {
+                        this.chunk = new Chunk(header, buffer);
+                        ctx.read();
+                        return;
+                    }
+                } else {
+
+                    chunk.buffer.writeBytes(buffer);
+                    buffer.release();
+
+                    if (!chunk.isCompletePacketAvailable()) {
+                        return;
+                    }
+
+                    buffer = chunk.buffer;
+                    header = chunk.header;
+                    this.chunk = null;
+                }
+
+                if (header.getType() == Type.PRE_LOGIN) {
                     this.sslHandler.channelRead(this.context, buffer);
                 }
 
-                if (decode.is(Status.StatusBit.IGNORE)) {
+                if (header.is(Status.StatusBit.IGNORE)) {
                     return;
                 }
             }
@@ -309,5 +341,35 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
     private boolean requiresWrapping() {
         return this.state == SslState.LOGIN_ONLY;
+    }
+
+    /**
+     * Chunk remainder for incomplete packet reads.
+     */
+    static class Chunk {
+
+        final Header header;
+
+        final ByteBuf buffer;
+
+        Chunk(Header header, ByteBuf buffer) {
+            this.header = header;
+            this.buffer = buffer;
+        }
+
+        boolean isCompletePacketAvailable() {
+            return isCompletePacketAvailable(this.header, this.buffer);
+        }
+
+        /**
+         * Check if the full packet arrived. Since we've already read the header, we need to add {@link Header#LENGTH} to the calculation.
+         *
+         * @param header
+         * @param buffer
+         * @return
+         */
+        static boolean isCompletePacketAvailable(Header header, ByteBuf buffer) {
+            return (buffer.readableBytes() + Header.LENGTH) >= header.getLength();
+        }
     }
 }
