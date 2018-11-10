@@ -110,7 +110,7 @@ class MssqlConnectionIntegrationTests {
 
         insertRecord(1);
 
-        connection.createStatement("SELECT * FROM r2dbc_example")
+        connection.createStatement("SELECT * FROM r2dbc_example ORDER BY first_name")
             .execute()
             .flatMap(it -> it.map((row, rowMetadata) -> {
 

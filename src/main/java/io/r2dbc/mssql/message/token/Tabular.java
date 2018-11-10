@@ -168,6 +168,15 @@ public final class Tabular implements Message {
                 return DecodeFinished.UNABLE_TO_DECODE;
             }
 
+            if (type == OrderToken.TYPE) {
+
+                if (!OrderToken.canDecode(buffer)) {
+                    return DecodeFinished.UNABLE_TO_DECODE;
+                }
+
+                return OrderToken.decode(buffer);
+            }
+            
             if (type == RowToken.TYPE) {
 
                 ColumnMetadataToken colMetadataToken = columns.get();
