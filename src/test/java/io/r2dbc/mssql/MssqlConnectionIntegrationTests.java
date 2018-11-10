@@ -151,6 +151,37 @@ class MssqlConnectionIntegrationTests {
     }
 
     @Test
+    void shouldInsertAndSelectUsingPaging() {
+
+        createTable(connection);
+
+        insertRecord(1);
+        insertRecord(2);
+        insertRecord(3);
+
+        connection.createStatement("SELECT * FROM r2dbc_example ORDER BY id OFFSET @Offset ROWS" +
+            "  FETCH NEXT @Rows ROWS ONLY")
+            .bind("Offset", 0)
+            .bind("Rows", 2)
+            .execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> row.get("id", Integer.class)))
+            .as(StepVerifier::create)
+            .expectNext(1)
+            .expectNext(2)
+            .verifyComplete();
+
+        connection.createStatement("SELECT * FROM r2dbc_example ORDER BY id OFFSET @Offset ROWS" +
+            " FETCH NEXT @Rows ROWS ONLY")
+            .bind("Offset", 2)
+            .bind("Rows", 2)
+            .execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> row.get("id", Integer.class)))
+            .as(StepVerifier::create)
+            .expectNext(3)
+            .verifyComplete();
+    }
+
+    @Test
     void shouldInsertAndSelectCompoundStatement() {
 
         createTable(connection);

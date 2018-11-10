@@ -33,6 +33,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Objects;
 import java.util.function.BiFunction;
+import java.util.logging.Level;
 
 import static reactor.function.TupleUtils.function;
 
@@ -115,6 +116,7 @@ public final class MssqlResult implements Result {
         messages
             .handle(MssqlException::handleErrorResponse)
             .hide()
+            .log("io.r2dbc.mssql.FOOO", Level.SEVERE)
             .subscribe(processor);
 
         return new MssqlResult(rows, rowsUpdated);

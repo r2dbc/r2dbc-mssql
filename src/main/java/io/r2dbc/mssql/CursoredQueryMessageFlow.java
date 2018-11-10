@@ -187,16 +187,11 @@ final class CursoredQueryMessageFlow {
                             LOG.debug("Prepared statement with handle: {}", preparedStatementHandle);
                             statementCache.putHandle(preparedStatementHandle, query, binding);
                         }
+                    }
 
-                        // cursor Id
-                        if (returnValue.getOrdinal() == 1) {
-                            state.cursorId = parseCursorId(codecs, state, returnValue);
-                        }
-                    } else {
-                        // cursor Id
-                        if (returnValue.getOrdinal() == 0) {
-                            state.cursorId = parseCursorId(codecs, state, returnValue);
-                        }
+                    // cursor Id
+                    if (returnValue.getOrdinal() == 1) {
+                        state.cursorId = parseCursorId(codecs, state, returnValue);
                     }
                 }
 
