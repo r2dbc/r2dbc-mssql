@@ -45,7 +45,7 @@ import static reactor.function.TupleUtils.function;
 public final class MssqlResult implements Result {
 
     private static final Logger logger = LoggerFactory.getLogger(MssqlResult.class);
-    
+
     private final Flux<MssqlRow> rows;
 
     private final Mono<Long> rowsUpdated;
@@ -116,7 +116,6 @@ public final class MssqlResult implements Result {
         messages
             .handle(MssqlException::handleErrorResponse)
             .hide()
-            .log("io.r2dbc.mssql.FOOO", Level.SEVERE)
             .subscribe(processor);
 
         return new MssqlResult(rows, rowsUpdated);
