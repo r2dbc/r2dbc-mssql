@@ -67,12 +67,12 @@ public final class MssqlException extends AbstractMssqlException {
     /**
      * Creates a full {@link MssqlException}.
      *
-     * @param message the exception message.
-     * @param number the error number.
-     * @param state SQL state.
-     * @param infoClass message classification.
+     * @param message    the exception message.
+     * @param number     the error number.
+     * @param state      SQL state.
+     * @param infoClass  message classification.
      * @param serverName name of the server.
-     * @param procName procedure name.
+     * @param procName   procedure name.
      * @param lineNumber line number in the offending SQL.
      */
     public MssqlException(String message, long number, int state, int infoClass, String serverName, String procName,

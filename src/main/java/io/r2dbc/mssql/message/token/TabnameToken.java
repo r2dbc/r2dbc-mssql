@@ -49,7 +49,7 @@ public class TabnameToken extends AbstractDataToken {
     public static TabnameToken decode(ByteBuf buffer) {
 
         Objects.requireNonNull(buffer, "Data buffer must not be null");
-        
+
         int length = Decode.uShort(buffer);
 
         int readerIndex = buffer.readerIndex();
@@ -72,7 +72,7 @@ public class TabnameToken extends AbstractDataToken {
     public static boolean canDecode(ByteBuf buffer) {
 
         Objects.requireNonNull(buffer, "Data buffer must not be null");
-        
+
         if (buffer.readableBytes() >= 5) {
 
             Integer requiredLength = Decode.peekUShort(buffer);

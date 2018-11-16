@@ -163,7 +163,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
     public Publisher<TdsFragment> encode(ByteBufAllocator allocator) {
 
         Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
-        
+
         return Mono.fromSupplier(() -> {
 
             int name = 2 + (this.procName != null ? this.procName.length() * 2 : 0);

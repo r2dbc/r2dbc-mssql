@@ -42,8 +42,8 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
     /**
      * Creates a {@link RowToken}.
      *
-     * @param data    the row data.
-     * @param toRelease    item to {@link ReferenceCounted#release()} on {@link #deallocate() de-allocation}.
+     * @param data      the row data.
+     * @param toRelease item to {@link ReferenceCounted#release()} on {@link #deallocate() de-allocation}.
      */
     RowToken(List<ByteBuf> data, ReferenceCounted toRelease) {
 
@@ -54,7 +54,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
     /**
      * Decode a {@link RowToken}.
      *
-     * @param buffer the data buffer.
+     * @param buffer  the data buffer.
      * @param columns column descriptors.
      * @return the {@link RowToken}.
      */
@@ -62,7 +62,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
 
         Objects.requireNonNull(buffer, "Data buffer must not be null");
         Objects.requireNonNull(columns, "List of Columns must not be null");
-        
+
         ByteBuf copy = buffer.copy();
 
         int start = copy.readerIndex();
@@ -85,7 +85,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
 
         Objects.requireNonNull(buffer, "Data buffer must not be null");
         Objects.requireNonNull(columns, "List of Columns must not be null");
-        
+
         int readerIndex = buffer.readerIndex();
 
         try {

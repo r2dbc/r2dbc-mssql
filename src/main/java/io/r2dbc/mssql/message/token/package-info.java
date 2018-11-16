@@ -16,11 +16,14 @@
 
 /**
  * The infrastructure for exchanging messages with the server.
+ * <p>
+ * Token stream message structures.
  */
 
 /**
  * Token stream message structures.
  */
+
 @NonNullApi
 package io.r2dbc.mssql.message.token;
 

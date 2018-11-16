@@ -45,10 +45,10 @@ import java.util.regex.Pattern;
 public final class MssqlConnection implements Connection {
 
     private static final Pattern SAVEPOINT_PATTERN = Pattern.compile("[\\d\\w_]{1,32}");
-    
+
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private final PreparedStatementCache statementCache = new IndefinitePreparedStatementCache(); 
+    private final PreparedStatementCache statementCache = new IndefinitePreparedStatementCache();
 
     private final Client client;
 
@@ -138,7 +138,7 @@ public final class MssqlConnection implements Connection {
         if (PreparedMssqlStatement.supports(sql)) {
             return new PreparedMssqlStatement(this.statementCache, this.client, this.codecs, sql);
         }
-        
+
         if (SimpleCursoredMssqlStatement.supports(sql)) {
             return new SimpleCursoredMssqlStatement(this.client, this.codecs, sql);
         }

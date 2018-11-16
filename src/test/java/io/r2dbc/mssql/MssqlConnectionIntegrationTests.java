@@ -16,12 +16,9 @@
 
 package io.r2dbc.mssql;
 
-import io.r2dbc.mssql.util.MsSqlServerExtension;
+import io.r2dbc.mssql.util.IntegrationTestSupport;
 import io.r2dbc.spi.ColumnMetadata;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -36,71 +33,42 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Mark Paluch
  */
-class MssqlConnectionIntegrationTests {
-
-    @RegisterExtension
-    static final MsSqlServerExtension SERVER = new MsSqlServerExtension();
-
-    private static MssqlConnectionFactory connectionFactory;
-
-    private static MssqlConnection connection;
-
-    @BeforeAll
-    static void setUp() {
-
-        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
-            .host(SERVER.getHost())
-            .port(SERVER.getPort())
-            .username(SERVER.getUsername())
-            .password(SERVER.getPassword())
-            .build();
-
-        connectionFactory = new MssqlConnectionFactory(configuration);
-        connection = connectionFactory.create().block();
-    }
-
-    @AfterAll
-    static void afterAll() {
-
-        if (connection != null) {
-            connection.close().subscribe();
-        }
-    }
+class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
 
     @Test
     void shouldFailOnConnectionRefused() {
 
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
-            .host(SERVER.getHost())
-            .port(123)
-            .username(SERVER.getUsername())
-            .password(SERVER.getPassword())
-            .build();
+                .host(SERVER.getHost())
+                .port(123)
+                .username(SERVER.getUsername())
+                .password(SERVER.getPassword())
+                .build();
 
         MssqlConnectionFactory connectionFactory = new MssqlConnectionFactory(configuration);
 
         connectionFactory.create()
-            .as(StepVerifier::create)
-            .expectError(ConnectException.class)
-            .verify();
+                .as(StepVerifier::create)
+                .expectError(ConnectException.class)
+                .verify();
     }
 
     @Test
     void shouldFailOnLoginFailedRefused() {
 
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
-            .host(SERVER.getHost())
-            .port(SERVER.getPort())
-            .username(SERVER.getUsername())
-            .password("foobar")
-            .build();
+                .host(SERVER.getHost())
+                .port(SERVER.getPort())
+                .username(SERVER.getUsername())
+                .password("foobar")
+                .build();
 
         MssqlConnectionFactory connectionFactory = new MssqlConnectionFactory(configuration);
 
         connectionFactory.create()
-            .as(StepVerifier::create)
-            .expectError(MssqlException.class)
-            .verify();
+                .as(StepVerifier::create)
+                .expectError(MssqlException.class)
+                .verify();
     }
 
     @Test
@@ -111,26 +79,26 @@ class MssqlConnectionIntegrationTests {
         insertRecord(1);
 
         connection.createStatement("SELECT * FROM r2dbc_example ORDER BY first_name")
-            .execute()
-            .flatMap(it -> it.map((row, rowMetadata) -> {
+                .execute()
+                .flatMap(it -> it.map((row, rowMetadata) -> {
 
-                Map<String, Object> values = new LinkedHashMap<>();
+                    Map<String, Object> values = new LinkedHashMap<>();
 
-                for (ColumnMetadata column : rowMetadata.getColumnMetadatas()) {
-                    values.put(column.getName(), row.get(column.getName()));
-                }
+                    for (ColumnMetadata column : rowMetadata.getColumnMetadatas()) {
+                        values.put(column.getName(), row.get(column.getName()));
+                    }
 
-                return values;
-            }))
-            .as(StepVerifier::create)
-            .consumeNextWith(actual -> {
+                    return values;
+                }))
+                .as(StepVerifier::create)
+                .consumeNextWith(actual -> {
 
-                assertThat(actual)
-                    .containsEntry("id", 1)
-                    .containsEntry("first_name", "Walter")
-                    .containsEntry("last_name", "White");
-            })
-            .verifyComplete();
+                    assertThat(actual)
+                            .containsEntry("id", 1)
+                            .containsEntry("first_name", "Walter")
+                            .containsEntry("last_name", "White");
+                })
+                .verifyComplete();
     }
 
     @Test
@@ -143,11 +111,11 @@ class MssqlConnectionIntegrationTests {
         insertRecord(3);
 
         connection.createStatement("SELECT * FROM r2dbc_example")
-            .execute()
-            .flatMap(MssqlResult::getRowsUpdated)
-            .as(StepVerifier::create)
-            .expectNext(3)
-            .verifyComplete();
+                .execute()
+                .flatMap(MssqlResult::getRowsUpdated)
+                .as(StepVerifier::create)
+                .expectNext(3)
+                .verifyComplete();
     }
 
     @Test
@@ -160,25 +128,25 @@ class MssqlConnectionIntegrationTests {
         insertRecord(3);
 
         connection.createStatement("SELECT * FROM r2dbc_example ORDER BY id OFFSET @Offset ROWS" +
-            "  FETCH NEXT @Rows ROWS ONLY")
-            .bind("Offset", 0)
-            .bind("Rows", 2)
-            .execute()
-            .flatMap(it -> it.map((row, rowMetadata) -> row.get("id", Integer.class)))
-            .as(StepVerifier::create)
-            .expectNext(1)
-            .expectNext(2)
-            .verifyComplete();
+                "  FETCH NEXT @Rows ROWS ONLY")
+                .bind("Offset", 0)
+                .bind("Rows", 2)
+                .execute()
+                .flatMap(it -> it.map((row, rowMetadata) -> row.get("id", Integer.class)))
+                .as(StepVerifier::create)
+                .expectNext(1)
+                .expectNext(2)
+                .verifyComplete();
 
         connection.createStatement("SELECT * FROM r2dbc_example ORDER BY id OFFSET @Offset ROWS" +
-            " FETCH NEXT @Rows ROWS ONLY")
-            .bind("Offset", 2)
-            .bind("Rows", 2)
-            .execute()
-            .flatMap(it -> it.map((row, rowMetadata) -> row.get("id", Integer.class)))
-            .as(StepVerifier::create)
-            .expectNext(3)
-            .verifyComplete();
+                " FETCH NEXT @Rows ROWS ONLY")
+                .bind("Offset", 2)
+                .bind("Rows", 2)
+                .execute()
+                .flatMap(it -> it.map((row, rowMetadata) -> row.get("id", Integer.class)))
+                .as(StepVerifier::create)
+                .expectNext(3)
+                .verifyComplete();
     }
 
     @Test
@@ -187,33 +155,33 @@ class MssqlConnectionIntegrationTests {
         createTable(connection);
 
         connection.createStatement("SELECT * FROM r2dbc_example;SELECT * FROM r2dbc_example")
-            .execute()
-            .flatMap(it -> it.map((row, rowMetadata) -> {
-                return new Object();   // just a marker
-            }).collectList())
-            .as(StepVerifier::create)
-            .consumeNextWith(actual -> assertThat(actual).isEmpty())
-            .consumeNextWith(actual -> assertThat(actual).isEmpty())
-            .verifyComplete();
+                .execute()
+                .flatMap(it -> it.map((row, rowMetadata) -> {
+                    return new Object();   // just a marker
+                }).collectList())
+                .as(StepVerifier::create)
+                .consumeNextWith(actual -> assertThat(actual).isEmpty())
+                .consumeNextWith(actual -> assertThat(actual).isEmpty())
+                .verifyComplete();
 
         insertRecord(1);
 
         connection.createStatement("SELECT * FROM r2dbc_example;SELECT * FROM r2dbc_example")
-            .execute()
-            .flatMap(it -> it.map((row, rowMetadata) -> {
+                .execute()
+                .flatMap(it -> it.map((row, rowMetadata) -> {
 
-                Map<String, Object> values = new LinkedHashMap<>();
+                    Map<String, Object> values = new LinkedHashMap<>();
 
-                for (ColumnMetadata column : rowMetadata.getColumnMetadatas()) {
-                    values.put(column.getName(), row.get(column.getName()));
-                }
+                    for (ColumnMetadata column : rowMetadata.getColumnMetadatas()) {
+                        values.put(column.getName(), row.get(column.getName()));
+                    }
 
-                return values;
-            }).collectList())
-            .as(StepVerifier::create)
-            .consumeNextWith(actual -> assertThat(actual).hasSize(1))
-            .consumeNextWith(actual -> assertThat(actual).hasSize(1))
-            .verifyComplete();
+                    return values;
+                }).collectList())
+                .as(StepVerifier::create)
+                .consumeNextWith(actual -> assertThat(actual).hasSize(1))
+                .consumeNextWith(actual -> assertThat(actual).hasSize(1))
+                .verifyComplete();
     }
 
     @Test
@@ -228,27 +196,27 @@ class MssqlConnectionIntegrationTests {
     private void createTable(MssqlConnection connection) {
 
         connection.createStatement("DROP TABLE r2dbc_example").execute()
-            .flatMap(MssqlResult::getRowsUpdated)
-            .onErrorResume(e -> Mono.empty())
-            .thenMany(connection.createStatement("CREATE TABLE r2dbc_example (" +
-                "id int PRIMARY KEY, " +
-                "first_name varchar(255), " +
-                "last_name varchar(255))")
-                .execute().flatMap(MssqlResult::getRowsUpdated).then())
-            .as(StepVerifier::create)
-            .verifyComplete();
+                .flatMap(MssqlResult::getRowsUpdated)
+                .onErrorResume(e -> Mono.empty())
+                .thenMany(connection.createStatement("CREATE TABLE r2dbc_example (" +
+                        "id int PRIMARY KEY, " +
+                        "first_name varchar(255), " +
+                        "last_name varchar(255))")
+                        .execute().flatMap(MssqlResult::getRowsUpdated).then())
+                .as(StepVerifier::create)
+                .verifyComplete();
     }
 
     private void insertRecord(int id) {
 
         connection.createStatement("INSERT INTO r2dbc_example VALUES(@id, @firstname, @lastname)")
-            .bind("id", id)
-            .bind("firstname", "Walter")
-            .bind("lastname", "White")
-            .execute()
-            .flatMap(MssqlResult::getRowsUpdated)
-            .as(StepVerifier::create)
-            .expectNext(1)
-            .verifyComplete();
+                .bind("id", id)
+                .bind("firstname", "Walter")
+                .bind("lastname", "White")
+                .execute()
+                .flatMap(MssqlResult::getRowsUpdated)
+                .as(StepVerifier::create)
+                .expectNext(1)
+                .verifyComplete();
     }
 }

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.client.ssl;
 
 import io.netty.channel.ChannelDuplexHandler;
@@ -23,7 +24,9 @@ import io.netty.handler.ssl.SslHandler;
  * Empty proxy handler as {@link ChannelHandlerContext} target for {@link SslHandler}. TDS requires wrapping of the SSL
  * handshake during prelogin and we need to wrap/reuse the SSL handler to prepend TDS prelogin headers during the
  * handshake.
- * 
+ *
  * @author Mark Paluch
  */
-class ContextProxy extends ChannelDuplexHandler {}
+class ContextProxy extends ChannelDuplexHandler {
+
+}

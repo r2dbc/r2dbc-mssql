@@ -43,7 +43,7 @@ import java.util.Objects;
 public final class Collation {
 
     public static final Collation RAW = Collation.from(0, 0);
-    
+
     private static final int UTF8_IN_TDSCOLLATION = 0x4000000;
 
     // Index from of windows locales by their LangIDs for fast lookup

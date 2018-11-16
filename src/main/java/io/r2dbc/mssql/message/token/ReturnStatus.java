@@ -57,7 +57,7 @@ public class ReturnStatus extends AbstractDataToken {
     public static ReturnStatus decode(ByteBuf buffer) {
 
         Objects.requireNonNull(buffer, "Data buffer must not be null");
-        
+
         return new ReturnStatus(Decode.asLong(buffer));
     }
 
@@ -70,7 +70,7 @@ public class ReturnStatus extends AbstractDataToken {
     public static boolean canDecode(ByteBuf buffer) {
 
         Objects.requireNonNull(buffer, "Data buffer must not be null");
-        
+
         return buffer.readableBytes() >= 5;
     }
 

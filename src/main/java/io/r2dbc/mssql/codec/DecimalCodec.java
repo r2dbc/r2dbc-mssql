@@ -41,7 +41,7 @@ import java.math.BigInteger;
 final class DecimalCodec extends AbstractCodec<BigDecimal> {
 
     private final static int MAX_PRECISION = 38;
-    
+
     static final DecimalCodec INSTANCE = new DecimalCodec();
 
     private DecimalCodec() {

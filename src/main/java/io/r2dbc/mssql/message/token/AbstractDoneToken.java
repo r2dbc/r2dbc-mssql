@@ -129,7 +129,7 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
 
         Objects.requireNonNull(buffer, "Data buffer must not be null");
 
-        return buffer.readableBytes() >= LENGTH - 1 /* Decoding always decodes the token type first 
+        return buffer.readableBytes() >= LENGTH - 1 /* Decoding always decodes the token type first
         so no need to check the for the type byte */;
     }
 
@@ -141,7 +141,7 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
     public void encode(ByteBuf buffer) {
 
         Objects.requireNonNull(buffer, "Data buffer must not be null");
-        
+
         buffer.writeByte(getType());
         Encode.uShort(buffer, getStatus());
         Encode.uShort(buffer, getCurrentCommand());

@@ -43,7 +43,7 @@ import static io.r2dbc.mssql.message.header.Status.StatusBit;
  * <li>Enter {@link #LOGIN} state once SSL is negotiated and send a {@link Login7} message</li>
  * <li>Enter {@link #POST_LOGIN} after receiving login ack</li>
  * </ul>
- * Connection states can {@link #canAdvance(Message) advance} triggered by a received {@link Message}. A state can provide a {@link MessageDecoder} function to decode messages exchanged in that 
+ * Connection states can {@link #canAdvance(Message) advance} triggered by a received {@link Message}. A state can provide a {@link MessageDecoder} function to decode messages exchanged in that
  * state. Note that message decoding is not supported in all states as per TDS state specification.
  *
  * @author Mark Paluch

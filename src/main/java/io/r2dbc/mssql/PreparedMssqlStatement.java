@@ -29,7 +29,13 @@ import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -90,16 +96,16 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
         FluxSink<Binding> boundRequests = bindingEmitter.sink();
 
         return bindingEmitter.startWith(iterator.next())
-                .flatMap(it -> {
+            .flatMap(it -> {
 
-                    logger.debug("Start exchange for {}", this.parsedQuery.sql);
-                    return CursoredQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, this.parsedQuery.sql, it, 128)              //
-                            .doOnComplete(() -> {
-                                tryNextBinding(iterator, boundRequests);
-                            });
+                logger.debug("Start exchange for {}", this.parsedQuery.sql);
+                return CursoredQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, this.parsedQuery.sql, it, 128)              //
+                    .doOnComplete(() -> {
+                        tryNextBinding(iterator, boundRequests);
+                    });
 
-                }).windowUntil(DoneInProcToken.class::isInstance) //
-                .map(it -> MssqlResult.toResult(this.codecs, it));
+            }).windowUntil(DoneInProcToken.class::isInstance) //
+            .map(it -> MssqlResult.toResult(this.codecs, it));
     }
 
     private static void tryNextBinding(Iterator<Binding> iterator, FluxSink<Binding> boundRequests) {
@@ -398,7 +404,7 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
             }
             ParsedQuery that = (ParsedQuery) o;
             return Objects.equals(this.sql, that.sql) &&
-                    Objects.equals(this.parameters, that.parameters);
+                Objects.equals(this.parameters, that.parameters);
         }
 
         @Override
@@ -450,7 +456,7 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
             }
             ParsedParameter that = (ParsedParameter) o;
             return this.position == that.position &&
-                    Objects.equals(this.name, that.name);
+                Objects.equals(this.name, that.name);
         }
 
         @Override

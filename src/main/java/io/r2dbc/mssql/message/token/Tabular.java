@@ -95,7 +95,7 @@ public final class Tabular implements Message {
         return (type, buffer) -> {
 
             if (type == EnvChangeToken.TYPE) {
-                return EnvChangeToken.canDecode(buffer) ? EnvChangeToken.decode(buffer) : DecodeFinished.UNABLE_TO_DECODE; 
+                return EnvChangeToken.canDecode(buffer) ? EnvChangeToken.decode(buffer) : DecodeFinished.UNABLE_TO_DECODE;
             }
 
             if (type == FeatureExtAckToken.TYPE) {
@@ -176,7 +176,7 @@ public final class Tabular implements Message {
 
                 return OrderToken.decode(buffer);
             }
-            
+
             if (type == RowToken.TYPE) {
 
                 ColumnMetadataToken colMetadataToken = columns.get();
@@ -255,7 +255,7 @@ public final class Tabular implements Message {
      * Find a {@link DataToken} by its {@link Class type} and a {@link Predicate}.
      *
      * @param tokenType type of the desired {@link DataToken}.
-     * @param filter filter that the desired {@link DataToken} must match.
+     * @param filter    filter that the desired {@link DataToken} must match.
      * @return the lookup result.
      */
     <T extends DataToken> Optional<T> getToken(Class<? extends T> tokenType, Predicate<T> filter) {
@@ -285,7 +285,7 @@ public final class Tabular implements Message {
      * Find a {@link DataToken} by its {@link Class type} and a {@link Predicate}.
      *
      * @param tokenType type of the desired {@link DataToken}.
-     * @param filter filter that the desired {@link DataToken} must match.
+     * @param filter    filter that the desired {@link DataToken} must match.
      * @return
      * @throws IllegalArgumentException if no token was found.
      */

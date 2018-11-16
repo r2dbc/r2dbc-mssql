@@ -23,7 +23,7 @@ import java.util.Objects;
 
 /**
  * Descriptor for the transaction state.
- * 
+ *
  * @author Mark Paluch
  */
 public final class TransactionDescriptor {
@@ -32,7 +32,7 @@ public final class TransactionDescriptor {
      * Length in bytes of the binary transaction descriptor representation.
      */
     public static final int LENGTH = 8;
-    
+
     private final byte[] descriptor;
 
     private TransactionDescriptor(byte[] descriptor) {

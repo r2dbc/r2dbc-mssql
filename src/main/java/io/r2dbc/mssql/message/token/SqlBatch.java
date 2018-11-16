@@ -81,7 +81,7 @@ public final class SqlBatch implements ClientMessage, TokenStream {
     public Publisher<TdsFragment> encode(ByteBufAllocator allocator) {
 
         Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
-        
+
         return Mono.fromSupplier(() -> {
 
             int length = this.allHeaders.getLength() + (this.sql.length() * 2);

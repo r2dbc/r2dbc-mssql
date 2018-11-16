@@ -52,7 +52,7 @@ import java.util.Objects;
  * @see TdsPacket
  * @see HeaderOptions
  * @see TdsFragment
- * TODO: Prevent buffer underrun if FirstTdsPacket contains less bytes than the negotiated packet size. 
+ * TODO: Prevent buffer underrun if FirstTdsPacket contains less bytes than the negotiated packet size.
  */
 public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements EnvironmentChangeListener {
 
@@ -62,7 +62,7 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
     public static final int INITIAL_PACKET_SIZE = 8000;
 
     private ByteBuf lastChunkRemainder;
-    
+
     private final PacketIdProvider packetIdProvider;
 
     private int packetSize;
@@ -127,7 +127,7 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
             ByteBuf message = packet.encode(ctx.alloc(), this.packetIdProvider);
 
             Assert.state(message.readableBytes() <= this.packetSize, "Packet size exceeded");
-            
+
             ctx.write(message, promise);
             return;
         }

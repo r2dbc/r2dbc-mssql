@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.util;
 
 import io.r2dbc.mssql.MssqlConnection;
@@ -23,6 +24,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
+ * Support class for integration tests.
+ *
  * @author Mark Paluch
  */
 public abstract class IntegrationTestSupport {
@@ -38,11 +41,11 @@ public abstract class IntegrationTestSupport {
     static void setUp() {
 
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
-                .host(SERVER.getHost())
-                .port(SERVER.getPort())
-                .username(SERVER.getUsername())
-                .password(SERVER.getPassword())
-                .build();
+            .host(SERVER.getHost())
+            .port(SERVER.getPort())
+            .username(SERVER.getUsername())
+            .password(SERVER.getPassword())
+            .build();
 
         connectionFactory = new MssqlConnectionFactory(configuration);
         connection = connectionFactory.create().block();

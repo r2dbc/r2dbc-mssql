@@ -88,7 +88,7 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
     public static ReturnValue decode(ByteBuf buffer, boolean encryptionSupported) {
 
         Objects.requireNonNull(buffer, "Data buffer must not be null");
-        
+
         int ordinal = Decode.uShort(buffer);
         String name = Decode.unicodeBString(buffer);
         byte status = Decode.asByte(buffer);
@@ -116,7 +116,7 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
     public static boolean canDecode(ByteBuf buffer, boolean encryptionSupported) {
 
         Objects.requireNonNull(buffer, "Data buffer must not be null");
-        
+
         int readerIndex = buffer.readerIndex();
 
         try {
@@ -255,6 +255,7 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
         sb.append(getClass().getSimpleName());
         sb.append(" [ordinal=").append(this.ordinal);
         sb.append(", parameterName='").append(this.parameterName).append('\'');
+        sb.append(", value=").append(this.value);
         sb.append(", type=").append(this.type);
         sb.append(']');
         return sb.toString();

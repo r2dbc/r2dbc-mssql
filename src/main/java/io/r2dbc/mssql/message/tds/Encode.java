@@ -120,7 +120,7 @@ public final class Encode {
         buffer.writeIntLE(intBitsHi);
         buffer.writeIntLE(intBitsLo);
     }
-    
+
     /**
      * Encode a bit. SQL server type {@code BIT}.
      *

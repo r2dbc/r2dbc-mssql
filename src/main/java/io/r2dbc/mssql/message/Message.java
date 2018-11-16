@@ -25,4 +25,5 @@ import io.r2dbc.mssql.message.token.TokenStream;
  * @see TokenStream
  */
 public interface Message {
+
 }
