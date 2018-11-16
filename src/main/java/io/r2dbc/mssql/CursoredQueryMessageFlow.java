@@ -23,17 +23,10 @@ import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
-import io.r2dbc.mssql.message.token.AbstractDoneToken;
-import io.r2dbc.mssql.message.token.AbstractInfoToken;
-import io.r2dbc.mssql.message.token.ColumnMetadataToken;
-import io.r2dbc.mssql.message.token.DoneInProcToken;
-import io.r2dbc.mssql.message.token.DoneProcToken;
-import io.r2dbc.mssql.message.token.ErrorToken;
-import io.r2dbc.mssql.message.token.ReturnValue;
-import io.r2dbc.mssql.message.token.RowToken;
-import io.r2dbc.mssql.message.token.RpcRequest;
+import io.r2dbc.mssql.message.token.*;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
+import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.EmitterProcessor;
@@ -101,40 +94,47 @@ final class CursoredQueryMessageFlow {
         Objects.requireNonNull(client, "Client must not be null");
         Objects.requireNonNull(query, "Query must not be null");
 
-        EmitterProcessor<ClientMessage> emitterProcessor = EmitterProcessor.create(false);
-        FluxSink<ClientMessage> requests = emitterProcessor.sink();
+        EmitterProcessor<ClientMessage> outbound = EmitterProcessor.create(false);
+        FluxSink<ClientMessage> requests = outbound.sink();
+
+        EmitterProcessor<Message> inbound = EmitterProcessor.create(false);
+        Flux<Message> firstMessages = inbound.cache(10);
 
         CursorState state = new CursorState();
 
-        return client.exchange(emitterProcessor.startWith(spCursorOpen(query, client.getRequiredCollation(), client.getTransactionDescriptor()))) //
-            .doOnSubscribe(ignore -> QueryLogger.logQuery(query))
-            .doOnNext(it -> {
+        Flux<Message> exchange = client.exchange(outbound.startWith(spCursorOpen(query, client.getRequiredCollation(), client.getTransactionDescriptor())));
 
-                if (it instanceof ReturnValue) {
+        Flux<Message> messages = firstMessages //
+                .doOnSubscribe(ignore -> QueryLogger.logQuery(query))
+                .doOnNext(it -> {
 
-                    ReturnValue returnValue = (ReturnValue) it;
+                    if (it instanceof ReturnValue) {
 
-                    // cursor Id
-                    if (returnValue.getOrdinal() == 0) {
-                        state.cursorId = parseCursorId(codecs, state, returnValue);
+                        ReturnValue returnValue = (ReturnValue) it;
+
+                        // cursor Id
+                        if (returnValue.getOrdinal() == 0) {
+                            state.cursorId = parseCursorId(codecs, state, returnValue);
+                        }
+
+                        returnValue.release();
                     }
 
-                    returnValue.release();
-                }
+                    if (it instanceof RowToken) {
+                        state.hasSeenRows = true;
+                    }
 
-                if (it instanceof RowToken) {
-                    state.hasSeenRows = true;
-                }
+                    if (it instanceof ErrorToken) {
+                        state.hasSeenError = true;
+                    }
+                })
+                .handle(MssqlException::handleErrorResponse)
+                .<Message>handle((message, sink) -> {
+                    handleMessage(client, fetchSize, requests, state, message, sink, inbound);
+                })
+                .filter(filterForWindow());
 
-                if (it instanceof ErrorToken) {
-                    state.hasSeenError = true;
-                }
-            })
-            .handle(MssqlException::handleErrorResponse)
-            .<Message>handle((message, sink) -> {
-                handleMessage(client, fetchSize, requests, state, message, sink);
-            })
-            .filter(filterForWindow());
+        return messages.doOnSubscribe(ignore -> exchange.subscribe(inbound));
     }
 
     /**
@@ -153,8 +153,11 @@ final class CursoredQueryMessageFlow {
         Objects.requireNonNull(client, "Client must not be null");
         Objects.requireNonNull(query, "Query must not be null");
 
-        EmitterProcessor<ClientMessage> emitterProcessor = EmitterProcessor.create(false);
-        FluxSink<ClientMessage> requests = emitterProcessor.sink();
+        EmitterProcessor<ClientMessage> outbound = EmitterProcessor.create(false);
+        FluxSink<ClientMessage> requests = outbound.sink();
+
+        EmitterProcessor<Message> inbound = EmitterProcessor.create(false);
+        Flux<Message> firstMessages = inbound.cache(10);
 
         CursorState state = new CursorState();
 
@@ -170,44 +173,49 @@ final class CursoredQueryMessageFlow {
             needsPrepare = false;
         }
 
-        return client.exchange(emitterProcessor.startWith(rpcRequest)) //
-            .doOnSubscribe(ignore -> QueryLogger.logQuery(query))
-            .doOnNext(it -> {
+        Flux<Message> exchange = client.exchange(outbound.startWith(rpcRequest));
 
-                if (it instanceof ReturnValue) {
+        Flux<Message> messages = firstMessages //
+                .doOnSubscribe(ignore -> QueryLogger.logQuery(query))
+                .doOnNext(it -> {
 
-                    ReturnValue returnValue = (ReturnValue) it;
+                    if (it instanceof ReturnValue) {
 
-                    if (needsPrepare) {
+                        ReturnValue returnValue = (ReturnValue) it;
 
-                        // prepared statement handle
-                        if (returnValue.getOrdinal() == 0) {
+                        if (needsPrepare) {
 
-                            int preparedStatementHandle = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
-                            LOG.debug("Prepared statement with handle: {}", preparedStatementHandle);
-                            statementCache.putHandle(preparedStatementHandle, query, binding);
+                            // prepared statement handle
+                            if (returnValue.getOrdinal() == 0) {
+
+                                int preparedStatementHandle = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
+                                LOG.debug("Prepared statement with handle: {}", preparedStatementHandle);
+                                statementCache.putHandle(preparedStatementHandle, query, binding);
+                            }
+                        }
+
+                        // cursor Id
+                        if (returnValue.getOrdinal() == 1) {
+                            state.cursorId = parseCursorId(codecs, state, returnValue);
                         }
                     }
 
-                    // cursor Id
-                    if (returnValue.getOrdinal() == 1) {
-                        state.cursorId = parseCursorId(codecs, state, returnValue);
+                    if (it instanceof RowToken) {
+                        state.hasSeenRows = true;
                     }
-                }
 
-                if (it instanceof RowToken) {
-                    state.hasSeenRows = true;
-                }
+                    if (it instanceof ErrorToken) {
+                        state.hasSeenError = true;
+                    }
+                })
+                .handle(MssqlException::handleErrorResponse)
+                .<Message>handle((message, sink) -> {
+                    handleMessage(client, fetchSize, requests, state, message, sink, inbound);
+                })
+                .filter(filterForWindow());
 
-                if (it instanceof ErrorToken) {
-                    state.hasSeenError = true;
-                }
-            })
-            .handle(MssqlException::handleErrorResponse)
-            .<Message>handle((message, sink) -> {
-                handleMessage(client, fetchSize, requests, state, message, sink);
-            })
-            .filter(filterForWindow());
+
+        return messages.doOnSubscribe(ignore -> exchange.subscribe(inbound));
     }
 
     private static int parseCursorId(Codecs codecs, CursorState state, ReturnValue returnValue) {
@@ -227,7 +235,7 @@ final class CursoredQueryMessageFlow {
             Completion.class::isInstance);
     }
 
-    private static void handleMessage(Client client, int fetchSize, FluxSink<ClientMessage> requests, CursorState state, Message message, SynchronousSink<Message> sink) {
+    private static void handleMessage(Client client, int fetchSize, FluxSink<ClientMessage> requests, CursorState state, Message message, SynchronousSink<Message> sink, Subscriber<Message> outboundSink) {
 
         if (message instanceof ColumnMetadataToken && ((ColumnMetadataToken) message).getColumns().isEmpty()) {
             return;
@@ -253,7 +261,11 @@ final class CursoredQueryMessageFlow {
                 }
                 return;
             }
+
+            sink.next(doneToken);
+            return;
         }
+
 
         if (!(message instanceof DoneProcToken)) {
             sink.next(message);
@@ -265,18 +277,18 @@ final class CursoredQueryMessageFlow {
         }
 
         if (DoneProcToken.isDone(message)) {
-            onDone(client, fetchSize, requests, state, sink);
+            onDone(client, fetchSize, requests, state, outboundSink::onComplete);
         }
     }
 
-    static void onDone(Client client, int fetchSize, FluxSink<ClientMessage> requests, CursorState state, SynchronousSink<Message> sink) {
+    static void onDone(Client client, int fetchSize, FluxSink<ClientMessage> requests, CursorState state, Runnable completion) {
 
         Phase phase = state.phase;
 
         if (phase == Phase.NONE || phase == Phase.FETCHING) {
 
             if (state.cursorId == 0) {
-                sink.complete();
+                completion.run();
                 state.phase = Phase.CLOSED;
                 return;
             }
@@ -288,7 +300,7 @@ final class CursoredQueryMessageFlow {
                 requests.next(spCursorFetch(state.cursorId, FETCH_NEXT, fetchSize, client.getTransactionDescriptor()));
             } else {
                 state.phase = Phase.CLOSING;
-                // TODO: spCursorClose should happen also if a subscriber cancels its subscription. 
+                // TODO: spCursorClose should happen also if a subscriber cancels its subscription.
                 requests.next(spCursorClose(state.cursorId, client.getTransactionDescriptor()));
             }
 
@@ -298,7 +310,7 @@ final class CursoredQueryMessageFlow {
 
         if (phase == Phase.ERROR || phase == Phase.CLOSING) {
 
-            sink.complete();
+            completion.run();
             state.phase = Phase.CLOSED;
         }
     }
@@ -321,14 +333,14 @@ final class CursoredQueryMessageFlow {
         int resultSetCCOpt = CCOPT_READ_ONLY | CCOPT_ALLOW_DIRECT;
 
         return RpcRequest.builder() //
-            .withProcId(RpcRequest.Sp_CursorOpen) //
-            .withTransactionDescriptor(transactionDescriptor) //
-            .withParameter(RpcDirection.OUT, 0) // cursor
-            .withParameter(RpcDirection.IN, collation, query)
-            .withParameter(RpcDirection.IN, resultSetScrollOpt)  // scrollopt
-            .withParameter(RpcDirection.IN, resultSetCCOpt) // ccopt
-            .withParameter(RpcDirection.OUT, 0) // rowcount
-            .build();
+                .withProcId(RpcRequest.Sp_CursorOpen) //
+                .withTransactionDescriptor(transactionDescriptor) //
+                .withParameter(RpcDirection.OUT, 0) // cursor
+                .withParameter(RpcDirection.IN, collation, query)
+                .withParameter(RpcDirection.IN, resultSetScrollOpt)  // scrollopt
+                .withParameter(RpcDirection.IN, resultSetCCOpt) // ccopt
+                .withParameter(RpcDirection.OUT, 0) // rowcount
+                .build();
     }
 
     /**
@@ -346,14 +358,14 @@ final class CursoredQueryMessageFlow {
         Objects.requireNonNull(transactionDescriptor, "TransactionDescriptor must not be null");
 
         return RpcRequest.builder() //
-            .withProcId(RpcRequest.Sp_CursorFetch) //
-            .withTransactionDescriptor(transactionDescriptor) //
-            .withOptionFlags(NO_METADATA) //
-            .withParameter(RpcDirection.IN, cursor) // cursor
-            .withParameter(RpcDirection.IN, fetchType) // fetch type
-            .withParameter(RpcDirection.IN, 0)  // startRow
-            .withParameter(RpcDirection.IN, rowCount) // numRows
-            .build();
+                .withProcId(RpcRequest.Sp_CursorFetch) //
+                .withTransactionDescriptor(transactionDescriptor) //
+                .withOptionFlags(NO_METADATA) //
+                .withParameter(RpcDirection.IN, cursor) // cursor
+                .withParameter(RpcDirection.IN, fetchType) // fetch type
+                .withParameter(RpcDirection.IN, 0)  // startRow
+                .withParameter(RpcDirection.IN, rowCount) // numRows
+                .build();
     }
 
     /**
@@ -368,10 +380,10 @@ final class CursoredQueryMessageFlow {
         Objects.requireNonNull(transactionDescriptor, "TransactionDescriptor must not be null");
 
         return RpcRequest.builder() //
-            .withProcId(RpcRequest.Sp_CursorClose) //
-            .withTransactionDescriptor(transactionDescriptor) //
-            .withParameter(RpcDirection.IN, cursor) // cursor
-            .build();
+                .withProcId(RpcRequest.Sp_CursorClose) //
+                .withTransactionDescriptor(transactionDescriptor) //
+                .withParameter(RpcDirection.IN, cursor) // cursor
+                .build();
     }
 
     /**
@@ -390,19 +402,19 @@ final class CursoredQueryMessageFlow {
         int resultSetCCOpt = CCOPT_READ_ONLY | CCOPT_ALLOW_DIRECT;
 
         RpcRequest.Builder builder = RpcRequest.builder() //
-            .withProcId(RpcRequest.Sp_CursorPrepExec) //
-            .withTransactionDescriptor(transactionDescriptor) //
+                .withProcId(RpcRequest.Sp_CursorPrepExec) //
+                .withTransactionDescriptor(transactionDescriptor) //
 
-            // <prepared handle>
-            // IN (reprepare): Old handle to unprepare before repreparing
-            // OUT: The newly prepared handle
-            .withParameter(RpcDirection.OUT, preparedStatementHandle)
-            .withParameter(RpcDirection.OUT, 0) // cursor
-            .withParameter(RpcDirection.IN, collation, binding.getFormalParameters()) // formal parameter defn
-            .withParameter(RpcDirection.IN, collation, query) // statement
-            .withParameter(RpcDirection.IN, resultSetScrollOpt) // scrollopt
-            .withParameter(RpcDirection.IN, resultSetCCOpt) // ccopt
-            .withParameter(RpcDirection.OUT, 0);// rowcount
+                // <prepared handle>
+                // IN (reprepare): Old handle to unprepare before repreparing
+                // OUT: The newly prepared handle
+                .withParameter(RpcDirection.OUT, preparedStatementHandle)
+                .withParameter(RpcDirection.OUT, 0) // cursor
+                .withParameter(RpcDirection.IN, collation, binding.getFormalParameters()) // formal parameter defn
+                .withParameter(RpcDirection.IN, collation, query) // statement
+                .withParameter(RpcDirection.IN, resultSetScrollOpt) // scrollopt
+                .withParameter(RpcDirection.IN, resultSetCCOpt) // ccopt
+                .withParameter(RpcDirection.OUT, 0);// rowcount
 
         binding.forEach((name, encoded) -> {
             builder.withNamedParameter(RpcDirection.IN, name, encoded);
@@ -427,17 +439,17 @@ final class CursoredQueryMessageFlow {
         int resultSetCCOpt = CCOPT_READ_ONLY | CCOPT_ALLOW_DIRECT;
 
         RpcRequest.Builder builder = RpcRequest.builder() //
-            .withProcId(RpcRequest.Sp_CursorExecute) //
-            .withTransactionDescriptor(transactionDescriptor) //
+                .withProcId(RpcRequest.Sp_CursorExecute) //
+                .withTransactionDescriptor(transactionDescriptor) //
 
-            // <prepared handle>
-            // IN (reprepare): Old handle to unprepare before repreparing
-            // OUT: The newly prepared handle
-            .withParameter(RpcDirection.IN, preparedStatementHandle)
-            .withParameter(RpcDirection.OUT, 0) // cursor
-            .withParameter(RpcDirection.IN, resultSetScrollOpt) // scrollopt
-            .withParameter(RpcDirection.IN, resultSetCCOpt) // ccopt
-            .withParameter(RpcDirection.OUT, 0);// rowcount
+                // <prepared handle>
+                // IN (reprepare): Old handle to unprepare before repreparing
+                // OUT: The newly prepared handle
+                .withParameter(RpcDirection.IN, preparedStatementHandle)
+                .withParameter(RpcDirection.OUT, 0) // cursor
+                .withParameter(RpcDirection.IN, resultSetScrollOpt) // scrollopt
+                .withParameter(RpcDirection.IN, resultSetCCOpt) // ccopt
+                .withParameter(RpcDirection.OUT, 0);// rowcount
 
         binding.forEach((name, encoded) -> {
             builder.withNamedParameter(RpcDirection.IN, name, encoded);

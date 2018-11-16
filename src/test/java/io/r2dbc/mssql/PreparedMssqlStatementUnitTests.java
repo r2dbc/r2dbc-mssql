@@ -104,18 +104,6 @@ class PreparedMssqlStatementUnitTests {
     }
 
     @Test
-    void shouldRejectBatchOperations() {
-
-        PreparedMssqlStatement statement = new PreparedMssqlStatement(this.statementCache, TestClient.NO_OP, new DefaultCodecs(), "SELECT * from FOO where firstname = @firstname");
-
-        statement.bind("firstname", "");
-        statement.add();
-        statement.bind("firstname", "");
-
-        assertThatThrownBy(statement::execute).isInstanceOf(UnsupportedOperationException.class);
-    }
-
-    @Test
     void shouldCachePreparedStatementHandle() {
 
         Encoded encodedPreparedStatementHandle = new DefaultCodecs().encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), 1);

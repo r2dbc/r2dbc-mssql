@@ -32,31 +32,26 @@ import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.token.AbstractInfoToken;
+import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.EnvChangeToken;
 import io.r2dbc.mssql.message.token.FeatureExtAckToken;
 import io.r2dbc.mssql.message.type.Collation;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.EmitterProcessor;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
-import reactor.core.publisher.Mono;
-import reactor.core.publisher.SynchronousSink;
+import reactor.core.publisher.*;
 import reactor.netty.Connection;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import static io.r2dbc.mssql.util.PredicateUtils.or;
 
 /**
  * An implementation of a TDS client based on the Reactor Netty project.
@@ -187,7 +182,9 @@ public final class ReactorNettyClient implements Client {
             .doOnError(ProtocolException.class, e -> {
                 this.isClosed.set(true);
                 connection.channel().close();
-            }).map(Flux::just) // Window surrogate
+            })
+            .windowUntil(or(DoneToken::isDone))
+            .map(Flux::cache)
             .subscribe(
                 responses::next, responses::error, responses::complete);
 

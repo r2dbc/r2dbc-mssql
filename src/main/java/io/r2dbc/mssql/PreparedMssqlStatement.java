@@ -25,13 +25,11 @@ import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Statement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -52,7 +50,7 @@ import java.util.regex.Pattern;
 final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatement> {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    
+
     private static final Pattern PARAMETER_MATCHER = Pattern.compile("@([\\p{Alpha}@][@$\\d\\w_]{0,127})");
 
     private final PreparedStatementCache statementCache;
@@ -82,17 +80,43 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
     @Override
     public Flux<MssqlResult> execute() {
 
-        if (this.bindings.bindings.size() > 1) {
-            throw new UnsupportedOperationException("Parametrized batch operations not yet supported");
+        Iterator<Binding> iterator = new Vector<>(this.bindings.bindings).iterator();
+
+        if (!iterator.hasNext()) {
+            return Flux.empty();
         }
 
-        return Flux.fromIterable(this.bindings.bindings).flatMap(it -> {
+        EmitterProcessor<Binding> bindingEmitter = EmitterProcessor.create(true);
+        FluxSink<Binding> boundRequests = bindingEmitter.sink();
 
-            logger.debug("Start exchange for {}", this.parsedQuery.sql);
-            return CursoredQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, this.parsedQuery.sql, it, 128);
+        return bindingEmitter.startWith(iterator.next())
+                .flatMap(it -> {
 
-        }).windowUntil(DoneInProcToken.class::isInstance) //
-            .map(it -> MssqlResult.toResult(this.codecs, it));
+                    logger.debug("Start exchange for {}", this.parsedQuery.sql);
+                    return CursoredQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, this.parsedQuery.sql, it, 128)              //
+                            .doOnComplete(() -> {
+                                tryNextBinding(iterator, boundRequests);
+                            });
+
+                }).windowUntil(DoneInProcToken.class::isInstance) //
+                .map(it -> MssqlResult.toResult(this.codecs, it));
+    }
+
+    private static void tryNextBinding(Iterator<Binding> iterator, FluxSink<Binding> boundRequests) {
+
+        if (boundRequests.isCancelled()) {
+            return;
+        }
+
+        try {
+            if (iterator.hasNext()) {
+                boundRequests.next(iterator.next());
+            } else {
+                boundRequests.complete();
+            }
+        } catch (Exception e) {
+            boundRequests.error(e);
+        }
     }
 
     @Override
@@ -272,7 +296,7 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
         private final Map<String, ParsedParameter> parametersByName = new LinkedHashMap<>();
 
         ParsedQuery(String sql, List<ParsedParameter> parameters) {
-            
+
             this.sql = sql;
             this.parameters = parameters;
 
@@ -374,7 +398,7 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
             }
             ParsedQuery that = (ParsedQuery) o;
             return Objects.equals(this.sql, that.sql) &&
-                Objects.equals(this.parameters, that.parameters);
+                    Objects.equals(this.parameters, that.parameters);
         }
 
         @Override
@@ -426,7 +450,7 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
             }
             ParsedParameter that = (ParsedParameter) o;
             return this.position == that.position &&
-                Objects.equals(this.name, that.name);
+                    Objects.equals(this.name, that.name);
         }
 
         @Override

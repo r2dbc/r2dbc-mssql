@@ -38,10 +38,7 @@ import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.SynchronousSink;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link CursoredQueryMessageFlow}.
@@ -57,11 +54,13 @@ class CursoredQueryMessageFlowUnitTests {
 
     SynchronousSink<Message> sink = mock(SynchronousSink.class);
 
+    Runnable completion = mock(Runnable.class);
+
     @BeforeEach
     void setUp() {
         when(client.getTransactionDescriptor()).thenReturn(TransactionDescriptor.empty());
     }
-    
+
     @Test
     void shouldEncodeSpCursorOpen() {
 
@@ -197,11 +196,11 @@ class CursoredQueryMessageFlowUnitTests {
         state.cursorId = 42;
         state.hasMore = true;
 
-        CursoredQueryMessageFlow.onDone(client, 128, requests, state, sink);
+        CursoredQueryMessageFlow.onDone(client, 128, requests, state, completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.FETCHING);
         verify(requests).next(CursoredQueryMessageFlow.spCursorFetch(state.cursorId, CursoredQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
-        verifyZeroInteractions(sink);
+        verifyZeroInteractions(completion);
     }
 
     @Test
@@ -212,11 +211,11 @@ class CursoredQueryMessageFlowUnitTests {
         state.phase = CursorState.Phase.FETCHING;
         state.hasSeenRows = true;
 
-        CursoredQueryMessageFlow.onDone(client, 128, requests, state, sink);
+        CursoredQueryMessageFlow.onDone(client, 128, requests, state, completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.FETCHING);
         verify(requests).next(CursoredQueryMessageFlow.spCursorFetch(state.cursorId, CursoredQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
-        verifyZeroInteractions(sink);
+        verifyZeroInteractions(completion);
     }
 
     @Test
@@ -226,7 +225,7 @@ class CursoredQueryMessageFlowUnitTests {
         state.cursorId = 42;
         state.phase = CursorState.Phase.FETCHING;
 
-        CursoredQueryMessageFlow.onDone(client, 128, requests, state, sink);
+        CursoredQueryMessageFlow.onDone(client, 128, requests, state, completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSING);
         verify(requests).next(CursoredQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
@@ -239,11 +238,11 @@ class CursoredQueryMessageFlowUnitTests {
         CursorState state = new CursorState();
         state.cursorId = 42;
 
-        CursoredQueryMessageFlow.onDone(client, 128, requests, state, sink);
+        CursoredQueryMessageFlow.onDone(client, 128, requests, state, completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSING);
         verify(requests).next(CursoredQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
-        verifyZeroInteractions(sink);
+        verifyZeroInteractions(completion);
     }
 
     @Test
@@ -253,10 +252,10 @@ class CursoredQueryMessageFlowUnitTests {
         state.cursorId = 42;
         state.phase = CursorState.Phase.CLOSING;
 
-        CursoredQueryMessageFlow.onDone(client, 128, requests, state, sink);
+        CursoredQueryMessageFlow.onDone(client, 128, requests, state, completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSED);
         verifyZeroInteractions(requests);
-        verify(sink).complete();
+        verify(completion).run();
     }
 }
