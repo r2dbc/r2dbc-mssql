@@ -23,8 +23,12 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.containers.MSSQLServerContainer;
 import reactor.util.annotation.Nullable;
+
+import java.io.IOException;
+import java.net.Socket;
 
 /**
  * Test container extension for Microsoft SQL Server.
@@ -41,23 +45,24 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
         }
     };
 
+    private final DatabaseContainer sqlServer = External.INSTANCE.isAvailable() ? External.INSTANCE : new TestContainer(container);
+
+    private final boolean useTestContainer = sqlServer instanceof TestContainer;
+
     private HikariDataSource dataSource;
 
     private JdbcOperations jdbcOperations;
 
     @Override
-    public void afterAll(ExtensionContext context) {
-        this.dataSource.close();
-        this.container.stop();
-    }
-
-    @Override
     public void beforeAll(ExtensionContext context) {
-        this.container.start();
+
+        if (this.useTestContainer) {
+            this.container.start();
+        }
 
         this.dataSource = DataSourceBuilder.create()
             .type(HikariDataSource.class)
-            .url(this.container.getJdbcUrl())
+            .url(this.sqlServer.getJdbcUrl())
             .username(this.container.getUsername())
             .password(this.container.getPassword())
             .build();
@@ -67,8 +72,18 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
         this.jdbcOperations = new JdbcTemplate(this.dataSource);
     }
 
+    @Override
+    public void afterAll(ExtensionContext context) {
+
+        this.dataSource.close();
+
+        if (this.useTestContainer) {
+            this.container.stop();
+        }
+    }
+
     public String getHost() {
-        return this.container.getContainerIpAddress();
+        return this.sqlServer.getHost();
     }
 
     @Nullable
@@ -81,11 +96,85 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
     }
 
     public int getPort() {
-        return this.container.getMappedPort(MSSQLServerContainer.MS_SQL_SERVER_PORT);
+        return this.sqlServer.getPort();
     }
 
     public String getUsername() {
         return this.container.getUsername();
     }
 
+    /**
+     * Interface to be implemented by database providers (provided database, test container).
+     */
+    interface DatabaseContainer {
+
+        String getJdbcUrl();
+
+        String getHost();
+
+        int getPort();
+    }
+
+    /**
+     * Externally provided SQL Server instance.
+     */
+    static class External implements DatabaseContainer {
+
+        public static final External INSTANCE = new External();
+
+        @Override
+        public String getJdbcUrl() {
+            return String.format("jdbc:sqlserver://%s:%d", getHost(), getPort());
+        }
+
+        @Override
+        public String getHost() {
+            return "localhost";
+        }
+
+        @Override
+        public int getPort() {
+            return 1433;
+        }
+
+        /**
+         * Returns whether this container is available.
+         *
+         * @return
+         */
+        @SuppressWarnings("try")
+        public boolean isAvailable() {
+
+            try (Socket ignored = new Socket(getHost(), getPort())) {
+
+                return true;
+            } catch (IOException e) {
+                return false;
+            }
+        }
+    }
+
+    static class TestContainer implements DatabaseContainer {
+
+        private final JdbcDatabaseContainer<?> container;
+
+        TestContainer(JdbcDatabaseContainer<?> container) {
+            this.container = container;
+        }
+
+        @Override
+        public String getJdbcUrl() {
+            return this.container.getJdbcUrl();
+        }
+
+        @Override
+        public String getHost() {
+            return this.container.getTestHostIpAddress();
+        }
+
+        @Override
+        public int getPort() {
+            return this.container.getMappedPort(MSSQLServerContainer.MS_SQL_SERVER_PORT);
+        }
+    }
 }
