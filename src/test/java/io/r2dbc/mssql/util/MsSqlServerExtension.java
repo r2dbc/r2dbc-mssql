@@ -154,6 +154,9 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
         }
     }
 
+    /**
+     * {@link DatabaseContainer} provided by {@link JdbcDatabaseContainer}.
+     */
     static class TestContainer implements DatabaseContainer {
 
         private final JdbcDatabaseContainer<?> container;
@@ -169,7 +172,7 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
 
         @Override
         public String getHost() {
-            return this.container.getTestHostIpAddress();
+            return this.container.getContainerIpAddress();
         }
 
         @Override

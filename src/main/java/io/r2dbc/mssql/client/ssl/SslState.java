@@ -42,6 +42,11 @@ public enum SslState implements Message {
     LOGIN_ONLY,
 
     /**
+     * SSL requested for the entire connection.
+     */
+    CONNECTION,
+
+    /**
      * SSL disabled once it was used for the login message.
      */
     AFTER_LOGIN_ONLY;

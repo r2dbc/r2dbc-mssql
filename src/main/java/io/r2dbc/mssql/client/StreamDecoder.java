@@ -116,7 +116,11 @@ final class StreamDecoder {
             }
 
             return state;
-        }, DecoderState::release).flatMapIterable(Function.identity());
+        }, state -> {
+            if (state != null) {
+                state.release();
+            }
+        }).flatMapIterable(Function.identity());
     }
 
     @Nullable

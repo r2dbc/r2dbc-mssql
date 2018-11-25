@@ -116,6 +116,11 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
 
             ByteBuf message = (ByteBuf) msg;
 
+            if (message.readableBytes() <= 0) {
+                ctx.write(msg, promise);
+                return;
+            }
+
             doWriteFragment(ctx, promise, message, this.headerOptions, true);
             return;
         }

@@ -23,6 +23,7 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
+import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.Login7;
 import io.r2dbc.mssql.message.token.Prelogin;
 import io.r2dbc.mssql.message.token.Tabular;
@@ -88,10 +89,18 @@ public enum ConnectionState {
             Prelogin prelogin = (Prelogin) message;
             Prelogin.Encryption encryption = prelogin.getRequiredToken(Prelogin.Encryption.class);
 
-            if (encryption.requiresLoginSslHanshake()) {
+            if (encryption.requiresLoginSslHandshake()) {
 
                 Channel channel = connection.channel();
                 channel.pipeline().fireUserEventTriggered(SslState.LOGIN_ONLY);
+
+                return PRELOGIN_SSL_NEGOTIATION;
+            }
+
+            if (encryption.requiresConnectionSslHandshake()) {
+
+                Channel channel = connection.channel();
+                channel.pipeline().fireUserEventTriggered(SslState.CONNECTION);
 
                 return PRELOGIN_SSL_NEGOTIATION;
             }
@@ -132,7 +141,7 @@ public enum ConnectionState {
     LOGIN {
         @Override
         public boolean canAdvance(Message message) {
-            return message instanceof AbstractDoneToken;
+            return message instanceof DoneToken;
         }
 
         @Override
@@ -173,7 +182,6 @@ public enum ConnectionState {
             return null;
         }
 
-        @SuppressWarnings("unchecked")
         @Override
         MessageDecoder decoder(Client client) {
 

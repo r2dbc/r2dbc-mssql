@@ -50,7 +50,7 @@ class LoginFlowUnitTests {
             .thenRespond(response)
             .build();
 
-        LoginConfiguration login = new LoginConfiguration("foo", "bar", "db", "host", "app", "server", null);
+        LoginConfiguration login = new LoginConfiguration("foo", "bar", "db", "host", "app", "server", null, false);
 
         LoginFlow.exchange(client, login)
             .as(StepVerifier::create)
@@ -65,7 +65,7 @@ class LoginFlowUnitTests {
             .thenRespond(DoneToken.create(0))
             .build();
 
-        LoginConfiguration login = new LoginConfiguration("foo", "bar", "db", "host", "app", "server", null);
+        LoginConfiguration login = new LoginConfiguration("foo", "bar", "db", "host", "app", "server", null, false);
 
         LoginFlow.exchange(client, login)
             .as(StepVerifier::create)
@@ -82,7 +82,7 @@ class LoginFlowUnitTests {
             .expectClose()
             .build();
 
-        LoginConfiguration login = new LoginConfiguration("foo", "bar", "db", "host", "app", "server", null);
+        LoginConfiguration login = new LoginConfiguration("foo", "bar", "db", "host", "app", "server", null, false);
 
         LoginFlow.exchange(client, login)
             .as(StepVerifier::create)

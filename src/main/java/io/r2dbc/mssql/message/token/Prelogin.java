@@ -351,6 +351,18 @@ public final class Prelogin implements TokenStream, ClientMessage {
         }
 
         /**
+         * Enable encryption.
+         *
+         * @return {@literal this} {@link Builder}.
+         */
+        public Builder withEncryptionEnabled() {
+
+            this.encryption = Encryption.ENCRYPT_ON;
+
+            return this;
+        }
+
+        /**
          * Disable encryption by indicating encryption not supported.
          *
          * @return {@literal this} {@link Builder}.
@@ -705,7 +717,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
     }
 
     /**
-     * Allows negotiation of the used encryption mode.
+     * Allows negotiation of the used encryption (Transport-Level Encryption via SSL) mode.
      */
     public static class Encryption extends Token {
 
@@ -781,7 +793,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
          *
          * @return {@literal true} if the subsequent communication requires a SSL handshake.
          */
-        public boolean requiresSslHanshake() {
+        public boolean requiresSslHandshake() {
             return getEncryption() == Prelogin.Encryption.ENCRYPT_REQ || getEncryption() == Prelogin.Encryption.ENCRYPT_OFF
                 || getEncryption() == Prelogin.Encryption.ENCRYPT_ON;
         }
@@ -789,10 +801,19 @@ public final class Prelogin implements TokenStream, ClientMessage {
         /**
          * Returns {@literal true} if a SSL handshake is required to enable SSL for sending the Login packet only.
          *
-         * @return {@literal true} if a SSL handshake is required to enable SSL for sending the Login packet only.}
+         * @return {@literal true} if a SSL handshake is required to enable SSL for sending the Login packet only.
          */
-        public boolean requiresLoginSslHanshake() {
+        public boolean requiresLoginSslHandshake() {
             return getEncryption() == Prelogin.Encryption.ENCRYPT_OFF;
+        }
+
+        /**
+         * Returns {@literal true} if a SSL handshake is required to enable SSL for the entire connection.
+         *
+         * @return {@literal true} if a SSL handshake is required to enable SSL for the entire connection.
+         */
+        public boolean requiresConnectionSslHandshake() {
+            return getEncryption() == Encryption.ENCRYPT_ON || getEncryption() == Encryption.ENCRYPT_REQ;
         }
 
         @Override

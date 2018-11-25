@@ -49,8 +49,10 @@ public final class MssqlConnectionConfiguration {
     @Nullable
     private final String appName;
 
+    private final boolean ssl;
+
     private MssqlConnectionConfiguration(@Nullable UUID connectionId, @Nullable String database, String host,
-                                         String password, int port, String username, String appName) {
+                                         String password, int port, String username, String appName, boolean ssl) {
 
         this.connectionId = connectionId;
         this.database = database;
@@ -59,6 +61,7 @@ public final class MssqlConnectionConfiguration {
         this.port = port;
         this.username = Objects.requireNonNull(username, "username must not be null");
         this.appName = appName;
+        this.ssl = ssl;
     }
 
     /**
@@ -75,12 +78,13 @@ public final class MssqlConnectionConfiguration {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
         sb.append(" [connectionId=").append(this.connectionId);
-        sb.append(", database='").append(this.database).append('\"');
-        sb.append(", host='").append(this.host).append('\"');
-        sb.append(", password='").append(this.password.replaceAll("|", "\\*")).append('\"');
+        sb.append(", database=\"").append(this.database).append('\"');
+        sb.append(", host=\"").append(this.host).append('\"');
+        sb.append(", password=\"").append(this.password.replaceAll("|", "\\*")).append('\"');
         sb.append(", port=").append(this.port);
-        sb.append(", username='").append(this.username).append('\"');
-        sb.append(", appName='").append(this.appName).append('\"');
+        sb.append(", username=\"").append(this.username).append('\"');
+        sb.append(", appName=\"").append(this.appName).append('\"');
+        sb.append(", encryption=").append(this.ssl);
         sb.append(']');
         return sb.toString();
     }
@@ -115,9 +119,13 @@ public final class MssqlConnectionConfiguration {
         return this.appName;
     }
 
+    boolean useSsl() {
+        return ssl;
+    }
+
     LoginConfiguration getLoginConfiguration() {
         return new LoginConfiguration(getUsername(), getPassword(), getDatabase().orElse(""), lookupHostName(),
-            getAppName(), getHost(), this.connectionId);
+            getAppName(), getHost(), this.connectionId, useSsl());
     }
 
     /**
@@ -168,6 +176,8 @@ public final class MssqlConnectionConfiguration {
 
         private String appName;
 
+        private boolean ssl;
+
         private Builder() {
         }
 
@@ -202,6 +212,16 @@ public final class MssqlConnectionConfiguration {
          */
         public Builder database(@Nullable String database) {
             this.database = database;
+            return this;
+        }
+
+        /**
+         * Enable SSL usage. This flag is also known as Use Encryption in other drivers.
+         *
+         * @return this {@link Builder}
+         */
+        public Builder enableSsl() {
+            this.ssl = true;
             return this;
         }
 
@@ -259,7 +279,7 @@ public final class MssqlConnectionConfiguration {
          */
         public MssqlConnectionConfiguration build() {
             return new MssqlConnectionConfiguration(this.connectionId, this.database, this.host, this.password, this.port,
-                this.username, this.appName);
+                this.username, this.appName, this.ssl);
         }
     }
 }

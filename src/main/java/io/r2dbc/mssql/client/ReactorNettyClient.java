@@ -31,8 +31,8 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.tds.ProtocolException;
+import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.AbstractInfoToken;
-import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.EnvChangeToken;
 import io.r2dbc.mssql.message.token.FeatureExtAckToken;
 import io.r2dbc.mssql.message.type.Collation;
@@ -191,7 +191,7 @@ public final class ReactorNettyClient implements Client {
                 this.isClosed.set(true);
                 connection.channel().close();
             })
-            .windowUntil(or(DoneToken::isDone))
+            .windowUntil(or(AbstractDoneToken::isDone))
             .map(Flux::cache)
             .subscribe(
                 responses::next, responses::error, responses::complete);

@@ -46,8 +46,11 @@ final class LoginConfiguration {
     @Nullable
     private final UUID connectionId;
 
+    private final boolean useSsl;
+
     LoginConfiguration(String username, String password, String database, String hostname, String appName,
-                       String serverName, @Nullable UUID connectionId) {
+                       String serverName, @Nullable UUID connectionId, boolean useSsl) {
+
         this.username = Objects.requireNonNull(username, "Username must not be null");
         this.password = Objects.requireNonNull(password, "Password must not be null");
         this.database = Objects.requireNonNull(database, "Database must not be null");
@@ -55,11 +58,16 @@ final class LoginConfiguration {
         this.appName = appName;
         this.serverName = Objects.requireNonNull(serverName, "Server name must not be null");
         this.connectionId = connectionId;
+        this.useSsl = useSsl;
     }
 
     @Nullable
     UUID getConnectionId() {
         return this.connectionId;
+    }
+
+    boolean useSsl() {
+        return useSsl;
     }
 
     Login7.Builder asBuilder() {

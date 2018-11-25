@@ -17,6 +17,7 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.tds.Decode;
 
 /**
@@ -47,6 +48,21 @@ public final class DoneInProcToken extends AbstractDoneToken {
      */
     public static DoneInProcToken create(long rowCount) {
         return new DoneInProcToken(DONE_FINAL | DONE_COUNT, 0, rowCount);
+    }
+
+    /**
+     * Check whether the the {@link Message} represents a finished {@link DoneInProcToken}.
+     *
+     * @param message
+     * @return
+     */
+    public static boolean isDone(Message message) {
+
+        if (message instanceof DoneInProcToken) {
+            return ((AbstractDoneToken) message).isDone();
+        }
+
+        return false;
     }
 
     /**

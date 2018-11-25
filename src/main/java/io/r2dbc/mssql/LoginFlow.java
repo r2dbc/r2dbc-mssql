@@ -62,6 +62,11 @@ final class LoginFlow {
         if (login.getConnectionId() != null) {
             builder.withConnectionId(login.getConnectionId());
         }
+
+        if (login.useSsl()) {
+            builder.withEncryptionEnabled();
+        }
+
         AtomicReference<Prelogin> preloginResponse = new AtomicReference<>();
 
         Prelogin request = builder.build();
@@ -79,7 +84,7 @@ final class LoginFlow {
 
                         Prelogin.Encryption encryption = response.getRequiredToken(Prelogin.Encryption.class);
 
-                        if (!encryption.requiresSslHanshake()) {
+                        if (!encryption.requiresSslHandshake()) {
                             requests.next(createLoginMessage(login, response));
                         }
 

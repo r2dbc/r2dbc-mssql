@@ -19,6 +19,7 @@ package io.r2dbc.mssql.client.ssl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.ssl.SslHandler;
@@ -31,6 +32,8 @@ import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.tds.ContextualTdsFragment;
 import io.r2dbc.mssql.message.tds.TdsFragment;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.util.annotation.Nullable;
 
 import javax.net.ssl.SSLContext;
@@ -48,13 +51,17 @@ import java.util.Objects;
  * <p/>
  * This handler wraps or passes thru read and write data depending on the {@link SslState}. Because TDS requires header
  * wrapping, we're not mounting the {@link SslHandler} directly into the pipeline but delegating read and write events
- * to it.
+ * to it.<p/>
+ * This {@link ChannelHandler} supports also full SSL mode and requires to be reordered once the handshake is done therefor it's marked as {@code @Sharable}.
  *
  * @author Mark Paluch
  * @see SslHandler
  * @see ConnectionState
  */
+@ChannelHandler.Sharable
 public final class TdsSslHandler extends ChannelDuplexHandler {
+
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private volatile SslHandler sslHandler;
 
@@ -128,11 +135,12 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
 
-        if (evt == SslState.LOGIN_ONLY) {
+        if (evt == SslState.LOGIN_ONLY || evt == SslState.CONNECTION) {
 
-            this.state = SslState.LOGIN_ONLY;
+            this.state = (SslState) evt;
             this.sslHandler = createSslHandler();
 
+            logger.debug("Registering Context Proxy and SSL Event Handlers to propagate SSL events to channelRead()");
             ctx.pipeline().addAfter(getClass().getName(), ContextProxy.class.getName(), new ContextProxy());
             ctx.pipeline().addAfter(ContextProxy.class.getName(), SslEventHandler.class.getName(), new SslEventHandler());
 
@@ -144,8 +152,23 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
         }
 
         if (evt == SslState.NEGOTIATED) {
+
+            logger.debug("SSL Handshake done");
+
             ctx.write(TdsEncoder.ResetHeader.INSTANCE, ctx.voidPromise());
             this.handshakeDone = true;
+
+            // Reorder handlers:
+            // 1. Apply TLS first
+            // 2. Logging next
+            // 3. TDS
+            if (this.state == SslState.CONNECTION) {
+
+                logger.debug("Reordering handlers for full SSL usage");
+
+                ctx.pipeline().remove(this);
+                ctx.pipeline().addFirst(this);
+            }
         }
 
         super.userEventTriggered(ctx, evt);
@@ -158,13 +181,19 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) {
-        this.outputBuffer.release();
-        this.outputBuffer = null;
+
+        if (this.outputBuffer != null) {
+            this.outputBuffer.release();
+            this.outputBuffer = null;
+        }
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        this.sslHandler.channelInactive(ctx);
+
+        if (this.sslHandler != null) {
+            this.sslHandler.channelInactive(ctx);
+        }
 
         Chunk chunk = this.chunk;
         if (chunk != null) {
@@ -187,7 +216,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
 
-        if (this.handshakeDone && (this.state == SslState.NEGOTIATED || this.state == SslState.LOGIN_ONLY)) {
+        if (this.handshakeDone && (this.state == SslState.NEGOTIATED || this.state == SslState.LOGIN_ONLY || this.state == SslState.CONNECTION)) {
 
             msg = unwrap(ctx.alloc(), msg);
 
@@ -202,6 +231,9 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
         }
 
         if (requiresWrapping()) {
+
+            logger.debug("Write wrapping: Append to output buffer");
+
             ByteBuf sslPayload = (ByteBuf) msg;
 
             this.outputBuffer.writeBytes(sslPayload);
@@ -252,10 +284,13 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
         if (requiresWrapping()) {
 
+            logger.debug("Write wrapping: Flushing output buffer and enable auto-read");
+
             ByteBuf message = this.outputBuffer;
             this.outputBuffer = ctx.alloc().buffer();
 
             ctx.writeAndFlush(message);
+            ctx.channel().config().setAutoRead(true);
         } else {
             super.flush(ctx);
         }
@@ -290,7 +325,6 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
         if (isInHandshake()) {
-
             ByteBuf buffer = (ByteBuf) msg;
 
             Chunk chunk = this.chunk;
@@ -332,6 +366,11 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
             return;
         }
 
+        if (handshakeDone && this.state == SslState.CONNECTION) {
+            this.sslHandler.channelRead(ctx, msg);
+            return;
+        }
+
         super.channelRead(ctx, msg);
     }
 
@@ -340,7 +379,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
     }
 
     private boolean requiresWrapping() {
-        return this.state == SslState.LOGIN_ONLY;
+        return (this.state == SslState.LOGIN_ONLY || this.state == SslState.CONNECTION);
     }
 
     /**
