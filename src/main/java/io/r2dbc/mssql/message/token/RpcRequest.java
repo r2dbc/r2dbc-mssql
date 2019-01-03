@@ -142,10 +142,10 @@ public final class RpcRequest implements ClientMessage, TokenStream {
 
     private RpcRequest(AllHeaders allHeaders, @Nullable String procName, @Nullable Integer procId, OptionFlags optionFlags, byte statusFlags, List<ParameterDescriptor> parameterDescriptors) {
 
-        this.allHeaders = Objects.requireNonNull(allHeaders, "AllHeaders must not be null");
+        this.allHeaders = Assert.requireNonNull(allHeaders, "AllHeaders must not be null");
         this.procName = procName;
         this.procId = procId;
-        this.optionFlags = Objects.requireNonNull(optionFlags, "Option flags must not be null");
+        this.optionFlags = Assert.requireNonNull(optionFlags, "Option flags must not be null");
         this.statusFlags = statusFlags;
         this.parameterDescriptors = parameterDescriptors;
     }
@@ -162,7 +162,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
     @Override
     public Publisher<TdsFragment> encode(ByteBufAllocator allocator) {
 
-        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
 
         return Mono.fromSupplier(() -> {
 
@@ -275,7 +275,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          */
         public Builder withProcName(String procName) {
 
-            Objects.requireNonNull(procName, "ProcName must not be null");
+            Assert.requireNonNull(procName, "ProcName must not be null");
 
             this.procId = null;
             this.procName = procName;
@@ -302,13 +302,14 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          *
          * @param direction RPC parameter direction (in/out).
          * @param collation parameter encoding.
-         * @param value     the parameter value, can be {@literal null}.
+         * @param value     the parameter value, can be {@code null}.
          * @return {@literal this} {@link Builder}.
+         * @throws IllegalArgumentException when {@link RpcDirection} or {@link Collation} is {@code null}.
          */
         public Builder withParameter(RpcDirection direction, Collation collation, @Nullable String value) {
 
-            Objects.requireNonNull(direction, "RPC direction (in/out) must not be null");
-            Objects.requireNonNull(collation, "Collation must not be null");
+            Assert.requireNonNull(direction, "RPC direction (in/out) must not be null");
+            Assert.requireNonNull(collation, "Collation must not be null");
 
             this.parameterDescriptors.add(new RpcString(direction, null, collation, value));
 
@@ -319,12 +320,13 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          * Add a {@link Integer} parameter to this RPC call.
          *
          * @param direction RPC parameter direction (in/out).
-         * @param value     the parameter value, can be {@literal null}.
+         * @param value     the parameter value, can be {@code null}.
          * @return {@literal this} {@link Builder}.
+         * @throws IllegalArgumentException when {@link RpcDirection} is {@code null}.
          */
         public Builder withParameter(RpcDirection direction, @Nullable Integer value) {
 
-            Objects.requireNonNull(direction, "RPC direction (in/out) must not be null");
+            Assert.requireNonNull(direction, "RPC direction (in/out) must not be null");
 
             this.parameterDescriptors.add(new RpcInt(direction, null, value));
 
@@ -337,11 +339,12 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          * @param direction RPC parameter direction (in/out).
          * @param value     the parameter value.
          * @return {@literal this} {@link Builder}.
+         * @throws IllegalArgumentException when {@link RpcDirection} or {@link Encoded} is {@code null}.
          */
         public Builder withParameter(RpcDirection direction, Encoded value) {
 
-            Objects.requireNonNull(direction, "RPC direction (in/out) must not be null");
-            Objects.requireNonNull(value, "Encoded parameter name must not be null");
+            Assert.requireNonNull(direction, "RPC direction (in/out) must not be null");
+            Assert.requireNonNull(value, "Encoded parameter name must not be null");
 
             this.parameterDescriptors.add(new EncodedRpcParameter(direction, null, value));
 
@@ -354,14 +357,15 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          * @param direction RPC parameter direction (in/out).
          * @param name      the parameter name
          * @param collation parameter encoding.
-         * @param value     the parameter value, can be {@literal null}.
+         * @param value     the parameter value, can be {@code null}.
          * @return {@literal this} {@link Builder}.
+         * @throws IllegalArgumentException when {@link RpcDirection}, {@code name} or {@link Collation} is {@code null}.
          */
         public Builder withNamedParameter(RpcDirection direction, String name, Collation collation, @Nullable String value) {
 
-            Objects.requireNonNull(direction, "RPC direction (in/out) must not be null");
-            Objects.requireNonNull(name, "Parameter name must not be null");
-            Objects.requireNonNull(collation, "Collation must not be null");
+            Assert.requireNonNull(direction, "RPC direction (in/out) must not be null");
+            Assert.requireNonNull(name, "Parameter name must not be null");
+            Assert.requireNonNull(collation, "Collation must not be null");
 
             this.parameterDescriptors.add(new RpcString(direction, name, collation, value));
 
@@ -373,13 +377,14 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          *
          * @param direction RPC parameter direction (in/out).
          * @param name      the parameter name
-         * @param value     the parameter value, can be {@literal null}.
+         * @param value     the parameter value, can be {@code null}.
          * @return {@literal this} {@link Builder}.
+         * @throws IllegalArgumentException when {@link RpcDirection} or {@code name} is {@code null}.
          */
         public Builder withNamedParameter(RpcDirection direction, String name, @Nullable Integer value) {
 
-            Objects.requireNonNull(direction, "RPC direction (in/out) must not be null");
-            Objects.requireNonNull(name, "Parameter name must not be null");
+            Assert.requireNonNull(direction, "RPC direction (in/out) must not be null");
+            Assert.requireNonNull(name, "Parameter name must not be null");
 
             this.parameterDescriptors.add(new RpcInt(direction, name, value));
 
@@ -393,12 +398,13 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          * @param name      the parameter name
          * @param value     the parameter value.
          * @return {@literal this} {@link Builder}.
+         * @throws IllegalArgumentException when {@link RpcDirection}, {@code name}, or {@link Encoded} is {@code null}.
          */
         public Builder withNamedParameter(RpcDirection direction, String name, Encoded value) {
 
-            Objects.requireNonNull(direction, "RPC direction (in/out) must not be null");
-            Objects.requireNonNull(name, "Parameter name must not be null");
-            Objects.requireNonNull(value, "Encoded parameter name must not be null");
+            Assert.requireNonNull(direction, "RPC direction (in/out) must not be null");
+            Assert.requireNonNull(name, "Parameter name must not be null");
+            Assert.requireNonNull(value, "Encoded parameter name must not be null");
 
             this.parameterDescriptors.add(new EncodedRpcParameter(direction, name, value));
 
@@ -410,10 +416,11 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          *
          * @param transactionDescriptor the transaction descriptor.
          * @return {@literal this} {@link Builder}.
+         * @throws IllegalArgumentException when {@link TransactionDescriptor} is {@code null}.
          */
         public Builder withTransactionDescriptor(TransactionDescriptor transactionDescriptor) {
 
-            this.transactionDescriptor = Objects.requireNonNull(transactionDescriptor, "TransactionDescriptor must not be null");
+            this.transactionDescriptor = Assert.requireNonNull(transactionDescriptor, "TransactionDescriptor must not be null");
 
             return this;
         }
@@ -423,10 +430,11 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          *
          * @param optionFlags the option flags to use.
          * @return {@literal this} {@link Builder}.
+         * @throws IllegalArgumentException when {@link OptionFlags} is {@code null}.
          */
         public Builder withOptionFlags(OptionFlags optionFlags) {
 
-            this.optionFlags = Objects.requireNonNull(optionFlags, "OptionFlags must not be null");
+            this.optionFlags = Assert.requireNonNull(optionFlags, "OptionFlags must not be null");
 
             return this;
         }
@@ -435,6 +443,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          * Build a {@link RpcRequest}.
          *
          * @return a new {@link RpcRequest}.
+         * @throws IllegalStateException when {@link TransactionDescriptor} or procedure name/id are not configured.
          */
         public RpcRequest build() {
 
@@ -516,7 +525,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
 
         ParameterDescriptor(RpcDirection direction, @Nullable String name) {
 
-            this.direction = Objects.requireNonNull(direction, "Direction must not be null");
+            this.direction = Assert.requireNonNull(direction, "Direction must not be null");
             this.name = name;
         }
 

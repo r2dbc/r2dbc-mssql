@@ -16,12 +16,12 @@
 
 package io.r2dbc.mssql;
 
+import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.StringUtils;
 import reactor.util.annotation.Nullable;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -56,10 +56,10 @@ public final class MssqlConnectionConfiguration {
 
         this.connectionId = connectionId;
         this.database = database;
-        this.host = Objects.requireNonNull(host, "host must not be null");
-        this.password = Objects.requireNonNull(password, "password must not be null");
+        this.host = Assert.requireNonNull(host, "host must not be null");
+        this.password = Assert.requireNonNull(password, "password must not be null");
         this.port = port;
-        this.username = Objects.requireNonNull(username, "username must not be null");
+        this.username = Assert.requireNonNull(username, "username must not be null");
         this.appName = appName;
         this.ssl = ssl;
     }
@@ -186,9 +186,10 @@ public final class MssqlConnectionConfiguration {
          *
          * @param connectionId the application name
          * @return this {@link Builder}
+         * @throws IllegalArgumentException when {@link UUID} is {@code null}.
          */
         public Builder connectionId(UUID connectionId) {
-            this.connectionId = Objects.requireNonNull(connectionId, "connectionId must not be null");
+            this.connectionId = Assert.requireNonNull(connectionId, "connectionId must not be null");
             return this;
         }
 
@@ -197,10 +198,10 @@ public final class MssqlConnectionConfiguration {
          *
          * @param appName the appName
          * @return this {@link Builder}
-         * @throws NullPointerException if {@code appName} is {@code null}
+         * @throws IllegalArgumentException if {@code appName} is {@code null}
          */
         public Builder appName(String appName) {
-            this.appName = Objects.requireNonNull(appName, "appName must not be null");
+            this.appName = Assert.requireNonNull(appName, "appName must not be null");
             return this;
         }
 
@@ -230,10 +231,10 @@ public final class MssqlConnectionConfiguration {
          *
          * @param host the host
          * @return this {@link Builder}
-         * @throws NullPointerException if {@code host} is {@code null}
+         * @throws IllegalArgumentException if {@code host} is {@code null}
          */
         public Builder host(String host) {
-            this.host = Objects.requireNonNull(host, "host must not be null");
+            this.host = Assert.requireNonNull(host, "host must not be null");
             return this;
         }
 
@@ -242,10 +243,10 @@ public final class MssqlConnectionConfiguration {
          *
          * @param username the username
          * @return this {@link Builder}
-         * @throws NullPointerException if {@code username} is {@code null}
+         * @throws IllegalArgumentException if {@code username} is {@code null}
          */
         public Builder username(String username) {
-            this.username = Objects.requireNonNull(username, "username must not be null");
+            this.username = Assert.requireNonNull(username, "username must not be null");
             return this;
         }
 
@@ -254,10 +255,10 @@ public final class MssqlConnectionConfiguration {
          *
          * @param password the password
          * @return this {@link Builder}
-         * @throws NullPointerException if {@code password} is {@code null}
+         * @throws IllegalArgumentException if {@code password} is {@code null}
          */
         public Builder password(String password) {
-            this.password = Objects.requireNonNull(password, "password must not be null");
+            this.password = Assert.requireNonNull(password, "password must not be null");
             return this;
         }
 

@@ -21,11 +21,11 @@ import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.header.Header;
 import io.r2dbc.mssql.message.header.Status;
+import io.r2dbc.mssql.util.Assert;
 import reactor.core.publisher.Flux;
 import reactor.util.annotation.Nullable;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
@@ -57,8 +57,8 @@ final class StreamDecoder {
     @SuppressWarnings("unchecked")
     public Flux<Message> decode(ByteBuf in, MessageDecoder messageDecoder) {
 
-        Objects.requireNonNull(in, "in must not be null");
-        Objects.requireNonNull(messageDecoder, "MessageDecoder must not be null");
+        Assert.requireNonNull(in, "in must not be null");
+        Assert.requireNonNull(messageDecoder, "MessageDecoder must not be null");
 
         return Flux.<List<Message>, DecoderState>generate(() -> {
             DecoderState decoderState = this.state.getAndSet(null);

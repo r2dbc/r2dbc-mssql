@@ -50,25 +50,25 @@ interface Codec<T> {
      *
      * @param allocator the allocator to allocate encoding buffers.
      * @param context   parameter context.
-     * @param value     the {@literal null} {@code value}.
+     * @param value     the {@code null} {@code value}.
      * @return the encoded value.
      */
     Encoded encode(ByteBufAllocator allocator, RpcParameterContext context, T value);
 
     /**
-     * Determine whether this {@link Codec} is capable of encoding a {@literal null} value for the given {@link Class} type.
+     * Determine whether this {@link Codec} is capable of encoding a {@code null} value for the given {@link Class} type.
      *
      * @param type the desired value type.
-     * @return {@literal true} if this {@link Codec} is able to encode {@literal null} values for the given {@link Class} type.
+     * @return {@literal true} if this {@link Codec} is able to encode {@code null} values for the given {@link Class} type.
      * @see #encodeNull
      */
     boolean canEncodeNull(Class<?> type);
 
     /**
-     * Encode a {@literal null} value.
+     * Encode a {@code null} value.
      *
      * @param allocator the allocator to allocate encoding buffers.
-     * @return the encoded {@literal null} value.
+     * @return the encoded {@code null} value.
      */
     Encoded encodeNull(ByteBufAllocator allocator);
 
@@ -88,7 +88,7 @@ interface Codec<T> {
      * @param buffer    the data buffer.
      * @param decodable the decodable descriptor.
      * @param type      the desired value type.
-     * @return the decoded value. Can be {@literal null} if the value is {@literal null}.
+     * @return the decoded value. Can be {@code null} if the value is {@code null}.
      */
     @Nullable
     T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type);

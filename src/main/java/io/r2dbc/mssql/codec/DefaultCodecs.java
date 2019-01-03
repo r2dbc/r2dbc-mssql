@@ -19,13 +19,13 @@ package io.r2dbc.mssql.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.type.SqlServerType;
+import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * The default {@link Codec} implementation.  Delegates to type-specific codec implementations.
@@ -77,9 +77,9 @@ public final class DefaultCodecs implements Codecs {
     @Override
     public Encoded encode(ByteBufAllocator allocator, RpcParameterContext context, Object value) {
 
-        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
-        Objects.requireNonNull(context, "RpcParameterContext must not be null");
-        Objects.requireNonNull(value, "Value must not be null");
+        Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        Assert.requireNonNull(context, "RpcParameterContext must not be null");
+        Assert.requireNonNull(value, "Value must not be null");
 
         for (Codec<?> codec : this.codecs) {
             if (codec.canEncode(value)) {
@@ -93,8 +93,8 @@ public final class DefaultCodecs implements Codecs {
     @Override
     public Encoded encodeNull(ByteBufAllocator allocator, Class<?> type) {
 
-        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
-        Objects.requireNonNull(type, "Type must not be null");
+        Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        Assert.requireNonNull(type, "Type must not be null");
 
         for (Codec<?> codec : this.codecs) {
             if (codec.canEncodeNull(type)) {
@@ -109,8 +109,8 @@ public final class DefaultCodecs implements Codecs {
     @Override
     public <T> T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type) {
 
-        Objects.requireNonNull(decodable, "Decodable must not be null");
-        Objects.requireNonNull(type, "Type must not be null");
+        Assert.requireNonNull(decodable, "Decodable must not be null");
+        Assert.requireNonNull(type, "Type must not be null");
 
         if (buffer == null) {
             return null;

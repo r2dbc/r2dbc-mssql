@@ -19,9 +19,8 @@ package io.r2dbc.mssql.message.token;
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.ServerCharset;
+import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
-
-import java.util.Objects;
 
 /**
  * @author Mark Paluch
@@ -48,8 +47,8 @@ public final class EnvChangeToken extends AbstractDataToken {
 
         super(TYPE);
 
-        Objects.requireNonNull(changeType, "EnvChangeType must not be null");
-        Objects.requireNonNull(newValue, "New value must not be null");
+        Assert.requireNonNull(changeType, "EnvChangeType must not be null");
+        Assert.requireNonNull(newValue, "New value must not be null");
 
         this.length = length;
         this.changeType = changeType;
@@ -89,7 +88,7 @@ public final class EnvChangeToken extends AbstractDataToken {
      */
     public static boolean canDecode(ByteBuf buffer) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
 
         Integer requiredLength = Decode.peekUShort(buffer);
 

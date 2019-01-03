@@ -18,8 +18,7 @@ package io.r2dbc.mssql.message.tds;
 
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.header.HeaderOptions;
-
-import java.util.Objects;
+import io.r2dbc.mssql.util.Assert;
 
 /**
  * Represents a TDS message with associated {@link HeaderOptions}. The encoder may split this packet into multiple
@@ -40,7 +39,7 @@ public class ContextualTdsFragment extends TdsFragment {
     public ContextualTdsFragment(HeaderOptions headerOptions, ByteBuf byteBuf) {
 
         super(byteBuf);
-        this.headerOptions = Objects.requireNonNull(headerOptions, "HeaderOptions must not be null");
+        this.headerOptions = Assert.requireNonNull(headerOptions, "HeaderOptions must not be null");
     }
 
     /**

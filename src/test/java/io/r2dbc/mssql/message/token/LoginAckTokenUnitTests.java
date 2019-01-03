@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
@@ -28,18 +29,18 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 final class LoginAckTokenUnitTests {
 
-	@Test
-	void shouldDecode() {
+    @Test
+    void shouldDecode() {
 
         ByteBuf buffer = HexUtils.decodeToByteBuf("ad36000174000004164d00" + "6900630072006f0073006f0066007400"
-				+ "2000530051004c002000530065007200" + "760065007200000000000e000bde");
+            + "2000530051004c002000530065007200" + "760065007200000000000e000bde");
 
-		assertThat(buffer.readByte()).isEqualTo(LoginAckToken.TYPE);
+        assertThat(buffer.readByte()).isEqualTo(LoginAckToken.TYPE);
 
-		LoginAckToken token = LoginAckToken.decode(buffer);
-		assertThat(token.getTdsVersion()).isEqualTo(TDSVersion.VER_DENALI.getVersion());
-		assertThat(token.getClientInterface()).isEqualTo(LoginAckToken.CLIENT_INTEFACE_TSQL);
-		assertThat(token.getProgrName()).startsWith("Microsoft SQL Server");
-		assertThat(token.getVersion()).isEqualTo(Version.parse("14.0.3038"));
-	}
+        LoginAckToken token = LoginAckToken.decode(buffer);
+        assertThat(token.getTdsVersion()).isEqualTo(TDSVersion.VER_DENALI.getVersion());
+        assertThat(token.getClientInterface()).isEqualTo(LoginAckToken.CLIENT_INTEFACE_TSQL);
+        assertThat(token.getProgrName()).startsWith("Microsoft SQL Server");
+        assertThat(token.getVersion()).isEqualTo(Version.parse("14.0.3038"));
+    }
 }

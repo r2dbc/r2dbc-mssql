@@ -16,7 +16,7 @@
 
 package io.r2dbc.mssql.message;
 
-import java.util.Objects;
+import io.r2dbc.mssql.util.Assert;
 
 /**
  * TDS protocol versions.
@@ -54,7 +54,7 @@ public enum TDSVersion {
      */
     public boolean isGreateOrEqualsTo(TDSVersion reference) {
 
-        Objects.requireNonNull(reference, "Reference version must not be null");
+        Assert.requireNonNull(reference, "Reference version must not be null");
         return getVersion() >= reference.getVersion();
     }
 }

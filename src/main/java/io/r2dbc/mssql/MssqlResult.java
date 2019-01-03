@@ -22,6 +22,7 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.ColumnMetadataToken;
 import io.r2dbc.mssql.message.token.RowToken;
+import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Result;
 import io.r2dbc.spi.Row;
 import io.r2dbc.spi.RowMetadata;
@@ -31,7 +32,6 @@ import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.Objects;
 import java.util.function.BiFunction;
 
 import static reactor.function.TupleUtils.function;
@@ -69,8 +69,8 @@ public final class MssqlResult implements Result {
      */
     static MssqlResult toResult(Codecs codecs, Flux<Message> messages) {
 
-        Objects.requireNonNull(codecs, "Codecs must not be null");
-        Objects.requireNonNull(messages, "Messages must not be null");
+        Assert.requireNonNull(codecs, "Codecs must not be null");
+        Assert.requireNonNull(messages, "Messages must not be null");
 
         logger.debug("Creating new result");
         EmitterProcessor<Message> processor = EmitterProcessor.create(false);
@@ -128,7 +128,7 @@ public final class MssqlResult implements Result {
     @Override
     public <T> Flux<T> map(BiFunction<Row, RowMetadata, ? extends T> f) {
 
-        Objects.requireNonNull(f, "Mapping function must not be null");
+        Assert.requireNonNull(f, "Mapping function must not be null");
 
         return this.rows
             .map((row) -> {

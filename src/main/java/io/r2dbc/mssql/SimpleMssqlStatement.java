@@ -25,8 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
-import java.util.Objects;
-
 /**
  * Simple SQL statement without SQL parameter (variables) using direct ({@link SqlBatch}) execution.
  *
@@ -48,12 +46,13 @@ class SimpleMssqlStatement implements MssqlStatement<SimpleMssqlStatement> {
      * @param client the client to exchange messages with.
      * @param codecs the codecs to exchange data.
      * @param sql    the query to execute.
+     * @throws IllegalArgumentException when {@link Client}, {@link Codecs}, or {@code sql} is {@code null}.
      */
     SimpleMssqlStatement(Client client, Codecs codecs, String sql) {
 
-        Objects.requireNonNull(client, "Client must not be null");
-        Objects.requireNonNull(codecs, "Codecs must not be null");
-        Objects.requireNonNull(sql, "SQL must not be null");
+        Assert.requireNonNull(client, "Client must not be null");
+        Assert.requireNonNull(codecs, "Codecs must not be null");
+        Assert.requireNonNull(sql, "SQL must not be null");
 
         Assert.isTrue(sql.trim().length() > 0, "SQL must contain text");
 

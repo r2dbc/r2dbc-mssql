@@ -19,6 +19,7 @@ package io.r2dbc.mssql.message.token;
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.tds.Encode;
+import io.r2dbc.mssql.util.Assert;
 
 import java.util.Objects;
 
@@ -124,10 +125,11 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
      *
      * @param buffer the data buffer.
      * @return {@literal true} if the buffer contains sufficient data to entirely decode a {@link AbstractDoneToken}.
+     * @throws IllegalArgumentException when {@link ByteBuf} is {@code null}.
      */
     public static boolean canDecode(ByteBuf buffer) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
 
         return buffer.readableBytes() >= LENGTH - 1 /* Decoding always decodes the token type first
         so no need to check the for the type byte */;
@@ -137,10 +139,11 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
      * Encode this token.
      *
      * @param buffer the data buffer.
+     * @throws IllegalArgumentException when {@link ByteBuf} is {@code null}.
      */
     public void encode(ByteBuf buffer) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
 
         buffer.writeByte(getType());
         Encode.uShort(buffer, getStatus());

@@ -18,10 +18,10 @@ package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Decode;
+import io.r2dbc.mssql.util.Assert;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Order token to inform the client by which columns the data is ordered.
@@ -52,7 +52,7 @@ class OrderToken extends AbstractDataToken {
      */
     public static OrderToken decode(ByteBuf buffer) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
 
         int length = Decode.uShort(buffer);
         int readerIndex = buffer.readerIndex();
@@ -76,7 +76,7 @@ class OrderToken extends AbstractDataToken {
      */
     public static boolean canDecode(ByteBuf buffer) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
 
         Integer length = Decode.peekUShort(buffer);
         if (length != null && buffer.readableBytes() >= length + /* length field */ 2) {

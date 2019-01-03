@@ -39,7 +39,7 @@ public final class AllHeaders {
 
     private AllHeaders(List<NestedHeader> headers) {
 
-        Objects.requireNonNull(headers, "Headers must not be null");
+        Assert.requireNonNull(headers, "Headers must not be null");
 
         this.headers = headers;
 
@@ -58,10 +58,11 @@ public final class AllHeaders {
      * @param transactionDescriptor the binary transaction descriptor.
      * @param outstandingRequests   number of outstanding requests
      * @return the {@link AllHeaders} for {@link TransactionDescriptor} and {@literal outstandingRequests}.
+     * @throws IllegalArgumentException when {@link TransactionDescriptor} is {@code null}.
      */
     public static AllHeaders transactional(TransactionDescriptor transactionDescriptor, int outstandingRequests) {
 
-        Objects.requireNonNull(transactionDescriptor, "Transaction descriptor must not be null");
+        Assert.requireNonNull(transactionDescriptor, "Transaction descriptor must not be null");
 
         return transactional(transactionDescriptor.toBytes(), outstandingRequests);
     }
@@ -72,10 +73,11 @@ public final class AllHeaders {
      * @param transactionDescriptor the binary transaction descriptor.
      * @param outstandingRequests   number of outstanding requests
      * @return the {@link AllHeaders} for {@literal transactionDescriptor} and {@literal outstandingRequests}.
+     * @throws IllegalArgumentException when {@link TransactionDescriptor} is {@code null}.
      */
     public static AllHeaders transactional(byte[] transactionDescriptor, int outstandingRequests) {
 
-        Objects.requireNonNull(transactionDescriptor, "Transaction descriptor must not be null");
+        Assert.requireNonNull(transactionDescriptor, "Transaction descriptor must not be null");
 
         TransactionDescriptorHeader txDescriptor = new TransactionDescriptorHeader(transactionDescriptor, outstandingRequests
         );
@@ -151,10 +153,11 @@ public final class AllHeaders {
          * Encode this header.
          *
          * @param buffer the data buffer.
+         * @throws IllegalArgumentException when {@link ByteBuf} is {@code null}.
          */
         public void encode(ByteBuf buffer) {
 
-            Objects.requireNonNull(buffer, "Buffer must not be null");
+            Assert.requireNonNull(buffer, "Buffer must not be null");
 
             Encode.dword(buffer, getTotalLength());
             Encode.uShort(buffer, this.type);
@@ -180,7 +183,7 @@ public final class AllHeaders {
 
         public TransactionDescriptorHeader(byte[] transactionDescriptor, int outstandingRequestCount) {
 
-            super(0x2, Objects.requireNonNull(transactionDescriptor, "Transaction Descriptor must not be null").length + /* outstanding request count */ 4);
+            super(0x2, Assert.requireNonNull(transactionDescriptor, "Transaction Descriptor must not be null").length + /* outstanding request count */ 4);
 
             Assert.isTrue(transactionDescriptor.length == 8, "Transaction Descriptor must be exactly 8 bytes long");
 

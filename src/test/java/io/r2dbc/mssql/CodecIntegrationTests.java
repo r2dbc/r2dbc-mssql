@@ -32,7 +32,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Integration tests for {@link DefaultCodecs} testing all known codecs with pre-defined values and {@literal null} values.
+ * Integration tests for {@link DefaultCodecs} testing all known codecs with pre-defined values and {@code null} values.
  *
  * @author Mark Paluch
  */

@@ -18,6 +18,7 @@ package io.r2dbc.mssql.message.token;
 
 import io.r2dbc.mssql.codec.Decodable;
 import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
 import java.util.Objects;
@@ -60,8 +61,8 @@ public class Column implements Decodable {
     public Column(int index, String name, TypeInformation type, @Nullable Identifier table) {
 
         this.index = index;
-        this.name = Objects.requireNonNull(name, "Column name must not be null");
-        this.type = Objects.requireNonNull(type, "Type information must not be null");
+        this.name = Assert.requireNonNull(name, "Column name must not be null");
+        this.type = Assert.requireNonNull(type, "Type information must not be null");
         this.table = table;
     }
 
@@ -97,7 +98,7 @@ public class Column implements Decodable {
     /**
      * Returns the {@link Identifier table} name.
      *
-     * @return the {@link Identifier table} name, can be {@literal null}.
+     * @return the {@link Identifier table} name, can be {@code null}.
      */
     @Nullable
     public Identifier getTable() {

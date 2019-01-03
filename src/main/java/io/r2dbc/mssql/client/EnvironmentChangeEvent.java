@@ -17,8 +17,7 @@
 package io.r2dbc.mssql.client;
 
 import io.r2dbc.mssql.message.token.EnvChangeToken;
-
-import java.util.Objects;
+import io.r2dbc.mssql.util.Assert;
 
 /**
  * Environment change event based on a {@link EnvChangeToken}.
@@ -35,7 +34,7 @@ public class EnvironmentChangeEvent {
      * @param token the environment change token.
      */
     public EnvironmentChangeEvent(EnvChangeToken token) {
-        this.token = Objects.requireNonNull(token);
+        this.token = Assert.requireNonNull(token, "EnvChangeToken must not be null");
     }
 
     /**

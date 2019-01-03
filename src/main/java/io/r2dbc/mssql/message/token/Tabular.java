@@ -21,12 +21,12 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.ProtocolException;
+import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
@@ -53,7 +53,7 @@ public final class Tabular implements Message {
      */
     public static Tabular create(DataToken... tokens) {
 
-        Objects.requireNonNull(tokens, "Data tokens must not be null");
+        Assert.requireNonNull(tokens, "Data tokens must not be null");
 
         return new Tabular(Arrays.asList(tokens));
     }
@@ -67,7 +67,7 @@ public final class Tabular implements Message {
      */
     public static Tabular decode(ByteBuf buffer, boolean encryptionSupported) {
 
-        Objects.requireNonNull(buffer, "Buffer must not be null");
+        Assert.requireNonNull(buffer, "Buffer must not be null");
 
         return new Tabular(new TabularDecoder(encryptionSupported).decode(buffer));
     }
@@ -222,12 +222,12 @@ public final class Tabular implements Message {
      * Resolve a {@link Prelogin.Token} given its {@link Class type}.
      *
      * @param filter filter that the desired {@link DataToken} must match.
-     * @return the lookup result or {@literal null} if no {@link DataToken} matches.
+     * @return the lookup result or {@code null} if no {@link DataToken} matches.
      */
     @Nullable
     private DataToken findToken(Predicate<DataToken> filter) {
 
-        Objects.requireNonNull(filter, "Filter must not be null");
+        Assert.requireNonNull(filter, "Filter must not be null");
 
         for (DataToken token : this.tokens) {
             if (filter.test(token)) {
@@ -246,7 +246,7 @@ public final class Tabular implements Message {
      */
     <T extends DataToken> Optional<T> getToken(Class<? extends T> tokenType) {
 
-        Objects.requireNonNull(tokenType, "Token type must not be null");
+        Assert.requireNonNull(tokenType, "Token type must not be null");
 
         return Optional.ofNullable(findToken(tokenType::isInstance)).map(tokenType::cast);
     }
@@ -260,8 +260,8 @@ public final class Tabular implements Message {
      */
     <T extends DataToken> Optional<T> getToken(Class<? extends T> tokenType, Predicate<T> filter) {
 
-        Objects.requireNonNull(tokenType, "Token type must not be null");
-        Objects.requireNonNull(filter, "Filter must not be null");
+        Assert.requireNonNull(tokenType, "Token type must not be null");
+        Assert.requireNonNull(filter, "Filter must not be null");
 
         Predicate<DataToken> predicate = tokenType::isInstance;
         return Optional.ofNullable(findToken(predicate.and(dataToken -> filter.test(tokenType.cast(dataToken)))))
@@ -356,7 +356,7 @@ public final class Tabular implements Message {
          */
         public List<DataToken> decode(ByteBuf buffer) {
 
-            Objects.requireNonNull(buffer, "Buffer must not be null");
+            Assert.requireNonNull(buffer, "Buffer must not be null");
 
             List<DataToken> tokens = new ArrayList<>();
 

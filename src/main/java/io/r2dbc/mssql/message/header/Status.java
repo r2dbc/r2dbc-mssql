@@ -16,6 +16,8 @@
 
 package io.r2dbc.mssql.message.header;
 
+import io.r2dbc.mssql.util.Assert;
+
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Objects;
@@ -79,7 +81,7 @@ public class Status {
      */
     public static Status of(StatusBit bit) {
 
-        Objects.requireNonNull(bit, "StatusBit must not be null");
+        Assert.requireNonNull(bit, "StatusBit must not be null");
 
         return new Status(EnumSet.of(bit));
     }
@@ -93,8 +95,8 @@ public class Status {
      */
     public static Status of(StatusBit bit, StatusBit... other) {
 
-        Objects.requireNonNull(bit, "StatusBit must not be null");
-        Objects.requireNonNull(other, "StatusBits must not be null");
+        Assert.requireNonNull(bit, "StatusBit must not be null");
+        Assert.requireNonNull(other, "StatusBits must not be null");
 
         return new Status(EnumSet.of(bit, other));
     }
@@ -107,7 +109,7 @@ public class Status {
      */
     public Status and(StatusBit bit) {
 
-        Objects.requireNonNull(bit, "StatusBit must not be null");
+        Assert.requireNonNull(bit, "StatusBit must not be null");
 
         // If bit set, then we can optimize.
         if (this.statusBits.contains(bit)) {
@@ -128,7 +130,7 @@ public class Status {
      */
     public Status not(StatusBit bit) {
 
-        Objects.requireNonNull(bit, "StatusBit must not be null");
+        Assert.requireNonNull(bit, "StatusBit must not be null");
 
         // If bit not set, then we can optimize.
         if (!this.statusBits.contains(bit)) {
@@ -149,7 +151,7 @@ public class Status {
      */
     public boolean is(Status.StatusBit bit) {
 
-        Objects.requireNonNull(bit, "StatusBit must not be null");
+        Assert.requireNonNull(bit, "StatusBit must not be null");
 
         return this.statusBits.contains(bit);
     }

@@ -21,7 +21,6 @@ import io.r2dbc.mssql.util.Assert;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -37,8 +36,8 @@ abstract class ColumnSource {
 
     ColumnSource(List<Column> columns, Map<String, Column> nameKeyedColumns) {
 
-        Objects.requireNonNull(columns, "Columns must not be null");
-        Objects.requireNonNull(nameKeyedColumns, "Name-keyed columns must not be null");
+        Assert.requireNonNull(columns, "Columns must not be null");
+        Assert.requireNonNull(nameKeyedColumns, "Name-keyed columns must not be null");
         Assert.isTrue(columns.size() == nameKeyedColumns.size(), "The size of columns and name-keyed columns must be the same");
 
         this.columns = columns;
@@ -51,10 +50,11 @@ abstract class ColumnSource {
      * @param identifier the index or name.
      * @return the column.
      * @throws IllegalArgumentException if the column cannot be retrieved.
+     * @throws IllegalArgumentException when {@code identifier} is {@code null}.
      */
     Column getColumn(Object identifier) {
 
-        Objects.requireNonNull(identifier, "Identifier must not be null");
+        Assert.requireNonNull(identifier, "Identifier must not be null");
 
         if (identifier instanceof Integer) {
             return getColumn((int) identifier);

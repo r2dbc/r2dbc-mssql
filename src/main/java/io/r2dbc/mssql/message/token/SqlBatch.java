@@ -26,6 +26,7 @@ import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.TdsFragment;
 import io.r2dbc.mssql.message.tds.TdsPackets;
+import io.r2dbc.mssql.util.Assert;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
@@ -53,8 +54,8 @@ public final class SqlBatch implements ClientMessage, TokenStream {
      */
     private SqlBatch(int outstandingRequests, byte[] transactionDescriptor, String sql) {
 
-        Objects.requireNonNull(transactionDescriptor, "Transaction descriptor must not be null");
-        Objects.requireNonNull(sql, "SQL must not be null");
+        Assert.requireNonNull(transactionDescriptor, "Transaction descriptor must not be null");
+        Assert.requireNonNull(sql, "SQL must not be null");
 
         this.header = HeaderOptions.create(Type.SQL_BATCH, Status.empty());
         this.allHeaders = AllHeaders.transactional(transactionDescriptor, outstandingRequests);
@@ -71,8 +72,8 @@ public final class SqlBatch implements ClientMessage, TokenStream {
      */
     public static SqlBatch create(int outstandingRequests, TransactionDescriptor transactionDescriptor, String sql) {
 
-        Objects.requireNonNull(transactionDescriptor, "Transaction descriptor must not be null");
-        Objects.requireNonNull(sql, "SQL must not be null");
+        Assert.requireNonNull(transactionDescriptor, "Transaction descriptor must not be null");
+        Assert.requireNonNull(sql, "SQL must not be null");
 
         return new SqlBatch(outstandingRequests, transactionDescriptor.toBytes(), sql);
     }
@@ -80,7 +81,7 @@ public final class SqlBatch implements ClientMessage, TokenStream {
     @Override
     public Publisher<TdsFragment> encode(ByteBufAllocator allocator) {
 
-        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
 
         return Mono.fromSupplier(() -> {
 

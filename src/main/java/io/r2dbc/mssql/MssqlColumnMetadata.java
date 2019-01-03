@@ -18,9 +18,9 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.ColumnMetadata;
 
-import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -38,7 +38,7 @@ public final class MssqlColumnMetadata implements ColumnMetadata {
      * @param column the column.
      */
     MssqlColumnMetadata(Column column) {
-        this.column = Objects.requireNonNull(column, "Column must not be null");
+        this.column = Assert.requireNonNull(column, "Column must not be null");
     }
 
     @Override

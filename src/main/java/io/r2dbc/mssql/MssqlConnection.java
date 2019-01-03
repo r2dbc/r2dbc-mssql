@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
@@ -60,8 +59,8 @@ public final class MssqlConnection implements Connection {
 
     private MssqlConnection(Client client, Codecs codecs) {
 
-        this.client = Objects.requireNonNull(client, "Client must not be null");
-        this.codecs = Objects.requireNonNull(codecs, "Codecs must not be null");
+        this.client = Assert.requireNonNull(client, "Client must not be null");
+        this.codecs = Assert.requireNonNull(codecs, "Codecs must not be null");
     }
 
     @Override
@@ -112,7 +111,7 @@ public final class MssqlConnection implements Connection {
     @Override
     public Mono<Void> createSavepoint(String name) {
 
-        Objects.requireNonNull(name, "Savepoint name must not be null");
+        Assert.requireNonNull(name, "Savepoint name must not be null");
         Assert.isTrue(SAVEPOINT_PATTERN.matcher(name).matches(), "Save point names must contain only characters and numbers and must not exceed 32 characters");
 
         return useTransactionStatus(tx -> {
@@ -132,7 +131,7 @@ public final class MssqlConnection implements Connection {
     @Override
     public MssqlStatement<?> createStatement(String sql) {
 
-        Objects.requireNonNull(sql, "SQL must not be null");
+        Assert.requireNonNull(sql, "SQL must not be null");
         this.logger.debug("Creating statement for SQL: [{}]", sql);
 
         if (PreparedMssqlStatement.supports(sql)) {
@@ -170,7 +169,7 @@ public final class MssqlConnection implements Connection {
     @Override
     public Mono<Void> rollbackTransactionToSavepoint(String name) {
 
-        Objects.requireNonNull(name, "Savepoint name must not be null");
+        Assert.requireNonNull(name, "Savepoint name must not be null");
         Assert.isTrue(SAVEPOINT_PATTERN.matcher(name).matches(), "Save point names must contain only characters and numbers and must not exceed 32 characters");
 
         return useTransactionStatus(tx -> {
@@ -189,7 +188,7 @@ public final class MssqlConnection implements Connection {
     @Override
     public Mono<Void> setTransactionIsolationLevel(IsolationLevel isolationLevel) {
 
-        Objects.requireNonNull(isolationLevel, "IsolationLevel must not be null");
+        Assert.requireNonNull(isolationLevel, "IsolationLevel must not be null");
 
         return QueryMessageFlow.exchange(this.client, "SET TRANSACTION ISOLATION LEVEL " + getIsolationLevelSql(isolationLevel)).handle(MssqlException::handleErrorResponse).then();
     }

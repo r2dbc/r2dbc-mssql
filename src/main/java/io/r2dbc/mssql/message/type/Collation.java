@@ -21,6 +21,7 @@ import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.tds.ServerCharset;
+import io.r2dbc.mssql.util.Assert;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
@@ -115,7 +116,7 @@ public final class Collation {
      */
     public static Collation decode(ByteBuf buffer) {
 
-        Objects.requireNonNull(buffer, "Buffer must not be null");
+        Assert.requireNonNull(buffer, "Buffer must not be null");
 
         int info = Decode.intBigEndian(buffer); // 4 bytes, contains: LCID ColFlags Version
         int sortId = Decode.uByte(buffer); // 1 byte, contains: SortId
@@ -139,7 +140,7 @@ public final class Collation {
      */
     public void encode(ByteBuf buffer) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
 
         Encode.intBigEndian(buffer, this.lcid);
         Encode.asByte(buffer, (byte) this.sortId);

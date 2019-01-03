@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.util;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -24,9 +25,10 @@ import io.netty.util.internal.PlatformDependent;
  */
 public final class TestByteBufAllocator {
 
-	public static final ByteBufAllocator TEST = new UnpooledByteBufAllocator(PlatformDependent.directBufferPreferred(),
-			true);
+    public static final ByteBufAllocator TEST = new UnpooledByteBufAllocator(PlatformDependent.directBufferPreferred(),
+        true);
 
-	private TestByteBufAllocator() {}
+    private TestByteBufAllocator() {
+    }
 
 }

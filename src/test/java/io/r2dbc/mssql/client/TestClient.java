@@ -21,6 +21,7 @@ import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.type.Collation;
+import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.assertj.core.api.Assertions;
 import org.reactivestreams.Publisher;
@@ -32,7 +33,6 @@ import reactor.core.publisher.Mono;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -62,7 +62,7 @@ public final class TestClient implements Client {
 
         FluxSink<Flux<Message>> responses = this.responseProcessor.sink();
 
-        Objects.requireNonNull(windows)
+        Assert.requireNonNull(windows, "Windows must not be null")
             .map(window -> window.exchanges)
             .map(exchanges -> exchanges
                 .concatMap(exchange ->
@@ -93,7 +93,7 @@ public final class TestClient implements Client {
 
     @Override
     public Flux<Message> exchange(Publisher<? extends ClientMessage> requests) {
-        Objects.requireNonNull(requests, "requests must not be null");
+        Assert.requireNonNull(requests, "requests must not be null");
 
         return this.responseProcessor
             .doOnSubscribe(s ->
@@ -151,12 +151,12 @@ public final class TestClient implements Client {
         }
 
         public Builder withTransactionStatus(TransactionStatus transactionStatus) {
-            this.transactionStatus = Objects.requireNonNull(transactionStatus, "TransactionStatus must not be nul");
+            this.transactionStatus = Assert.requireNonNull(transactionStatus, "TransactionStatus must not be nuln");
             return this;
         }
 
         public Exchange.Builder<Builder> expectRequest(ClientMessage... requests) {
-            Objects.requireNonNull(requests);
+            Assert.requireNonNull(requests, "ClientMessage requests must not be null");
 
             Consumer[] consumers = Arrays.stream(requests).map(request -> {
 
@@ -168,13 +168,13 @@ public final class TestClient implements Client {
         }
 
         public Exchange.Builder<Builder> assertNextRequestWith(Consumer<ClientMessage> request) {
-            Objects.requireNonNull(request);
+            Assert.requireNonNull(request, "Client Consumer must not be null");
 
             return assertNextRequestWith(new Consumer[]{request});
         }
 
         public Exchange.Builder<Builder> assertNextRequestWith(Consumer<ClientMessage>... requests) {
-            Objects.requireNonNull(requests);
+            Assert.requireNonNull(requests, "Client Consumer must not be null");
 
             Window.Builder<Builder> window = new Window.Builder<>(this);
             this.windows.add(window);
@@ -199,8 +199,8 @@ public final class TestClient implements Client {
         private final Publisher<Message> responses;
 
         private Exchange(Flux<Consumer<? extends Message>> requests, Publisher<Message> responses) {
-            this.requests = Objects.requireNonNull(requests);
-            this.responses = Objects.requireNonNull(responses);
+            this.requests = Assert.requireNonNull(requests, "Requests must not be null");
+            this.responses = Assert.requireNonNull(responses, "Responses must not be null");
         }
 
         public static final class Builder<T> {
@@ -212,18 +212,18 @@ public final class TestClient implements Client {
             private Publisher<Message> responses;
 
             private Builder(T chain, Consumer<? extends Message>... requests) {
-                this.chain = Objects.requireNonNull(chain);
-                this.requests = Flux.just(Objects.requireNonNull(requests));
+                this.chain = Assert.requireNonNull(chain, "Request chain must not be null");
+                this.requests = Flux.just(Assert.requireNonNull(requests, "Requests must not be null"));
             }
 
             public T thenRespond(Message... responses) {
-                Objects.requireNonNull(responses);
+                Assert.requireNonNull(responses, "Responses must not be null");
 
                 return thenRespond(Flux.just(responses));
             }
 
             T thenRespond(Publisher<Message> responses) {
-                Objects.requireNonNull(responses);
+                Assert.requireNonNull(responses, "Responses must not be null");
 
                 this.responses = responses;
                 return this.chain;
@@ -240,7 +240,7 @@ public final class TestClient implements Client {
         private final Flux<Exchange> exchanges;
 
         private Window(Flux<Exchange> exchanges) {
-            this.exchanges = Objects.requireNonNull(exchanges);
+            this.exchanges = Assert.requireNonNull(exchanges, "Exchanges must not be null");
         }
 
         public static final class Builder<T> {
@@ -250,7 +250,7 @@ public final class TestClient implements Client {
             private final List<Exchange.Builder<?>> exchanges = new ArrayList<>();
 
             private Builder(T chain) {
-                this.chain = Objects.requireNonNull(chain);
+                this.chain = Assert.requireNonNull(chain, "Chain must not be null");
             }
 
             public T done() {
@@ -263,7 +263,7 @@ public final class TestClient implements Client {
 
             public Exchange.Builder<Builder<T>> assertNextRequestWith(Consumer<ClientMessage> request) {
 
-                Objects.requireNonNull(request);
+                Assert.requireNonNull(request, "Request must not be null");
 
                 Exchange.Builder<Builder<T>> exchange = new Exchange.Builder<>(this, request);
                 this.exchanges.add(exchange);

@@ -33,8 +33,6 @@ import io.r2dbc.mssql.message.tds.TdsPacket;
 import io.r2dbc.mssql.message.token.EnvChangeToken;
 import io.r2dbc.mssql.util.Assert;
 
-import java.util.Objects;
-
 /**
  * Encoder for TDS packets. This encoder can apply various strategies regarding TDS header handling:
  * <ul>
@@ -82,10 +80,11 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
      * Creates a new {@link TdsEncoder} using the given {@code packetSize}
      *
      * @param packetIdProvider provider for the {@literal packetId}.
+     * @throws IllegalArgumentException when {@link PacketIdProvider} is {@code null}.
      */
     public TdsEncoder(PacketIdProvider packetIdProvider, int packetSize) {
 
-        this.packetIdProvider = Objects.requireNonNull(packetIdProvider, "PacketId Provider must not be null");
+        this.packetIdProvider = Assert.requireNonNull(packetIdProvider, "PacketId Provider must not be null");
         this.packetSize = packetSize;
     }
 

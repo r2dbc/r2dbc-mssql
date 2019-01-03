@@ -17,10 +17,10 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.message.token.Login7;
+import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.StringUtils;
 import reactor.util.annotation.Nullable;
 
-import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -51,12 +51,12 @@ final class LoginConfiguration {
     LoginConfiguration(String username, String password, String database, String hostname, String appName,
                        String serverName, @Nullable UUID connectionId, boolean useSsl) {
 
-        this.username = Objects.requireNonNull(username, "Username must not be null");
-        this.password = Objects.requireNonNull(password, "Password must not be null");
-        this.database = Objects.requireNonNull(database, "Database must not be null");
-        this.hostname = Objects.requireNonNull(hostname, "Hostname must not be null");
+        this.username = Assert.requireNonNull(username, "Username must not be null");
+        this.password = Assert.requireNonNull(password, "Password must not be null");
+        this.database = Assert.requireNonNull(database, "Database must not be null");
+        this.hostname = Assert.requireNonNull(hostname, "Hostname must not be null");
         this.appName = appName;
-        this.serverName = Objects.requireNonNull(serverName, "Server name must not be null");
+        this.serverName = Assert.requireNonNull(serverName, "Server name must not be null");
         this.connectionId = connectionId;
         this.useSsl = useSsl;
     }

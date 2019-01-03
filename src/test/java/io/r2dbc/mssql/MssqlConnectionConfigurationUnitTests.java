@@ -21,42 +21,42 @@ import org.junit.jupiter.api.Test;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
  * Unit tests for {@link  MssqlConnectionConfiguration}.
- * 
+ *
  * @author Mark Paluch
  */
 final class MssqlConnectionConfigurationUnitTests {
 
     @Test
     void builderNoApplicationName() {
-        assertThatNullPointerException().isThrownBy(() -> MssqlConnectionConfiguration.builder().appName(null))
+        assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder().appName(null))
             .withMessage("appName must not be null");
     }
-    
+
     @Test
     void builderNoConnectionId() {
-        assertThatNullPointerException().isThrownBy(() -> MssqlConnectionConfiguration.builder().connectionId(null))
+        assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder().connectionId(null))
             .withMessage("connectionId must not be null");
     }
 
     @Test
     void builderNoHost() {
-        assertThatNullPointerException().isThrownBy(() -> MssqlConnectionConfiguration.builder().host(null))
+        assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder().host(null))
             .withMessage("host must not be null");
     }
 
     @Test
     void builderNoPassword() {
-        assertThatNullPointerException().isThrownBy(() -> MssqlConnectionConfiguration.builder().password(null))
+        assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder().password(null))
             .withMessage("password must not be null");
     }
 
     @Test
     void builderNoUsername() {
-        assertThatNullPointerException().isThrownBy(() -> MssqlConnectionConfiguration.builder().username(null))
+        assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder().username(null))
             .withMessage("username must not be null");
     }
 
@@ -102,7 +102,7 @@ final class MssqlConnectionConfigurationUnitTests {
 
     @Test
     void constructorNoNoHost() {
-        assertThatNullPointerException().isThrownBy(() -> MssqlConnectionConfiguration.builder()
+        assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder()
             .password("test-password")
             .username("test-username")
             .build())
@@ -111,7 +111,7 @@ final class MssqlConnectionConfigurationUnitTests {
 
     @Test
     void constructorNoPassword() {
-        assertThatNullPointerException().isThrownBy(() -> MssqlConnectionConfiguration.builder()
+        assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder()
             .host("test-host")
             .username("test-username")
             .build())
@@ -120,7 +120,7 @@ final class MssqlConnectionConfigurationUnitTests {
 
     @Test
     void constructorNoUsername() {
-        assertThatNullPointerException().isThrownBy(() -> MssqlConnectionConfiguration.builder()
+        assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder()
             .host("test-host")
             .password("test-password")
             .build())

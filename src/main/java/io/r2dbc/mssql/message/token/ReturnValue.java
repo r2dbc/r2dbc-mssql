@@ -26,9 +26,8 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
-
-import java.util.Objects;
 
 /**
  * A returned value from a RPC call.
@@ -87,7 +86,7 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
      */
     public static ReturnValue decode(ByteBuf buffer, boolean encryptionSupported) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
 
         int ordinal = Decode.uShort(buffer);
         String name = Decode.unicodeBString(buffer);
@@ -115,7 +114,7 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
      */
     public static boolean canDecode(ByteBuf buffer, boolean encryptionSupported) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
 
         int readerIndex = buffer.readerIndex();
 
@@ -165,8 +164,8 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
      */
     public static boolean matches(Message message, String name) {
 
-        Objects.requireNonNull(message, "Message must not be null");
-        Objects.requireNonNull(name, "Name must not be null");
+        Assert.requireNonNull(message, "Message must not be null");
+        Assert.requireNonNull(name, "Name must not be null");
 
         return message instanceof ReturnValue && name.equals(((ReturnValue) message).getParameterName());
     }
@@ -180,7 +179,7 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
      */
     public static boolean matches(Message message, int ordinal) {
 
-        Objects.requireNonNull(message, "Message must not be null");
+        Assert.requireNonNull(message, "Message must not be null");
 
         return message instanceof ReturnValue && ordinal == ((ReturnValue) message).getOrdinal();
     }

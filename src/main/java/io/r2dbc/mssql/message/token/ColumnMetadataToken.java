@@ -20,13 +20,13 @@ import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.util.Assert;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Column metadata token.
@@ -54,7 +54,7 @@ public final class ColumnMetadataToken extends AbstractDataToken {
     private ColumnMetadataToken(List<Column> columns) {
 
         super(TYPE);
-        this.columns = Collections.unmodifiableList(Objects.requireNonNull(columns, "Columns must not be null"));
+        this.columns = Collections.unmodifiableList(Assert.requireNonNull(columns, "Columns must not be null"));
 
         Map<String, Column> byName = new LinkedHashMap<>(this.columns.size());
 

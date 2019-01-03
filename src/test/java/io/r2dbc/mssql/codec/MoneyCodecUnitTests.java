@@ -56,7 +56,7 @@ class MoneyCodecUnitTests {
         EncodedAssert.assertThat(encoded).isEqualToHex("08 00");
         assertThat(encoded.getFormalType()).isEqualTo("money");
     }
-    
+
     @Test
     void shouldDecodeBigMoney() {
 

@@ -128,7 +128,7 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
     @Override
     public PreparedMssqlStatement bind(Object identifier, Object value) {
 
-        Objects.requireNonNull(identifier, "identifier must not be null");
+        Assert.requireNonNull(identifier, "identifier must not be null");
         Assert.isInstanceOf(String.class, identifier, "identifier must be a String");
 
         Encoded encoded = this.codecs.encode(this.client.getByteBufAllocator(), RpcParameterContext.in(this.client.getRequiredCollation()), value);
@@ -142,7 +142,7 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
     @Override
     public PreparedMssqlStatement bind(int index, Object value) {
 
-        Objects.requireNonNull(value, "value must not be null");
+        Assert.requireNonNull(value, "value must not be null");
 
         return bind(getParameterName(index), value);
     }
@@ -150,9 +150,9 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
     @Override
     public PreparedMssqlStatement bindNull(Object identifier, Class<?> type) {
 
-        Objects.requireNonNull(identifier, "Identifier must not be null");
+        Assert.requireNonNull(identifier, "Identifier must not be null");
         Assert.isInstanceOf(String.class, identifier, "Identifier must be a String");
-        Objects.requireNonNull(type, "type must not be null");
+        Assert.requireNonNull(type, "type must not be null");
 
         this.bindings.getCurrent().add((String) identifier, this.codecs.encodeNull(this.client.getByteBufAllocator(), type));
         return this;
@@ -161,7 +161,7 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
     @Override
     public PreparedMssqlStatement bindNull(int index, Class<?> type) {
 
-        Objects.requireNonNull(type, "Type must not be null");
+        Assert.requireNonNull(type, "Type must not be null");
 
         this.bindings.getCurrent().add(getParameterName(index), this.codecs.encodeNull(this.client.getByteBufAllocator(), type));
         return this;
@@ -194,10 +194,11 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
      *
      * @param sql the SQL to check.
      * @return {@literal true} if supported.
+     * @throws IllegalArgumentException when {@code sql} is {@code null}.
      */
-    public static boolean supports(String sql) {
+    public static boolean supports(CharSequence sql) {
 
-        Objects.requireNonNull(sql, "SQL must not be null");
+        Assert.requireNonNull(sql, "SQL must not be null");
         return PARAMETER_MATCHER.matcher(sql).find();
     }
 
@@ -316,10 +317,11 @@ final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatem
          *
          * @param sql the SQL query to parse.
          * @return the parsed query.
+         * @throws IllegalArgumentException when {@code sql} is {@code null}.
          */
         static ParsedQuery parse(String sql) {
 
-            Objects.requireNonNull(sql, "SQL must not be null");
+            Assert.requireNonNull(sql, "SQL must not be null");
 
             List<ParsedParameter> variables = new ArrayList<>();
 

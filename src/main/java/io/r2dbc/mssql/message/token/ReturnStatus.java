@@ -18,8 +18,7 @@ package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Decode;
-
-import java.util.Objects;
+import io.r2dbc.mssql.util.Assert;
 
 /**
  * Return Status token.
@@ -56,7 +55,7 @@ public class ReturnStatus extends AbstractDataToken {
      */
     public static ReturnStatus decode(ByteBuf buffer) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
 
         return new ReturnStatus(Decode.asLong(buffer));
     }
@@ -69,7 +68,7 @@ public class ReturnStatus extends AbstractDataToken {
      */
     public static boolean canDecode(ByteBuf buffer) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
 
         return buffer.readableBytes() >= 5;
     }

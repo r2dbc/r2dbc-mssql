@@ -22,12 +22,12 @@ import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.token.ColumnMetadataToken;
 import io.r2dbc.mssql.message.token.RowToken;
+import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Row;
 import reactor.util.annotation.Nullable;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
@@ -72,9 +72,9 @@ final class MssqlRow extends ColumnSource implements Row {
      */
     static MssqlRow toRow(Codecs codecs, RowToken rowToken, ColumnMetadataToken columns) {
 
-        Objects.requireNonNull(codecs, "Codecs must not be null");
-        Objects.requireNonNull(rowToken, "RowToken must not be null");
-        Objects.requireNonNull(columns, "ColMetadataToken must not be null");
+        Assert.requireNonNull(codecs, "Codecs must not be null");
+        Assert.requireNonNull(rowToken, "RowToken must not be null");
+        Assert.requireNonNull(columns, "ColMetadataToken must not be null");
 
         return new MssqlRow(codecs, columns.getColumns(), columns.toMap(), rowToken);
     }
@@ -83,8 +83,8 @@ final class MssqlRow extends ColumnSource implements Row {
     @Nullable
     public <T> T get(Object identifier, Class<T> type) {
 
-        Objects.requireNonNull(identifier, "Identifier must not be null");
-        Objects.requireNonNull(type, "Type must not be null");
+        Assert.requireNonNull(identifier, "Identifier must not be null");
+        Assert.requireNonNull(type, "Type must not be null");
         requireNotReleased();
 
         Column column = super.getColumn(identifier);

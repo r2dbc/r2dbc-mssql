@@ -34,7 +34,7 @@ public class Version implements Comparable<Version> {
     /**
      * Creates a new {@link Version} from the given integer values. At least one value has to be given but a maximum of 4.
      *
-     * @param parts must not be {@literal null} or empty.
+     * @param parts must not be {@code null} or empty.
      */
     public Version(int... parts) {
 
@@ -55,7 +55,7 @@ public class Version implements Comparable<Version> {
     /**
      * Parses the given string representation of a version into a {@link Version} object.
      *
-     * @param version must not be {@literal null} or empty.
+     * @param version must not be {@code null} or empty.
      * @return
      */
     public static Version parse(String version) {

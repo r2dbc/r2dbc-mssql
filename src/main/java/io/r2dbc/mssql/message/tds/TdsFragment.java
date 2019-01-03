@@ -17,8 +17,7 @@
 package io.r2dbc.mssql.message.tds;
 
 import io.netty.buffer.ByteBuf;
-
-import java.util.Objects;
+import io.r2dbc.mssql.util.Assert;
 
 /**
  * Fragment of a TDS message. Can be a partial or complete TDS message. Headers are supplied during encoding.
@@ -35,7 +34,7 @@ public class TdsFragment {
      * @param buffer the data buffer.
      */
     TdsFragment(ByteBuf buffer) {
-        this.byteBuf = Objects.requireNonNull(buffer, "Data buffer must not be null");
+        this.byteBuf = Assert.requireNonNull(buffer, "Data buffer must not be null");
     }
 
     /**

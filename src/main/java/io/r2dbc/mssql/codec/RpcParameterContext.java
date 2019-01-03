@@ -17,9 +17,8 @@
 package io.r2dbc.mssql.codec;
 
 import io.r2dbc.mssql.message.type.Collation;
+import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
-
-import java.util.Objects;
 
 /**
  * Parameter context for RPC parameters. Encapsulated {@link RpcDirection} and an optional {@link Collation}.
@@ -60,7 +59,7 @@ public final class RpcParameterContext {
      * @see RpcDirection#IN
      */
     public static RpcParameterContext in(Collation collation) {
-        return new RpcParameterContext(RpcDirection.IN, Objects.requireNonNull(collation, "Collation must not be null"));
+        return new RpcParameterContext(RpcDirection.IN, Assert.requireNonNull(collation, "Collation must not be null"));
     }
 
     /**
@@ -81,7 +80,7 @@ public final class RpcParameterContext {
      * @see RpcDirection#IN
      */
     public static RpcParameterContext out(Collation collation) {
-        return new RpcParameterContext(RpcDirection.OUT, Objects.requireNonNull(collation, "Collation must not be null"));
+        return new RpcParameterContext(RpcDirection.OUT, Assert.requireNonNull(collation, "Collation must not be null"));
     }
 
     /**
@@ -106,7 +105,7 @@ public final class RpcParameterContext {
     }
 
     /**
-     * @return the collation, can be {@literal null}.
+     * @return the collation, can be {@code null}.
      */
     @Nullable
     public Collation getCollation() {

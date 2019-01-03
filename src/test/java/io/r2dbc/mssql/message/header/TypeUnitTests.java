@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.message.header;
 
 import org.junit.jupiter.api.Test;
@@ -25,13 +26,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 final class TypeUnitTests {
 
-	@Test
-	void shouldResolveType() {
-		assertThat(Type.valueOf((byte) 0x1)).isEqualTo(Type.SQL_BATCH);
-	}
+    @Test
+    void shouldResolveType() {
+        assertThat(Type.valueOf((byte) 0x1)).isEqualTo(Type.SQL_BATCH);
+    }
 
-	@Test
-	void typeResolutionShouldFail() {
-		assertThatThrownBy(() -> Type.valueOf((byte) 0xFF)).hasMessageContaining("Invalid header type: 0xFF");
-	}
+    @Test
+    void typeResolutionShouldFail() {
+        assertThatThrownBy(() -> Type.valueOf((byte) 0xFF)).hasMessageContaining("Invalid header type: 0xFF");
+    }
 }

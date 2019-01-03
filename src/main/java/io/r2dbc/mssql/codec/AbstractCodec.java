@@ -20,9 +20,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
-
-import java.util.Objects;
 
 /**
  * Abstract codec class that provides a basis for all concrete
@@ -40,14 +39,14 @@ abstract class AbstractCodec<T> implements Codec<T> {
      * @param type the type handled by this codec.
      */
     AbstractCodec(Class<T> type) {
-        this.type = Objects.requireNonNull(type, "Type must not be null");
+        this.type = Assert.requireNonNull(type, "Type must not be null");
     }
 
 
     @Override
     public boolean canEncode(Object value) {
 
-        Objects.requireNonNull(value, "Value must not be null");
+        Assert.requireNonNull(value, "Value must not be null");
 
         return this.type.isInstance(value);
     }
@@ -55,9 +54,9 @@ abstract class AbstractCodec<T> implements Codec<T> {
     @Override
     public final Encoded encode(ByteBufAllocator allocator, RpcParameterContext context, T value) {
 
-        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
-        Objects.requireNonNull(context, "RpcParameterContext must not be null");
-        Objects.requireNonNull(value, "Value must not be null");
+        Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        Assert.requireNonNull(context, "RpcParameterContext must not be null");
+        Assert.requireNonNull(value, "Value must not be null");
 
         return doEncode(allocator, context, value);
     }
@@ -65,7 +64,7 @@ abstract class AbstractCodec<T> implements Codec<T> {
     @Override
     public final boolean canEncodeNull(Class<?> type) {
 
-        Objects.requireNonNull(type, "Type must not be null");
+        Assert.requireNonNull(type, "Type must not be null");
 
         return this.type.isAssignableFrom(type);
     }
@@ -73,7 +72,7 @@ abstract class AbstractCodec<T> implements Codec<T> {
     @Override
     public final Encoded encodeNull(ByteBufAllocator allocator) {
 
-        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
 
         return doEncodeNull(allocator);
     }
@@ -81,8 +80,8 @@ abstract class AbstractCodec<T> implements Codec<T> {
     @Override
     public final boolean canDecode(Decodable decodable, Class<?> type) {
 
-        Objects.requireNonNull(decodable, "Decodable must not be null");
-        Objects.requireNonNull(type, "Type must not be null");
+        Assert.requireNonNull(decodable, "Decodable must not be null");
+        Assert.requireNonNull(type, "Type must not be null");
 
         return type.isAssignableFrom(this.type) &&
             doCanDecode(decodable.getType());
@@ -91,8 +90,8 @@ abstract class AbstractCodec<T> implements Codec<T> {
     @Nullable
     public final T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type) {
 
-        Objects.requireNonNull(decodable, "Decodable must not be null");
-        Objects.requireNonNull(type, "Type must not be null");
+        Assert.requireNonNull(decodable, "Decodable must not be null");
+        Assert.requireNonNull(type, "Type must not be null");
 
         if (buffer == null) {
             return null;
@@ -105,16 +104,16 @@ abstract class AbstractCodec<T> implements Codec<T> {
     /**
      * @param allocator the allocator to allocate encoding buffers.
      * @param context   parameter context.
-     * @param value     the {@literal null} {@code value}.
+     * @param value     the {@code null} {@code value}.
      * @return the encoded value.
      */
     abstract Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, T value);
 
     /**
-     * Encode a {@literal null} value.
+     * Encode a {@code null} value.
      *
      * @param allocator the allocator to allocate encoding buffers.
-     * @return the encoded {@literal null} value.
+     * @return the encoded {@code null} value.
      */
     abstract Encoded doEncodeNull(ByteBufAllocator allocator);
 
@@ -133,7 +132,7 @@ abstract class AbstractCodec<T> implements Codec<T> {
      * @param length    length of the column data.
      * @param type      the type descriptor.
      * @param valueType the desired value type.
-     * @return the decoded value. Can be {@literal null} if the column value is {@literal null}.
+     * @return the decoded value. Can be {@code null} if the column value is {@code null}.
      */
     @Nullable
     abstract T doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends T> valueType);

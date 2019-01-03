@@ -34,13 +34,13 @@ public enum LengthStrategy {
 
     /**
      * Variable length type such as {@code VARCHAR}, {@code VARBINARY} (2 bytes) as length
-     * descriptor (0-65534), {@code -1} represents {@literal null}
+     * descriptor (0-65534), {@code -1} represents {@code null}
      */
     USHORTLENTYPE,
 
     /**
      * Variable length type such as {@code TEXT} and  {@code IMAGE} using a {@code long} (4 bytes) as length
-     * descriptor (0-2GB), {@code -1} represents {@literal null}.
+     * descriptor (0-2GB), {@code -1} represents {@code null}.
      */
     LONGLENTYPE,
 

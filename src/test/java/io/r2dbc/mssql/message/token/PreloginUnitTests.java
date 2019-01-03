@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
@@ -30,112 +31,112 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link Prelogin}.
- * 
+ *
  * @author Mark Paluch
  */
 final class PreloginUnitTests {
 
-	@Test
-	void shouldUsePreloginHeader() {
+    @Test
+    void shouldUsePreloginHeader() {
 
-		Prelogin prelogin = Prelogin.builder().build();
+        Prelogin prelogin = Prelogin.builder().build();
 
-		Mono.from(prelogin.encode(TestByteBufAllocator.TEST))
-			.cast(ContextualTdsFragment.class)
-			.as(StepVerifier::create)
-			.consumeNextWith(actual -> {
-				assertThat(actual.getHeaderOptions().getType()).isEqualTo(Type.PRE_LOGIN);
-			}).verifyComplete();
-	}
-	
-	@Test
-	void shouldEncodePrelogin() {
+        Mono.from(prelogin.encode(TestByteBufAllocator.TEST))
+            .cast(ContextualTdsFragment.class)
+            .as(StepVerifier::create)
+            .consumeNextWith(actual -> {
+                assertThat(actual.getHeaderOptions().getType()).isEqualTo(Type.PRE_LOGIN);
+            }).verifyComplete();
+    }
 
-		Prelogin prelogin = Prelogin.builder().build();
-		ByteBuf buffer = Unpooled.buffer(32);
+    @Test
+    void shouldEncodePrelogin() {
 
-		prelogin.encode(buffer);
+        Prelogin prelogin = Prelogin.builder().build();
+        ByteBuf buffer = Unpooled.buffer(32);
 
-		String result = ByteBufUtil.prettyHexDump(buffer);
+        prelogin.encode(buffer);
 
-		// Version header at offset 10, length 6
-		assertThat(result).containsSequence("00 00 10 00 06");
-	}
+        String result = ByteBufUtil.prettyHexDump(buffer);
 
-	@Test
-	void shouldEncodePreloginVersion() {
+        // Version header at offset 10, length 6
+        assertThat(result).containsSequence("00 00 10 00 06");
+    }
 
-		Prelogin.Version token = new Prelogin.Version(0, 0);
+    @Test
+    void shouldEncodePreloginVersion() {
 
-		assertThat(token.getTokenHeaderLength()).isEqualTo(5);
-		assertThat(token.getDataLength()).isEqualTo(6);
+        Prelogin.Version token = new Prelogin.Version(0, 0);
 
-		ByteBuf buffer = Unpooled.buffer(11);
+        assertThat(token.getTokenHeaderLength()).isEqualTo(5);
+        assertThat(token.getDataLength()).isEqualTo(6);
 
-		token.encodeToken(buffer, 0);
-		token.encodeStream(buffer);
+        ByteBuf buffer = Unpooled.buffer(11);
 
-		// Token header sequence
-		assertThat(buffer.array()).startsWith(0, 0, 0, 0, 6);
+        token.encodeToken(buffer, 0);
+        token.encodeStream(buffer);
 
-		// Token data sequence
-		assertThat(buffer.array()).endsWith(0, 0, 0, 0, 0, 0);
-	}
+        // Token header sequence
+        assertThat(buffer.array()).startsWith(0, 0, 0, 0, 6);
 
-	@Test
-	void shouldEncodeEncryption() {
+        // Token data sequence
+        assertThat(buffer.array()).endsWith(0, 0, 0, 0, 0, 0);
+    }
 
-		Prelogin.Encryption token = new Prelogin.Encryption(Prelogin.Encryption.ENCRYPT_NOT_SUP);
+    @Test
+    void shouldEncodeEncryption() {
 
-		assertThat(token.getTokenHeaderLength()).isEqualTo(5);
-		assertThat(token.getDataLength()).isEqualTo(1);
+        Prelogin.Encryption token = new Prelogin.Encryption(Prelogin.Encryption.ENCRYPT_NOT_SUP);
 
-		ByteBuf buffer = Unpooled.buffer(6);
+        assertThat(token.getTokenHeaderLength()).isEqualTo(5);
+        assertThat(token.getDataLength()).isEqualTo(1);
 
-		token.encodeToken(buffer, 0);
-		token.encodeStream(buffer);
+        ByteBuf buffer = Unpooled.buffer(6);
 
-		// Token header sequence
-		assertThat(buffer.array()).startsWith(1, 0, 0, 0, 1);
+        token.encodeToken(buffer, 0);
+        token.encodeStream(buffer);
 
-		// Token data sequence
-		assertThat(buffer.array()).endsWith(Prelogin.Encryption.ENCRYPT_NOT_SUP);
-	}
+        // Token header sequence
+        assertThat(buffer.array()).startsWith(1, 0, 0, 0, 1);
 
-	@Test
-	void shouldDecodePreloginResponse() {
+        // Token data sequence
+        assertThat(buffer.array()).endsWith(Prelogin.Encryption.ENCRYPT_NOT_SUP);
+    }
 
-		// Server version 14.0.3038.14
-		// Encryption disabled
-		// Instance validation 0x00
-		String response = "00 00 10 00 06 01 00 16 00 01 02 00 17 00 01 ff 0e 00 0b de 00 00 02 00";
+    @Test
+    void shouldDecodePreloginResponse() {
 
-		ByteBuf buffer = HexUtils.decodeToByteBuf(response);
-		Prelogin prelogin = Prelogin.decode(buffer);
+        // Server version 14.0.3038.14
+        // Encryption disabled
+        // Instance validation 0x00
+        String response = "00 00 10 00 06 01 00 16 00 01 02 00 17 00 01 ff 0e 00 0b de 00 00 02 00";
 
-		assertThat(prelogin.getTokens()).hasSize(4);
-		assertThat(prelogin.getToken(Prelogin.Version.class)).isNotEmpty().hasValueSatisfying(actual -> {
+        ByteBuf buffer = HexUtils.decodeToByteBuf(response);
+        Prelogin prelogin = Prelogin.decode(buffer);
 
-			assertThat(actual.getVersion()).isEqualTo(14);
-			assertThat(actual.getSubbuild()).isEqualTo((short) 3038);
-		});
+        assertThat(prelogin.getTokens()).hasSize(4);
+        assertThat(prelogin.getToken(Prelogin.Version.class)).isNotEmpty().hasValueSatisfying(actual -> {
 
-		assertThat(prelogin.getToken(Prelogin.Encryption.class)).isNotEmpty().hasValueSatisfying(actual -> {
+            assertThat(actual.getVersion()).isEqualTo(14);
+            assertThat(actual.getSubbuild()).isEqualTo((short) 3038);
+        });
 
-			assertThat(actual.getEncryption()).isEqualTo(Prelogin.Encryption.ENCRYPT_NOT_SUP);
-		});
+        assertThat(prelogin.getToken(Prelogin.Encryption.class)).isNotEmpty().hasValueSatisfying(actual -> {
 
-		assertThat(prelogin.getToken(Prelogin.Terminator.class)).hasValue(Prelogin.Terminator.INSTANCE);
-	}
+            assertThat(actual.getEncryption()).isEqualTo(Prelogin.Encryption.ENCRYPT_NOT_SUP);
+        });
 
-	@Test
-	void decodeShouldConsumeRemainingBytes() {
+        assertThat(prelogin.getToken(Prelogin.Terminator.class)).hasValue(Prelogin.Terminator.INSTANCE);
+    }
 
-		String response = "00 00 10 00 06 01 00 16 00 01 02 00 17 00 01 ff 0e 00 0b de 00 00 02 00 01 02 03 04";
+    @Test
+    void decodeShouldConsumeRemainingBytes() {
 
-		ByteBuf buffer = HexUtils.decodeToByteBuf(response);
-		Prelogin.decode(buffer);
+        String response = "00 00 10 00 06 01 00 16 00 01 02 00 17 00 01 ff 0e 00 0b de 00 00 02 00 01 02 03 04";
 
-		assertThat(buffer.readerIndex()).isEqualTo(buffer.writerIndex());
-	}
+        ByteBuf buffer = HexUtils.decodeToByteBuf(response);
+        Prelogin.decode(buffer);
+
+        assertThat(buffer.readerIndex()).isEqualTo(buffer.writerIndex());
+    }
 }

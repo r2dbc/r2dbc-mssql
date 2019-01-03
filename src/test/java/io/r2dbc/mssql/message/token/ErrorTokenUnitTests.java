@@ -24,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link ErrorToken}.
- * 
+ *
  * @author Mark Paluch
  */
 class ErrorTokenUnitTests {

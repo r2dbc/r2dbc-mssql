@@ -44,9 +44,9 @@ public final class Length {
     }
 
     /**
-     * Creates a {@link Length} that indicates the value is {@literal null}.
+     * Creates a {@link Length} that indicates the value is {@code null}.
      *
-     * @return a {@link Length} for {@literal null}.
+     * @return a {@link Length} for {@code null}.
      */
     public static Length nullLength() {
         return new Length(0, true);
@@ -55,7 +55,7 @@ public final class Length {
     /**
      * Creates a {@link Length} with a given {@code length}.
      *
-     * @return a {@link Length} for a non-{@literal null} value of the given {@code length}.
+     * @return a {@link Length} for a non-{@code null} value of the given {@code length}.
      */
     public static Length of(int length) {
         return new Length(length, false);
@@ -65,7 +65,7 @@ public final class Length {
      * Creates a {@link Length}.
      *
      * @param length value length.
-     * @param isNull {@literal true} if the value is {@literal null}.
+     * @param isNull {@literal true} if the value is {@code null}.
      * @return the {@link Length}.
      */
     public static Length of(int length, boolean isNull) {

@@ -16,20 +16,20 @@
 
 package io.r2dbc.mssql;
 
-import static org.assertj.core.api.Assertions.assertThatNullPointerException;
-
 import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
  * Unit tests for {@link MssqlConnectionFactory}.
- * 
+ *
  * @author Mark Paluch
  */
 final class MssqlConnectionFactoryUnitTests {
 
     @Test
     void constructorNoClientFactory() {
-        assertThatNullPointerException().isThrownBy(() -> new MssqlConnectionFactory(null, MssqlConnectionConfiguration.builder()
+        assertThatIllegalArgumentException().isThrownBy(() -> new MssqlConnectionFactory(null, MssqlConnectionConfiguration.builder()
             .host("test-host")
             .password("test-password")
             .username("test-username")
@@ -39,7 +39,7 @@ final class MssqlConnectionFactoryUnitTests {
 
     @Test
     void constructorNoConfiguration() {
-        assertThatNullPointerException().isThrownBy(() -> new MssqlConnectionFactory(null))
+        assertThatIllegalArgumentException().isThrownBy(() -> new MssqlConnectionFactory(null))
             .withMessage("configuration must not be null");
     }
 

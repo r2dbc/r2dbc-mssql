@@ -22,8 +22,6 @@ import io.r2dbc.mssql.message.header.Header;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.util.Assert;
 
-import java.util.Objects;
-
 /**
  * Self-contained TDS packet containing a {@link Header} and {@link ByteBuf data}. Self-contained TDS packets must
  * consist of a single message that does not exceed the negotiated packet size.
@@ -38,7 +36,7 @@ public final class TdsPacket extends TdsFragment {
 
         super(buffer);
 
-        this.header = Objects.requireNonNull(header, "Header must not be null!");
+        this.header = Assert.requireNonNull(header, "Header must not be null!");
 
         int expectedBodySize = header.getLength() - Header.LENGTH;
         Assert.isTrue(buffer.readableBytes() == expectedBodySize,
@@ -52,10 +50,11 @@ public final class TdsPacket extends TdsFragment {
      *
      * @param allocator the allocator.
      * @return the encoded buffer.
+     * @throws IllegalArgumentException when {@link ByteBufAllocator} is {@code null}.
      */
     public ByteBuf encode(ByteBufAllocator allocator) {
 
-        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
 
         ByteBuf buffer = allocator.buffer(this.header.getLength());
 
@@ -74,11 +73,12 @@ public final class TdsPacket extends TdsFragment {
      * @param allocator        the allocator.
      * @param packetIdProvider the {@link PacketIdProvider}.
      * @return the encoded buffer.
+     * @throws IllegalArgumentException when {@link ByteBufAllocator} or {@link PacketIdProvider} is {@code null}.
      */
     public ByteBuf encode(ByteBufAllocator allocator, PacketIdProvider packetIdProvider) {
 
-        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
-        Objects.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
+        Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        Assert.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
 
         ByteBuf buffer = allocator.buffer(this.header.getLength());
 

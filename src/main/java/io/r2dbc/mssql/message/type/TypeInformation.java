@@ -17,10 +17,10 @@
 package io.r2dbc.mssql.message.type;
 
 import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
 import java.nio.charset.Charset;
-import java.util.Objects;
 
 /**
  * Type information for a column following the {@code TYPE_INFO} rule
@@ -104,7 +104,7 @@ public interface TypeInformation {
     int getUserType();
 
     /**
-     * Returns the user type name. Can be {@literal null} if this type information is not related to a user type.
+     * Returns the user type name. Can be {@code null} if this type information is not related to a user type.
      *
      * @return the user type name.
      */
@@ -112,7 +112,7 @@ public interface TypeInformation {
     String getUdtTypeName();
 
     /**
-     * Returns the {@link Collation}. Can be {@literal null} if this type information has no collation details.
+     * Returns the {@link Collation}. Can be {@code null} if this type information has no collation details.
      *
      * @return the {@link Collation}.
      */
@@ -120,7 +120,7 @@ public interface TypeInformation {
     Collation getCollation();
 
     /**
-     * Returns the {@link Charset}. Can be {@literal null} if this type information has no collation details.
+     * Returns the {@link Charset}. Can be {@code null} if this type information has no collation details.
      *
      * @return the {@link Charset}.
      * @see #getCollation()
@@ -218,7 +218,7 @@ public interface TypeInformation {
          * @return {@literal this} {@link Builder}.
          */
         public Builder withCharset(Charset charset) {
-            this.charset = Objects.requireNonNull(charset, "Charset must not be null");
+            this.charset = Assert.requireNonNull(charset, "Charset must not be null");
             return this;
         }
 
@@ -229,7 +229,7 @@ public interface TypeInformation {
          * @return {@literal this} {@link Builder}.
          */
         public Builder withCollation(Collation collation) {
-            this.collation = Objects.requireNonNull(collation, "Collation must not be null");
+            this.collation = Assert.requireNonNull(collation, "Collation must not be null");
             return this;
         }
 
@@ -262,7 +262,7 @@ public interface TypeInformation {
          * @return {@literal this} {@link Builder}.
          */
         public Builder withLengthStrategy(LengthStrategy lengthStrategy) {
-            this.lengthStrategy = Objects.requireNonNull(lengthStrategy, "LengthStrategy must not be null");
+            this.lengthStrategy = Assert.requireNonNull(lengthStrategy, "LengthStrategy must not be null");
             return this;
         }
 
@@ -306,7 +306,7 @@ public interface TypeInformation {
          * @return {@literal this} {@link Builder}.
          */
         public Builder withServerType(SqlServerType serverType) {
-            this.serverType = Objects.requireNonNull(serverType, "SqlServerType must not be null");
+            this.serverType = Assert.requireNonNull(serverType, "SqlServerType must not be null");
 
             return this;
         }

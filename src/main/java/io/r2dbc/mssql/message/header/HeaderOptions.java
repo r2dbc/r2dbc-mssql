@@ -16,7 +16,7 @@
 
 package io.r2dbc.mssql.message.header;
 
-import java.util.Objects;
+import io.r2dbc.mssql.util.Assert;
 
 /**
  * Base header options defining {@link Type} and {@link Status}. Typically used to provide a TDS packet context so
@@ -55,8 +55,8 @@ public interface HeaderOptions {
      */
     static HeaderOptions create(Type type, Status status) {
 
-        Objects.requireNonNull(type, "Type must not be null");
-        Objects.requireNonNull(status, "Status must not be null");
+        Assert.requireNonNull(type, "Type must not be null");
+        Assert.requireNonNull(status, "Status must not be null");
 
         return new DefaultHeaderOptions(type, status);
     }

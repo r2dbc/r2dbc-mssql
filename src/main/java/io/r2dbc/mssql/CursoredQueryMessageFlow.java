@@ -43,7 +43,6 @@ import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.SynchronousSink;
 
 import javax.annotation.processing.Completion;
-import java.util.Objects;
 import java.util.function.Predicate;
 
 import static io.r2dbc.mssql.util.PredicateUtils.or;
@@ -99,8 +98,8 @@ final class CursoredQueryMessageFlow {
      */
     static Flux<Message> exchange(Client client, Codecs codecs, String query, int fetchSize) {
 
-        Objects.requireNonNull(client, "Client must not be null");
-        Objects.requireNonNull(query, "Query must not be null");
+        Assert.requireNonNull(client, "Client must not be null");
+        Assert.requireNonNull(query, "Query must not be null");
 
         EmitterProcessor<ClientMessage> outbound = EmitterProcessor.create(false);
         FluxSink<ClientMessage> requests = outbound.sink();
@@ -155,11 +154,12 @@ final class CursoredQueryMessageFlow {
      * @param binding        parameter bindings.
      * @param fetchSize      the number of rows to fetch. TODO: Try to determine fetch size from current demand and apply demand function.
      * @return the messages received in response to this exchange.
+     * @throws IllegalArgumentException when {@link Client} or {@code query} is {@code null}.
      */
     static Flux<Message> exchange(PreparedStatementCache statementCache, Client client, Codecs codecs, String query, Binding binding, int fetchSize) {
 
-        Objects.requireNonNull(client, "Client must not be null");
-        Objects.requireNonNull(query, "Query must not be null");
+        Assert.requireNonNull(client, "Client must not be null");
+        Assert.requireNonNull(query, "Query must not be null");
 
         EmitterProcessor<ClientMessage> outbound = EmitterProcessor.create(false);
         FluxSink<ClientMessage> requests = outbound.sink();
@@ -331,12 +331,13 @@ final class CursoredQueryMessageFlow {
      * @param collation             the database collation.
      * @param transactionDescriptor transaction descriptor.
      * @return {@link RpcRequest} for {@link RpcRequest#Sp_CursorOpen}.
+     * @throws IllegalArgumentException when {@code query}, {@link Collation}, or {@link TransactionDescriptor} is {@code null}.
      */
     static RpcRequest spCursorOpen(String query, Collation collation, TransactionDescriptor transactionDescriptor) {
 
-        Objects.requireNonNull(query, "Query must not be null");
-        Objects.requireNonNull(collation, "Collation must not be null");
-        Objects.requireNonNull(transactionDescriptor, "TransactionDescriptor must not be null");
+        Assert.requireNonNull(query, "Query must not be null");
+        Assert.requireNonNull(collation, "Collation must not be null");
+        Assert.requireNonNull(transactionDescriptor, "TransactionDescriptor must not be null");
 
         int resultSetScrollOpt = SCROLLOPT_FAST_FORWARD;
         int resultSetCCOpt = CCOPT_READ_ONLY | CCOPT_ALLOW_DIRECT;
@@ -360,11 +361,13 @@ final class CursoredQueryMessageFlow {
      * @param rowCount              number of rows to fetch
      * @param transactionDescriptor transaction descriptor.
      * @return {@link RpcRequest} for {@link RpcRequest#Sp_CursorFetch}.
+     * @throws IllegalArgumentException when {@link TransactionDescriptor} is {@code null}.
+     * @throws IllegalArgumentException when {@code rowCount} is less than zero.
      */
     static RpcRequest spCursorFetch(int cursor, int fetchType, int rowCount, TransactionDescriptor transactionDescriptor) {
 
         Assert.isTrue(rowCount >= 0, "Row count must be greater or equal to zero");
-        Objects.requireNonNull(transactionDescriptor, "TransactionDescriptor must not be null");
+        Assert.requireNonNull(transactionDescriptor, "TransactionDescriptor must not be null");
 
         return RpcRequest.builder() //
             .withProcId(RpcRequest.Sp_CursorFetch) //
@@ -383,10 +386,11 @@ final class CursoredQueryMessageFlow {
      * @param cursor                the cursor Id.
      * @param transactionDescriptor transaction descriptor.
      * @return {@link RpcRequest} for {@link RpcRequest#Sp_CursorFetch}.
+     * @throws IllegalArgumentException when {@link TransactionDescriptor} is {@code null}.
      */
     static RpcRequest spCursorClose(int cursor, TransactionDescriptor transactionDescriptor) {
 
-        Objects.requireNonNull(transactionDescriptor, "TransactionDescriptor must not be null");
+        Assert.requireNonNull(transactionDescriptor, "TransactionDescriptor must not be null");
 
         return RpcRequest.builder() //
             .withProcId(RpcRequest.Sp_CursorClose) //

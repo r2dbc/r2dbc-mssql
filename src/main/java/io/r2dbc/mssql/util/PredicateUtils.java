@@ -17,7 +17,6 @@
 package io.r2dbc.mssql.util;
 
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.function.Predicate;
 
 /**
@@ -34,10 +33,11 @@ public final class PredicateUtils {
      * @param t   the predicate to negate
      * @param <T> the type of element being tested
      * @return a negated predicate
+     * @throws IllegalArgumentException when {@link Predicate} is {@code null}.
      * @see Predicate#negate()
      */
     public static <T> Predicate<T> not(Predicate<T> t) {
-        Objects.requireNonNull(t, "t must not be null");
+        Assert.requireNonNull(t, "t must not be null");
 
         return t.negate();
     }
@@ -48,11 +48,12 @@ public final class PredicateUtils {
      * @param ts  the predicates to logical OR
      * @param <T> the type of element being tested
      * @return a local ORd collection of predicates
+     * @throws IllegalArgumentException when {@link Predicate predicates} is {@code null}.
      */
     @SafeVarargs
     @SuppressWarnings("varargs")
     public static <T> Predicate<T> or(Predicate<T>... ts) {
-        Objects.requireNonNull(ts, "ts must not be null");
+        Assert.requireNonNull(ts, "ts must not be null");
 
         return Arrays.stream(ts).reduce(Predicate::or).orElseThrow(() -> new IllegalStateException("Unable to combine predicates together via logical OR"));
     }

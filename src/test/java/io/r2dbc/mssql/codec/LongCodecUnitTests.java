@@ -52,7 +52,7 @@ class LongCodecUnitTests {
         EncodedAssert.assertThat(encoded).isEqualToHex("08 00");
         assertThat(encoded.getFormalType()).isEqualTo("bigint");
     }
-    
+
     @Test
     void shouldBeAbleToDecode() {
 

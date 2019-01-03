@@ -20,8 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 
-import java.util.Objects;
-
 /**
  * Utilities for working with {@link ByteBuf}s.
  */
@@ -33,12 +31,12 @@ public final class HexUtils {
     /**
      * Decode a {@link String} containing Hex-encoded bytes into a {@link ByteBuf}.
      *
-     * @param sequence the {@link String} to decode
+     * @param chars the {@link String} to decode
      * @return the {@link ByteBuf} decoded from the {@link String}
      */
     public static ByteBuf decodeToByteBuf(String chars) {
 
-        Objects.requireNonNull(chars, "String must not be null");
+        Assert.requireNonNull(chars, "String must not be null");
 
         return Unpooled.wrappedBuffer(ByteBufUtil.decodeHexDump(chars.replaceAll(" ", "")));
     }

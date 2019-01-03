@@ -38,7 +38,10 @@ import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.SynchronousSink;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link CursoredQueryMessageFlow}.

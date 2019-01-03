@@ -38,7 +38,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -368,10 +367,11 @@ public final class Login7 implements TokenStream, ClientMessage {
          *
          * @param tdsVersion the TDS protocol version.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@link TDSVersion} is {@code null}.
          */
         public Builder tdsVersion(TDSVersion tdsVersion) {
 
-            this.tdsVersion = Objects.requireNonNull(tdsVersion, "TDS version must not be null");
+            this.tdsVersion = Assert.requireNonNull(tdsVersion, "TDS version must not be null");
             return this;
         }
 
@@ -391,10 +391,11 @@ public final class Login7 implements TokenStream, ClientMessage {
          *
          * @param optionFlags1 option 1 flags.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@link OptionFlags1} is {@code null}.
          */
         public Builder optionFlags1(OptionFlags1 optionFlags1) {
 
-            this.optionFlags1 = Objects.requireNonNull(optionFlags1, "Option flags 1 must not be null");
+            this.optionFlags1 = Assert.requireNonNull(optionFlags1, "Option flags 1 must not be null");
             return this;
         }
 
@@ -403,10 +404,11 @@ public final class Login7 implements TokenStream, ClientMessage {
          *
          * @param optionFlags2 option 2 flags.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@link OptionFlags2} is {@code null}.
          */
         public Builder optionFlags2(OptionFlags2 optionFlags2) {
 
-            this.optionFlags2 = Objects.requireNonNull(optionFlags2, "Option flags 2 must not be null");
+            this.optionFlags2 = Assert.requireNonNull(optionFlags2, "Option flags 2 must not be null");
             return this;
         }
 
@@ -415,10 +417,11 @@ public final class Login7 implements TokenStream, ClientMessage {
          *
          * @param optionFlags3 option 3 flags.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@link OptionFlags3} is {@code null}.
          */
         public Builder optionFlags3(OptionFlags3 optionFlags3) {
 
-            this.optionFlags3 = Objects.requireNonNull(optionFlags3, "Option flags 3 must not be null");
+            this.optionFlags3 = Assert.requireNonNull(optionFlags3, "Option flags 3 must not be null");
             return this;
         }
 
@@ -427,10 +430,11 @@ public final class Login7 implements TokenStream, ClientMessage {
          *
          * @param typeFlags the type flags.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@link TypeFlags} is {@code null}.
          */
         public Builder typeFlags(TypeFlags typeFlags) {
 
-            this.typeFlags = Objects.requireNonNull(typeFlags, "Type flags must not be null");
+            this.typeFlags = Assert.requireNonNull(typeFlags, "Type flags must not be null");
             return this;
         }
 
@@ -439,10 +443,11 @@ public final class Login7 implements TokenStream, ClientMessage {
          *
          * @param username login username.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@code username} is {@code null}.
          */
         public Builder username(CharSequence username) {
 
-            this.username = Objects.requireNonNull(username, "Username must not be null");
+            this.username = Assert.requireNonNull(username, "Username must not be null");
             return this;
         }
 
@@ -451,10 +456,11 @@ public final class Login7 implements TokenStream, ClientMessage {
          *
          * @param password login password.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@code password} is {@code null}.
          */
         public Builder password(CharSequence password) {
 
-            Objects.requireNonNull(password, "Password must not be null");
+            Assert.requireNonNull(password, "Password must not be null");
             Assert.isTrue(password.length() < 128, "Password name must be shorter than 128 chars");
 
             this.password = password;
@@ -466,10 +472,11 @@ public final class Login7 implements TokenStream, ClientMessage {
          *
          * @param appName the application name.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@code appName} is {@code null}.
          */
         public Builder appName(CharSequence appName) {
 
-            Objects.requireNonNull(appName, "App name must not be null");
+            Assert.requireNonNull(appName, "App name must not be null");
             Assert.isTrue(appName.length() < 128, "Application name must be shorter than 128 chars");
 
             this.appName = appName;
@@ -481,10 +488,11 @@ public final class Login7 implements TokenStream, ClientMessage {
          *
          * @param clientLibraryName driver name.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@code clientLibraryName} is {@code null}.
          */
         public Builder clientLibraryName(CharSequence clientLibraryName) {
 
-            Objects.requireNonNull(clientLibraryName, "Client library name must not be null");
+            Assert.requireNonNull(clientLibraryName, "Client library name must not be null");
             Assert.isTrue(clientLibraryName.length() < 128, "Client library name must be shorter than 128 chars");
 
             this.clientLibraryName = clientLibraryName;
@@ -496,10 +504,11 @@ public final class Login7 implements TokenStream, ClientMessage {
          *
          * @param clientLibraryVersion driver version.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@link Version} is {@code null}.
          */
         public Builder clientLibraryVersion(Version clientLibraryVersion) {
 
-            this.clientLibraryVersion = Objects.requireNonNull(clientLibraryVersion,
+            this.clientLibraryVersion = Assert.requireNonNull(clientLibraryVersion,
                 "Client library version must not be null");
             return this;
         }
@@ -509,10 +518,11 @@ public final class Login7 implements TokenStream, ClientMessage {
          *
          * @param hostname the client hostname.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@code hostname} is {@code null}.
          */
         public Builder hostName(CharSequence hostname) {
 
-            Objects.requireNonNull(hostname, "Hostname must not be null");
+            Assert.requireNonNull(hostname, "Hostname must not be null");
             Assert.isTrue(hostname.length() < 128, "Hostname name must be shorter than 128 chars");
 
             this.hostname = hostname;
@@ -524,10 +534,11 @@ public final class Login7 implements TokenStream, ClientMessage {
          *
          * @param databaseName the initial database name.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@code databaseName} is {@code null}.
          */
         public Builder database(CharSequence databaseName) {
 
-            Objects.requireNonNull(databaseName, "Database name must not be null");
+            Assert.requireNonNull(databaseName, "Database name must not be null");
             Assert.isTrue(databaseName.length() < 128, "Database name must be shorter than 128 chars");
 
             this.databaseName = databaseName;
@@ -539,10 +550,11 @@ public final class Login7 implements TokenStream, ClientMessage {
          *
          * @param serverName the remote server name.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@code serverName} is {@code null}.
          */
         public Builder serverName(CharSequence serverName) {
 
-            Objects.requireNonNull(serverName, "Server name must not be null");
+            Assert.requireNonNull(serverName, "Server name must not be null");
             Assert.isTrue(serverName.length() < 128, "Server name must be shorter than 128 chars");
 
             this.serverName = serverName;
@@ -554,10 +566,11 @@ public final class Login7 implements TokenStream, ClientMessage {
          *
          * @param clientId the client Id.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@code clientId} is {@code null}.
          */
         public Builder clientId(byte[] clientId) {
 
-            Objects.requireNonNull(clientId, "Client name must not be null");
+            Assert.requireNonNull(clientId, "Client name must not be null");
             Assert.isTrue(clientId.length == 6, "Client Id must be exactly 6 chars");
 
             this.clientId = Arrays.copyOf(clientId, 6);
@@ -580,6 +593,7 @@ public final class Login7 implements TokenStream, ClientMessage {
          * Build a new {@link Login7} message.
          *
          * @return a new {@link Login7} message.
+         * @throws IllegalStateException if {@code username}, {@code password}, or {@code databaseName} is {@code null} (unconfigured).
          */
         public Login7 build() {
 

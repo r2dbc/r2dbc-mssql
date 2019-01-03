@@ -18,10 +18,9 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.ReactorNettyClient;
+import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.ConnectionFactory;
 import reactor.core.publisher.Mono;
-
-import java.util.Objects;
 
 /**
  * An implementation of {@link ConnectionFactory} for creating connections to a Microsoft SQL Server database.
@@ -38,18 +37,19 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
      * Creates a new connection factory.
      *
      * @param configuration the configuration to use connections
+     * @throws IllegalArgumentException when {@link MssqlConnectionConfiguration} is {@code null}.
      */
     public MssqlConnectionFactory(MssqlConnectionConfiguration configuration) {
         this(Mono.defer(() -> {
-            Objects.requireNonNull(configuration, "configuration must not be null");
+            Assert.requireNonNull(configuration, "configuration must not be null");
 
             return ReactorNettyClient.connect(configuration.getHost(), configuration.getPort()).cast(Client.class);
         }), configuration);
     }
 
     MssqlConnectionFactory(Mono<? extends Client> clientFactory, MssqlConnectionConfiguration configuration) {
-        this.clientFactory = Objects.requireNonNull(clientFactory, "clientFactory must not be null");
-        this.configuration = Objects.requireNonNull(configuration, "configuration must not be null");
+        this.clientFactory = Assert.requireNonNull(clientFactory, "clientFactory must not be null");
+        this.configuration = Assert.requireNonNull(configuration, "configuration must not be null");
     }
 
     @Override

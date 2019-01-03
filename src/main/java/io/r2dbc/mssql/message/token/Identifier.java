@@ -48,7 +48,7 @@ public final class Identifier {
         this.serverName = serverName;
         this.databaseName = databaseName;
         this.schemaName = schemaName;
-        this.objectName = Objects.requireNonNull(objectName, "Object name must not be null");
+        this.objectName = Assert.requireNonNull(objectName, "Object name must not be null");
     }
 
     /**
@@ -56,6 +56,7 @@ public final class Identifier {
      *
      * @param objectName the object name.
      * @return the {@link Identifier} for {@code objectName}.
+     * @throws IllegalArgumentException when {@code objectName} is {@code null}.
      */
     public static Identifier objectName(String objectName) {
         return new Identifier(null, null, null, objectName);
@@ -75,10 +76,11 @@ public final class Identifier {
      *
      * @param buffer the data buffer.
      * @return the decoded {@link Identifier}.
+     * @throws IllegalArgumentException when {@link ByteBuf} is {@code null}.
      */
     public static Identifier decode(ByteBuf buffer) {
 
-        Objects.requireNonNull(buffer, "Buffer must not be null");
+        Assert.requireNonNull(buffer, "Buffer must not be null");
 
         // Multi-part names should have between 1 and 4 parts
         int parts = Decode.uByte(buffer);
@@ -204,12 +206,13 @@ public final class Identifier {
         /**
          * Configure an {@code objectName}.
          *
-         * @param objectName the object name, must not be {@literal null}.
+         * @param objectName the object name, must not be {@code null}.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@code objectName} is {@code null}.
          */
         public Builder objectName(String objectName) {
 
-            this.objectName = Objects.requireNonNull(objectName, "Object name must not be null");
+            this.objectName = Assert.requireNonNull(objectName, "Object name must not be null");
 
             return this;
         }
@@ -217,12 +220,13 @@ public final class Identifier {
         /**
          * Configure a {@code schemaName}.
          *
-         * @param schemaName the schema name, must not be {@literal null}.
+         * @param schemaName the schema name, must not be {@code null}.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@code schemaName} is {@code null}.
          */
         public Builder schemaName(String schemaName) {
 
-            this.schemaName = Objects.requireNonNull(schemaName, "Schema name must not be null");
+            this.schemaName = Assert.requireNonNull(schemaName, "Schema name must not be null");
 
             return this;
         }
@@ -230,12 +234,13 @@ public final class Identifier {
         /**
          * Configure a {@code databaseName}.
          *
-         * @param databaseName the database name, must not be {@literal null}.
+         * @param databaseName the database name, must not be {@code null}.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@link ByteBuf} is {@code null}.
          */
         public Builder databaseName(String databaseName) {
 
-            this.databaseName = Objects.requireNonNull(databaseName, "Database name must not be null");
+            this.databaseName = Assert.requireNonNull(databaseName, "Database name must not be null");
 
             return this;
         }
@@ -243,12 +248,13 @@ public final class Identifier {
         /**
          * Configure a {@code serverName}. Requires the {@link #databaseName(String)} be set if the server name is not empty.
          *
-         * @param serverName the server name, must not be {@literal null}.
+         * @param serverName the server name, must not be {@code null}.
          * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@code serverName} is {@code null}.
          */
         public Builder serverName(String serverName) {
 
-            this.serverName = Objects.requireNonNull(serverName, "Server name must not be null");
+            this.serverName = Assert.requireNonNull(serverName, "Server name must not be null");
 
             return this;
         }

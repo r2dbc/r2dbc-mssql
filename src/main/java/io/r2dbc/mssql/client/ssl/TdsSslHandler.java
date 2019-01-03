@@ -32,6 +32,7 @@ import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.tds.ContextualTdsFragment;
 import io.r2dbc.mssql.message.tds.TdsFragment;
+import io.r2dbc.mssql.util.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.util.annotation.Nullable;
@@ -44,7 +45,6 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.Objects;
 
 /**
  * SSL handling for TDS connections.
@@ -85,7 +85,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
      */
     public TdsSslHandler(PacketIdProvider packetIdProvider) {
 
-        Objects.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
+        Assert.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
 
         this.packetIdProvider = packetIdProvider;
     }

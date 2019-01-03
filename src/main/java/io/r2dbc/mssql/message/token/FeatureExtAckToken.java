@@ -19,10 +19,10 @@ package io.r2dbc.mssql.message.token;
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.ProtocolException;
+import io.r2dbc.mssql.util.Assert;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Feature Extension Acknowledgement token.
@@ -50,7 +50,7 @@ public class FeatureExtAckToken extends AbstractDataToken {
      */
     public static FeatureExtAckToken decode(ByteBuf buffer) {
 
-        Objects.requireNonNull(buffer, "Buffer must not be null");
+        Assert.requireNonNull(buffer, "Buffer must not be null");
 
         List<FeatureToken> featureTokens = new ArrayList<>();
 
@@ -138,7 +138,7 @@ public class FeatureExtAckToken extends AbstractDataToken {
          */
         public static ColumnEncryption decode(ByteBuf buffer) {
 
-            Objects.requireNonNull(buffer, "Buffer must not be null");
+            Assert.requireNonNull(buffer, "Buffer must not be null");
 
             long length = Decode.dword(buffer);
 
@@ -190,7 +190,7 @@ public class FeatureExtAckToken extends AbstractDataToken {
          */
         public static UnknownFeature decode(byte featureId, ByteBuf buffer) {
 
-            Objects.requireNonNull(buffer, "Buffer must not be null");
+            Assert.requireNonNull(buffer, "Buffer must not be null");
 
             long length = Decode.dword(buffer);
             byte[] bytes = new byte[Math.toIntExact(length)];

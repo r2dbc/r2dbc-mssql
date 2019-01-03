@@ -88,8 +88,8 @@ public class Header implements HeaderOptions {
 
     public Header(Type type, Status status, short length, short spid, byte packetId, byte window) {
 
-        Objects.requireNonNull(type, "Type must not be null");
-        Objects.requireNonNull(status, "sStatus must not be null");
+        Assert.requireNonNull(type, "Type must not be null");
+        Assert.requireNonNull(status, "sStatus must not be null");
         Assert.isTrue(length >= 8, "Header length must be greater or equal to 8");
 
         this.type = type;
@@ -107,11 +107,12 @@ public class Header implements HeaderOptions {
      * @param length
      * @param packetIdProvider the {@link PacketIdProvider}.
      * @return the {@link Header}.
+     * @throws IllegalArgumentException when {@link HeaderOptions} or {@link PacketIdProvider} is {@code null}.
      */
     public static Header create(HeaderOptions options, int length, PacketIdProvider packetIdProvider) {
 
-        Objects.requireNonNull(options, "HeaderOptions must not be null");
-        Objects.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
+        Assert.requireNonNull(options, "HeaderOptions must not be null");
+        Assert.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
 
         return new Header(options.getType(), options.getStatus(), length, 0, packetIdProvider.nextPacketId(), 0);
     }
@@ -149,10 +150,11 @@ public class Header implements HeaderOptions {
      *
      * @param allocator the byteBufAllocator to use to get a {@link ByteBuf} to write into
      * @return a {@link Publisher} that produces the {@link ByteBuf} containing the encoded message
+     * @throws IllegalArgumentException when {@link ByteBufAllocator} is {@code null}.
      */
     Publisher<ByteBuf> encode(ByteBufAllocator allocator) {
 
-        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
 
         return Mono.fromSupplier(() -> {
 
@@ -173,11 +175,15 @@ public class Header implements HeaderOptions {
 
     /**
      * Encode a header into a {@link ByteBuf}.
+     *
+     * @param buffer           the target {@link ByteBuf}.
+     * @param packetIdProvider must not be {@code null}.
+     * @throws IllegalArgumentException when {@link HeaderOptions} or {@link PacketIdProvider} is {@code null}.
      */
     public void encode(ByteBuf buffer, PacketIdProvider packetIdProvider) {
 
-        Objects.requireNonNull(buffer, "ByteBuf must not be null");
-        Objects.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
+        Assert.requireNonNull(buffer, "ByteBuf must not be null");
+        Assert.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
 
         buffer.ensureWritable(8);
 

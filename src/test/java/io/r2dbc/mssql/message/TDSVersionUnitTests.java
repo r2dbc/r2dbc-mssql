@@ -13,24 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.r2dbc.mssql.message;
 
-import static org.assertj.core.api.Assertions.assertThat;
+package io.r2dbc.mssql.message;
 
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 /**
  * Unit tests for {@link TDSVersion}.
- * 
+ *
  * @author Mark Paluch
  */
 final class TDSVersionUnitTests {
 
-	@Test
-	void shouldCompareGreaterVersion() {
+    @Test
+    void shouldCompareGreaterVersion() {
 
-		assertThat(TDSVersion.VER_KATMAI.isGreateOrEqualsTo(TDSVersion.VER_YUKON)).isTrue();
-		assertThat(TDSVersion.VER_KATMAI.isGreateOrEqualsTo(TDSVersion.VER_KATMAI)).isTrue();
-		assertThat(TDSVersion.VER_KATMAI.isGreateOrEqualsTo(TDSVersion.VER_DENALI)).isFalse();
-	}
+        assertThat(TDSVersion.VER_KATMAI.isGreateOrEqualsTo(TDSVersion.VER_YUKON)).isTrue();
+        assertThat(TDSVersion.VER_KATMAI.isGreateOrEqualsTo(TDSVersion.VER_KATMAI)).isTrue();
+        assertThat(TDSVersion.VER_KATMAI.isGreateOrEqualsTo(TDSVersion.VER_DENALI)).isFalse();
+    }
 }

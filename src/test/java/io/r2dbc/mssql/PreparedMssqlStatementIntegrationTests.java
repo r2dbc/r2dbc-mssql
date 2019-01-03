@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.util.IntegrationTestSupport;
@@ -31,25 +32,25 @@ class PreparedMssqlStatementIntegrationTests extends IntegrationTestSupport {
     void shouldExecuteBatch() {
 
         connection.createStatement("DROP TABLE r2dbc_example").execute()
-                .flatMap(MssqlResult::getRowsUpdated)
-                .onErrorResume(e -> Mono.empty())
-                .thenMany(connection.createStatement("CREATE TABLE r2dbc_example (" +
-                        "id int PRIMARY KEY IDENTITY(1,1), " +
-                        "first_name varchar(255), " +
-                        "last_name varchar(255))")
-                        .execute().flatMap(MssqlResult::getRowsUpdated).then())
-                .as(StepVerifier::create)
-                .verifyComplete();
+            .flatMap(MssqlResult::getRowsUpdated)
+            .onErrorResume(e -> Mono.empty())
+            .thenMany(connection.createStatement("CREATE TABLE r2dbc_example (" +
+                "id int PRIMARY KEY IDENTITY(1,1), " +
+                "first_name varchar(255), " +
+                "last_name varchar(255))")
+                .execute().flatMap(MssqlResult::getRowsUpdated).then())
+            .as(StepVerifier::create)
+            .verifyComplete();
 
         connection.createStatement("INSERT INTO r2dbc_example (first_name, last_name) values (@fn, @ln)")
-                .bind("fn", "Walter").bind("ln", "White").add()
-                .bind("fn", "Hank").bind("ln", "Schrader").add()
-                .bind("fn", "Skyler").bind("ln", "White")
-                .execute()
-                .flatMap(MssqlResult::getRowsUpdated)
-                .as(StepVerifier::create)
-                .expectNext(1, 1, 1)
-                .verifyComplete();
+            .bind("fn", "Walter").bind("ln", "White").add()
+            .bind("fn", "Hank").bind("ln", "Schrader").add()
+            .bind("fn", "Skyler").bind("ln", "White")
+            .execute()
+            .flatMap(MssqlResult::getRowsUpdated)
+            .as(StepVerifier::create)
+            .expectNext(1, 1, 1)
+            .verifyComplete();
 
     }
 }

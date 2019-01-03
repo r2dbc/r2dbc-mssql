@@ -20,11 +20,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.message.tds.Decode;
+import io.r2dbc.mssql.util.Assert;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * NBC Row (Null-bitmap compressed row). Expresses nullability through a bitmap.
@@ -42,7 +42,7 @@ public class NbcRowToken extends RowToken {
      *
      * @param data       the row data.
      * @param toRelease  item to {@link ReferenceCounted#release()} on {@link #deallocate() de-allocation}.
-     * @param nullMarker {@literal null} bitmap.
+     * @param nullMarker {@code null} bitmap.
      */
     private NbcRowToken(List<ByteBuf> data, ReferenceCounted toRelease, boolean[] nullMarker) {
         super(data, toRelease);
@@ -58,8 +58,8 @@ public class NbcRowToken extends RowToken {
      */
     public static NbcRowToken decode(ByteBuf buffer, List<Column> columns) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
-        Objects.requireNonNull(columns, "List of Columns must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(columns, "List of Columns must not be null");
 
         ByteBuf copy = buffer.copy();
 
@@ -81,8 +81,8 @@ public class NbcRowToken extends RowToken {
      */
     public static boolean canDecode(ByteBuf buffer, List<Column> columns) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
-        Objects.requireNonNull(columns, "List of Columns must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(columns, "List of Columns must not be null");
 
         int readerIndex = buffer.readerIndex();
         int nullBitmapSize = getNullBitmapSize(columns);

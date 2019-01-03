@@ -36,6 +36,7 @@ import io.r2dbc.mssql.message.token.AbstractInfoToken;
 import io.r2dbc.mssql.message.token.EnvChangeToken;
 import io.r2dbc.mssql.message.token.FeatureExtAckToken;
 import io.r2dbc.mssql.message.type.Collation;
+import io.r2dbc.mssql.util.Assert;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +52,6 @@ import reactor.netty.tcp.TcpClient;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -153,7 +153,7 @@ public final class ReactorNettyClient implements Client {
      * @param connection the TCP connection
      */
     private ReactorNettyClient(Connection connection, List<EnvironmentChangeListener> envChangeListeners) {
-        Objects.requireNonNull(connection, "Connection must not be null");
+        Assert.requireNonNull(connection, "Connection must not be null");
 
         FluxSink<Flux<Message>> responses = this.responseProcessor.sink();
 
@@ -214,7 +214,7 @@ public final class ReactorNettyClient implements Client {
      */
     public static Mono<ReactorNettyClient> connect(String host, int port) {
 
-        Objects.requireNonNull(host, "host must not be null");
+        Assert.requireNonNull(host, "host must not be null");
 
         return connect(ConnectionProvider.newConnection(), host, port);
     }
@@ -228,8 +228,8 @@ public final class ReactorNettyClient implements Client {
      */
     public static Mono<ReactorNettyClient> connect(ConnectionProvider connectionProvider, String host, int port) {
 
-        Objects.requireNonNull(connectionProvider, "connectionProvider must not be null");
-        Objects.requireNonNull(host, "host must not be null");
+        Assert.requireNonNull(connectionProvider, "connectionProvider must not be null");
+        Assert.requireNonNull(host, "host must not be null");
 
         PacketIdProvider packetIdProvider = PacketIdProvider.atomic();
 
@@ -284,7 +284,7 @@ public final class ReactorNettyClient implements Client {
     @Override
     public Flux<Message> exchange(Publisher<? extends ClientMessage> requests) {
 
-        Objects.requireNonNull(requests, "Requests must not be null");
+        Assert.requireNonNull(requests, "Requests must not be null");
 
         return Flux.defer(() -> {
             if (this.isClosed.get()) {

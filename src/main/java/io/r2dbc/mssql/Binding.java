@@ -17,6 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.codec.Encoded;
+import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
 import java.util.LinkedHashMap;
@@ -46,8 +47,8 @@ class Binding {
      */
     public Binding add(String name, Encoded parameter) {
 
-        Objects.requireNonNull(name, "Name must not be null");
-        Objects.requireNonNull(parameter, "Parameter must not be null");
+        Assert.requireNonNull(name, "Name must not be null");
+        Assert.requireNonNull(parameter, "Parameter must not be null");
 
         this.formalRepresentation = null;
         this.parameters.put(name, parameter);
@@ -94,7 +95,7 @@ class Binding {
      */
     public void forEach(BiConsumer<String, Encoded> action) {
 
-        Objects.requireNonNull(action, "Action must not be null");
+        Assert.requireNonNull(action, "Action must not be null");
 
         this.parameters.forEach(action);
     }

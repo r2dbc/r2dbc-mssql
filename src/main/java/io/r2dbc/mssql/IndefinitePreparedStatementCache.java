@@ -16,8 +16,9 @@
 
 package io.r2dbc.mssql;
 
+import io.r2dbc.mssql.util.Assert;
+
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -32,8 +33,8 @@ class IndefinitePreparedStatementCache implements PreparedStatementCache {
     @Override
     public int getHandle(String sql, Binding binding) {
 
-        Objects.requireNonNull(sql, "SQL query must not be null");
-        Objects.requireNonNull(binding, "Binding query must not be null");
+        Assert.requireNonNull(sql, "SQL query must not be null");
+        Assert.requireNonNull(binding, "Binding query must not be null");
 
         return this.preparedStatements.getOrDefault(createKey(sql, binding), UNPREPARED);
     }
@@ -41,8 +42,8 @@ class IndefinitePreparedStatementCache implements PreparedStatementCache {
     @Override
     public void putHandle(int handle, String sql, Binding binding) {
 
-        Objects.requireNonNull(sql, "SQL query must not be null");
-        Objects.requireNonNull(binding, "Binding query must not be null");
+        Assert.requireNonNull(sql, "SQL query must not be null");
+        Assert.requireNonNull(binding, "Binding query must not be null");
 
         this.preparedStatements.put(createKey(sql, binding), handle);
     }

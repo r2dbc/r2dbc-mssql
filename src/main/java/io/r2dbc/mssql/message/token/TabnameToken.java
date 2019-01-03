@@ -18,10 +18,10 @@ package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Decode;
+import io.r2dbc.mssql.util.Assert;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Table name token. Used to send the table name to the client only when in browser mode or from cursors.
@@ -48,7 +48,7 @@ public class TabnameToken extends AbstractDataToken {
      */
     public static TabnameToken decode(ByteBuf buffer) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
 
         int length = Decode.uShort(buffer);
 
@@ -71,7 +71,7 @@ public class TabnameToken extends AbstractDataToken {
      */
     public static boolean canDecode(ByteBuf buffer) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
 
         if (buffer.readableBytes() >= 5) {
 

@@ -19,7 +19,6 @@ package io.r2dbc.mssql.message;
 import io.r2dbc.mssql.util.Assert;
 
 import java.util.Arrays;
-import java.util.Objects;
 
 /**
  * Descriptor for the transaction state.
@@ -37,7 +36,7 @@ public final class TransactionDescriptor {
 
     private TransactionDescriptor(byte[] descriptor) {
 
-        Objects.requireNonNull(descriptor, "Descriptor bytes must not be null");
+        Assert.requireNonNull(descriptor, "Descriptor bytes must not be null");
         Assert.isTrue(descriptor.length == LENGTH, "Descriptor must be 8 bytes long");
 
         this.descriptor = Arrays.copyOf(descriptor, descriptor.length);

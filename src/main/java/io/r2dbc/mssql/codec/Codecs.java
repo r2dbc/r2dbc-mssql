@@ -35,21 +35,21 @@ import reactor.util.annotation.Nullable;
 public interface Codecs {
 
     /**
-     * Encode a non-{@literal null} {@code value} as RPC parameter.
+     * Encode a non-{@code null} {@code value} as RPC parameter.
      *
      * @param allocator the allocator to allocate encoding buffers.
      * @param context   parameter context.
-     * @param value     the {@literal null} {@code value}.
+     * @param value     the {@code null} {@code value}.
      * @return the encoded value. Must be {@link ReferenceCounted#release() released} after usage.
      */
     Encoded encode(ByteBufAllocator allocator, RpcParameterContext context, Object value);
 
     /**
-     * Encode a {@literal null} value for a specific {@link Class type}.
+     * Encode a {@code null} value for a specific {@link Class type}.
      *
      * @param allocator the allocator to allocate encoding buffers.
-     * @param type      the type to represent {@literal null}.
-     * @return the encoded {@literal null} value.
+     * @param type      the type to represent {@code null}.
+     * @return the encoded {@code null} value.
      */
     Encoded encodeNull(ByteBufAllocator allocator, Class<?> type);
 
@@ -60,7 +60,7 @@ public interface Codecs {
      * @param decodable the decodable metadata.
      * @param type      the type to decode to.
      * @param <T>       the type of item being returned.
-     * @return the decoded value. Can be {@literal null} if the column value is {@literal NULL}.
+     * @return the decoded value. Can be {@code null} if the column value is {@code null}.
      */
     @Nullable
     <T> T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type);

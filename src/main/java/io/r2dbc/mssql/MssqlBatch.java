@@ -18,12 +18,12 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.Codecs;
+import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Batch;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * An implementation of {@link Batch} for executing a collection of statements in a batch against a Microsoft SQL Server database.
@@ -38,20 +38,16 @@ public final class MssqlBatch implements Batch<MssqlBatch> {
 
     private final List<String> statements = new ArrayList<>();
 
-    /**
-     * @param client
-     * @param codecs
-     */
     MssqlBatch(Client client, Codecs codecs) {
 
-        this.client = Objects.requireNonNull(client, "Client must not be null");
-        this.codecs = Objects.requireNonNull(codecs, "Codecs must not be null");
+        this.client = Assert.requireNonNull(client, "Client must not be null");
+        this.codecs = Assert.requireNonNull(codecs, "Codecs must not be null");
     }
 
     @Override
     public MssqlBatch add(String sql) {
 
-        Objects.requireNonNull(sql, "SQL must not be null");
+        Assert.requireNonNull(sql, "SQL must not be null");
 
         this.statements.add(sql);
         return this;

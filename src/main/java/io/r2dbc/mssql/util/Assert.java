@@ -194,6 +194,40 @@ public final class Assert {
     }
 
     /**
+     * Assert that an object is not {@code null} and return the non-null instance.
+     *
+     * <pre class="code">
+     * Class&lt?&gt; nonNullObject = Assert.requireNonNull(clazz, "The class must not be null");
+     * </pre>
+     *
+     * @param object  the object to check
+     * @param message the exception message to use if the assertion fails
+     * @return the non-null {@code object}
+     * @throws IllegalArgumentException if the object is {@code null}
+     */
+    public static <T> T requireNonNull(@Nullable T object, String message) {
+        notNull(object, message);
+        return object;
+    }
+
+    /**
+     * Assert that an object is not {@code null} and return the non-null instance.
+     *
+     * <pre class="code">
+     * Class&lt?&gt; nonNullObject = Assert.requireNonNull(clazz, () -&gt; "The class '" + clazz.getName() + "' must not be null");
+     * </pre>
+     *
+     * @param object          the object to check
+     * @param messageSupplier a supplier for the exception message to use if the assertion fails
+     * @return the non-null {@code object}
+     * @throws IllegalArgumentException if the object is {@code null}
+     */
+    public static <T> T requireNonNull(@Nullable T object, Supplier<String> messageSupplier) {
+        notNull(object, messageSupplier);
+        return object;
+    }
+
+    /**
      * Assert that the provided object is an instance of the provided class.
      * <pre class="code">Assert.instanceOf(Foo.class, foo, "Foo expected");</pre>
      *
@@ -294,7 +328,6 @@ public final class Assert {
     public static void isAssignable(Class<?> superType, Class<?> subType) {
         isAssignable(superType, subType, "");
     }
-
 
     private static void instanceCheckFailed(Class<?> type, @Nullable Object obj, @Nullable String msg) {
         String className = (obj != null ? obj.getClass().getName() : "null");

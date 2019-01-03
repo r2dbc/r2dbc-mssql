@@ -20,11 +20,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.message.type.Length;
+import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Row token message containing row bytes.
@@ -47,7 +47,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      */
     RowToken(List<ByteBuf> data, ReferenceCounted toRelease) {
 
-        this.data = Objects.requireNonNull(data, "Row data must not be null");
+        this.data = Assert.requireNonNull(data, "Row data must not be null");
         this.toRelease = toRelease;
     }
 
@@ -60,8 +60,8 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      */
     public static RowToken decode(ByteBuf buffer, List<Column> columns) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
-        Objects.requireNonNull(columns, "List of Columns must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(columns, "List of Columns must not be null");
 
         ByteBuf copy = buffer.copy();
 
@@ -83,8 +83,8 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      */
     public static boolean canDecode(ByteBuf buffer, List<Column> columns) {
 
-        Objects.requireNonNull(buffer, "Data buffer must not be null");
-        Objects.requireNonNull(columns, "List of Columns must not be null");
+        Assert.requireNonNull(buffer, "Data buffer must not be null");
+        Assert.requireNonNull(columns, "List of Columns must not be null");
 
         int readerIndex = buffer.readerIndex();
 
@@ -163,7 +163,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      * Returns the {@link ByteBuf data} for the column at {@code index}.
      *
      * @param index the column {@code index}.
-     * @return the data buffer. Can be {@literal null} if indicated by null-bit compression.
+     * @return the data buffer. Can be {@code null} if indicated by null-bit compression.
      */
     @Nullable
     public ByteBuf getColumnData(int index) {

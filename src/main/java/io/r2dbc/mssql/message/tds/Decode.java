@@ -17,10 +17,10 @@
 package io.r2dbc.mssql.message.tds;
 
 import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
 import java.nio.charset.Charset;
-import java.util.Objects;
 
 /**
  * TDS-specific decode methods. This utility provides decoding methods according to TDS types.
@@ -164,10 +164,10 @@ public final class Decode {
 
     /**
      * Peek onto the next {@link #uShort(ByteBuf)}. This method retains the {@link ByteBuf#readerIndex()} and returns the {@code USHORT} value if it is readable (i.e. if the buffer has at least two
-     * readable bytes). Returns {@literal null} if not readable.
+     * readable bytes). Returns {@code null} if not readable.
      *
      * @param buffer the data buffer.
-     * @return the peeked {@code USHORT} value or {@literal null}.
+     * @return the peeked {@code USHORT} value or {@code null}.
      */
     @Nullable
     public static Integer peekUShort(ByteBuf buffer) {
@@ -224,8 +224,8 @@ public final class Decode {
      */
     private static String as(ByteBuf buffer, int length, Charset charset) {
 
-        Objects.requireNonNull(buffer, "Buffer must not be null");
-        Objects.requireNonNull(charset, "Charset must not be null");
+        Assert.requireNonNull(buffer, "Buffer must not be null");
+        Assert.requireNonNull(charset, "Charset must not be null");
 
         String result = buffer.toString(buffer.readerIndex(), length, charset);
         buffer.skipBytes(length);

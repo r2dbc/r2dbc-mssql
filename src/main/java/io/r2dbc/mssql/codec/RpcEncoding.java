@@ -47,7 +47,7 @@ public final class RpcEncoding {
      * @param name      optional parameter name.
      * @param direction RPC parameter direction (in/out)
      * @param collation parameter value encoding.
-     * @param value     the parameter value, can be {@literal null}.
+     * @param value     the parameter value, can be {@code null}.
      */
     public static void encodeString(ByteBuf buffer, @Nullable String name, RpcDirection direction, Collation collation, @Nullable String value) {
 
@@ -63,7 +63,7 @@ public final class RpcEncoding {
      * @param buffer    the data buffer.
      * @param name      optional parameter name.
      * @param direction RPC parameter direction (in/out)
-     * @param value     the parameter value, can be {@literal null}.
+     * @param value     the parameter value, can be {@code null}.
      */
     public static void encodeInteger(ByteBuf buffer, @Nullable String name, RpcDirection direction, @Nullable Integer value) {
 
@@ -83,7 +83,7 @@ public final class RpcEncoding {
      * Encode an RPC header that writes {@code name}, {@link RpcDirection}, and the {@link TdsDataType}.
      *
      * @param buffer    the data buffer.
-     * @param name      name of the parameter, can be {@literal null}.
+     * @param name      name of the parameter, can be {@code null}.
      * @param direction the parameter direction.
      * @param dataType  TDS data type.
      */
@@ -159,11 +159,11 @@ public final class RpcEncoding {
     }
 
     /**
-     * Encode a {@literal null} RPC parameter that declares length and max-length attributes and apply a {@link SqlServerType} hint.
+     * Encode a {@code null} RPC parameter that declares length and max-length attributes and apply a {@link SqlServerType} hint.
      *
      * @param allocator  the allocator to allocate encoding buffers.
      * @param serverType the server data type. Used to derive the nullable {@link TdsDataType}.
-     * @return the encoded {@literal null} value.
+     * @return the encoded {@code null} value.
      */
     public static Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
 
@@ -175,11 +175,11 @@ public final class RpcEncoding {
     }
 
     /**
-     * Encode a temporal typed {@literal null} RPC parameter.
+     * Encode a temporal typed {@code null} RPC parameter.
      *
      * @param allocator  the allocator to allocate encoding buffers.
      * @param serverType the server data type. Used to derive the nullable {@link TdsDataType}.
-     * @return the encoded {@literal null} value.
+     * @return the encoded {@code null} value.
      */
     public static Encoded encodeTemporalNull(ByteBufAllocator allocator, SqlServerType serverType) {
 
@@ -192,12 +192,12 @@ public final class RpcEncoding {
     }
 
     /**
-     * Encode a temporal scaled {@literal null} RPC parameter.
+     * Encode a temporal scaled {@code null} RPC parameter.
      *
      * @param allocator  the allocator to allocate encoding buffers.
      * @param serverType the server data type. Used to derive the nullable {@link TdsDataType}.
      * @param scale      type scale.
-     * @return the encoded {@literal null} value.
+     * @return the encoded {@code null} value.
      */
     public static <T> Encoded encodeTemporalNull(ByteBufAllocator allocator, SqlServerType serverType, int scale) {
 

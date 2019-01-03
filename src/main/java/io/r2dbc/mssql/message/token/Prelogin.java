@@ -30,6 +30,7 @@ import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.tds.TdsFragment;
+import io.r2dbc.mssql.util.Assert;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
@@ -60,7 +61,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
      */
     public Prelogin(List<? extends Token> tokens) {
 
-        Objects.requireNonNull(tokens, "Tokens must not be null");
+        Assert.requireNonNull(tokens, "Tokens must not be null");
         this.tokens = tokens;
     }
 
@@ -79,7 +80,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
      */
     public static Prelogin decode(ByteBuf buffer) {
 
-        Objects.requireNonNull(buffer, "ByteBuf must not be null");
+        Assert.requireNonNull(buffer, "ByteBuf must not be null");
 
         List<Token> decodedTokens = new ArrayList<>();
         Prelogin prelogin = new Prelogin(decodedTokens);
@@ -138,7 +139,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
      */
     public <T extends Token> Optional<T> getToken(Class<? extends T> tokenType) {
 
-        Objects.requireNonNull(tokenType, "Token type must not be null");
+        Assert.requireNonNull(tokenType, "Token type must not be null");
 
         for (Token token : this.tokens) {
             if (tokenType.isInstance(token)) {
@@ -157,7 +158,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
      */
     public <T extends Token> T getRequiredToken(Class<? extends T> tokenType) {
 
-        Objects.requireNonNull(tokenType, "Token type must not be null");
+        Assert.requireNonNull(tokenType, "Token type must not be null");
 
         return getToken(tokenType).orElseThrow(
             () -> new IllegalArgumentException(String.format("No token of type [%s] available", tokenType.getName())));
@@ -171,7 +172,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
     @Override
     public Publisher<TdsFragment> encode(ByteBufAllocator allocator) {
 
-        Objects.requireNonNull(allocator, "ByteBufAllocator must not be null");
+        Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
 
         return Mono.fromSupplier(() -> {
 
@@ -292,7 +293,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
          */
         public Builder withConnectionId(UUID connectionId) {
 
-            Objects.requireNonNull(connectionId, "ConnectionID must not be null");
+            Assert.requireNonNull(connectionId, "ConnectionID must not be null");
             this.connectionId = connectionId;
 
             return this;
@@ -306,7 +307,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
          */
         public Builder withActivityId(UUID activityId) {
 
-            Objects.requireNonNull(activityId, "Activity ID must not be null");
+            Assert.requireNonNull(activityId, "Activity ID must not be null");
             this.activityId = activityId;
 
             return this;
@@ -376,7 +377,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
 
         public Builder withInstanceName(String instanceName) {
 
-            Objects.requireNonNull(instanceName, "Instance name must not be null");
+            Assert.requireNonNull(instanceName, "Instance name must not be null");
             this.instanceName = instanceName;
 
             return this;
@@ -439,9 +440,9 @@ public final class Prelogin implements TokenStream, ClientMessage {
         static <T extends Token> T decode(TokenDecodingState toDecode, LengthValidator validator,
                                           DecodeFunction<T> decoder) {
 
-            Objects.requireNonNull(toDecode, "TokenDecodingState must not be null");
-            Objects.requireNonNull(validator, "LengthValidator must not be null");
-            Objects.requireNonNull(decoder, "DecodeFunction must not be null");
+            Assert.requireNonNull(toDecode, "TokenDecodingState must not be null");
+            Assert.requireNonNull(validator, "LengthValidator must not be null");
+            Assert.requireNonNull(decoder, "DecodeFunction must not be null");
 
             ByteBuf buffer = toDecode.buffer;
             short position = buffer.readShort();
@@ -669,7 +670,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
          */
         private InstanceValidation(byte[] instanceName) {
 
-            super(TYPE, Objects.requireNonNull(instanceName, "Instance name must not be null").length);
+            super(TYPE, Assert.requireNonNull(instanceName, "Instance name must not be null").length);
             this.instanceName = instanceName;
         }
 
@@ -707,7 +708,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
         // TODO: find an approach to use Encode.as(…)
         private static byte[] toBytes(String instanceName) {
 
-            Objects.requireNonNull(instanceName, "Instance name must not be null");
+            Assert.requireNonNull(instanceName, "Instance name must not be null");
             byte[] name = instanceName.getBytes(StandardCharsets.UTF_8);
             byte[] result = new byte[name.length + 1];
             System.arraycopy(name, 0, result, 0, name.length);

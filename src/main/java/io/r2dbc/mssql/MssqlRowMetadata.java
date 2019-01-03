@@ -17,13 +17,13 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.message.token.Column;
+import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.RowMetadata;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Microsoft SQL Server-specific {@link RowMetadata}.
@@ -42,7 +42,7 @@ final class MssqlRowMetadata implements RowMetadata {
      * @param columnSource the source of {@link Column}s.
      */
     public MssqlRowMetadata(ColumnSource columnSource) {
-        this.columnSource = Objects.requireNonNull(columnSource, "ColumnSource must not be null");
+        this.columnSource = Assert.requireNonNull(columnSource, "ColumnSource must not be null");
     }
 
     @Override

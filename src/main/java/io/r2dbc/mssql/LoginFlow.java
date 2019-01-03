@@ -26,11 +26,11 @@ import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.Login7;
 import io.r2dbc.mssql.message.token.Prelogin;
+import io.r2dbc.mssql.util.Assert;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.r2dbc.mssql.util.PredicateUtils.or;
@@ -52,8 +52,8 @@ final class LoginFlow {
      */
     static Flux<Message> exchange(Client client, LoginConfiguration login) {
 
-        Objects.requireNonNull(client, "client must not be null");
-        Objects.requireNonNull(login, "Login must not be null");
+        Assert.requireNonNull(client, "client must not be null");
+        Assert.requireNonNull(login, "Login must not be null");
 
         EmitterProcessor<ClientMessage> requestProcessor = EmitterProcessor.create();
         FluxSink<ClientMessage> requests = requestProcessor.sink();
