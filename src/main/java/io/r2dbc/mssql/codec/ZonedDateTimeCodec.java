@@ -18,18 +18,11 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.r2dbc.mssql.message.tds.Decode;
-import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.SqlServerType;
-import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
-import io.r2dbc.mssql.message.type.TypeUtils;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
+import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 
 /**
@@ -56,15 +49,7 @@ final class ZonedDateTimeCodec extends AbstractCodec<ZonedDateTime> {
 
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, ZonedDateTime value) {
-
-        ByteBuf buffer = allocator.buffer(12);
-
-        Encode.asByte(buffer, 7); // scale
-        Encode.asByte(buffer, 0x0a); // length
-
-        doEncode(buffer, value.minusSeconds(value.getOffset().getTotalSeconds()));
-
-        return new RpcEncoding.HintedEncoded(TdsDataType.DATETIMEOFFSETN, SqlServerType.DATETIMEOFFSET, buffer);
+        return OffsetDateTimeCodec.INSTANCE.encode(allocator, context, value.toOffsetDateTime());
     }
 
     @Override
@@ -84,22 +69,7 @@ final class ZonedDateTimeCodec extends AbstractCodec<ZonedDateTime> {
             return null;
         }
 
-        LocalTime localTime = LocalTimeCodec.INSTANCE.doDecode(buffer, length, type, LocalTime.class);
-        LocalDate localDate = LocalDateCodec.INSTANCE.doDecode(buffer, length, type, LocalDate.class);
-
-        int localMinutesOffset = Decode.uShort(buffer);
-        ZoneOffset offset = ZoneOffset.ofTotalSeconds(localMinutesOffset * 60);
-
-        return ZonedDateTime.ofStrict(localTime.atDate(localDate), offset, ZoneId.ofOffset("UT", offset)).plusMinutes(localMinutesOffset);
-    }
-
-    static void doEncode(ByteBuf buffer, ZonedDateTime value) {
-
-        LocalTimeCodec.doEncode(buffer, TypeUtils.MAX_FRACTIONAL_SECONDS_SCALE, value.toLocalTime());
-        LocalDateCodec.encode(buffer, value.toLocalDate());
-
-        int localMinutesOffset = value.getOffset().getTotalSeconds() / 60;
-
-        Encode.uShort(buffer, localMinutesOffset);
+        OffsetDateTime offsetDateTime = OffsetDateTimeCodec.INSTANCE.doDecode(buffer, length, type, OffsetDateTime.class);
+        return offsetDateTime.toZonedDateTime();
     }
 }

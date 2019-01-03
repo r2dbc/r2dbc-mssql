@@ -60,6 +60,7 @@ public final class DefaultCodecs implements Codecs {
             DecimalCodec.INSTANCE,
             MoneyCodec.INSTANCE,
             TimestampCodec.INSTANCE,
+            OffsetDateTimeCodec.INSTANCE,
             ZonedDateTimeCodec.INSTANCE
         );
 

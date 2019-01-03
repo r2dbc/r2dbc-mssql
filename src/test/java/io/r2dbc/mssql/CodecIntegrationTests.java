@@ -27,6 +27,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -114,7 +115,12 @@ class CodecIntegrationTests extends IntegrationTestSupport {
 
     @Test
     void shouldEncodeZonedDateTimeAsDatetimeoffset() {
-        testType(connection, "DATETIMEOFFSET", ZonedDateTime.parse("2018-08-27T17:41:14.890+00:45[UT+00:45]"));
+        testType(connection, "DATETIMEOFFSET", ZonedDateTime.parse("2018-08-27T17:41:14.890+00:45"), OffsetDateTime.parse("2018-08-27T17:41:14.890+00:45"));
+    }
+
+    @Test
+    void shouldEncodeOffsetDateTimeAsDatetimeoffset() {
+        testType(connection, "DATETIMEOFFSET", OffsetDateTime.parse("2018-08-27T17:41:14.890+00:45"));
     }
 
     @Test
