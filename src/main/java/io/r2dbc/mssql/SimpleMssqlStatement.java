@@ -24,6 +24,7 @@ import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.mssql.util.Operators;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,7 +130,7 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
                     logger.debug(this.context.getMessage("Start direct exchange for {}"), sql);
                 }
 
-                exchange = QueryMessageFlow.exchange(this.client, sql);
+                exchange = QueryMessageFlow.exchange(this.client, sql).transform(Operators::discardOnCancel);
 
                 return createResultStream(useGeneratedKeysClause, exchange, AbstractDoneToken.class::isInstance);
             }

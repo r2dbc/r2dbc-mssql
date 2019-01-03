@@ -129,7 +129,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
             Iterator<Binding> iterator = this.bindings.bindings.iterator();
             EmitterProcessor<Binding> bindingEmitter = EmitterProcessor.create(true);
             return bindingEmitter.startWith(iterator.next())
-                .flatMap(it -> {
+                .concatMap(it -> {
 
                     Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, it);
 
