@@ -278,7 +278,7 @@
             <resource>
                 <directory>${project.basedir}</directory>
                 <includes>
-                    <include>LICENSE.txt</include>
+                    <include>LICENSE</include>
                     <include>NOTICE</include>
                 </includes>
                 <targetPath>META-INF</targetPath>
