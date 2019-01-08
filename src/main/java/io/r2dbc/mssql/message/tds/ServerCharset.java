@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ public enum ServerCharset {
     CP1256  ("Cp1256", true, true),
     CP1257  ("Cp1257", true, true),
     CP1258  ("Cp1258", true, true);
-    
+
     // @formatter:on
 
     private final String charsetName;
