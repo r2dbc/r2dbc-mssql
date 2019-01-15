@@ -47,7 +47,7 @@ final class Login7UnitTests {
             .password("super-secret")
             .database("master")
             .clientLibraryName("MyDriver")
-            .appName("MyApp")
+            .applicationName("MyApp")
             .clientLibraryVersion(Version.parse("6.4"))
             .tdsVersion(TDSVersion.VER_DENALI).build();
 
@@ -76,7 +76,7 @@ final class Login7UnitTests {
             .password("super-secret")
             .database("master")
             .clientLibraryName("MyDriver")
-            .appName("MyApp")
+            .applicationName("MyApp")
             .clientLibraryVersion(Version.parse("6.4"))
             .tdsVersion(TDSVersion.VER_DENALI).build();
 

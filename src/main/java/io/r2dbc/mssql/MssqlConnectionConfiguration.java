@@ -45,6 +45,9 @@ public final class MssqlConnectionConfiguration {
     public static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(30);
 
     @Nullable
+    private final String applicationName;
+
+    @Nullable
     private final UUID connectionId;
 
     private final Duration connectTimeout;
@@ -53,29 +56,26 @@ public final class MssqlConnectionConfiguration {
 
     private final String host;
 
-    private final String password;
+    private final CharSequence password;
 
     private final int port;
 
-    private final String username;
-
-    @Nullable
-    private final String appName;
-
     private final boolean ssl;
 
-    private MssqlConnectionConfiguration(@Nullable UUID connectionId, Duration connectTimeout, @Nullable String database, String host,
-                                         String password, int port, String username, String appName, boolean ssl) {
+    private final String username;
 
+    private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, Duration connectTimeout, @Nullable String database, String host, CharSequence password,
+                                         int port, boolean ssl, String username) {
+
+        this.applicationName = applicationName;
         this.connectionId = connectionId;
         this.connectTimeout = Assert.requireNonNull(connectTimeout, "connect timeout must not be null");
         this.database = database;
         this.host = Assert.requireNonNull(host, "host must not be null");
         this.password = Assert.requireNonNull(password, "password must not be null");
         this.port = port;
-        this.username = Assert.requireNonNull(username, "username must not be null");
-        this.appName = appName;
         this.ssl = ssl;
+        this.username = Assert.requireNonNull(username, "username must not be null");
     }
 
     /**
@@ -91,17 +91,22 @@ public final class MssqlConnectionConfiguration {
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [connectionId=").append(this.connectionId);
+        sb.append(" [applicationName=\"").append(this.applicationName).append('\"');
+        sb.append(", connectionId=").append(this.connectionId);
         sb.append(", connectTimeout=\"").append(this.connectTimeout).append('\"');
         sb.append(", database=\"").append(this.database).append('\"');
         sb.append(", host=\"").append(this.host).append('\"');
-        sb.append(", password=\"").append(this.password.replaceAll("|", "\\*")).append('\"');
+        sb.append(", password=\"").append(repeat(this.password.length(), "*")).append('\"');
         sb.append(", port=").append(this.port);
-        sb.append(", username=\"").append(this.username).append('\"');
-        sb.append(", appName=\"").append(this.appName).append('\"');
         sb.append(", ssl=").append(this.ssl);
+        sb.append(", username=\"").append(this.username).append('\"');
         sb.append(']');
         return sb.toString();
+    }
+
+    @Nullable
+    String getApplicationName() {
+        return this.applicationName;
     }
 
     @Nullable
@@ -121,7 +126,7 @@ public final class MssqlConnectionConfiguration {
         return this.host;
     }
 
-    String getPassword() {
+    CharSequence getPassword() {
         return this.password;
     }
 
@@ -129,22 +134,28 @@ public final class MssqlConnectionConfiguration {
         return this.port;
     }
 
-    String getUsername() {
-        return this.username;
-    }
-
-    @Nullable
-    String getAppName() {
-        return this.appName;
-    }
-
     boolean useSsl() {
         return ssl;
     }
 
+    String getUsername() {
+        return this.username;
+    }
+
     LoginConfiguration getLoginConfiguration() {
-        return new LoginConfiguration(getUsername(), getPassword(), getDatabase().orElse(""), lookupHostName(),
-            getAppName(), getHost(), this.connectionId, useSsl());
+        return new LoginConfiguration(getApplicationName(), this.connectionId, getDatabase().orElse(""), lookupHostName(), getPassword(), getHost(), useSsl(), getUsername()
+        );
+    }
+
+    private static String repeat(int length, String character) {
+
+        StringBuilder builder = new StringBuilder();
+
+        for (int i = 0; i < length; i++) {
+            builder.append(character);
+        }
+
+        return builder.toString();
     }
 
     /**
@@ -181,25 +192,38 @@ public final class MssqlConnectionConfiguration {
      */
     public static final class Builder {
 
+        @Nullable
+        private String applicationName;
+
         private UUID connectionId = UUID.randomUUID();
+
+        private Duration connectTimeout = DEFAULT_CONNECT_TIMEOUT;
 
         private String database;
 
         private String host;
 
-        private String password;
+        private CharSequence password;
 
         private int port = DEFAULT_PORT;
 
-        private String username;
-
-        private String appName;
-
         private boolean ssl;
 
-        private Duration connectTimeout = DEFAULT_CONNECT_TIMEOUT;
+        private String username;
 
         private Builder() {
+        }
+
+        /**
+         * Configure the applicationName.
+         *
+         * @param applicationName the applicationName
+         * @return this {@link Builder}
+         * @throws IllegalArgumentException if {@code applicationName} is {@code null}
+         */
+        public Builder applicationName(String applicationName) {
+            this.applicationName = Assert.requireNonNull(applicationName, "applicationName must not be null");
+            return this;
         }
 
         /**
@@ -226,18 +250,6 @@ public final class MssqlConnectionConfiguration {
             Assert.isTrue(!connectTimeout.isNegative(), "connect timeout must not be negative");
 
             this.connectTimeout = connectTimeout;
-            return this;
-        }
-
-        /**
-         * Configure the appName.
-         *
-         * @param appName the appName
-         * @return this {@link Builder}
-         * @throws IllegalArgumentException if {@code appName} is {@code null}
-         */
-        public Builder appName(String appName) {
-            this.appName = Assert.requireNonNull(appName, "appName must not be null");
             return this;
         }
 
@@ -275,25 +287,13 @@ public final class MssqlConnectionConfiguration {
         }
 
         /**
-         * Configure the username.
-         *
-         * @param username the username
-         * @return this {@link Builder}
-         * @throws IllegalArgumentException if {@code username} is {@code null}
-         */
-        public Builder username(String username) {
-            this.username = Assert.requireNonNull(username, "username must not be null");
-            return this;
-        }
-
-        /**
          * Configure the password.
          *
          * @param password the password
          * @return this {@link Builder}
          * @throws IllegalArgumentException if {@code password} is {@code null}
          */
-        public Builder password(String password) {
+        public Builder password(CharSequence password) {
             this.password = Assert.requireNonNull(password, "password must not be null");
             return this;
         }
@@ -310,13 +310,25 @@ public final class MssqlConnectionConfiguration {
         }
 
         /**
+         * Configure the username.
+         *
+         * @param username the username
+         * @return this {@link Builder}
+         * @throws IllegalArgumentException if {@code username} is {@code null}
+         */
+        public Builder username(String username) {
+            this.username = Assert.requireNonNull(username, "username must not be null");
+            return this;
+        }
+
+        /**
          * Returns a configured {@link MssqlConnectionConfiguration}.
          *
          * @return a configured {@link MssqlConnectionConfiguration}.
          */
         public MssqlConnectionConfiguration build() {
-            return new MssqlConnectionConfiguration(this.connectionId, this.connectTimeout, this.database, this.host, this.password, this.port,
-                this.username, this.appName, this.ssl);
+            return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, this.host, this.password, this.port,
+                this.ssl, this.username);
         }
     }
 }

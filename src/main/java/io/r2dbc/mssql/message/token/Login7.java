@@ -337,7 +337,7 @@ public final class Login7 implements TokenStream, ClientMessage {
         private CharSequence password;
 
         @Nullable
-        private CharSequence appName;
+        private CharSequence applicationName;
 
         @Nullable
         private CharSequence hostname;
@@ -359,7 +359,7 @@ public final class Login7 implements TokenStream, ClientMessage {
             }
 
             this.clientLibraryName = clientLibraryName;
-            this.appName = clientLibraryName;
+            this.applicationName = clientLibraryName;
         }
 
         /**
@@ -470,16 +470,16 @@ public final class Login7 implements TokenStream, ClientMessage {
         /**
          * Configure the application name. Must not exceed 128 chars.
          *
-         * @param appName the application name.
+         * @param applicationName the application name.
          * @return {@code this} {@link Builder}.
-         * @throws IllegalArgumentException when {@code appName} is {@code null}.
+         * @throws IllegalArgumentException when {@code applicationName} is {@code null}.
          */
-        public Builder appName(CharSequence appName) {
+        public Builder applicationName(CharSequence applicationName) {
 
-            Assert.requireNonNull(appName, "App name must not be null");
-            Assert.isTrue(appName.length() < 128, "Application name must be shorter than 128 chars");
+            Assert.requireNonNull(applicationName, "App name must not be null");
+            Assert.isTrue(applicationName.length() < 128, "Application name must be shorter than 128 chars");
 
-            this.appName = appName;
+            this.applicationName = applicationName;
             return this;
         }
 
@@ -605,7 +605,7 @@ public final class Login7 implements TokenStream, ClientMessage {
             requestTokens.add(new LoginRequestToken(TokenType.Hostname, this.hostname));
             requestTokens.add(new LoginRequestToken(TokenType.Username, this.username));
             requestTokens.add(new LoginRequestToken(TokenType.Password, this.password));
-            requestTokens.add(new LoginRequestToken(TokenType.AppName, this.appName));
+            requestTokens.add(new LoginRequestToken(TokenType.AppName, this.applicationName));
             requestTokens.add(new LoginRequestToken(TokenType.Servername, this.serverName));
             requestTokens.add(new LoginRequestToken(TokenType.IntName, this.clientLibraryName));
             requestTokens.add(new LoginRequestToken(TokenType.Database, this.databaseName));

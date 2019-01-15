@@ -30,32 +30,31 @@ import java.util.UUID;
  */
 final class LoginConfiguration {
 
-    private final String username;
+    @Nullable
+    private final String applicationName;
 
-    private final String password;
+    @Nullable
+    private final UUID connectionId;
 
     private final String database;
 
     private final String hostname;
 
-    @Nullable
-    private final String appName;
+    private final CharSequence password;
 
     private final String serverName;
 
-    @Nullable
-    private final UUID connectionId;
-
     private final boolean useSsl;
 
-    LoginConfiguration(String username, String password, String database, String hostname, String appName,
-                       String serverName, @Nullable UUID connectionId, boolean useSsl) {
+    private final String username;
+
+    LoginConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, String database, String hostname, CharSequence password, String serverName, boolean useSsl, String username) {
 
         this.username = Assert.requireNonNull(username, "Username must not be null");
         this.password = Assert.requireNonNull(password, "Password must not be null");
         this.database = Assert.requireNonNull(database, "Database must not be null");
         this.hostname = Assert.requireNonNull(hostname, "Hostname must not be null");
-        this.appName = appName;
+        this.applicationName = applicationName;
         this.serverName = Assert.requireNonNull(serverName, "Server name must not be null");
         this.connectionId = connectionId;
         this.useSsl = useSsl;
@@ -75,8 +74,8 @@ final class LoginConfiguration {
         Login7.Builder builder = Login7.builder().username(this.username).password(this.password).database(this.database)
             .hostName(this.hostname).serverName(this.serverName);
 
-        if (StringUtils.hasText(this.appName)) {
-            builder.appName(this.appName);
+        if (StringUtils.hasText(this.applicationName)) {
+            builder.applicationName(this.applicationName);
         }
         return builder;
     }

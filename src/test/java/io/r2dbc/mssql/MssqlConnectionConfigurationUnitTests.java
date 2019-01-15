@@ -32,8 +32,8 @@ final class MssqlConnectionConfigurationUnitTests {
 
     @Test
     void builderNoApplicationName() {
-        assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder().appName(null))
-            .withMessage("appName must not be null");
+        assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder().applicationName(null))
+            .withMessage("applicationName must not be null");
     }
 
     @Test
@@ -84,7 +84,7 @@ final class MssqlConnectionConfigurationUnitTests {
     @Test
     void configurationDefaults() {
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
-            .appName("r2dbc")
+            .applicationName("r2dbc")
             .database("test-database")
             .host("test-host")
             .password("test-password")
@@ -92,7 +92,7 @@ final class MssqlConnectionConfigurationUnitTests {
             .build();
 
         assertThat(configuration)
-            .hasFieldOrPropertyWithValue("appName", "r2dbc")
+            .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
             .hasFieldOrPropertyWithValue("database", "test-database")
             .hasFieldOrPropertyWithValue("host", "test-host")
             .hasFieldOrPropertyWithValue("password", "test-password")

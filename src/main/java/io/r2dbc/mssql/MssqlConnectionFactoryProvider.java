@@ -68,7 +68,7 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
 
         String applicationName = connectionFactoryOptions.getValue(APPLICATION_NAME);
         if (applicationName != null) {
-            builder.appName(applicationName);
+            builder.applicationName(applicationName);
         }
 
         Boolean ssl = connectionFactoryOptions.getValue(SSL);
@@ -93,9 +93,9 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
 
         builder.database(connectionFactoryOptions.getValue(DATABASE));
         builder.host(connectionFactoryOptions.getRequiredValue(HOST));
-        builder.password(connectionFactoryOptions.getRequiredValue(PASSWORD).toString());
+        builder.password(connectionFactoryOptions.getRequiredValue(PASSWORD));
         builder.username(connectionFactoryOptions.getRequiredValue(USER));
-        builder.appName(connectionFactoryOptions.getRequiredValue(USER));
+        builder.applicationName(connectionFactoryOptions.getRequiredValue(USER));
 
         MssqlConnectionConfiguration configuration = builder.build();
         if (logger.isDebugEnabled()) {
