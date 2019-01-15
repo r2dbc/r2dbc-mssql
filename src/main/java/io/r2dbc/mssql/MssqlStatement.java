@@ -30,7 +30,7 @@ import reactor.core.publisher.Flux;
  *
  * @author Mark Paluch
  */
-public interface MssqlStatement<SELF extends MssqlStatement<SELF>> extends Statement<SELF> {
+public interface MssqlStatement extends Statement {
 
     /**
      * {@inheritDoc}
@@ -39,7 +39,7 @@ public interface MssqlStatement<SELF extends MssqlStatement<SELF>> extends State
      *                                  etc.
      */
     @Override
-    SELF bind(Object identifier, Object value);
+    Statement bind(Object identifier, Object value);
 
     /**
      * {@inheritDoc}
@@ -48,7 +48,7 @@ public interface MssqlStatement<SELF extends MssqlStatement<SELF>> extends State
      *                                  etc.
      */
     @Override
-    SELF bindNull(Object identifier, Class<?> type);
+    Statement bindNull(Object identifier, Class<?> type);
 
     @Override
     Flux<MssqlResult> execute();

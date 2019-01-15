@@ -53,7 +53,7 @@ import java.util.regex.Pattern;
  *
  * @author Mark Paluch
  */
-final class PreparedMssqlStatement implements MssqlStatement<PreparedMssqlStatement> {
+final class PreparedMssqlStatement implements MssqlStatement {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 

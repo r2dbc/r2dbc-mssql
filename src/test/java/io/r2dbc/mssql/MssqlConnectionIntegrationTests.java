@@ -18,7 +18,9 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.util.IntegrationTestSupport;
 import io.r2dbc.spi.ColumnMetadata;
+import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -172,22 +174,22 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
         insertRecord(connection, 2);
         insertRecord(connection, 3);
 
-        connection.createStatement("SELECT * FROM r2dbc_example ORDER BY id OFFSET @Offset ROWS" +
+        Flux.from(connection.createStatement("SELECT * FROM r2dbc_example ORDER BY id OFFSET @Offset ROWS" +
             "  FETCH NEXT @Rows ROWS ONLY")
             .bind("Offset", 0)
             .bind("Rows", 2)
-            .execute()
+            .execute())
             .flatMap(it -> it.map((row, rowMetadata) -> row.get("id", Integer.class)))
             .as(StepVerifier::create)
             .expectNext(1)
             .expectNext(2)
             .verifyComplete();
 
-        connection.createStatement("SELECT * FROM r2dbc_example ORDER BY id OFFSET @Offset ROWS" +
+        Flux.from(connection.createStatement("SELECT * FROM r2dbc_example ORDER BY id OFFSET @Offset ROWS" +
             " FETCH NEXT @Rows ROWS ONLY")
             .bind("Offset", 2)
             .bind("Rows", 2)
-            .execute()
+            .execute())
             .flatMap(it -> it.map((row, rowMetadata) -> row.get("id", Integer.class)))
             .as(StepVerifier::create)
             .expectNext(3)
@@ -254,12 +256,12 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
 
     private void insertRecord(MssqlConnection connection, int id) {
 
-        connection.createStatement("INSERT INTO r2dbc_example VALUES(@id, @firstname, @lastname)")
+        Flux.from(connection.createStatement("INSERT INTO r2dbc_example VALUES(@id, @firstname, @lastname)")
             .bind("id", id)
             .bind("firstname", "Walter")
             .bind("lastname", "White")
-            .execute()
-            .flatMap(MssqlResult::getRowsUpdated)
+            .execute())
+            .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
             .expectNext(1)
             .verifyComplete();

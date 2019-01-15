@@ -18,7 +18,9 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.util.IntegrationTestSupport;
+import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -146,10 +148,10 @@ class CodecIntegrationTests extends IntegrationTestSupport {
 
         createTable(connection, columnType);
 
-        connection.createStatement("INSERT INTO codec_test values(@P0)")
+        Flux.from(connection.createStatement("INSERT INTO codec_test values(@P0)")
             .bind("P0", value)
-            .execute()
-            .flatMap(MssqlResult::getRowsUpdated)
+            .execute())
+            .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
             .expectNext(1)
             .verifyComplete();
@@ -168,10 +170,10 @@ class CodecIntegrationTests extends IntegrationTestSupport {
             .expectNext(expectedGetObjectValue)
             .verifyComplete();
 
-        connection.createStatement("UPDATE codec_test SET my_col = @P0")
+        Flux.from(connection.createStatement("UPDATE codec_test SET my_col = @P0")
             .bindNull("P0", value.getClass())
-            .execute()
-            .flatMap(MssqlResult::getRowsUpdated)
+            .execute())
+            .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
             .expectNext(1)
             .verifyComplete();

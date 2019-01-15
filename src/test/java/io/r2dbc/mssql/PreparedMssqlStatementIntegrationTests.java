@@ -17,7 +17,9 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.util.IntegrationTestSupport;
+import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -42,12 +44,12 @@ class PreparedMssqlStatementIntegrationTests extends IntegrationTestSupport {
             .as(StepVerifier::create)
             .verifyComplete();
 
-        connection.createStatement("INSERT INTO r2dbc_example (first_name, last_name) values (@fn, @ln)")
+        Flux.from(connection.createStatement("INSERT INTO r2dbc_example (first_name, last_name) values (@fn, @ln)")
             .bind("fn", "Walter").bind("ln", "White").add()
             .bind("fn", "Hank").bind("ln", "Schrader").add()
             .bind("fn", "Skyler").bind("ln", "White")
-            .execute()
-            .flatMap(MssqlResult::getRowsUpdated)
+            .execute())
+            .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
             .expectNext(1, 1, 1)
             .verifyComplete();

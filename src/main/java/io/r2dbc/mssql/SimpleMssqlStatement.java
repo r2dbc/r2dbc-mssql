@@ -30,7 +30,7 @@ import reactor.core.publisher.Flux;
  *
  * @author Mark Paluch
  */
-class SimpleMssqlStatement implements MssqlStatement<SimpleMssqlStatement> {
+class SimpleMssqlStatement implements MssqlStatement {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 

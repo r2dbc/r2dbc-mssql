@@ -104,7 +104,7 @@ public final class MssqlConnection implements Connection {
     }
 
     @Override
-    public Batch<?> createBatch() {
+    public Batch createBatch() {
         return new MssqlBatch(this.client, this.codecs);
     }
 
@@ -129,7 +129,7 @@ public final class MssqlConnection implements Connection {
     }
 
     @Override
-    public MssqlStatement<?> createStatement(String sql) {
+    public MssqlStatement createStatement(String sql) {
 
         Assert.requireNonNull(sql, "SQL must not be null");
         this.logger.debug("Creating statement for SQL: [{}]", sql);

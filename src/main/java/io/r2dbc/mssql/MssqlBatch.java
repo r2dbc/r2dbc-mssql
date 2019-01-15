@@ -30,7 +30,7 @@ import java.util.List;
  *
  * @author Mark Paluch
  */
-public final class MssqlBatch implements Batch<MssqlBatch> {
+public final class MssqlBatch implements Batch {
 
     private final Client client;
 
