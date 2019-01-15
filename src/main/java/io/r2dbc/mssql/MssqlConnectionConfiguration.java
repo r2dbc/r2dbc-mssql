@@ -33,6 +33,11 @@ import java.util.UUID;
  */
 public final class MssqlConnectionConfiguration {
 
+    /**
+     * Default SQL Server port.
+     */
+    public static final int DEFAULT_PORT = 1433;
+
     @Nullable
     private final UUID connectionId;
 
@@ -170,7 +175,7 @@ public final class MssqlConnectionConfiguration {
 
         private String password;
 
-        private int port = 1433;
+        private int port = DEFAULT_PORT;
 
         private String username;
 

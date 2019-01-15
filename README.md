@@ -59,6 +59,28 @@ Artifacts can bound found at the following repositories.
 
 ## Usage
 
+Connection Factory Discovery:
+
+```java
+ConnectionFactoryOptions options = builder()
+    .option(DRIVER, "mssql")
+    .option(HOST, "…")
+    .option(PORT, …)  // optional, defaults to 1433
+    .option(USER, "…")
+    .option(PASSWORD, "…")
+    .option(DATABASE, "…") // optional
+    .option(SSL, true) // optional, defaults to false
+    .option(Option.valueOf("applicationName"), "…") // optional
+    .option(Option.valueOf("connectionId"), new UUID(…)) // optional
+    .build();
+
+ConnectionFactory connectionFactory = ConnectionFactories.get(options);
+
+Mono<Connection> connectionMono = factory.create();
+```
+
+Programmatic:
+
 ```java
 MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
     .host("…")
@@ -89,6 +111,18 @@ connection.createStatement("INSERT INTO person (id, first_name, last_name) VALUE
 ``` 
 
 Binding also allows positional index (zero-based) references. The parameter index is derived from the parameter discovery order when parsing the query.
+
+Supported ConnectionFactory Discovery Options:
+
+* `driver`: Must be `mysql`. Mandatory.
+* `host`: Server hostname to connect to. Mandatory.
+* `port`: Server port to connect to. Defaults to `1433` if not set.
+* `username`: Login username. Mandatory.
+* `password`: Login password. Mandatory.
+* `database`: Initial database to select. Defaults to SQL Server user profile settings if not set.
+* `ssl`: Whether to use transport-level encryption for the entire SQL server traffic, defaults to `false`.
+* `applicationName`: Name of the application. Defaults to driver name and version if not set.
+* `connectionId`: Connection Id for tracing purposes. Random Id if not set.
 
 ## License
 This project is released under version 2.0 of the [Apache License][l].

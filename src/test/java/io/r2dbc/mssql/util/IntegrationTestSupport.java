@@ -17,11 +17,20 @@
 package io.r2dbc.mssql.util;
 
 import io.r2dbc.mssql.MssqlConnection;
-import io.r2dbc.mssql.MssqlConnectionConfiguration;
 import io.r2dbc.mssql.MssqlConnectionFactory;
+import io.r2dbc.mssql.MssqlConnectionFactoryProvider;
+import io.r2dbc.spi.ConnectionFactories;
+import io.r2dbc.spi.ConnectionFactoryOptions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
+import static io.r2dbc.spi.ConnectionFactoryOptions.DRIVER;
+import static io.r2dbc.spi.ConnectionFactoryOptions.HOST;
+import static io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD;
+import static io.r2dbc.spi.ConnectionFactoryOptions.PORT;
+import static io.r2dbc.spi.ConnectionFactoryOptions.USER;
+import static io.r2dbc.spi.ConnectionFactoryOptions.builder;
 
 /**
  * Support class for integration tests.
@@ -40,14 +49,15 @@ public abstract class IntegrationTestSupport {
     @BeforeAll
     static void setUp() {
 
-        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
-            .host(SERVER.getHost())
-            .port(SERVER.getPort())
-            .username(SERVER.getUsername())
-            .password(SERVER.getPassword())
+        ConnectionFactoryOptions options = builder()
+            .option(DRIVER, MssqlConnectionFactoryProvider.MSSQL_DRIVER)
+            .option(HOST, SERVER.getHost())
+            .option(PORT, SERVER.getPort())
+            .option(PASSWORD, SERVER.getPassword())
+            .option(USER, SERVER.getUsername())
             .build();
 
-        connectionFactory = new MssqlConnectionFactory(configuration);
+        connectionFactory = (MssqlConnectionFactory) ConnectionFactories.get(options);
         connection = connectionFactory.create().block();
     }
 
