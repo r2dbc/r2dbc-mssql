@@ -89,7 +89,7 @@ public final class MssqlConnectionConfiguration {
         sb.append(", port=").append(this.port);
         sb.append(", username=\"").append(this.username).append('\"');
         sb.append(", appName=\"").append(this.appName).append('\"');
-        sb.append(", encryption=").append(this.ssl);
+        sb.append(", ssl=").append(this.ssl);
         sb.append(']');
         return sb.toString();
     }

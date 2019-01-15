@@ -8,6 +8,7 @@ This project contains the [Microsoft SQL Server][m] implementation of the [R2DBC
 This driver provides the following features:
 
 * Login with username/password with temporary SSL encryption
+* Full SSL encryption support (for e.g. Azure usage).
 * Transaction Control
 * Simple (un-cursored) execution of SQL batches
 * Execution of prepared statements
@@ -16,7 +17,6 @@ This driver provides the following features:
 
 Next steps:
 
-* Full SSL encryption support.
 * Add encoding for remaining codecs (VARBINARY, XML, UDT)
 * Execution of stored procedures 
 * Add support for TVP and UDTs
