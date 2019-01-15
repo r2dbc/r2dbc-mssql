@@ -22,6 +22,7 @@ import reactor.util.annotation.Nullable;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -38,8 +39,15 @@ public final class MssqlConnectionConfiguration {
      */
     public static final int DEFAULT_PORT = 1433;
 
+    /**
+     * Default connect timeout.
+     */
+    public static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(30);
+
     @Nullable
     private final UUID connectionId;
+
+    private final Duration connectTimeout;
 
     private final String database;
 
@@ -56,10 +64,11 @@ public final class MssqlConnectionConfiguration {
 
     private final boolean ssl;
 
-    private MssqlConnectionConfiguration(@Nullable UUID connectionId, @Nullable String database, String host,
+    private MssqlConnectionConfiguration(@Nullable UUID connectionId, Duration connectTimeout, @Nullable String database, String host,
                                          String password, int port, String username, String appName, boolean ssl) {
 
         this.connectionId = connectionId;
+        this.connectTimeout = Assert.requireNonNull(connectTimeout, "connect timeout must not be null");
         this.database = database;
         this.host = Assert.requireNonNull(host, "host must not be null");
         this.password = Assert.requireNonNull(password, "password must not be null");
@@ -83,6 +92,7 @@ public final class MssqlConnectionConfiguration {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
         sb.append(" [connectionId=").append(this.connectionId);
+        sb.append(", connectTimeout=\"").append(this.connectTimeout).append('\"');
         sb.append(", database=\"").append(this.database).append('\"');
         sb.append(", host=\"").append(this.host).append('\"');
         sb.append(", password=\"").append(this.password.replaceAll("|", "\\*")).append('\"');
@@ -97,6 +107,10 @@ public final class MssqlConnectionConfiguration {
     @Nullable
     UUID getConnectionId() {
         return this.connectionId;
+    }
+
+    Duration getConnectTimeout() {
+        return this.connectTimeout;
     }
 
     Optional<String> getDatabase() {
@@ -183,6 +197,8 @@ public final class MssqlConnectionConfiguration {
 
         private boolean ssl;
 
+        private Duration connectTimeout = DEFAULT_CONNECT_TIMEOUT;
+
         private Builder() {
         }
 
@@ -195,6 +211,21 @@ public final class MssqlConnectionConfiguration {
          */
         public Builder connectionId(UUID connectionId) {
             this.connectionId = Assert.requireNonNull(connectionId, "connectionId must not be null");
+            return this;
+        }
+
+        /**
+         * Configure the connect timeout. Defaults to 30 seconds.
+         *
+         * @param connectTimeout the connect timeout
+         * @return this {@link Builder}
+         */
+        public Builder connectTimeout(Duration connectTimeout) {
+
+            Assert.requireNonNull(connectTimeout, "connect timeout must not be null");
+            Assert.isTrue(!connectTimeout.isNegative(), "connect timeout must not be negative");
+
+            this.connectTimeout = connectTimeout;
             return this;
         }
 
@@ -281,10 +312,10 @@ public final class MssqlConnectionConfiguration {
         /**
          * Returns a configured {@link MssqlConnectionConfiguration}.
          *
-         * @return a configured {@link MssqlConnectionConfiguration}
+         * @return a configured {@link MssqlConnectionConfiguration}.
          */
         public MssqlConnectionConfiguration build() {
-            return new MssqlConnectionConfiguration(this.connectionId, this.database, this.host, this.password, this.port,
+            return new MssqlConnectionConfiguration(this.connectionId, this.connectTimeout, this.database, this.host, this.password, this.port,
                 this.username, this.appName, this.ssl);
         }
     }

@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -49,6 +50,7 @@ import reactor.netty.Connection;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -216,26 +218,47 @@ public final class ReactorNettyClient implements Client {
 
         Assert.requireNonNull(host, "host must not be null");
 
-        return connect(ConnectionProvider.newConnection(), host, port);
+        return connect(host, port, Duration.ofSeconds(30));
     }
 
     /**
      * Creates a new frame processor connected to a given host.
      *
-     * @param connectionProvider the connection provider resources
+     * @param host           the host to connect to
+     * @param port           the port to connect to
+     * @param connectTimeout the connect timeout
+     */
+    public static Mono<ReactorNettyClient> connect(String host, int port, Duration connectTimeout) {
+
+        Assert.requireNonNull(connectTimeout, "connect timeout must not be null");
+        Assert.requireNonNull(host, "host must not be null");
+
+        return connect(host, port, connectTimeout, ConnectionProvider.newConnection());
+    }
+
+    /**
+     * Creates a new frame processor connected to a given host.
+     *
      * @param host               the host to connect to
      * @param port               the port to connect to
+     * @param connectTimeout     the connect timeout
+     * @param connectionProvider the connection provider resources
      */
-    public static Mono<ReactorNettyClient> connect(ConnectionProvider connectionProvider, String host, int port) {
+    private static Mono<ReactorNettyClient> connect(String host, int port, Duration connectTimeout, ConnectionProvider connectionProvider) {
 
         Assert.requireNonNull(connectionProvider, "connectionProvider must not be null");
+        Assert.requireNonNull(connectTimeout, "connect timeout must not be null");
         Assert.requireNonNull(host, "host must not be null");
 
         PacketIdProvider packetIdProvider = PacketIdProvider.atomic();
 
         TdsEncoder tdsEncoder = new TdsEncoder(packetIdProvider);
 
-        Mono<? extends Connection> connection = TcpClient.create(connectionProvider).host(host).port(port).connect()
+        Mono<? extends Connection> connection = TcpClient.create(connectionProvider)
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Math.toIntExact(connectTimeout.toMillis()))
+            .host(host)
+            .port(port)
+            .connect()
             .doOnNext(it -> {
 
                 ChannelPipeline pipeline = it.channel().pipeline();

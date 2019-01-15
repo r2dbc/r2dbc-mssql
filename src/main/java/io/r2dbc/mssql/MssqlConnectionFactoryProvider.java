@@ -23,8 +23,10 @@ import io.r2dbc.spi.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.UUID;
 
+import static io.r2dbc.spi.ConnectionFactoryOptions.CONNECT_TIMEOUT;
 import static io.r2dbc.spi.ConnectionFactoryOptions.DATABASE;
 import static io.r2dbc.spi.ConnectionFactoryOptions.DRIVER;
 import static io.r2dbc.spi.ConnectionFactoryOptions.HOST;
@@ -82,6 +84,11 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         UUID connectionId = connectionFactoryOptions.getValue(CONNECTION_ID);
         if (connectionId != null) {
             builder.connectionId(connectionId);
+        }
+
+        Duration connectTimeout = connectionFactoryOptions.getValue(CONNECT_TIMEOUT);
+        if (connectTimeout != null) {
+            builder.connectTimeout(connectTimeout);
         }
 
         builder.database(connectionFactoryOptions.getValue(DATABASE));

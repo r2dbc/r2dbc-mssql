@@ -114,15 +114,21 @@ Binding also allows positional index (zero-based) references. The parameter inde
 
 Supported ConnectionFactory Discovery Options:
 
-* `driver`: Must be `mysql`. Mandatory.
-* `host`: Server hostname to connect to. Mandatory.
-* `port`: Server port to connect to. Defaults to `1433` if not set.
-* `username`: Login username. Mandatory.
-* `password`: Login password. Mandatory.
-* `database`: Initial database to select. Defaults to SQL Server user profile settings if not set.
+Core options:
+
+* `driver`: Must be `mysql`.
+* `host`: Server hostname to connect to.
+* `port`: Server port to connect to. Defaults to `1433`.
+* `username`: Login username.
+* `password`: Login password.
+
+Additional options:
+
+* `applicationName`: Name of the application. Defaults to driver name and version.
+* `connectionId`: Connection Id for tracing purposes. Defaults to a random Id.
+* `connectTimeout`: Connection Id for tracing purposes. Defaults to 30 seconds.
+* `database`: Initial database to select. Defaults to SQL Server user profile settings.
 * `ssl`: Whether to use transport-level encryption for the entire SQL server traffic, defaults to `false`.
-* `applicationName`: Name of the application. Defaults to driver name and version if not set.
-* `connectionId`: Connection Id for tracing purposes. Random Id if not set.
 
 ## License
 This project is released under version 2.0 of the [Apache License][l].
