@@ -47,7 +47,7 @@ public abstract class IntegrationTestSupport {
     protected static MssqlConnection connection;
 
     @BeforeAll
-    static void setUp() {
+    static void beforeAll() {
 
         ConnectionFactoryOptions options = builder()
             .option(DRIVER, MssqlConnectionFactoryProvider.MSSQL_DRIVER)

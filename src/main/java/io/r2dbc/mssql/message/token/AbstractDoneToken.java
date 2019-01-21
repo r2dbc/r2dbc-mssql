@@ -121,6 +121,21 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
     }
 
     /**
+     * Check whether the the {@link Message} has a count.
+     *
+     * @param message
+     * @return
+     */
+    public static boolean hasCount(Message message) {
+
+        if (message instanceof AbstractDoneToken) {
+            return ((AbstractDoneToken) message).hasCount();
+        }
+
+        return false;
+    }
+
+    /**
      * Check whether the {@link ByteBuf} can be decoded into an entire {@link AbstractDoneToken}.
      *
      * @param buffer the data buffer.

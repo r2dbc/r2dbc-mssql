@@ -25,8 +25,6 @@ import io.r2dbc.mssql.util.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.regex.Pattern;
-
 /**
  * Simple (direct) query message flow using {@link SqlBatch}.
  *
@@ -34,10 +32,6 @@ import java.util.regex.Pattern;
  */
 final class QueryMessageFlow {
 
-    /**
-     * The pattern that identifies a parameter symbol with its variable name.
-     */
-    public static final Pattern PARAMETER_SYMBOL = Pattern.compile(".*@([@_\\d\\p{IsAlpha}]+).*");
 
     /**
      * Execute a simple query using {@link SqlBatch}. Query execution terminates with a {@link DoneToken}.

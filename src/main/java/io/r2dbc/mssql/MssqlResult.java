@@ -94,7 +94,7 @@ public final class MssqlResult implements Result {
         Mono<Long> rowsUpdated = firstMessages
             .doOnNext(ReferenceCountUtil::release)
             .ofType(AbstractDoneToken.class)
-            .filter(AbstractDoneToken::hasCount)
+            .filter(it -> it.hasCount())
             .doOnNext(it -> logger.debug("Incoming row count: {}", it))
             .map(AbstractDoneToken::getRowCount)
             .collectList()

@@ -39,7 +39,7 @@ public interface MssqlStatement extends Statement {
      *                                  etc.
      */
     @Override
-    Statement bind(Object identifier, Object value);
+    MssqlStatement bind(Object identifier, Object value);
 
     /**
      * {@inheritDoc}
@@ -48,8 +48,11 @@ public interface MssqlStatement extends Statement {
      *                                  etc.
      */
     @Override
-    Statement bindNull(Object identifier, Class<?> type);
+    MssqlStatement bindNull(Object identifier, Class<?> type);
 
     @Override
     Flux<MssqlResult> execute();
+
+    @Override
+    MssqlStatement returnGeneratedValues(String... strings);
 }

@@ -20,6 +20,7 @@ import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.Encoded;
 import io.r2dbc.mssql.codec.RpcParameterContext;
+import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Statement;
@@ -69,6 +70,8 @@ final class PreparedMssqlStatement implements MssqlStatement {
 
     private final Bindings bindings = new Bindings();
 
+    private String[] generatedColumns;
+
     PreparedMssqlStatement(PreparedStatementCache statementCache, Client client, Codecs codecs, String sql) {
 
         this.statementCache = statementCache;
@@ -92,20 +95,38 @@ final class PreparedMssqlStatement implements MssqlStatement {
             return Flux.empty();
         }
 
+        boolean useGeneratedKeysClause = GeneratedValues.shouldExpectGeneratedKeys(this.generatedColumns);
+        String sql = useGeneratedKeysClause ? GeneratedValues.augmentQuery(this.parsedQuery.sql, generatedColumns) : this.parsedQuery.sql;
+
         EmitterProcessor<Binding> bindingEmitter = EmitterProcessor.create(true);
         FluxSink<Binding> boundRequests = bindingEmitter.sink();
 
         return bindingEmitter.startWith(iterator.next())
             .flatMap(it -> {
 
-                logger.debug("Start exchange for {}", this.parsedQuery.sql);
-                return CursoredQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, this.parsedQuery.sql, it, 128)              //
-                    .doOnComplete(() -> {
+                logger.debug("Start exchange for {}", sql);
+
+                Flux<Message> exchange = CursoredQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, sql, it, 128);
+
+                if (useGeneratedKeysClause) {
+                    exchange = exchange.transform(GeneratedValues::reduceToSingleCountDoneToken);
+                }
+
+                return exchange.doOnComplete(() -> {
                         tryNextBinding(iterator, boundRequests);
                     });
 
             }).windowUntil(DoneInProcToken.class::isInstance) //
             .map(it -> MssqlResult.toResult(this.codecs, it));
+    }
+
+    @Override
+    public PreparedMssqlStatement returnGeneratedValues(String... columns) {
+
+        Assert.requireNonNull(columns, "columns must not be null");
+
+        this.generatedColumns = columns;
+        return this;
     }
 
     private static void tryNextBinding(Iterator<Binding> iterator, FluxSink<Binding> boundRequests) {

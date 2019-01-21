@@ -41,13 +41,28 @@ public final class DoneToken extends AbstractDoneToken {
     }
 
     /**
-     * Creates a new {@link DoneToken}
+     * Creates a new {@link DoneToken} indicating a final packet and {@code rowCount}.
      *
      * @param rowCount the row count.
      * @return the {@link DoneToken}.
+     * @see #isDone()
+     * @see #getRowCount()
+     * @see #hasCount()
      */
     public static DoneToken create(long rowCount) {
         return new DoneToken(DONE_FINAL | DONE_COUNT, 0, rowCount);
+    }
+
+    /**
+     * Creates a new {@link DoneToken} with just a {@code rowCount}.
+     *
+     * @param rowCount the row count.
+     * @return the {@link DoneToken}.
+     * @see #getRowCount()
+     * @see #hasCount()
+     */
+    public static DoneToken count(long rowCount) {
+        return new DoneToken(DONE_COUNT, 0, rowCount);
     }
 
     /**

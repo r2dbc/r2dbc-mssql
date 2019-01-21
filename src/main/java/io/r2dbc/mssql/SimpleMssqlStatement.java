@@ -18,6 +18,7 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.Codecs;
+import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.Assert;
@@ -39,6 +40,8 @@ class SimpleMssqlStatement implements MssqlStatement {
     final Codecs codecs;
 
     final String sql;
+
+    String[] generatedColumns;
 
     /**
      * Creates a new {@link SimpleMssqlStatement}.
@@ -93,13 +96,27 @@ class SimpleMssqlStatement implements MssqlStatement {
     @Override
     public Flux<MssqlResult> execute() {
 
-        return Flux.defer(() -> {
+        boolean useGeneratedKeysClause = GeneratedValues.shouldExpectGeneratedKeys(this.generatedColumns);
+        String sql = useGeneratedKeysClause ? GeneratedValues.augmentQuery(this.sql, generatedColumns) : this.sql;
 
-            logger.debug("Start exchange for {}", sql);
+        logger.debug("Start exchange for {}", sql);
 
-            return QueryMessageFlow.exchange(this.client, this.sql) //
-                .windowUntil(AbstractDoneToken.class::isInstance) //
-                .map(it -> MssqlResult.toResult(this.codecs, it));
-        });
+        Flux<Message> exchange = QueryMessageFlow.exchange(this.client, sql);
+
+        if (useGeneratedKeysClause) {
+            exchange = exchange.transform(GeneratedValues::reduceToSingleCountDoneToken);
+        }
+
+        return exchange.windowUntil(AbstractDoneToken.class::isInstance) //
+            .map(it -> MssqlResult.toResult(this.codecs, it));
+    }
+
+    @Override
+    public SimpleMssqlStatement returnGeneratedValues(String... columns) {
+
+        Assert.requireNonNull(columns, "columns must not be null");
+
+        this.generatedColumns = columns;
+        return this;
     }
 }

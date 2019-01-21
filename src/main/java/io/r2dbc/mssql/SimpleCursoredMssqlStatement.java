@@ -61,6 +61,11 @@ final class SimpleCursoredMssqlStatement extends SimpleMssqlStatement {
         });
     }
 
+    @Override
+    public SimpleMssqlStatement returnGeneratedValues(String... columns) {
+        throw new UnsupportedOperationException("Not supported for SELECT statements");
+    }
+
     /**
      * Returns {@literal true} if the query is supported by this {@link MssqlStatement}. Cursored execution is supported for {@literal SELECT} queries.
      *
