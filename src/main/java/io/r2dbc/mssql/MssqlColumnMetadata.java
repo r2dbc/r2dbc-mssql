@@ -16,12 +16,14 @@
 
 package io.r2dbc.mssql;
 
+import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.ColumnMetadata;
+import io.r2dbc.spi.Nullability;
 
-import java.util.Optional;
+import javax.annotation.Nonnull;
 
 /**
  * Microsoft SQL Server-specific {@link ColumnMetadata} based on {@link Column}.
@@ -32,13 +34,17 @@ public final class MssqlColumnMetadata implements ColumnMetadata {
 
     private final Column column;
 
+    private final Codecs codecs;
+
     /**
      * Creates a new {@link MssqlColumnMetadata}.
      *
      * @param column the column.
+     * @param codecs the {@link Codecs codec registry}
      */
-    MssqlColumnMetadata(Column column) {
+    MssqlColumnMetadata(Column column, Codecs codecs) {
         this.column = Assert.requireNonNull(column, "Column must not be null");
+        this.codecs = Assert.requireNonNull(codecs, "Codecs must not be null");
     }
 
     @Override
@@ -47,21 +53,28 @@ public final class MssqlColumnMetadata implements ColumnMetadata {
     }
 
     @Override
-    public Optional<Integer> getPrecision() {
-        return Optional.of(this.column.getType().getPrecision());
+    public Integer getPrecision() {
+        return getNativeTypeMetadata().getPrecision();
     }
 
     @Override
-    public Integer getType() {
-        return this.column.getType().getServerType().ordinal();
+    public Integer getScale() {
+        return getNativeTypeMetadata().getScale();
     }
 
-    /**
-     * Returns the underlying {@link TypeInformation}.
-     *
-     * @return the {@link TypeInformation}.
-     */
-    public TypeInformation getTypeInformation() {
+    @Override
+    public Nullability getNullability() {
+        return getNativeTypeMetadata().isNullable() ? Nullability.NULLABLE : Nullability.NON_NULL;
+    }
+
+    @Override
+    public Class<?> getJavaType() {
+        return codecs.getJavaType(getNativeTypeMetadata());
+    }
+
+    @Override
+    @Nonnull
+    public TypeInformation getNativeTypeMetadata() {
         return this.column.getType();
     }
 }

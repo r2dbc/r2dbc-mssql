@@ -92,4 +92,11 @@ interface Codec<T> {
      */
     @Nullable
     T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type);
+
+    /**
+     * Returns the Java {@link Class type} of this codec.
+     *
+     * @return the Java type.
+     */
+    Class<T> getType();
 }

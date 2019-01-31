@@ -19,6 +19,7 @@ package io.r2dbc.mssql.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.type.SqlServerType;
+import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
@@ -106,7 +107,7 @@ public final class DefaultCodecs implements Codecs {
         throw new IllegalArgumentException(String.format("Cannot encode [null] parameter of type [%s]", type.getName()));
     }
 
-    @SuppressWarnings("unchecked")
+
     @Override
     public <T> T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type) {
 
@@ -117,22 +118,58 @@ public final class DefaultCodecs implements Codecs {
             return null;
         }
 
-        Codec<?> preferredCodec = this.codecPreferences.get(decodable.getType().getServerType());
-        if (preferredCodec != null && preferredCodec.canDecode(decodable, type)) {
-            return doDecode((Codec<T>) preferredCodec, buffer, decodable, type);
-        }
-
-        for (Codec<?> codec : this.codecs) {
-            if (codec.canDecode(decodable, type)) {
-                return doDecode((Codec<T>) codec, buffer, decodable, type);
-            }
-        }
-
-        throw new IllegalArgumentException(String.format("Cannot decode value of type [%s], name [%s] server type [%s]", type.getName(), decodable.getName(), decodable.getType().getServerType()));
+        Codec<T> codec = getDecodingCodec(decodable, type);
+        return doDecode(codec, buffer, decodable, type);
     }
 
     @Nullable
     private <T> T doDecode(Codec<T> codec, @Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type) {
         return codec.decode(buffer, decodable, type);
+    }
+
+    @Override
+    public Class<?> getJavaType(TypeInformation type) {
+
+        Assert.requireNonNull(type, "Type must not be null");
+
+        Codec<Object> decodingCodec = getDecodingCodec(new TypeInformationWrapper(type), Object.class);
+        return decodingCodec.getType();
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> Codec<T> getDecodingCodec(Decodable decodable, Class<? extends T> requestedType) {
+
+        Codec<?> preferredCodec = this.codecPreferences.get(decodable.getType().getServerType());
+        if (preferredCodec != null && preferredCodec.canDecode(decodable, requestedType)) {
+            return (Codec<T>) preferredCodec;
+        }
+
+        for (Codec<?> codec : this.codecs) {
+            if (codec.canDecode(decodable, requestedType)) {
+                return (Codec<T>) codec;
+            }
+        }
+
+        throw new IllegalArgumentException(String.format("Cannot decode value of type [%s], name [%s] server type [%s]", requestedType.getName(), decodable.getName(),
+            decodable.getType().getServerType()));
+    }
+
+    static class TypeInformationWrapper implements Decodable {
+
+        private final TypeInformation typeInformation;
+
+        TypeInformationWrapper(TypeInformation typeInformation) {
+            this.typeInformation = typeInformation;
+        }
+
+        @Override
+        public TypeInformation getType() {
+            return typeInformation;
+        }
+
+        @Override
+        public String getName() {
+            return typeInformation.getServerTypeName();
+        }
     }
 }

@@ -18,12 +18,14 @@ package io.r2dbc.mssql;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.message.type.LengthStrategy;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.spi.Nullability;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -38,7 +40,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class MssqlRowMetadataUnitTests {
 
-    TypeInformation integer = builder().withScale(4).withMaxLength(4).withLengthStrategy(LengthStrategy.FIXEDLENTYPE).withServerType(SqlServerType.INTEGER).build();
+    Codecs codecs = new DefaultCodecs();
+
+    TypeInformation integer = builder().withScale(5).withMaxLength(4).withPrecision(4).withLengthStrategy(LengthStrategy.FIXEDLENTYPE).withServerType(SqlServerType.INTEGER).build();
 
     Column column = new Column(0, "foo", integer, null);
 
@@ -51,19 +55,22 @@ class MssqlRowMetadataUnitTests {
     @Test
     void shouldLookupMetadataByName() {
 
-        MssqlRowMetadata metadata = new MssqlRowMetadata(row);
+        MssqlRowMetadata metadata = new MssqlRowMetadata(row, codecs);
         MssqlColumnMetadata columnMetadata = metadata.getColumnMetadata("foo");
 
         assertThat(columnMetadata).isNotNull();
         assertThat(columnMetadata.getName()).isEqualTo("foo");
-        assertThat(columnMetadata.getType()).isEqualTo(SqlServerType.INTEGER.ordinal());
-        assertThat(columnMetadata.getTypeInformation()).isEqualTo(integer);
+        assertThat(columnMetadata.getJavaType()).isEqualTo(Integer.class);
+        assertThat(columnMetadata.getPrecision()).isEqualTo(4);
+        assertThat(columnMetadata.getScale()).isEqualTo(5);
+        assertThat(columnMetadata.getNullability()).isEqualTo(Nullability.NON_NULL);
+        assertThat(columnMetadata.getNativeTypeMetadata()).isEqualTo(integer);
     }
 
     @Test
     void shouldLookupMetadataByIndex() {
 
-        MssqlRowMetadata metadata = new MssqlRowMetadata(row);
+        MssqlRowMetadata metadata = new MssqlRowMetadata(row, codecs);
         MssqlColumnMetadata columnMetadata = metadata.getColumnMetadata(0);
 
         assertThat(columnMetadata).isNotNull();
@@ -71,9 +78,9 @@ class MssqlRowMetadataUnitTests {
     }
 
     @Test
-    void shouldReturnMetadataForAllCOlumns() {
+    void shouldReturnMetadataForAllColumns() {
 
-        MssqlRowMetadata metadata = new MssqlRowMetadata(row);
+        MssqlRowMetadata metadata = new MssqlRowMetadata(row, codecs);
 
         assertThat(metadata.getColumnMetadatas()).hasSize(1);
     }

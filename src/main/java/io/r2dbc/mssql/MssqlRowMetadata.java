@@ -16,6 +16,7 @@
 
 package io.r2dbc.mssql;
 
+import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.RowMetadata;
@@ -24,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 
 /**
  * Microsoft SQL Server-specific {@link RowMetadata}.
@@ -34,20 +36,24 @@ final class MssqlRowMetadata implements RowMetadata {
 
     private final ColumnSource columnSource;
 
+    private final Codecs codecs;
+
     private final Map<Column, MssqlColumnMetadata> metadataCache = new HashMap<>();
 
     /**
      * Creates a new {@link MssqlColumnMetadata}.
      *
      * @param columnSource the source of {@link Column}s.
+     * @param codecs       the codec registry.
      */
-    public MssqlRowMetadata(ColumnSource columnSource) {
+    MssqlRowMetadata(ColumnSource columnSource, Codecs codecs) {
         this.columnSource = Assert.requireNonNull(columnSource, "ColumnSource must not be null");
+        this.codecs = Assert.requireNonNull(codecs, "Codecs must not be null");
     }
 
     @Override
     public MssqlColumnMetadata getColumnMetadata(Object identifier) {
-        return this.metadataCache.computeIfAbsent(this.columnSource.getColumn(identifier), MssqlColumnMetadata::new);
+        return this.metadataCache.computeIfAbsent(this.columnSource.getColumn(identifier), column -> new MssqlColumnMetadata(column, codecs));
     }
 
     @Override
@@ -57,7 +63,7 @@ final class MssqlRowMetadata implements RowMetadata {
 
         for (int i = 0; i < this.columnSource.getColumnCount(); i++) {
 
-            MssqlColumnMetadata columnMetadata = this.metadataCache.computeIfAbsent(this.columnSource.getColumn(i), MssqlColumnMetadata::new);
+            MssqlColumnMetadata columnMetadata = this.metadataCache.computeIfAbsent(this.columnSource.getColumn(i), column -> new MssqlColumnMetadata(column, codecs));
             metadatas.add(columnMetadata);
         }
 

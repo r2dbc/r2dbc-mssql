@@ -45,6 +45,8 @@ public final class MssqlResult implements Result {
 
     private static final Logger logger = LoggerFactory.getLogger(MssqlResult.class);
 
+    private final Codecs codecs;
+
     private final Flux<MssqlRow> rows;
 
     private final Mono<Long> rowsUpdated;
@@ -52,10 +54,12 @@ public final class MssqlResult implements Result {
     /**
      * Creates a new {@link MssqlResult}.
      *
+     * @param codecs      codec registry.
      * @param rows        stream of {@link MssqlRow}.
      * @param rowsUpdated publisher of the updated row count.
      */
-    MssqlResult(Flux<MssqlRow> rows, Mono<Long> rowsUpdated) {
+    MssqlResult(Codecs codecs, Flux<MssqlRow> rows, Mono<Long> rowsUpdated) {
+        this.codecs = codecs;
         this.rows = rows;
         this.rowsUpdated = rowsUpdated;
     }
@@ -117,7 +121,7 @@ public final class MssqlResult implements Result {
             .hide()
             .subscribe(processor);
 
-        return new MssqlResult(rows, rowsUpdated);
+        return new MssqlResult(codecs, rows, rowsUpdated);
     }
 
     @Override
@@ -133,7 +137,7 @@ public final class MssqlResult implements Result {
         return this.rows
             .map((row) -> {
                 try {
-                    return f.apply(row, new MssqlRowMetadata(row));
+                    return f.apply(row, new MssqlRowMetadata(row, codecs));
                 } finally {
                     row.release();
                 }

@@ -101,6 +101,11 @@ abstract class AbstractCodec<T> implements Codec<T> {
         return doDecode(buffer, length, decodable.getType(), type);
     }
 
+    @Override
+    public Class<T> getType() {
+        return this.type;
+    }
+
     /**
      * @param allocator the allocator to allocate encoding buffers.
      * @param context   parameter context.

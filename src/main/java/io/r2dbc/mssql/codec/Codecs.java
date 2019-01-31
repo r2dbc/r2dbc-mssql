@@ -22,6 +22,7 @@ import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.token.ReturnValue;
 import io.r2dbc.mssql.message.token.RowToken;
+import io.r2dbc.mssql.message.type.TypeInformation;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -64,4 +65,14 @@ public interface Codecs {
      */
     @Nullable
     <T> T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type);
+
+    /**
+     * Returns the Java {@link Class type} to which this {@link TypeInformation type descriptor} decodes to. The resulting type is considered the native type for the {@link TypeInformation type
+     * descriptor}.
+     *
+     * @param type the type descriptor.
+     * @return the most appropriate Java {@link Class type}.
+     * @throws IllegalArgumentException if {@code type} is {@code null}
+     */
+    Class<?> getJavaType(TypeInformation type);
 }
