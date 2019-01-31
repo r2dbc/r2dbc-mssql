@@ -45,8 +45,6 @@ public final class MssqlResult implements Result {
 
     private static final Logger logger = LoggerFactory.getLogger(MssqlResult.class);
 
-    private final Codecs codecs;
-
     private final Flux<MssqlRow> rows;
 
     private final Mono<Long> rowsUpdated;
@@ -54,12 +52,10 @@ public final class MssqlResult implements Result {
     /**
      * Creates a new {@link MssqlResult}.
      *
-     * @param codecs      codec registry.
      * @param rows        stream of {@link MssqlRow}.
      * @param rowsUpdated publisher of the updated row count.
      */
-    MssqlResult(Codecs codecs, Flux<MssqlRow> rows, Mono<Long> rowsUpdated) {
-        this.codecs = codecs;
+    private MssqlResult(Flux<MssqlRow> rows, Mono<Long> rowsUpdated) {
         this.rows = rows;
         this.rowsUpdated = rowsUpdated;
     }
@@ -81,10 +77,11 @@ public final class MssqlResult implements Result {
 
         Flux<Message> firstMessages = processor.cache();
 
-        Mono<ColumnMetadataToken> columnDescriptions = firstMessages
+        Mono<MssqlRowMetadata> columnDescriptions = firstMessages
             .ofType(ColumnMetadataToken.class)
             .filter(it -> !it.getColumns().isEmpty())
             .doOnNext(it -> logger.debug("Result column definition: {}", it))
+            .map(it -> MssqlRowMetadata.create(codecs, it))
             .singleOrEmpty()
             .cache();
 
@@ -92,7 +89,7 @@ public final class MssqlResult implements Result {
             .startWith(firstMessages)
             .ofType(RowToken.class)
             .zipWith(columnDescriptions.repeat())
-            .map(function((dataToken, columns) -> MssqlRow.toRow(codecs, dataToken, columns)));
+            .map(function((dataToken, metadata) -> MssqlRow.toRow(codecs, dataToken, metadata)));
 
         // Release unused tokens directly.
         Mono<Long> rowsUpdated = firstMessages
@@ -121,7 +118,7 @@ public final class MssqlResult implements Result {
             .hide()
             .subscribe(processor);
 
-        return new MssqlResult(codecs, rows, rowsUpdated);
+        return new MssqlResult(rows, rowsUpdated);
     }
 
     @Override
@@ -137,7 +134,7 @@ public final class MssqlResult implements Result {
         return this.rows
             .map((row) -> {
                 try {
-                    return f.apply(row, new MssqlRowMetadata(row, codecs));
+                    return f.apply(row, row.getMetadata());
                 } finally {
                     row.release();
                 }

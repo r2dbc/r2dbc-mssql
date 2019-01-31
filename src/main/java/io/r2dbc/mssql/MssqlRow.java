@@ -20,14 +20,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.message.token.Column;
-import io.r2dbc.mssql.message.token.ColumnMetadataToken;
 import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Row;
 import reactor.util.annotation.Nullable;
 
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
@@ -39,7 +36,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  * @see #release()
  * @see ReferenceCounted
  */
-final class MssqlRow extends ColumnSource implements Row {
+final class MssqlRow implements Row {
 
     private static final AtomicIntegerFieldUpdater<MssqlRow> STATE_ACCESSOR = AtomicIntegerFieldUpdater.newUpdater(MssqlRow.class, "state");
 
@@ -49,16 +46,18 @@ final class MssqlRow extends ColumnSource implements Row {
 
     private final Codecs codecs;
 
+    private final MssqlRowMetadata metadata;
+
     private final RowToken rowToken;
 
     // see STATE_UPDATER
     @SuppressWarnings("unused")
     private volatile int state = STATE_ACTIVE;
 
-    MssqlRow(Codecs codecs, List<Column> columns, Map<String, Column> nameKeyedColumns, RowToken rowToken) {
+    MssqlRow(Codecs codecs, RowToken rowToken, MssqlRowMetadata metadata) {
 
-        super(columns, nameKeyedColumns);
         this.codecs = codecs;
+        this.metadata = metadata;
         this.rowToken = rowToken;
     }
 
@@ -70,13 +69,22 @@ final class MssqlRow extends ColumnSource implements Row {
      * @param columns  column specifications.
      * @return
      */
-    static MssqlRow toRow(Codecs codecs, RowToken rowToken, ColumnMetadataToken columns) {
+    static MssqlRow toRow(Codecs codecs, RowToken rowToken, MssqlRowMetadata metadata) {
 
         Assert.requireNonNull(codecs, "Codecs must not be null");
         Assert.requireNonNull(rowToken, "RowToken must not be null");
-        Assert.requireNonNull(columns, "ColMetadataToken must not be null");
+        Assert.requireNonNull(metadata, "MssqlRowMetadata must not be null");
 
-        return new MssqlRow(codecs, columns.getColumns(), columns.toMap(), rowToken);
+        return new MssqlRow(codecs, rowToken, metadata);
+    }
+
+    /**
+     * Returns the {@link MssqlRowMetadata} associated with this {@link Row}.
+     *
+     * @return the {@link MssqlRowMetadata} associated with this {@link Row}.
+     */
+    public MssqlRowMetadata getMetadata() {
+        return this.metadata;
     }
 
     @Override
@@ -87,7 +95,7 @@ final class MssqlRow extends ColumnSource implements Row {
         Assert.requireNonNull(type, "Type must not be null");
         requireNotReleased();
 
-        Column column = super.getColumn(identifier);
+        Column column = this.metadata.getColumn(identifier);
 
         ByteBuf columnData = this.rowToken.getColumnData(column.getIndex());
 

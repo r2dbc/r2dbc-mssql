@@ -18,6 +18,7 @@ package io.r2dbc.mssql;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.token.RowToken;
@@ -37,6 +38,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class MssqlRowUnitTests {
 
+    Codecs codecs = new DefaultCodecs();
+
     TypeInformation integer = Types.integer();
 
     Column column = new Column(0, "foo", integer, null);
@@ -45,7 +48,9 @@ class MssqlRowUnitTests {
 
     RowToken rowToken = RowToken.decode(data, Collections.singletonList(column));
 
-    MssqlRow row = new MssqlRow(new DefaultCodecs(), Collections.singletonList(column), Collections.singletonMap("foo", column), rowToken);
+    MssqlRowMetadata rowMetadata = new MssqlRowMetadata(codecs, Collections.singletonList(column), Collections.singletonMap("foo", column));
+
+    MssqlRow row = new MssqlRow(codecs, rowToken, rowMetadata);
 
     @Test
     void shouldReadRowByIndex() {

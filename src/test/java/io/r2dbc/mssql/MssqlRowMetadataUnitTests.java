@@ -50,13 +50,12 @@ class MssqlRowMetadataUnitTests {
 
     RowToken rowToken = RowToken.decode(data, Collections.singletonList(column));
 
-    MssqlRow row = new MssqlRow(new DefaultCodecs(), Collections.singletonList(column), Collections.singletonMap("foo", column), rowToken);
+    MssqlRowMetadata rowMetadata = new MssqlRowMetadata(codecs, Collections.singletonList(column), Collections.singletonMap("foo", column));
 
     @Test
     void shouldLookupMetadataByName() {
 
-        MssqlRowMetadata metadata = new MssqlRowMetadata(row, codecs);
-        MssqlColumnMetadata columnMetadata = metadata.getColumnMetadata("foo");
+        MssqlColumnMetadata columnMetadata = rowMetadata.getColumnMetadata("foo");
 
         assertThat(columnMetadata).isNotNull();
         assertThat(columnMetadata.getName()).isEqualTo("foo");
@@ -70,8 +69,7 @@ class MssqlRowMetadataUnitTests {
     @Test
     void shouldLookupMetadataByIndex() {
 
-        MssqlRowMetadata metadata = new MssqlRowMetadata(row, codecs);
-        MssqlColumnMetadata columnMetadata = metadata.getColumnMetadata(0);
+        MssqlColumnMetadata columnMetadata = rowMetadata.getColumnMetadata(0);
 
         assertThat(columnMetadata).isNotNull();
         assertThat(columnMetadata.getName()).isEqualTo("foo");
@@ -79,9 +77,6 @@ class MssqlRowMetadataUnitTests {
 
     @Test
     void shouldReturnMetadataForAllColumns() {
-
-        MssqlRowMetadata metadata = new MssqlRowMetadata(row, codecs);
-
-        assertThat(metadata.getColumnMetadatas()).hasSize(1);
+        assertThat(rowMetadata.getColumnMetadatas()).hasSize(1);
     }
 }

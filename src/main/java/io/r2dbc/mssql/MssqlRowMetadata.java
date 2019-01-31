@@ -18,6 +18,7 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.message.token.Column;
+import io.r2dbc.mssql.message.token.ColumnMetadataToken;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.RowMetadata;
 
@@ -32,9 +33,7 @@ import java.util.Map;
  *
  * @author Mark Paluch
  */
-final class MssqlRowMetadata implements RowMetadata {
-
-    private final ColumnSource columnSource;
+final class MssqlRowMetadata extends ColumnSource implements RowMetadata {
 
     private final Codecs codecs;
 
@@ -43,27 +42,41 @@ final class MssqlRowMetadata implements RowMetadata {
     /**
      * Creates a new {@link MssqlColumnMetadata}.
      *
-     * @param columnSource the source of {@link Column}s.
-     * @param codecs       the codec registry.
+     * @param codecs           the codec registry.
+     * @param columns          collection of {@link Column}s.
+     * @param nameKeyedColumns name-keyed {@link Map} of {@link Column}s.
      */
-    MssqlRowMetadata(ColumnSource columnSource, Codecs codecs) {
-        this.columnSource = Assert.requireNonNull(columnSource, "ColumnSource must not be null");
+    MssqlRowMetadata(Codecs codecs, List<Column> columns, Map<String, Column> nameKeyedColumns) {
+        super(columns, nameKeyedColumns);
         this.codecs = Assert.requireNonNull(codecs, "Codecs must not be null");
+    }
+
+    /**
+     * Creates a new {@link MssqlColumnMetadata}.
+     *
+     * @param codecs         the codec registry.
+     * @param columnMetadata the column metadata.
+     */
+    public static MssqlRowMetadata create(Codecs codecs, ColumnMetadataToken columnMetadata) {
+
+        Assert.notNull(columnMetadata, "ColumnMetadata must not be null");
+
+        return new MssqlRowMetadata(codecs, columnMetadata.getColumns(), columnMetadata.toMap());
     }
 
     @Override
     public MssqlColumnMetadata getColumnMetadata(Object identifier) {
-        return this.metadataCache.computeIfAbsent(this.columnSource.getColumn(identifier), column -> new MssqlColumnMetadata(column, codecs));
+        return this.metadataCache.computeIfAbsent(this.getColumn(identifier), column -> new MssqlColumnMetadata(column, codecs));
     }
 
     @Override
     public List<MssqlColumnMetadata> getColumnMetadatas() {
 
-        List<MssqlColumnMetadata> metadatas = new ArrayList<>(this.columnSource.getColumnCount());
+        List<MssqlColumnMetadata> metadatas = new ArrayList<>(this.getColumnCount());
 
-        for (int i = 0; i < this.columnSource.getColumnCount(); i++) {
+        for (int i = 0; i < this.getColumnCount(); i++) {
 
-            MssqlColumnMetadata columnMetadata = this.metadataCache.computeIfAbsent(this.columnSource.getColumn(i), column -> new MssqlColumnMetadata(column, codecs));
+            MssqlColumnMetadata columnMetadata = this.metadataCache.computeIfAbsent(this.getColumn(i), column -> new MssqlColumnMetadata(column, codecs));
             metadatas.add(columnMetadata);
         }
 
