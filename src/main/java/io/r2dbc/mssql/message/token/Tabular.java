@@ -119,7 +119,7 @@ public final class Tabular implements Message {
                 // TODO: Chunking support.
                 ColumnMetadataToken colMetadataToken = ColumnMetadataToken.decode(buffer, encryptionSupported);
 
-                if (columns.get() == null && !colMetadataToken.getColumns().isEmpty()) {
+                if (columns.get() == null || !colMetadataToken.getColumns().isEmpty()) {
                     columns.set(colMetadataToken);
                 }
 

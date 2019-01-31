@@ -139,6 +139,20 @@ class ColumnMetadataIntegrationTests extends IntegrationTestSupport {
             .expectNext(1)
             .verifyComplete();
 
+        connection.createStatement("SELECT non_nullable_col FROM metadata_test")
+            .execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> rowMetadata.getColumnMetadata("non_nullable_col")))
+            .as(StepVerifier::create)
+            .consumeNextWith(it -> {
+
+                assertThat(it.getNullability()).isEqualTo(Nullability.NON_NULL);
+                assertThat(it.getPrecision()).isEqualTo(expectation.precision);
+                assertThat(it.getScale()).isEqualTo(expectation.scale);
+                assertThat(it.getJavaType()).isEqualTo(expectation.javaClass);
+
+            })
+            .verifyComplete();
+
         connection.createStatement("SELECT nullable_col FROM metadata_test")
             .execute()
             .flatMap(it -> it.map((row, rowMetadata) -> rowMetadata.getColumnMetadata("nullable_col")))

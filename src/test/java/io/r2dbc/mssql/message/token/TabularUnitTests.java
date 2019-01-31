@@ -19,7 +19,10 @@ package io.r2dbc.mssql.message.token;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.r2dbc.mssql.util.HexUtils;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,7 +34,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 final class TabularUnitTests {
 
     @Test
-    @SuppressWarnings("unchecked")
     void shouldDecodeLoginAck() {
 
         String hex = "e31b0001066d0061" + "007300740065007200066d0061007300"
@@ -53,5 +55,40 @@ final class TabularUnitTests {
         assertThat(tabular
             .getRequiredToken(EnvChangeToken.class, it -> it.getChangeType() == EnvChangeToken.EnvChangeType.Database)
             .getNewValueString()).isEqualTo("master");
+    }
+
+    @Test
+    void colMetadataShouldReplacePreviousMetadata() {
+
+        ByteBuf firstMetadata = HexUtils.decodeToByteBuf("8107000000000000" +
+            "000800300B65006D0070006C006F0079" +
+            "00650065005F00690064000000000008" +
+            "00E764000904D00034096C0061007300" +
+            "74005F006E0061006D00650000000000" +
+            "0900A732000904D000340A6600690072" +
+            "00730074005F006E0061006D00650000" +
+            "00000009006E0806730061006C006100" +
+            "7200790000000000090024100366006F" +
+            "006F000000000009006D080366006C00" +
+            "74000000000009006D04036200610072" +
+            "00");
+
+        ByteBuf nextMetadata = HexUtils.decodeToByteBuf("8102000000000000" +
+            "00090026010c6e0075006c006c006100" +
+            "62006c0065005f0063006f006c000000" +
+            "00000000380752004f00570053005400" +
+            "41005400");
+
+        ByteBuf rowData = HexUtils.decodeToByteBuf("d1014201000000");
+
+        Tabular.TabularDecoder decoder = Tabular.createDecoder(true);
+
+        // initialize
+        decoder.decode(firstMetadata);
+        decoder.decode(nextMetadata);
+
+        List<DataToken> rows = decoder.decode(rowData);
+        assertThat(rows).hasSize(1);
+        assertThat(rowData.readableBytes()).isEqualTo(0);
     }
 }
