@@ -76,7 +76,10 @@ ConnectionFactoryOptions options = builder()
 
 ConnectionFactory connectionFactory = ConnectionFactories.get(options);
 
-Mono<Connection> connectionMono = factory.create();
+Publisher<? extends Connection> connectionPublisher = connectionFactory.create();
+
+// Alternative: Creating a Mono using Project Reactor
+Mono<Connection> connectionMono = Mono.from(connectionFactory.create());
 ```
 
 Programmatic:
