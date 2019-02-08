@@ -1,0 +1,23 @@
+R2DBC MSSQL Changelog
+=============================
+
+1.0.0.M7
+------------------
+* Update changelog for M7 #25
+* Fix ConnectionFactories usage example in readme #24
+* Tabular decode function retains previous column metadata #23
+* Introduce caching for RowMetadata instead creating an instance per row #22
+* Enhanced ColumnMetadata #21
+* Upgrade to TestContainers 1.10.6 #20
+* Add Statement.returnGeneratedValues(String...) #17
+* Remove Recursive Generics #16
+* Add configuration support connect timeout #15
+* Implement ConnectionFactory Discovery #14
+* Null values should return IllegalArgumentException #10
+* Parametrized INSERT … SELECT select SCOPE_IDENTITY() returns wrong affected rows count #7
+* Add support for transport-level encryption to allow Azure usage #5
+* Add support for OffsetDateTime #4
+
+1.0.0.M6
+------------------
+* Inception
