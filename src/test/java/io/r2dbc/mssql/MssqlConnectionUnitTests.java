@@ -246,4 +246,19 @@ class MssqlConnectionUnitTests {
             .as(StepVerifier::create)
             .verifyComplete();
     }
+
+    @ParameterizedTest
+    @EnumSource(MssqlIsolationLevel.class)
+    void shouldSetMssqlIsolationLevel(MssqlIsolationLevel isolationLevel) {
+
+        TestClient client =
+            TestClient.builder().withTransactionStatus(TransactionStatus.EXPLICIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(),
+                "SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql().toUpperCase())).thenRespond(DoneToken.create(0)).build();
+
+        MssqlConnection connection = new MssqlConnection(client);
+
+        connection.setTransactionIsolationLevel(isolationLevel)
+            .as(StepVerifier::create)
+            .verifyComplete();
+    }
 }

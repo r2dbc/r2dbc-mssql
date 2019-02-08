@@ -187,39 +187,23 @@ public final class MssqlConnection implements Connection {
 
     @Override
     public Mono<Void> setTransactionIsolationLevel(IsolationLevel isolationLevel) {
-
         Assert.requireNonNull(isolationLevel, "IsolationLevel must not be null");
 
-        return QueryMessageFlow.exchange(this.client, "SET TRANSACTION ISOLATION LEVEL " + getIsolationLevelSql(isolationLevel)).handle(MssqlException::handleErrorResponse).then();
+        MssqlIsolationLevel specializedLevel =  MssqlIsolationLevel.valueOf(isolationLevel.name());
+
+        return setTransactionIsolationLevel(specializedLevel);
+    }
+
+    public Mono<Void> setTransactionIsolationLevel(MssqlIsolationLevel isolationLevel) {
+        Assert.requireNonNull(isolationLevel, "IsolationLevel must not be null");
+
+        return QueryMessageFlow
+            .exchange(this.client, "SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql())
+            .handle(MssqlException::handleErrorResponse).then();
     }
 
     Client getClient() {
         return this.client;
-    }
-
-    private static String getIsolationLevelSql(IsolationLevel isolationLevel) {
-        switch (isolationLevel) {
-            case READ_UNCOMMITTED: {
-                return "READ UNCOMMITTED";
-            }
-            case READ_COMMITTED: {
-                return "READ COMMITTED";
-            }
-            case REPEATABLE_READ: {
-                return "REPEATABLE READ";
-            }
-            case SERIALIZABLE: {
-                return "SERIALIZABLE";
-            }
-            // TODO: add snapshot isolation level.
-           /* case SNAPSHOT: {
-                return "snapshot";
-                break;
-            }*/
-
-        }
-
-        throw new IllegalArgumentException("Isolation level " + isolationLevel + " not supported");
     }
 
     private Mono<Void> useTransactionStatus(Function<TransactionStatus, Publisher<?>> function) {
