@@ -17,14 +17,16 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.spi.IsolationLevel;
 
 /**
- * SQL transaction isolation levels.
- *
- * Hold specific MSSQL server transaction levels.
- *
+ * SQL Server-specific transaction isolation levels.
+ * <p>
  * For more information check:
- * <a href="https://docs.microsoft.com/en-us/sql/t-sql/statements/set-transaction-isolation-level-transact-sql?view=sql-server-2017">MS Sql Server Isolation Levels</a>
+ * <a href="https://docs.microsoft.com/en-us/sql/t-sql/statements/set-transaction-isolation-level-transact-sql?view=sql-server-2017">SQL Server Isolation Levels</a>
+ *
+ * @author Hebert Coelho
+ * @see IsolationLevel
  */
 public enum MssqlIsolationLevel {
 

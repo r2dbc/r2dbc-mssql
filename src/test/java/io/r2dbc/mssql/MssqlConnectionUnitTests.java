@@ -40,6 +40,7 @@ import static org.mockito.Mockito.when;
  * Unit tests for {@link MssqlConnection}.
  *
  * @author Mark Paluch
+ * @author Hebert Coelho
  */
 class MssqlConnectionUnitTests {
 
