@@ -133,6 +133,93 @@ Additional options:
 * `database`: Initial database to select. Defaults to SQL Server user profile settings.
 * `ssl`: Whether to use transport-level encryption for the entire SQL server traffic, defaults to `false`.
 
+### Data Type Mapping 
+
+This reference table shows the type mapping between [Microsoft SQL Server][m] and Java data types:
+
+
+| Microsoft SQL Server Type                 | Java Data Type                                                                                                                           | 
+|:------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------|
+| [`bit`][sql-bit-ref]                      | [**`Boolean`**][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref] |
+| [`tinyint`][sql-all-int-ref]              | [**`Byte`**][java-byte-ref], [`Boolean`][java-boolean-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref] |
+| [`smallint`][sql-all-int-ref]             | [**`Short`**][java-short-ref], [`Boolean`][java-boolean-ref], [`Byte`][java-byte-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref] |
+| [`int`][sql-all-int-ref]                  | [**`Integer`**][java-integer-ref], [`Boolean`][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Long`][java-long-ref] |
+| [`bigint`][sql-all-int-ref]               | [**`Long`**][java-long-ref], [`Boolean`][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref] |
+| [`real`][sql-float-real-ref]              | [**`Float`**][java-float-ref], [`Double`][java-double-ref]   
+| [`float`][sql-float-real-ref]             | [**`Double`**][java-double-ref], [`Float`][java-float-ref] 
+| [`decimal`][sql-decimal-ref]              | [`BigDecimal`][java-bigdecimal-ref] 
+| [`numeric`][sql-decimal-ref]              | [`BigDecimal`][java-bigdecimal-ref]
+| [`uniqueidentifier`][sql-uid-ref]         | [**`UUID`**][java-uuid-ref], [`String`][java-string-ref]   
+| [`smalldatetime`][sql-smalldatetime-ref]  | [`LocalDateTime`][java-ldt-ref] 
+| [`datetime`][sql-datetime-ref]            | [`LocalDateTime`][java-ldt-ref] 
+| [`datetime2`][sql-datetime2-ref]          | [`LocalDateTime`][java-ldt-ref] 
+| [`date`][sql-date-ref]                    | [`LocalDate`][java-ld-ref] 
+| [`time`][sql-time-ref]                    | [`LocalTime`][java-lt-ref] 
+| [`datetimeoffset`][sql-dtof-ref]          | [**`OffsetDateTime`**][java-odt-ref], [`ZonedDateTime`][java-zdt-ref]  
+| [`timestamp`][sql-timestamp-ref]          | `byte[]`
+| [`smallmoney`][sql-money-ref]             | [`BigDecimal`][java-bigdecimal-ref]
+| [`money`][sql-money-ref]                  | [`BigDecimal`][java-bigdecimal-ref]
+| [`char`][sql-(var)char-ref]               | [`String`][java-string-ref]
+| [`varchar`][sql-(var)char-ref]            | [`String`][java-string-ref]
+| [`varcharmax`][sql-(var)char-ref]         | Not yet supported.
+| [`nchar`][sql-n(var)char-ref]             | [`String`][java-string-ref]
+| [`nvarchar`][sql-n(var)char-ref]          | [`String`][java-string-ref]
+| [`nvarcharmax`][sql-n(var)char-ref]       | Not yet supported.
+| [`text`][sql-(n)text-ref]                 | Not yet supported.
+| [`ntext`][sql-(n)text-ref]                | Not yet supported.
+| [`image`][sql-(n)text-ref]                | Not yet supported.
+| [`binary`][sql-binary-ref]                | Not yet supported.
+| [`varbinary`][sql-binary-ref]             | Not yet supported.
+| [`varbinarymax`][sql-binary-ref]          | Not yet supported.
+| [`sql_variant`][sql-sql-variant-ref]      | Not yet supported.
+| [`xml`][sql-xml-ref]                      | Not yet supported.
+| [`udt`][sql-udt-ref]                      | Not yet supported.
+| [`geometry`][sql-geometry-ref]            | Not yet supported.
+| [`geography`][sql-geography-ref]          | Not yet supported.
+
+Types in **bold** indicate the native (default) Java type.
+
+
+[sql-bit-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/bit-transact-sql?view=sql-server-2017
+[sql-all-int-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/int-bigint-smallint-and-tinyint-transact-sql?view=sql-server-2017
+[sql-float-real-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/float-and-real-transact-sql?view=sql-server-2017
+[sql-decimal-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/decimal-and-numeric-transact-sql?view=sql-server-2017
+[sql-smalldatetime-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/smalldatetime-transact-sql?view=sql-server-2017
+[sql-datetime-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/datetime-transact-sql?view=sql-server-2017
+[sql-datetime2-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/datetime2-transact-sql?view=sql-server-2017
+[sql-date-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/date-transact-sql?view=sql-server-2017
+[sql-time-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/time-transact-sql?view=sql-server-2017
+[sql-timestamp-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/rowversion-transact-sql?view=sql-server-2017
+[sql-uid-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/uniqueidentifier-transact-sql?view=sql-server-2017
+[sql-dtof-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/datetimeoffset-transact-sql?view=sql-server-2017
+[sql-money-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/money-and-smallmoney-transact-sql?view=sql-server-2017
+[sql-(var)char-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/char-and-varchar-transact-sql?view=sql-server-2017
+[sql-n(var)char-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/nchar-and-nvarchar-transact-sql?view=sql-server-2017
+[sql-(n)text-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/ntext-text-and-image-transact-sql?view=sql-server-2017
+[sql-binary-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/binary-and-varbinary-transact-sql?view=sql-server-2017
+[sql-sql-variant-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/sql-variant-transact-sql?view=sql-server-2017
+[sql-xml-ref]: https://docs.microsoft.com/en-us/sql/t-sql/xml/xml-transact-sql?view=sql-server-2017
+[sql-udt-ref]: https://docs.microsoft.com/en-us/sql/relational-databases/clr-integration-database-objects-user-defined-types/clr-user-defined-types?view=sql-server-2017
+[sql-geometry-ref]: https://docs.microsoft.com/en-us/sql/t-sql/spatial-geometry/spatial-types-geometry-transact-sql?view=sql-server-2017
+[sql-geography-ref]: https://docs.microsoft.com/en-us/sql/t-sql/spatial-geography/spatial-types-geography?view=sql-server-2017
+
+
+[java-bigdecimal-ref]: https://docs.oracle.com/javase/8/docs/api/java/math/BigDecimal.html
+[java-boolean-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Boolean.html
+[java-byte-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Byte.html
+[java-double-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Double.html
+[java-float-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Float.html
+[java-integer-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Integer.html
+[java-long-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Long.html
+[java-ldt-ref]: https://docs.oracle.com/javase/8/docs/api/java/time/LocalDateTime.html
+[java-ld-ref]: https://docs.oracle.com/javase/8/docs/api/java/time/LocalDate.html
+[java-lt-ref]: https://docs.oracle.com/javase/8/docs/api/java/time/LocalTime.html
+[java-odt-ref]: https://docs.oracle.com/javase/8/docs/api/java/time/OffsetDateTime.html
+[java-short-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Short.html
+[java-string-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/String.html
+[java-uuid-ref]: https://docs.oracle.com/javase/8/docs/api/java/util/UUID.html
+[java-zdt-ref]: https://docs.oracle.com/javase/8/docs/api/java/time/ZonedDateTime.html
+
 ## License
 This project is released under version 2.0 of the [Apache License][l].
 
