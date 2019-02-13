@@ -135,10 +135,10 @@ Additional options:
 
 ### Data Type Mapping 
 
-[Microsoft Sql Server][m] type mapping reference. This reference table shows encoding/decoding types from [Microsoft Sql Server][m] types to java data types.
+This reference table shows the type mapping between [Microsoft SQL Server][m] and Java data types:
 
 
-| Microsoft SQL Server Type                 | Supported Data Type                                                                                                                           | 
+| Microsoft SQL Server Type                 | Java Data Type                                                                                                                           | 
 |:------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------|
 | [`bit`][sql-bit-ref]                      | [**`Boolean`**][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref] |
 | [`tinyint`][sql-all-int-ref]              | [**`Byte`**][java-byte-ref], [`Boolean`][java-boolean-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref] |
@@ -161,23 +161,23 @@ Additional options:
 | [`money`][sql-money-ref]                  | [`BigDecimal`][java-bigdecimal-ref]
 | [`char`][sql-(var)char-ref]               | [`String`][java-string-ref]
 | [`varchar`][sql-(var)char-ref]            | [`String`][java-string-ref]
-| [`varcharmax`][sql-(var)char-ref]         | Not suppoprted
+| [`varcharmax`][sql-(var)char-ref]         | Not yet supported.
 | [`nchar`][sql-n(var)char-ref]             | [`String`][java-string-ref]
 | [`nvarchar`][sql-n(var)char-ref]          | [`String`][java-string-ref]
-| [`nvarcharmax`][sql-n(var)char-ref]       | Not suppoprted
-| [`text`][sql-(n)text-ref]                 | Not suppoprted
-| [`ntext`][sql-(n)text-ref]                | Not suppoprted
-| [`image`][sql-(n)text-ref]                | Not suppoprted
-| [`binary`][sql-binary-ref]                | Not suppoprted
-| [`varbinary`][sql-binary-ref]             | Not suppoprted
-| [`varbinarymax`][sql-binary-ref]          | Not suppoprted
-| [`sql_variant`][sql-sql-variant-ref]      | Not suppoprted
-| [`xml`][sql-xml-ref]                      | Not suppoprted
-| [`udt`][sql-udt-ref]                      | Not suppoprted
-| [`geometry`][sql-geometry-ref]            | Not suppoprted
-| [`geography`][sql-geography-ref]          | Not suppoprted
+| [`nvarcharmax`][sql-n(var)char-ref]       | Not yet supported.
+| [`text`][sql-(n)text-ref]                 | Not yet supported.
+| [`ntext`][sql-(n)text-ref]                | Not yet supported.
+| [`image`][sql-(n)text-ref]                | Not yet supported.
+| [`binary`][sql-binary-ref]                | Not yet supported.
+| [`varbinary`][sql-binary-ref]             | Not yet supported.
+| [`varbinarymax`][sql-binary-ref]          | Not yet supported.
+| [`sql_variant`][sql-sql-variant-ref]      | Not yet supported.
+| [`xml`][sql-xml-ref]                      | Not yet supported.
+| [`udt`][sql-udt-ref]                      | Not yet supported.
+| [`geometry`][sql-geometry-ref]            | Not yet supported.
+| [`geography`][sql-geography-ref]          | Not yet supported.
 
-_**Bold values indicate preferred java types while decoding.**_
+Types in **bold** indicate the native (default) Java type.
 
 
 [sql-bit-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/bit-transact-sql?view=sql-server-2017
