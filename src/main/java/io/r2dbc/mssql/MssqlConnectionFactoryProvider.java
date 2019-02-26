@@ -128,4 +128,9 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
 
         return true;
     }
+
+    @Override
+    public String getDriver() {
+        return MSSQL_DRIVER;
+    }
 }

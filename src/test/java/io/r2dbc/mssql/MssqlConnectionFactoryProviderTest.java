@@ -96,4 +96,9 @@ final class MssqlConnectionFactoryProviderTest {
             .option(USER, "test-user")
             .build())).isTrue();
     }
+
+    @Test
+    void returnsDriverIdentifier() {
+        assertThat(this.provider.getDriver()).isEqualTo(MSSQL_DRIVER);
+    }
 }
