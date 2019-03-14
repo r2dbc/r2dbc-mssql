@@ -57,6 +57,7 @@ public final class DefaultCodecs implements Codecs {
             LocalTimeCodec.INSTANCE,
             LocalDateCodec.INSTANCE,
             LocalDateTimeCodec.INSTANCE,
+            EnumCodec.INSTANCE,
             UuidCodec.INSTANCE,
             DecimalCodec.INSTANCE,
             MoneyCodec.INSTANCE,

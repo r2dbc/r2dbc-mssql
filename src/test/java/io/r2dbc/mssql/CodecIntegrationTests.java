@@ -17,6 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.codec.DefaultCodecs;
+import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.util.IntegrationTestSupport;
 import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
@@ -128,6 +129,11 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     @Test
     void shouldEncodeGuid() {
         testType(connection, "uniqueidentifier", UUID.randomUUID());
+    }
+
+    @Test
+    void shouldEncodeEnumAsVarchar() {
+        testType(connection, "VARCHAR(255)", RpcDirection.IN);
     }
 
     @Test
