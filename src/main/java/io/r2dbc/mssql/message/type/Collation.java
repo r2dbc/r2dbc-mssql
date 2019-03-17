@@ -118,7 +118,7 @@ public final class Collation {
 
         Assert.requireNonNull(buffer, "Buffer must not be null");
 
-        int info = Decode.intBigEndian(buffer); // 4 bytes, contains: LCID ColFlags Version
+        int info = Decode.asInt(buffer); // 4 bytes, contains: LCID ColFlags Version
         int sortId = Decode.uByte(buffer); // 1 byte, contains: SortId
 
         try {
@@ -142,7 +142,7 @@ public final class Collation {
 
         Assert.requireNonNull(buffer, "Data buffer must not be null");
 
-        Encode.intBigEndian(buffer, this.lcid);
+        Encode.asInt(buffer, this.lcid);
         Encode.asByte(buffer, (byte) this.sortId);
     }
 

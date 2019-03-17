@@ -41,4 +41,15 @@ class CollationUnitTests {
         assertThat(collation.getSortId()).isEqualTo(52);
         assertThat(collation.getCharset()).isEqualTo(Charset.forName("windows-1252"));
     }
+
+    @Test
+    void shouldDecodeEnglishCollationFromSortId() {
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("0904D00000");
+
+        Collation collation = Collation.decode(buffer);
+
+        assertThat(collation.getSortId()).isEqualTo(0);
+        assertThat(collation.getCharset()).isEqualTo(Charset.forName("windows-1252"));
+    }
 }

@@ -54,10 +54,10 @@ class StringCodecUnitTests {
             expected.writeShortLE(8000); // max size
 
             // collation windows-1252
-            expected.writeByte(0x00);
-            expected.writeByte(0xD0);
-            expected.writeByte(0x04);
             expected.writeByte(0x09);
+            expected.writeByte(0x04);
+            expected.writeByte(0xD0);
+            expected.writeByte(0x00);
             expected.writeByte(0x34);
 
             expected.writeShortLE(12); // actual size
