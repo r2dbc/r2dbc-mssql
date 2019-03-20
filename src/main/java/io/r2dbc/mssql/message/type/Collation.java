@@ -261,7 +261,7 @@ public final class Collation {
      * <p/>
      * For our purposes in the driver, locales are only described by their LangID and character encodings.
      * The set of locales is derived from the following resources:
-     * http://download.microsoft.com/download/9/5/e/95ef66af-9026-4bb0-a41d-a4f81802d92c/[MS-LCID].pdf Lists LCID values
+     * https://download.microsoft.com/download/9/5/e/95ef66af-9026-4bb0-a41d-a4f81802d92c/[MS-LCID].pdf Lists LCID values
      * and their corresponding meanings (in RFC 3066 format). Used to derive the names for the various enumeration
      * constants.
      * <p/>

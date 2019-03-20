@@ -2,7 +2,7 @@
 
 This project contains the [Microsoft SQL Server][m] implementation of the [R2DBC SPI][r]. This implementation is not intended to be used directly, but rather to be used as the backing implementation for a humane client library to delegate to
 
-[m]: http://microsoft.com/sqlserver
+[m]: https://microsoft.com/sqlserver
 [r]: https://github.com/r2dbc/r2dbc-spi
 
 This driver provides the following features:
