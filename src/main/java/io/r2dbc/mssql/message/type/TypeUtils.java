@@ -48,7 +48,7 @@ public final class TypeUtils {
 
     /**
      * From SQL Server 2005 Books Online : ntext, text, and image (Transact-SQL)
-     * http://msdn.microsoft.com/en-us/library/ms187993.aspx
+     * https://msdn.microsoft.com/en-us/library/ms187993.aspx
      * <p>
      * image "... through 2^31 - 1 (2,147,483,687) bytes."
      * <p>
@@ -61,7 +61,7 @@ public final class TypeUtils {
     public static final int IMAGE_TEXT_MAX_BYTES = 0x7FFFFFFF;
 
     /**
-     * Transact-SQL Data Types: http://msdn.microsoft.com/en-us/library/ms179910.aspx
+     * Transact-SQL Data Types: https://msdn.microsoft.com/en-us/library/ms179910.aspx
      * <p/>
      * {@literal varbinary(max)} "max indicates that the maximum storage size is 2<sup>31</sup> - 1 bytes. The storage size is the actual
      * length of the data entered + 2 bytes."
