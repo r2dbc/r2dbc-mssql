@@ -32,7 +32,6 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.tds.ProtocolException;
-import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.AbstractInfoToken;
 import io.r2dbc.mssql.message.token.EnvChangeToken;
 import io.r2dbc.mssql.message.token.FeatureExtAckToken;
@@ -59,9 +58,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.Function;
-
-import static io.r2dbc.mssql.util.PredicateUtils.or;
 
 /**
  * An implementation of a TDS client based on the Reactor Netty project.
@@ -143,7 +139,7 @@ public final class ReactorNettyClient implements Client {
 
     private final FluxSink<ClientMessage> requests = this.requestProcessor.sink();
 
-    private final EmitterProcessor<Flux<Message>> responseProcessor = EmitterProcessor.create(false);
+    private final EmitterProcessor<Message> responseProcessor = EmitterProcessor.create(false);
 
     private final AtomicReference<ConnectionState> state = new AtomicReference<>(ConnectionState.PRELOGIN);
 
@@ -157,7 +153,7 @@ public final class ReactorNettyClient implements Client {
     private ReactorNettyClient(Connection connection, List<EnvironmentChangeListener> envChangeListeners) {
         Assert.requireNonNull(connection, "Connection must not be null");
 
-        FluxSink<Flux<Message>> responses = this.responseProcessor.sink();
+        FluxSink<Message> responses = this.responseProcessor.sink();
 
         StreamDecoder decoder = new StreamDecoder();
 
@@ -184,7 +180,7 @@ public final class ReactorNettyClient implements Client {
                 return Mono.error(new ProtocolException(String.format("Unexpected protocol message: [%s]", it)));
             }) //
             .doOnNext(message -> this.logger.debug("Response: {}", message)) //
-            .doOnError(message -> this.logger.warn("Error: {}", message)) //
+            .doOnError(message -> this.logger.warn("Error: {}", message.getMessage(), message)) //
             .handle(this.handleStateChange) //
             .doOnNext(this.handleEnvChange) //
             .doOnNext(this.featureAckChange) //
@@ -193,13 +189,11 @@ public final class ReactorNettyClient implements Client {
                 this.isClosed.set(true);
                 connection.channel().close();
             })
-            .windowUntil(or(AbstractDoneToken::isDone))
-            .map(Flux::cache)
             .subscribe(
                 responses::next, responses::error, responses::complete);
 
         this.requestProcessor.doOnError(message -> {
-            this.logger.warn("Error: {}", message);
+            this.logger.warn("Error: {}", message.getMessage(), message);
             this.isClosed.set(true);
             connection.channel().close();
         }).doOnNext(message -> this.logger.debug("Request:  {}", message))
@@ -299,7 +293,6 @@ public final class ReactorNettyClient implements Client {
                         it.error(future.cause());
                     }
                 });
-
             });
         });
     }
@@ -314,7 +307,7 @@ public final class ReactorNettyClient implements Client {
                 return Flux.error(new IllegalStateException("Cannot exchange messages because the connection is closed"));
             }
 
-            return this.responseProcessor.flatMap(Function.identity()) //
+            return this.responseProcessor
                 .doOnSubscribe(s -> Flux.from(requests).subscribe(this.requests::next, this.requests::error));
         });
     }

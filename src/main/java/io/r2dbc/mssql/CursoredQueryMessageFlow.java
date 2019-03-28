@@ -35,6 +35,7 @@ import io.r2dbc.mssql.message.token.RpcRequest;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.EmitterProcessor;
@@ -43,6 +44,7 @@ import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.SynchronousSink;
 
 import javax.annotation.processing.Completion;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
 import static io.r2dbc.mssql.util.PredicateUtils.or;
@@ -111,6 +113,8 @@ final class CursoredQueryMessageFlow {
 
         Flux<Message> exchange = client.exchange(outbound.startWith(spCursorOpen(query, client.getRequiredCollation(), client.getTransactionDescriptor())));
 
+        OnCursorComplete cursorComplete = new OnCursorComplete(inbound);
+
         Flux<Message> messages = firstMessages //
             .doOnSubscribe(ignore -> QueryLogger.logQuery(query))
             .doOnNext(it -> {
@@ -137,11 +141,12 @@ final class CursoredQueryMessageFlow {
             })
             .handle(MssqlException::handleErrorResponse)
             .<Message>handle((message, sink) -> {
-                handleMessage(client, fetchSize, requests, state, message, sink, inbound);
+                handleMessage(client, fetchSize, requests, state, message, sink, cursorComplete);
             })
-            .filter(filterForWindow());
+            .filter(filterForWindow())
+            .doOnCancel(cursorComplete);
 
-        return messages.doOnSubscribe(ignore -> exchange.subscribe(inbound));
+        return messages.doOnSubscribe(ignore -> exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound));
     }
 
     /**
@@ -183,6 +188,8 @@ final class CursoredQueryMessageFlow {
 
         Flux<Message> exchange = client.exchange(outbound.startWith(rpcRequest));
 
+        OnCursorComplete cursorComplete = new OnCursorComplete(inbound);
+
         Flux<Message> messages = firstMessages //
             .doOnSubscribe(ignore -> QueryLogger.logQuery(query))
             .doOnNext(it -> {
@@ -218,12 +225,12 @@ final class CursoredQueryMessageFlow {
             })
             .handle(MssqlException::handleErrorResponse)
             .<Message>handle((message, sink) -> {
-                handleMessage(client, fetchSize, requests, state, message, sink, inbound);
+                handleMessage(client, fetchSize, requests, state, message, sink, cursorComplete);
             })
-            .filter(filterForWindow());
+            .filter(filterForWindow())
+            .doOnCancel(cursorComplete);
 
-
-        return messages.doOnSubscribe(ignore -> exchange.subscribe(inbound));
+        return messages.doOnSubscribe(ignore -> exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound));
     }
 
     private static int parseCursorId(Codecs codecs, CursorState state, ReturnValue returnValue) {
@@ -244,7 +251,7 @@ final class CursoredQueryMessageFlow {
     }
 
     private static void handleMessage(Client client, int fetchSize, FluxSink<ClientMessage> requests, CursorState state, Message message, SynchronousSink<Message> sink,
-                                      Subscriber<Message> outboundSink) {
+                                      Runnable onCursorComplete) {
 
         if (message instanceof ColumnMetadataToken && ((ColumnMetadataToken) message).getColumns().isEmpty()) {
             return;
@@ -286,7 +293,7 @@ final class CursoredQueryMessageFlow {
         }
 
         if (DoneProcToken.isDone(message)) {
-            onDone(client, fetchSize, requests, state, outboundSink::onComplete);
+            onDone(client, fetchSize, requests, state, onCursorComplete);
         }
     }
 
@@ -297,6 +304,7 @@ final class CursoredQueryMessageFlow {
         if (phase == Phase.NONE || phase == Phase.FETCHING) {
 
             if (state.cursorId == 0) {
+
                 completion.run();
                 state.phase = Phase.CLOSED;
                 return;
@@ -504,6 +512,27 @@ final class CursoredQueryMessageFlow {
         @Override
         public String getName() {
             return "INTERMEDIATE_COUNT";
+        }
+    }
+
+    static class OnCursorComplete extends AtomicReference<Subscription> implements Runnable {
+
+        private final Subscriber<?> upstream;
+
+        OnCursorComplete(Subscriber<?> upstream) {
+            this.upstream = upstream;
+        }
+
+        @Override
+        public void run() {
+
+            Subscription subscription = get();
+
+            if (subscription != null) {
+                subscription.cancel();
+            }
+
+            upstream.onComplete();
         }
     }
 }
