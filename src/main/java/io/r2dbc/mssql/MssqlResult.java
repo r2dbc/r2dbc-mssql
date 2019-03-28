@@ -21,6 +21,7 @@ import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.ColumnMetadataToken;
+import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Result;
@@ -32,6 +33,7 @@ import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
 import static reactor.function.TupleUtils.function;
@@ -123,10 +125,33 @@ public final class MssqlResult implements Result {
                 }
             });
 
-        messages
-            .handle(MssqlException::handleErrorResponse)
-            .hide()
-            .subscribe(processor);
+        AtomicReference<RuntimeException> exceptionRef = new AtomicReference<>();
+        messages.<Message>handle((message, sink) -> {
+
+            RuntimeException exception = exceptionRef.get();
+
+            if (AbstractDoneToken.isDone(message)) {
+                if (exception != null) {
+                    sink.error(exception);
+                    return;
+                }
+            }
+
+            if (message instanceof ErrorToken) {
+
+                MssqlException mssqlException = MssqlException.create((ErrorToken) message);
+
+                if (exception != null) {
+                    exception.addSuppressed(mssqlException);
+                } else {
+                    exceptionRef.set(mssqlException);
+                }
+
+                return;
+            }
+
+            sink.next(message);
+        }).subscribe(processor);
 
         return new MssqlResult(rows, rowsUpdated);
     }
