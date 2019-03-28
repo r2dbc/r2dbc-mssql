@@ -398,8 +398,7 @@ public final class ReactorNettyClient implements Client {
                     logger.debug(String.format("Transaction %s", op));
                 }
 
-                transactionStatus.set(TransactionStatus.STARTED);
-                transactionDescriptor.set(TransactionDescriptor.from(descriptor));
+                updateStatus(TransactionStatus.STARTED, TransactionDescriptor.from(descriptor));
             }
 
             if (token.getChangeType() == EnvChangeToken.EnvChangeType.CommitTx) {
@@ -408,8 +407,7 @@ public final class ReactorNettyClient implements Client {
                     logger.debug("Transaction committed");
                 }
 
-                transactionStatus.set(TransactionStatus.EXPLICIT);
-                transactionDescriptor.set(TransactionDescriptor.empty());
+                updateStatus(TransactionStatus.EXPLICIT, TransactionDescriptor.empty());
             }
 
             if (token.getChangeType() == EnvChangeToken.EnvChangeType.RollbackTx) {
@@ -418,9 +416,13 @@ public final class ReactorNettyClient implements Client {
                     logger.debug("Transaction rolled back");
                 }
 
-                transactionStatus.set(TransactionStatus.EXPLICIT);
-                transactionDescriptor.set(TransactionDescriptor.empty());
+                updateStatus(TransactionStatus.EXPLICIT, TransactionDescriptor.empty());
             }
+        }
+
+        private void updateStatus(TransactionStatus status, TransactionDescriptor descriptor) {
+            transactionStatus.set(status);
+            transactionDescriptor.set(descriptor);
         }
     }
 

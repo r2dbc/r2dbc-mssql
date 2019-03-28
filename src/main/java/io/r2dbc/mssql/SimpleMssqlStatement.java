@@ -96,21 +96,23 @@ class SimpleMssqlStatement implements MssqlStatement {
     @Override
     public Flux<MssqlResult> execute() {
 
-        boolean useGeneratedKeysClause = GeneratedValues.shouldExpectGeneratedKeys(this.generatedColumns);
-        String sql = useGeneratedKeysClause ? GeneratedValues.augmentQuery(this.sql, generatedColumns) : this.sql;
+        return Flux.defer(() -> {
+            boolean useGeneratedKeysClause = GeneratedValues.shouldExpectGeneratedKeys(this.generatedColumns);
+            String sql = useGeneratedKeysClause ? GeneratedValues.augmentQuery(this.sql, generatedColumns) : this.sql;
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("Start exchange for {}", sql);
-        }
+            if (logger.isDebugEnabled()) {
+                logger.debug("Start exchange for {}", sql);
+            }
 
-        Flux<Message> exchange = QueryMessageFlow.exchange(this.client, sql);
+            Flux<Message> exchange = QueryMessageFlow.exchange(this.client, sql);
 
-        if (useGeneratedKeysClause) {
-            exchange = exchange.transform(GeneratedValues::reduceToSingleCountDoneToken);
-        }
+            if (useGeneratedKeysClause) {
+                exchange = exchange.transform(GeneratedValues::reduceToSingleCountDoneToken);
+            }
 
-        return exchange.windowUntil(AbstractDoneToken.class::isInstance) //
-            .map(it -> MssqlResult.toResult(this.codecs, it));
+            return exchange.windowUntil(AbstractDoneToken.class::isInstance) //
+                .map(it -> MssqlResult.toResult(this.codecs, it));
+        });
     }
 
     @Override
