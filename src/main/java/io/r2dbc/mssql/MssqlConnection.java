@@ -18,8 +18,6 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.TransactionStatus;
-import io.r2dbc.mssql.codec.Codecs;
-import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Batch;
 import io.r2dbc.spi.Connection;
@@ -48,20 +46,14 @@ public final class MssqlConnection implements Connection {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private final PreparedStatementCache statementCache = new IndefinitePreparedStatementCache();
-
     private final Client client;
 
-    private final Codecs codecs;
+    private final ConnectionOptions connectionOptions;
 
-    MssqlConnection(Client client) {
-        this(client, new DefaultCodecs());
-    }
-
-    private MssqlConnection(Client client, Codecs codecs) {
+    MssqlConnection(Client client, ConnectionOptions connectionOptions) {
 
         this.client = Assert.requireNonNull(client, "Client must not be null");
-        this.codecs = Assert.requireNonNull(codecs, "Codecs must not be null");
+        this.connectionOptions = Assert.requireNonNull(connectionOptions, "ConnectionOptions must not be null");
     }
 
     @Override
@@ -106,7 +98,7 @@ public final class MssqlConnection implements Connection {
 
     @Override
     public Batch createBatch() {
-        return new MssqlBatch(this.client, this.codecs);
+        return new MssqlBatch(this.client, this.connectionOptions);
     }
 
     @Override
@@ -136,14 +128,14 @@ public final class MssqlConnection implements Connection {
         this.logger.debug("Creating statement for SQL: [{}]", sql);
 
         if (PreparedMssqlStatement.supports(sql)) {
-            return new PreparedMssqlStatement(this.statementCache, this.client, this.codecs, sql);
+            return new PreparedMssqlStatement(this.client, this.connectionOptions, sql);
         }
 
-        if (SimpleCursoredMssqlStatement.supports(sql)) {
-            return new SimpleCursoredMssqlStatement(this.client, this.codecs, sql);
+        if (SimpleCursoredMssqlStatement.supports(sql) && this.connectionOptions.prefersCursors(sql)) {
+            return new SimpleCursoredMssqlStatement(this.client, this.connectionOptions, sql);
         }
 
-        return new SimpleMssqlStatement(this.client, this.codecs, sql);
+        return new SimpleMssqlStatement(this.client, this.connectionOptions, sql);
     }
 
     @Override

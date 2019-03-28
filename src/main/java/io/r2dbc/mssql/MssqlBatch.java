@@ -17,7 +17,6 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
-import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Batch;
 import reactor.core.publisher.Flux;
@@ -34,14 +33,14 @@ public final class MssqlBatch implements Batch {
 
     private final Client client;
 
-    private final Codecs codecs;
+    private final ConnectionOptions connectionOptions;
 
     private final List<String> statements = new ArrayList<>();
 
-    MssqlBatch(Client client, Codecs codecs) {
+    MssqlBatch(Client client, ConnectionOptions connectionOptions) {
 
         this.client = Assert.requireNonNull(client, "Client must not be null");
-        this.codecs = Assert.requireNonNull(codecs, "Codecs must not be null");
+        this.connectionOptions = Assert.requireNonNull(connectionOptions, "ConnectionOptions must not be null");
     }
 
     @Override
@@ -55,7 +54,7 @@ public final class MssqlBatch implements Batch {
 
     @Override
     public Flux<MssqlResult> execute() {
-        return new SimpleMssqlStatement(this.client, this.codecs, String.join("; ", this.statements))
+        return new SimpleMssqlStatement(this.client, this.connectionOptions, String.join("; ", this.statements))
             .execute();
     }
 
@@ -64,7 +63,7 @@ public final class MssqlBatch implements Batch {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
         sb.append(" [client=").append(this.client);
-        sb.append(", codecs=").append(this.codecs);
+        sb.append(", connectionOptions=").append(this.connectionOptions);
         sb.append(", statements=").append(this.statements);
         sb.append(']');
         return sb.toString();

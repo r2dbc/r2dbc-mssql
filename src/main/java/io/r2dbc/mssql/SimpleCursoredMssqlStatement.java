@@ -44,8 +44,8 @@ final class SimpleCursoredMssqlStatement extends SimpleMssqlStatement {
      * @param sql    the query to execute.
      * @throws IllegalArgumentException when {@link Client}, {@link Codecs}, or {@code sql} is {@code null}.
      */
-    SimpleCursoredMssqlStatement(Client client, Codecs codecs, String sql) {
-        super(client, codecs, sql);
+    SimpleCursoredMssqlStatement(Client client, ConnectionOptions connectionOptions, String sql) {
+        super(client, connectionOptions, sql);
     }
 
     @Override

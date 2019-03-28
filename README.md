@@ -71,6 +71,7 @@ ConnectionFactoryOptions options = builder()
     .option(DATABASE, "…") // optional
     .option(SSL, true) // optional, defaults to false
     .option(Option.valueOf("applicationName"), "…") // optional
+    .option(Option.valueOf("preferCursoredExecution"), true/false) // optional
     .option(Option.valueOf("connectionId"), new UUID(…)) // optional
     .build();
 
@@ -90,6 +91,7 @@ MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builde
     .username("…")
     .password("…")
     .database("…")
+    .preferCursoredExecution(…)
     .build();
 
 MssqlConnectionFactory factory = new MssqlConnectionFactory(configuration);
@@ -132,6 +134,7 @@ Additional options:
 * `connectTimeout`: Connection Id for tracing purposes. Defaults to 30 seconds.
 * `database`: Initial database to select. Defaults to SQL Server user profile settings.
 * `ssl`: Whether to use transport-level encryption for the entire SQL server traffic, defaults to `false`.
+* `preferCursoredExecution`: Whether to prefer cursors  or direct execution for queries. Uses by default direct. Cursors require more round-trips but are more backpressure-friendly. Defaults to direct execution. Can be `boolean` or a `Predicate<String>` accepting the SQL query.
 
 ### Data Type Mapping 
 

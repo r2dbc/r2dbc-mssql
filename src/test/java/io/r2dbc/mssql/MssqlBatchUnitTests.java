@@ -40,7 +40,7 @@ class MssqlBatchUnitTests {
             .thenRespond(DoneToken.create(1))
             .build();
 
-        new MssqlBatch(client, new DefaultCodecs())
+        new MssqlBatch(client, new ConnectionOptions())
             .add("foo")
             .execute()
             .as(StepVerifier::create)
@@ -56,7 +56,7 @@ class MssqlBatchUnitTests {
             .thenRespond(DoneToken.create(1), DoneToken.create(1))
             .build();
 
-        new MssqlBatch(client, new DefaultCodecs())
+        new MssqlBatch(client, new ConnectionOptions())
             .add("foo")
             .add("bar")
             .execute()
@@ -74,7 +74,7 @@ class MssqlBatchUnitTests {
                 "proc", 0))
             .build();
 
-        new MssqlBatch(client, new DefaultCodecs())
+        new MssqlBatch(client, new ConnectionOptions())
             .add("foo")
             .execute()
             .as(StepVerifier::create)

@@ -19,6 +19,8 @@ package io.r2dbc.mssql;
 import io.r2dbc.spi.ConnectionFactoryOptions;
 import org.junit.jupiter.api.Test;
 
+import java.util.function.Predicate;
+
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.MSSQL_DRIVER;
 import static io.r2dbc.spi.ConnectionFactoryOptions.DRIVER;
 import static io.r2dbc.spi.ConnectionFactoryOptions.HOST;
@@ -98,7 +100,66 @@ final class MssqlConnectionFactoryProviderTest {
     }
 
     @Test
+    void shouldConfigureWithStaticCursoredExecutionPreference() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(MssqlConnectionFactoryProvider.PREFER_CURSORED_EXECUTION, "true")
+            .build());
+
+        ConnectionOptions options = factory.getConnectionOptions();
+
+        assertThat(options.prefersCursors("foo")).isTrue();
+    }
+
+    @Test
+    void shouldConfigureWithStaticBooleanCursoredExecutionPreference() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(MssqlConnectionFactoryProvider.PREFER_CURSORED_EXECUTION, true)
+            .build());
+
+        ConnectionOptions options = factory.getConnectionOptions();
+
+        assertThat(options.prefersCursors("foo")).isTrue();
+    }
+
+    @Test
+    void shouldConfigureWithClassCursoredExecutionPreference() {
+
+        Predicate<String> preference = s -> s.equals("foo");
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(MssqlConnectionFactoryProvider.PREFER_CURSORED_EXECUTION, MyPredicate.class.getName())
+            .build());
+
+        ConnectionOptions options = factory.getConnectionOptions();
+
+        assertThat(options.prefersCursors("foo")).isTrue();
+        assertThat(options.prefersCursors("bar")).isFalse();
+    }
+
+    @Test
     void returnsDriverIdentifier() {
         assertThat(this.provider.getDriver()).isEqualTo(MSSQL_DRIVER);
+    }
+
+    static class MyPredicate implements Predicate<String> {
+
+        @Override
+        public boolean test(String s) {
+            return s.equals("foo");
+        }
     }
 }

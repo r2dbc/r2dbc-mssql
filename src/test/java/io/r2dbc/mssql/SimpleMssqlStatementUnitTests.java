@@ -17,8 +17,6 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.TestClient;
-import io.r2dbc.mssql.codec.Codecs;
-import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ServerCharset;
@@ -63,7 +61,7 @@ class SimpleMssqlStatementUnitTests {
 
         createColumn(3, "salary", SqlServerType.MONEY, 8, LengthStrategy.BYTELENTYPE, null));
 
-    static final Codecs CODECS = new DefaultCodecs();
+    static final ConnectionOptions OPTIONS = new ConnectionOptions();
 
     @Test
     void shouldReportNumberOfAffectedRows() {
@@ -76,7 +74,7 @@ class SimpleMssqlStatementUnitTests {
 
         TestClient client = TestClient.builder().expectRequest(batch).thenRespond(tabular.getTokens().toArray(new DataToken[0])).build();
 
-        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, CODECS, "SELECT * FROM foo");
+        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo");
 
         statement.execute()
             .flatMap(Result::getRowsUpdated)
@@ -107,7 +105,7 @@ class SimpleMssqlStatementUnitTests {
 
         TestClient client = TestClient.builder().expectRequest(batch).thenRespond(tabular.getTokens().toArray(new DataToken[0])).build();
 
-        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, CODECS, "SELECT * FROM foo");
+        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo");
 
         statement.execute()
             .flatMap(result -> result.map((row, md) -> {

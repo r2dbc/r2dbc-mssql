@@ -19,6 +19,7 @@ package io.r2dbc.mssql;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
+import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -63,11 +64,13 @@ final class MssqlConnectionConfigurationUnitTests {
     @Test
     void configuration() {
         UUID connectionId = UUID.randomUUID();
+        Predicate<String> TRUE = s -> true;
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
             .connectionId(connectionId)
             .database("test-database")
             .host("test-host")
             .password("test-password")
+            .preferCursoredExecution(TRUE)
             .port(100)
             .username("test-username")
             .build();
@@ -77,6 +80,7 @@ final class MssqlConnectionConfigurationUnitTests {
             .hasFieldOrPropertyWithValue("database", "test-database")
             .hasFieldOrPropertyWithValue("host", "test-host")
             .hasFieldOrPropertyWithValue("password", "test-password")
+            .hasFieldOrPropertyWithValue("preferCursoredExecution", TRUE)
             .hasFieldOrPropertyWithValue("port", 100)
             .hasFieldOrPropertyWithValue("username", "test-username");
     }

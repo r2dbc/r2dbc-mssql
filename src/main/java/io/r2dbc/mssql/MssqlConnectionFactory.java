@@ -33,6 +33,8 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
 
     private final MssqlConnectionConfiguration configuration;
 
+    private final ConnectionOptions connectionOptions;
+
     /**
      * Creates a new connection factory.
      *
@@ -50,6 +52,7 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
     MssqlConnectionFactory(Mono<? extends Client> clientFactory, MssqlConnectionConfiguration configuration) {
         this.clientFactory = Assert.requireNonNull(clientFactory, "clientFactory must not be null");
         this.configuration = Assert.requireNonNull(configuration, "configuration must not be null");
+        this.connectionOptions = configuration.toConnectionOptions();
     }
 
     @Override
@@ -61,7 +64,11 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
             return LoginFlow.exchange(client, loginConfiguration)
                 .doOnError(e -> client.close().subscribe());
         })
-            .map(MssqlConnection::new);
+            .map(it -> new MssqlConnection(it, connectionOptions));
+    }
+
+    ConnectionOptions getConnectionOptions() {
+        return connectionOptions;
     }
 
     @Override

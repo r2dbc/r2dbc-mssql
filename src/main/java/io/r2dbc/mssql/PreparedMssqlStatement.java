@@ -72,11 +72,11 @@ final class PreparedMssqlStatement implements MssqlStatement {
 
     private String[] generatedColumns;
 
-    PreparedMssqlStatement(PreparedStatementCache statementCache, Client client, Codecs codecs, String sql) {
+    PreparedMssqlStatement(Client client, ConnectionOptions connectionOptions, String sql) {
 
-        this.statementCache = statementCache;
+        this.statementCache = connectionOptions.getPreparedStatementCache();
         this.client = client;
-        this.codecs = codecs;
+        this.codecs = connectionOptions.getCodecs();
         this.parsedQuery = ParsedQuery.parse(sql);
     }
 
@@ -113,8 +113,8 @@ final class PreparedMssqlStatement implements MssqlStatement {
                 }
 
                 return exchange.doOnComplete(() -> {
-                        tryNextBinding(iterator, boundRequests);
-                    });
+                    tryNextBinding(iterator, boundRequests);
+                });
 
             }).windowUntil(DoneInProcToken.class::isInstance) //
             .map(it -> MssqlResult.toResult(this.codecs, it));

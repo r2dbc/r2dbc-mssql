@@ -42,6 +42,8 @@ class PreparedMssqlStatementUnitTests {
 
     PreparedStatementCache statementCache = new IndefinitePreparedStatementCache();
 
+    ConnectionOptions connectionOptions = new ConnectionOptions(sql -> true, new DefaultCodecs(), statementCache);
+
     @Test
     void shouldSupportSql() {
 
@@ -71,7 +73,7 @@ class PreparedMssqlStatementUnitTests {
     @Test
     void shouldBindParameterByIndex() {
 
-        PreparedMssqlStatement statement = new PreparedMssqlStatement(this.statementCache, TestClient.NO_OP, new DefaultCodecs(), "SELECT * from FOO where firstname = @firstname");
+        PreparedMssqlStatement statement = new PreparedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
 
         statement.bind(0, "name");
         assertThat(statement.getBindings().first().getParameters()).containsKeys("firstname");
@@ -80,7 +82,7 @@ class PreparedMssqlStatementUnitTests {
     @Test
     void shouldRejectBindIndexOutOfBounds() {
 
-        PreparedMssqlStatement statement = new PreparedMssqlStatement(this.statementCache, TestClient.NO_OP, new DefaultCodecs(), "SELECT * from FOO where firstname = @firstname");
+        PreparedMssqlStatement statement = new PreparedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
 
         assertThatThrownBy(() -> statement.bind(-1, "name")).isInstanceOf(IndexOutOfBoundsException.class);
         assertThatThrownBy(() -> statement.bind(1, "name")).isInstanceOf(IndexOutOfBoundsException.class);
@@ -89,7 +91,7 @@ class PreparedMssqlStatementUnitTests {
     @Test
     void shouldBindParameterByName() {
 
-        PreparedMssqlStatement statement = new PreparedMssqlStatement(this.statementCache, TestClient.NO_OP, new DefaultCodecs(), "SELECT * from FOO where firstname = @firstname");
+        PreparedMssqlStatement statement = new PreparedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
 
         statement.bind(0, "firstname");
         assertThat(statement.getBindings().first().getParameters()).containsKeys("firstname");
@@ -98,7 +100,7 @@ class PreparedMssqlStatementUnitTests {
     @Test
     void shouldRejectBindForUnknownParameters() {
 
-        PreparedMssqlStatement statement = new PreparedMssqlStatement(this.statementCache, TestClient.NO_OP, new DefaultCodecs(), "SELECT * from FOO where firstname = @firstname");
+        PreparedMssqlStatement statement = new PreparedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
 
         assertThatThrownBy(() -> statement.bind("foo", "name")).isInstanceOf(IllegalArgumentException.class);
     }
@@ -120,7 +122,7 @@ class PreparedMssqlStatementUnitTests {
             .build();
 
         String sql = "SELECT * from FOO where firstname = @firstname";
-        PreparedMssqlStatement statement = new PreparedMssqlStatement(this.statementCache, testClient, new DefaultCodecs(), sql);
+        PreparedMssqlStatement statement = new PreparedMssqlStatement(testClient, this.connectionOptions, sql);
 
         statement.bind("firstname", "");
 
@@ -148,7 +150,7 @@ class PreparedMssqlStatementUnitTests {
             .build();
 
         String sql = "SELECT * from FOO where firstname = @firstname";
-        PreparedMssqlStatement statement = new PreparedMssqlStatement(this.statementCache, testClient, new DefaultCodecs(), sql);
+        PreparedMssqlStatement statement = new PreparedMssqlStatement(testClient, this.connectionOptions, sql);
 
         statement.bind("firstname", "");
 

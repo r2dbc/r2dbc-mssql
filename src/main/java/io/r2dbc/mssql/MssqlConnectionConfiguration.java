@@ -16,6 +16,7 @@
 
 package io.r2dbc.mssql;
 
+import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.StringUtils;
 import reactor.util.annotation.Nullable;
@@ -25,6 +26,7 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 /**
  * Connection configuration information for connecting to a Microsoft SQL database.
@@ -58,6 +60,8 @@ public final class MssqlConnectionConfiguration {
 
     private final CharSequence password;
 
+    private final Predicate<String> preferCursoredExecution;
+
     private final int port;
 
     private final boolean ssl;
@@ -65,7 +69,7 @@ public final class MssqlConnectionConfiguration {
     private final String username;
 
     private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, Duration connectTimeout, @Nullable String database, String host, CharSequence password,
-                                         int port, boolean ssl, String username) {
+                                         Predicate<String> preferCursoredExecution, int port, boolean ssl, String username) {
 
         this.applicationName = applicationName;
         this.connectionId = connectionId;
@@ -73,6 +77,7 @@ public final class MssqlConnectionConfiguration {
         this.database = database;
         this.host = Assert.requireNonNull(host, "host must not be null");
         this.password = Assert.requireNonNull(password, "password must not be null");
+        this.preferCursoredExecution = Assert.requireNonNull(preferCursoredExecution, "preferCursoredExecution must not be null");
         this.port = port;
         this.ssl = ssl;
         this.username = Assert.requireNonNull(username, "username must not be null");
@@ -87,6 +92,10 @@ public final class MssqlConnectionConfiguration {
         return new Builder();
     }
 
+    public ConnectionOptions toConnectionOptions() {
+        return new ConnectionOptions(this.preferCursoredExecution, new DefaultCodecs(), new IndefinitePreparedStatementCache());
+    }
+
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();
@@ -97,6 +106,7 @@ public final class MssqlConnectionConfiguration {
         sb.append(", database=\"").append(this.database).append('\"');
         sb.append(", host=\"").append(this.host).append('\"');
         sb.append(", password=\"").append(repeat(this.password.length(), "*")).append('\"');
+        sb.append(", preferCursoredExecution=\"").append(preferCursoredExecution).append('\"');
         sb.append(", port=").append(this.port);
         sb.append(", ssl=").append(this.ssl);
         sb.append(", username=\"").append(this.username).append('\"');
@@ -128,6 +138,10 @@ public final class MssqlConnectionConfiguration {
 
     CharSequence getPassword() {
         return this.password;
+    }
+
+    Predicate<String> getPreferCursoredExecution() {
+        return preferCursoredExecution;
     }
 
     int getPort() {
@@ -202,6 +216,8 @@ public final class MssqlConnectionConfiguration {
         private String database;
 
         private String host;
+
+        private Predicate<String> preferCursoredExecution = sql -> false;
 
         private CharSequence password;
 
@@ -299,6 +315,30 @@ public final class MssqlConnectionConfiguration {
         }
 
         /**
+         * Configure whether to prefer cursored execution.
+         *
+         * @param preferCursoredExecution {@literal true} prefers cursors, {@literal false} prefers direct execution. Defaults to direct execution.
+         * @return this {@link Builder}
+         * @throws IllegalArgumentException if {@code password} is {@code null}
+         */
+        public Builder preferCursoredExecution(boolean preferCursoredExecution) {
+            return preferCursoredExecution(sql -> preferCursoredExecution);
+        }
+
+        /**
+         * Configure whether to prefer cursored execution on a statement-by-statement basis. The {@link Predicate} accepts the SQL query string and returns a boolean flag indicating preference.
+         * {@literal true} prefers cursors, {@literal false} prefers direct execution. Defaults to direct execution.
+         *
+         * @param preference the {@link Predicate}.
+         * @return this {@link Builder}
+         * @throws IllegalArgumentException if {@code password} is {@code null}
+         */
+        public Builder preferCursoredExecution(Predicate<String> preference) {
+            this.preferCursoredExecution = Assert.requireNonNull(preference, "Predicate must not be null");
+            return this;
+        }
+
+        /**
          * Configure the port. Defaults to {@code 5432}.
          *
          * @param port the port
@@ -327,7 +367,7 @@ public final class MssqlConnectionConfiguration {
          * @return a configured {@link MssqlConnectionConfiguration}.
          */
         public MssqlConnectionConfiguration build() {
-            return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, this.host, this.password, this.port,
+            return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, this.host, this.password, this.preferCursoredExecution, this.port,
                 this.ssl, this.username);
         }
     }

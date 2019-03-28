@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 import static io.r2dbc.spi.ConnectionFactoryOptions.CONNECT_TIMEOUT;
 import static io.r2dbc.spi.ConnectionFactoryOptions.DATABASE;
@@ -55,10 +56,18 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
     public static final Option<UUID> CONNECTION_ID = Option.valueOf("connectionId");
 
     /**
+     * Configure whether to prefer cursored execution on a statement-by-statement basis. Value can be {@link Boolean}, a {@link Predicate}, or a {@link Class class name}. The {@link Predicate}
+     * accepts the SQL query string and returns a boolean flag indicating preference.
+     * {@literal true} prefers cursors, {@literal false} prefers direct execution.
+     */
+    public static final Option<Object> PREFER_CURSORED_EXECUTION = Option.valueOf("preferCursoredExecution");
+
+    /**
      * Driver option value.
      */
     public static final String MSSQL_DRIVER = "mssql";
 
+    @SuppressWarnings("unchecked")
     @Override
     public MssqlConnectionFactory create(ConnectionFactoryOptions connectionFactoryOptions) {
 
@@ -89,6 +98,36 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         Duration connectTimeout = connectionFactoryOptions.getValue(CONNECT_TIMEOUT);
         if (connectTimeout != null) {
             builder.connectTimeout(connectTimeout);
+        }
+
+        Object preferCursoredExecution = connectionFactoryOptions.getValue(PREFER_CURSORED_EXECUTION);
+
+        if (preferCursoredExecution instanceof Predicate) {
+            builder.preferCursoredExecution((Predicate<String>) preferCursoredExecution);
+        }
+
+        if (preferCursoredExecution instanceof Boolean) {
+            builder.preferCursoredExecution((boolean) preferCursoredExecution);
+        }
+
+        if (preferCursoredExecution instanceof String) {
+
+            String value = (String) preferCursoredExecution;
+            if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
+                builder.preferCursoredExecution((Boolean.valueOf(value)));
+            } else {
+
+                try {
+                    Object predicate = Class.forName(value).newInstance();
+                    if (predicate instanceof Predicate) {
+                        builder.preferCursoredExecution((Predicate<String>) predicate);
+                    } else {
+                        throw new IllegalArgumentException("Value '" + value + "' must be an instance of Predicate");
+                    }
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalArgumentException("Cannot instantiate '" + value + "'", e);
+                }
+            }
         }
 
         builder.database(connectionFactoryOptions.getValue(DATABASE));

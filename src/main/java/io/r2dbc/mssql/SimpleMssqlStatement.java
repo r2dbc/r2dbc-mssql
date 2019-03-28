@@ -46,21 +46,21 @@ class SimpleMssqlStatement implements MssqlStatement {
     /**
      * Creates a new {@link SimpleMssqlStatement}.
      *
-     * @param client the client to exchange messages with.
-     * @param codecs the codecs to exchange data.
-     * @param sql    the query to execute.
-     * @throws IllegalArgumentException when {@link Client}, {@link Codecs}, or {@code sql} is {@code null}.
+     * @param client            the client to exchange messages with.
+     * @param connectionOptions the connection options.
+     * @param sql               the query to execute.
+     * @throws IllegalArgumentException when {@link Client}, {@link ConnectionOptions}, or {@code sql} is {@code null}.
      */
-    SimpleMssqlStatement(Client client, Codecs codecs, String sql) {
+    SimpleMssqlStatement(Client client, ConnectionOptions connectionOptions, String sql) {
 
         Assert.requireNonNull(client, "Client must not be null");
-        Assert.requireNonNull(codecs, "Codecs must not be null");
+        Assert.requireNonNull(connectionOptions, "ConnectionOptions must not be null");
         Assert.requireNonNull(sql, "SQL must not be null");
 
         Assert.isTrue(sql.trim().length() > 0, "SQL must contain text");
 
         this.client = client;
-        this.codecs = codecs;
+        this.codecs = connectionOptions.getCodecs();
         this.sql = sql;
     }
 

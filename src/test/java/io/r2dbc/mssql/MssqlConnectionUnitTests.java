@@ -19,6 +19,7 @@ package io.r2dbc.mssql;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.TestClient;
 import io.r2dbc.mssql.client.TransactionStatus;
+import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
@@ -50,7 +51,7 @@ class MssqlConnectionUnitTests {
         TestClient client =
             TestClient.builder().expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "SET IMPLICIT_TRANSACTIONS OFF; BEGIN TRANSACTION")).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client);
+        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
 
         connection.beginTransaction()
             .as(StepVerifier::create)
@@ -63,7 +64,7 @@ class MssqlConnectionUnitTests {
         TestClient client =
             TestClient.builder().withTransactionStatus(TransactionStatus.EXPLICIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "BEGIN TRANSACTION")).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client);
+        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
 
         connection.beginTransaction()
             .as(StepVerifier::create)
@@ -76,7 +77,7 @@ class MssqlConnectionUnitTests {
         Client clientMock = mock(Client.class);
         when(clientMock.getTransactionStatus()).thenReturn(TransactionStatus.STARTED);
 
-        MssqlConnection connection = new MssqlConnection(clientMock);
+        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
 
         connection.beginTransaction()
             .as(StepVerifier::create)
@@ -92,7 +93,7 @@ class MssqlConnectionUnitTests {
         TestClient client =
             TestClient.builder().withTransactionStatus(TransactionStatus.STARTED).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "IF @@TRANCOUNT > 0 COMMIT TRANSACTION")).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client);
+        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
 
         connection.commitTransaction()
             .as(StepVerifier::create)
@@ -105,7 +106,7 @@ class MssqlConnectionUnitTests {
         Client clientMock = mock(Client.class);
         when(clientMock.getTransactionStatus()).thenReturn(TransactionStatus.AUTO_COMMIT);
 
-        MssqlConnection connection = new MssqlConnection(clientMock);
+        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
 
         connection.commitTransaction()
             .as(StepVerifier::create)
@@ -121,7 +122,7 @@ class MssqlConnectionUnitTests {
         TestClient client =
             TestClient.builder().withTransactionStatus(TransactionStatus.STARTED).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION")).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client);
+        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
 
         connection.rollbackTransaction()
             .as(StepVerifier::create)
@@ -134,7 +135,7 @@ class MssqlConnectionUnitTests {
         Client clientMock = mock(Client.class);
         when(clientMock.getTransactionStatus()).thenReturn(TransactionStatus.AUTO_COMMIT);
 
-        MssqlConnection connection = new MssqlConnection(clientMock);
+        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
 
         connection.rollbackTransaction()
             .as(StepVerifier::create)
@@ -148,7 +149,7 @@ class MssqlConnectionUnitTests {
     void shouldNotSupportSavePointRelease() {
 
         Client clientMock = mock(Client.class);
-        MssqlConnection connection = new MssqlConnection(clientMock);
+        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
 
         assertThatThrownBy(() -> connection.releaseSavepoint("foo")).isInstanceOf(UnsupportedOperationException.class);
     }
@@ -158,7 +159,7 @@ class MssqlConnectionUnitTests {
     void shouldAllowSavepointNames(String name) {
 
         Client clientMock = mock(Client.class);
-        MssqlConnection connection = new MssqlConnection(clientMock);
+        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
 
         assertThat(connection.createSavepoint(name)).isNotNull();
     }
@@ -168,7 +169,7 @@ class MssqlConnectionUnitTests {
     void shouldRejectSavepointNames(String name) {
 
         Client clientMock = mock(Client.class);
-        MssqlConnection connection = new MssqlConnection(clientMock);
+        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
 
         assertThatThrownBy(() -> connection.createSavepoint(name)).isInstanceOf(IllegalArgumentException.class);
     }
@@ -179,7 +180,7 @@ class MssqlConnectionUnitTests {
         TestClient client =
             TestClient.builder().withTransactionStatus(TransactionStatus.STARTED).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "ROLLBACK TRANSACTION foo")).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client);
+        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
 
         connection.rollbackTransactionToSavepoint("foo")
             .as(StepVerifier::create)
@@ -192,7 +193,7 @@ class MssqlConnectionUnitTests {
         Client clientMock = mock(Client.class);
         when(clientMock.getTransactionStatus()).thenReturn(TransactionStatus.AUTO_COMMIT);
 
-        MssqlConnection connection = new MssqlConnection(clientMock);
+        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
 
         connection.rollbackTransactionToSavepoint("foo")
             .as(StepVerifier::create)
@@ -210,7 +211,7 @@ class MssqlConnectionUnitTests {
             TestClient.builder().withTransactionStatus(TransactionStatus.STARTED).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "IF @@TRANCOUNT = 0 BEGIN BEGIN TRANSACTION IF " +
                 "@@TRANCOUNT = 2 COMMIT TRANSACTION END SAVE TRANSACTION foo")).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client);
+        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
 
         connection.createSavepoint("foo")
             .as(StepVerifier::create)
@@ -223,7 +224,7 @@ class MssqlConnectionUnitTests {
         Client clientMock = mock(Client.class);
         when(clientMock.getTransactionStatus()).thenReturn(TransactionStatus.AUTO_COMMIT);
 
-        MssqlConnection connection = new MssqlConnection(clientMock);
+        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
 
         connection.createSavepoint("foo")
             .as(StepVerifier::create)
@@ -231,6 +232,21 @@ class MssqlConnectionUnitTests {
 
         verify(clientMock).getTransactionStatus();
         verifyNoMoreInteractions(clientMock);
+    }
+
+    @Test
+    void shouldConsiderCursorPreferenceForSimpleStatement() {
+
+        MssqlConnection cursored = new MssqlConnection(mock(Client.class), new ConnectionOptions(sql -> true, new DefaultCodecs(), new IndefinitePreparedStatementCache()));
+
+        assertThat(cursored.createStatement("SELECT *")).isExactlyInstanceOf(SimpleCursoredMssqlStatement.class);
+        assertThat(cursored.createStatement("INSERT *")).isExactlyInstanceOf(SimpleMssqlStatement.class);
+
+
+        MssqlConnection direct = new MssqlConnection(mock(Client.class), new ConnectionOptions(sql -> false, new DefaultCodecs(), new IndefinitePreparedStatementCache()));
+
+        assertThat(direct.createStatement("SELECT *")).isExactlyInstanceOf(SimpleMssqlStatement.class);
+        assertThat(direct.createStatement("INSERT *")).isExactlyInstanceOf(SimpleMssqlStatement.class);
     }
 
     @ParameterizedTest
@@ -241,7 +257,7 @@ class MssqlConnectionUnitTests {
             TestClient.builder().withTransactionStatus(TransactionStatus.EXPLICIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(),
                 "SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql().toUpperCase())).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client);
+        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
 
         connection.setTransactionIsolationLevel(isolationLevel)
             .as(StepVerifier::create)
@@ -256,7 +272,7 @@ class MssqlConnectionUnitTests {
             TestClient.builder().withTransactionStatus(TransactionStatus.EXPLICIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(),
                 "SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql().toUpperCase())).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client);
+        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
 
         connection.setTransactionIsolationLevel(isolationLevel)
             .as(StepVerifier::create)

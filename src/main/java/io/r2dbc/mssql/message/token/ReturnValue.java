@@ -160,7 +160,7 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
      *
      * @param message the message.
      * @param name    the parameter name.
-     * @return {@link true} if  the {@link Message} is a {@link ReturnValue} that matches the parameter {@literal name}.
+     * @return {@literal true} if  the {@link Message} is a {@link ReturnValue} that matches the parameter {@literal name}.
      */
     public static boolean matches(Message message, String name) {
 
@@ -175,7 +175,7 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
      *
      * @param message the message.
      * @param ordinal the parameter ordinal.
-     * @return {@link true} if  the {@link Message} is a {@link ReturnValue} that matches the parameter {@literal ordinal}.
+     * @return {@literal true} if  the {@link Message} is a {@link ReturnValue} that matches the parameter {@literal ordinal}.
      */
     public static boolean matches(Message message, int ordinal) {
 
