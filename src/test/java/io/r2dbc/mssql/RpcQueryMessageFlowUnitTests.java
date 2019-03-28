@@ -16,7 +16,7 @@
 
 package io.r2dbc.mssql;
 
-import io.r2dbc.mssql.CursoredQueryMessageFlow.CursorState;
+import io.r2dbc.mssql.RpcQueryMessageFlow.CursorState;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.codec.RpcParameterContext;
@@ -44,12 +44,12 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for {@link CursoredQueryMessageFlow}.
+ * Unit tests for {@link RpcQueryMessageFlow}.
  *
  * @author Mark Paluch
  */
 @SuppressWarnings("unchecked")
-class CursoredQueryMessageFlowUnitTests {
+class RpcQueryMessageFlowUnitTests {
 
     Client client = mock(Client.class);
 
@@ -59,17 +59,48 @@ class CursoredQueryMessageFlowUnitTests {
 
     Runnable completion = mock(Runnable.class);
 
+    DefaultCodecs codecs = new DefaultCodecs();
+
+    // windows-1252
+    Collation collation = Collation.from(13632521, 52);
+
     @BeforeEach
     void setUp() {
         when(client.getTransactionDescriptor()).thenReturn(TransactionDescriptor.empty());
     }
 
     @Test
+    void shouldEncodeSpExecuteSql() {
+
+        Binding binding = new Binding();
+        binding.add("P0", codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(collation), "mark"));
+
+        RpcRequest rpcRequest = RpcQueryMessageFlow.spExecuteSql("SELECT * FROM my_table", binding, collation, TransactionDescriptor.empty());
+
+        String hex = "ff ff 0a 00 00 00 00 00 e7 40" +
+            "1f 09 04 d0 00 34 2c 00 53 00 45 00 4c 00 45 00" +
+            "43 00 54 00 20 00 2a 00 20 00 46 00 52 00 4f 00" +
+            "4d 00 20 00 6d 00 79 00 5f 00 74 00 61 00 62 00" +
+            "6c 00 65 00 00 00 e7 40 1f 09 04 d0 00 34 24 00" +
+            "40 00 50 00 30 00 20 00 6e 00 76 00 61 00 72 00" +
+            "63 00 68 00 61 00 72 00 28 00 34 00 30 00 30 00" +
+            "30 00 29 00 03 40 00 50 00 30 00 00 e7 40 1f 09" +
+            "04 d0 00 34 08 00 6d 00 61 00 72 00 6b 00";
+
+        ClientMessageAssert.assertThat(rpcRequest).encoded()
+            .hasHeader(HeaderOptions.create(Type.RPC, Status.empty()))
+            .isEncodedAs(expected -> {
+
+                AllHeaders.transactional(TransactionDescriptor.empty(), 1).encode(expected);
+
+                expected.writeBytes(HexUtils.decodeToByteBuf(hex));
+            });
+    }
+
+    @Test
     void shouldEncodeSpCursorOpen() {
 
-        Collation collation = Collation.from(13632521, 52);
-
-        RpcRequest rpcRequest = CursoredQueryMessageFlow.spCursorOpen("SELECT * FROM my_table", collation, TransactionDescriptor.empty());
+        RpcRequest rpcRequest = RpcQueryMessageFlow.spCursorOpen("SELECT * FROM my_table", collation, TransactionDescriptor.empty());
 
         String hex = "FFFF020000000001260404000000000000E7" +
             "401F0904D000342C00530045004C0045" +
@@ -91,7 +122,7 @@ class CursoredQueryMessageFlowUnitTests {
     @Test
     void shouldEncodeSpCursorFetch() {
 
-        RpcRequest rpcRequest = CursoredQueryMessageFlow.spCursorFetch(180150003, CursoredQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty());
+        RpcRequest rpcRequest = RpcQueryMessageFlow.spCursorFetch(180150003, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty());
 
         String hex =
             "FFFF070002000000260404F3DEBC0A000026" +
@@ -111,7 +142,7 @@ class CursoredQueryMessageFlowUnitTests {
     @Test
     void shouldEncodeSpCursorClose() {
 
-        RpcRequest rpcRequest = CursoredQueryMessageFlow.spCursorClose(180150003, TransactionDescriptor.empty());
+        RpcRequest rpcRequest = RpcQueryMessageFlow.spCursorClose(180150003, TransactionDescriptor.empty());
 
         String hex = "FFFF090000000000260404F3DEBC0A";
 
@@ -128,8 +159,6 @@ class CursoredQueryMessageFlowUnitTests {
     @Test
     void shouldEncodeSpPrepExec() {
 
-        Collation collation = Collation.from(13632521, 52);
-
         String hex = "ff ff 05 00 00 00 00 01 26 04" +
             "04 00 00 00 00 00 01 26 04 04 00 00 00 00 00 00" +
             "e7 40 1f 09 04 d0 00 34 24 00 40 00 50 00 30 00" +
@@ -145,13 +174,12 @@ class CursoredQueryMessageFlowUnitTests {
             "50 00 30 00 00 e7 40 1f 09 04 d0 00 34 08 00 6d" +
             "00 61 00 72 00 6b 00";
 
-        DefaultCodecs codecs = new DefaultCodecs();
         String sql = "UPDATE my_table set first_name = @P0";
 
         Binding binding = new Binding();
         binding.add("P0", codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(collation), "mark"));
 
-        RpcRequest rpcRequest = CursoredQueryMessageFlow.spCursorPrepExec(0, sql, binding, collation, TransactionDescriptor.empty());
+        RpcRequest rpcRequest = RpcQueryMessageFlow.spCursorPrepExec(0, sql, binding, collation, TransactionDescriptor.empty());
 
         ClientMessageAssert.assertThat(rpcRequest).encoded()
             .hasHeader(HeaderOptions.create(Type.RPC, Status.empty()))
@@ -166,8 +194,6 @@ class CursoredQueryMessageFlowUnitTests {
     @Test
     void shouldEncodeSpCursorExec() {
 
-        Collation collation = Collation.from(13632521, 52);
-
         String hex = "ff ff 04 00 00 00 00 00 26 04" +
             "04 02 00 00 00 00 01 26 04 04 00 00 00 00 00 00" +
             "26 04 04 10 00 00 00 00 00 26 04 04 01 20 00 00" +
@@ -175,12 +201,10 @@ class CursoredQueryMessageFlowUnitTests {
             "00 e7 40 1f 09 04 d0 00 34 08 00 6d 00 61 00 72" +
             "00 6b 00";
 
-        DefaultCodecs codecs = new DefaultCodecs();
-
         Binding binding = new Binding();
         binding.add("P0", codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(collation), "mark"));
 
-        RpcRequest rpcRequest = CursoredQueryMessageFlow.spCursorExec(2, binding, TransactionDescriptor.empty());
+        RpcRequest rpcRequest = RpcQueryMessageFlow.spCursorExec(2, binding, TransactionDescriptor.empty());
 
         ClientMessageAssert.assertThat(rpcRequest).encoded()
             .hasHeader(HeaderOptions.create(Type.RPC, Status.empty()))
@@ -199,10 +223,10 @@ class CursoredQueryMessageFlowUnitTests {
         state.cursorId = 42;
         state.hasMore = true;
 
-        CursoredQueryMessageFlow.onDone(client, 128, requests, state, completion);
+        RpcQueryMessageFlow.onDone(client, 128, requests, state, completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.FETCHING);
-        verify(requests).next(CursoredQueryMessageFlow.spCursorFetch(state.cursorId, CursoredQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
+        verify(requests).next(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
         verifyZeroInteractions(completion);
     }
 
@@ -214,10 +238,10 @@ class CursoredQueryMessageFlowUnitTests {
         state.phase = CursorState.Phase.FETCHING;
         state.hasSeenRows = true;
 
-        CursoredQueryMessageFlow.onDone(client, 128, requests, state, completion);
+        RpcQueryMessageFlow.onDone(client, 128, requests, state, completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.FETCHING);
-        verify(requests).next(CursoredQueryMessageFlow.spCursorFetch(state.cursorId, CursoredQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
+        verify(requests).next(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
         verifyZeroInteractions(completion);
     }
 
@@ -228,10 +252,10 @@ class CursoredQueryMessageFlowUnitTests {
         state.cursorId = 42;
         state.phase = CursorState.Phase.FETCHING;
 
-        CursoredQueryMessageFlow.onDone(client, 128, requests, state, completion);
+        RpcQueryMessageFlow.onDone(client, 128, requests, state, completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSING);
-        verify(requests).next(CursoredQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
+        verify(requests).next(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
         verifyZeroInteractions(sink);
     }
 
@@ -241,10 +265,10 @@ class CursoredQueryMessageFlowUnitTests {
         CursorState state = new CursorState();
         state.cursorId = 42;
 
-        CursoredQueryMessageFlow.onDone(client, 128, requests, state, completion);
+        RpcQueryMessageFlow.onDone(client, 128, requests, state, completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSING);
-        verify(requests).next(CursoredQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
+        verify(requests).next(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
         verifyZeroInteractions(completion);
     }
 
@@ -255,7 +279,7 @@ class CursoredQueryMessageFlowUnitTests {
         state.cursorId = 42;
         state.phase = CursorState.Phase.CLOSING;
 
-        CursoredQueryMessageFlow.onDone(client, 128, requests, state, completion);
+        RpcQueryMessageFlow.onDone(client, 128, requests, state, completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSED);
         verifyZeroInteractions(requests);

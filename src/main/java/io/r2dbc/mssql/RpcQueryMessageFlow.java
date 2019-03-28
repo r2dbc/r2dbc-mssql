@@ -16,7 +16,7 @@
 
 package io.r2dbc.mssql;
 
-import io.r2dbc.mssql.CursoredQueryMessageFlow.CursorState.Phase;
+import io.r2dbc.mssql.RpcQueryMessageFlow.CursorState.Phase;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.RpcDirection;
@@ -55,9 +55,9 @@ import static io.r2dbc.mssql.util.PredicateUtils.or;
  * @author Mark Paluch
  * @see RpcRequest
  */
-final class CursoredQueryMessageFlow {
+final class RpcQueryMessageFlow {
 
-    static final Logger LOG = LoggerFactory.getLogger(CursoredQueryMessageFlow.class);
+    static final Logger LOG = LoggerFactory.getLogger(RpcQueryMessageFlow.class);
 
     static final RpcRequest.OptionFlags NO_METADATA = RpcRequest.OptionFlags.empty().disableMetadata();
 
@@ -88,6 +88,60 @@ final class CursoredQueryMessageFlow {
     static final int CCOPT_READ_ONLY = 1;
 
     static final int CCOPT_ALLOW_DIRECT = 8192;
+
+    /**
+     * Execute a direct query with parameters.
+     *
+     * @param client    the {@link Client} to exchange messages with.
+     * @param query     the query to execute.
+     * @param fetchSize the number of rows to fetch. TODO: Try to determine fetch size from current demand and apply demand function.
+     * @return the messages received in response to this exchange.
+     */
+    static Flux<Message> exchange(Client client, String query, Binding binding) {
+
+        Assert.requireNonNull(client, "Client must not be null");
+        Assert.requireNonNull(query, "Query must not be null");
+
+        EmitterProcessor<ClientMessage> outbound = EmitterProcessor.create(false);
+        FluxSink<ClientMessage> requests = outbound.sink();
+
+        EmitterProcessor<Message> inbound = EmitterProcessor.create(false);
+        Flux<Message> firstMessages = inbound.cache(10);
+
+        CursorState state = new CursorState();
+        state.directMode = true;
+
+        Flux<Message> exchange = client.exchange(outbound.startWith(spExecuteSql(query, binding, client.getRequiredCollation(), client.getTransactionDescriptor())));
+
+        OnCursorComplete cursorComplete = new OnCursorComplete(inbound);
+
+        Flux<Message> messages = firstMessages //
+            .doOnSubscribe(ignore -> QueryLogger.logQuery(query))
+            .doOnNext(it -> {
+
+                if (it instanceof ReturnValue) {
+
+                    ReturnValue returnValue = (ReturnValue) it;
+                    returnValue.release();
+                }
+
+                if (it instanceof RowToken) {
+                    state.hasSeenRows = true;
+                }
+
+                if (it instanceof ErrorToken) {
+                    state.hasSeenError = true;
+                }
+            })
+            .handle(MssqlException::handleErrorResponse)
+            .<Message>handle((message, sink) -> {
+                handleMessage(client, 0, requests, state, message, sink, cursorComplete);
+            })
+            .filter(filterForWindow())
+            .doOnCancel(cursorComplete);
+
+        return messages.doOnSubscribe(ignore -> exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound));
+    }
 
     /**
      * Execute a cursored query.
@@ -330,6 +384,35 @@ final class CursoredQueryMessageFlow {
             completion.run();
             state.phase = Phase.CLOSED;
         }
+    }
+
+    /**
+     * Creates a {@link RpcRequest} for {@link RpcRequest#Sp_ExecuteSql} to execute a SQL statement that returns directly results.
+     *
+     * @param query                 the query to execute.
+     * @param binding               bound parameters
+     * @param collation             the database collation.
+     * @param transactionDescriptor transaction descriptor.
+     * @return {@link RpcRequest} for {@link RpcRequest#Sp_CursorOpen}.
+     * @throws IllegalArgumentException when {@code query}, {@link Collation}, or {@link TransactionDescriptor} is {@code null}.
+     */
+    static RpcRequest spExecuteSql(String query, Binding binding, Collation collation, TransactionDescriptor transactionDescriptor) {
+
+        Assert.requireNonNull(query, "Query must not be null");
+        Assert.requireNonNull(collation, "Collation must not be null");
+        Assert.requireNonNull(transactionDescriptor, "TransactionDescriptor must not be null");
+
+        RpcRequest.Builder builder = RpcRequest.builder() //
+            .withProcId(RpcRequest.Sp_ExecuteSql) //
+            .withTransactionDescriptor(transactionDescriptor) //
+            .withParameter(RpcDirection.IN, collation, query) //
+            .withParameter(RpcDirection.IN, collation, binding.getFormalParameters()); // formal parameter defn
+
+        binding.forEach((name, encoded) -> {
+            builder.withNamedParameter(RpcDirection.IN, name, encoded);
+        });
+
+        return builder.build();
     }
 
     /**

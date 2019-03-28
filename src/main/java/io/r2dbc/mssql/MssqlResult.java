@@ -80,7 +80,12 @@ public final class MssqlResult implements Result {
         Mono<MssqlRowMetadata> columnDescriptions = firstMessages
             .ofType(ColumnMetadataToken.class)
             .filter(it -> !it.getColumns().isEmpty())
-            .doOnNext(it -> logger.debug("Result column definition: {}", it))
+            .as(it -> {
+                if (logger.isDebugEnabled()) {
+                    return it.doOnNext(cd -> logger.debug("Result column definition: {}", cd));
+                }
+                return it;
+            })
             .map(it -> MssqlRowMetadata.create(codecs, it))
             .singleOrEmpty()
             .cache();
@@ -96,7 +101,12 @@ public final class MssqlResult implements Result {
             .doOnNext(ReferenceCountUtil::release)
             .ofType(AbstractDoneToken.class)
             .filter(it -> it.hasCount())
-            .doOnNext(it -> logger.debug("Incoming row count: {}", it))
+            .as(it -> {
+                if (logger.isDebugEnabled()) {
+                    return it.doOnNext(count -> logger.debug("Incoming row count: {}", count));
+                }
+                return it;
+            })
             .map(AbstractDoneToken::getRowCount)
             .collectList()
             .handle((longs, sink) -> {

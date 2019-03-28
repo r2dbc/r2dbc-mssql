@@ -16,7 +16,7 @@
 
 package io.r2dbc.mssql;
 
-import io.r2dbc.mssql.PreparedMssqlStatement.ParsedParameter;
+import io.r2dbc.mssql.ParametrizedMssqlStatement.ParsedParameter;
 import io.r2dbc.mssql.client.TestClient;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.codec.Encoded;
@@ -29,16 +29,16 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static io.r2dbc.mssql.PreparedMssqlStatement.ParsedQuery;
+import static io.r2dbc.mssql.ParametrizedMssqlStatement.ParsedQuery;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Unit tests for {@link PreparedMssqlStatement}.
+ * Unit tests for {@link ParametrizedMssqlStatement}.
  *
  * @author Mark Paluch
  */
-class PreparedMssqlStatementUnitTests {
+class ParametrizedMssqlStatementUnitTests {
 
     PreparedStatementCache statementCache = new IndefinitePreparedStatementCache();
 
@@ -47,11 +47,11 @@ class PreparedMssqlStatementUnitTests {
     @Test
     void shouldSupportSql() {
 
-        assertThat(PreparedMssqlStatement.supports("SELECT * from FOO where firstname = @firstname")).isTrue();
-        assertThat(PreparedMssqlStatement.supports("SELECT * from FOO where firstname =@firstname")).isTrue();
-        assertThat(PreparedMssqlStatement.supports("SELECT * from FOO where firstname = @foo_bar")).isTrue();
+        assertThat(ParametrizedMssqlStatement.supports("SELECT * from FOO where firstname = @firstname")).isTrue();
+        assertThat(ParametrizedMssqlStatement.supports("SELECT * from FOO where firstname =@firstname")).isTrue();
+        assertThat(ParametrizedMssqlStatement.supports("SELECT * from FOO where firstname = @foo_bar")).isTrue();
 
-        assertThat(PreparedMssqlStatement.supports("SELECT * from FOO where firstname = 'foo'")).isFalse();
+        assertThat(ParametrizedMssqlStatement.supports("SELECT * from FOO where firstname = 'foo'")).isFalse();
     }
 
     @Test
@@ -73,7 +73,7 @@ class PreparedMssqlStatementUnitTests {
     @Test
     void shouldBindParameterByIndex() {
 
-        PreparedMssqlStatement statement = new PreparedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
+        ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
 
         statement.bind(0, "name");
         assertThat(statement.getBindings().first().getParameters()).containsKeys("firstname");
@@ -82,7 +82,7 @@ class PreparedMssqlStatementUnitTests {
     @Test
     void shouldRejectBindIndexOutOfBounds() {
 
-        PreparedMssqlStatement statement = new PreparedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
+        ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
 
         assertThatThrownBy(() -> statement.bind(-1, "name")).isInstanceOf(IndexOutOfBoundsException.class);
         assertThatThrownBy(() -> statement.bind(1, "name")).isInstanceOf(IndexOutOfBoundsException.class);
@@ -91,7 +91,7 @@ class PreparedMssqlStatementUnitTests {
     @Test
     void shouldBindParameterByName() {
 
-        PreparedMssqlStatement statement = new PreparedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
+        ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
 
         statement.bind(0, "firstname");
         assertThat(statement.getBindings().first().getParameters()).containsKeys("firstname");
@@ -100,7 +100,7 @@ class PreparedMssqlStatementUnitTests {
     @Test
     void shouldRejectBindForUnknownParameters() {
 
-        PreparedMssqlStatement statement = new PreparedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
+        ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
 
         assertThatThrownBy(() -> statement.bind("foo", "name")).isInstanceOf(IllegalArgumentException.class);
     }
@@ -122,7 +122,7 @@ class PreparedMssqlStatementUnitTests {
             .build();
 
         String sql = "SELECT * from FOO where firstname = @firstname";
-        PreparedMssqlStatement statement = new PreparedMssqlStatement(testClient, this.connectionOptions, sql);
+        ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(testClient, this.connectionOptions, sql);
 
         statement.bind("firstname", "");
 
@@ -150,7 +150,7 @@ class PreparedMssqlStatementUnitTests {
             .build();
 
         String sql = "SELECT * from FOO where firstname = @firstname";
-        PreparedMssqlStatement statement = new PreparedMssqlStatement(testClient, this.connectionOptions, sql);
+        ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(testClient, this.connectionOptions, sql);
 
         statement.bind("firstname", "");
 

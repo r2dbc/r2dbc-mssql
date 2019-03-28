@@ -25,6 +25,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.util.function.Predicate;
+
 import static io.r2dbc.spi.ConnectionFactoryOptions.DRIVER;
 import static io.r2dbc.spi.ConnectionFactoryOptions.HOST;
 import static io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD;
@@ -49,12 +51,15 @@ public abstract class IntegrationTestSupport {
     @BeforeAll
     static void beforeAll() {
 
+        Predicate<String> preferCursoredExecution = sql -> sql.contains("cursored");
+
         ConnectionFactoryOptions options = builder()
             .option(DRIVER, MssqlConnectionFactoryProvider.MSSQL_DRIVER)
             .option(HOST, SERVER.getHost())
             .option(PORT, SERVER.getPort())
             .option(PASSWORD, SERVER.getPassword())
             .option(USER, SERVER.getUsername())
+            .option(MssqlConnectionFactoryProvider.PREFER_CURSORED_EXECUTION, preferCursoredExecution)
             .build();
 
         connectionFactory = (MssqlConnectionFactory) ConnectionFactories.get(options);

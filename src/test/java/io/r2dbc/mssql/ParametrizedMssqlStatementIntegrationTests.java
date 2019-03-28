@@ -24,11 +24,11 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 /**
- * Integration tests for {@link PreparedMssqlStatement}.
+ * Integration tests for {@link ParametrizedMssqlStatement}.
  *
  * @author Mark Paluch
  */
-class PreparedMssqlStatementIntegrationTests extends IntegrationTestSupport {
+class ParametrizedMssqlStatementIntegrationTests extends IntegrationTestSupport {
 
     @Test
     void shouldExecuteBatch() {

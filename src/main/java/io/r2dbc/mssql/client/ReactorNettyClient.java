@@ -179,7 +179,12 @@ public final class ReactorNettyClient implements Client {
 
                 return Mono.error(new ProtocolException(String.format("Unexpected protocol message: [%s]", it)));
             }) //
-            .doOnNext(message -> this.logger.debug("Response: {}", message)) //
+            .as(it -> {
+                if (this.logger.isDebugEnabled()) {
+                    return it.doOnNext(message -> this.logger.debug("Response: {}", message));
+                }
+                return it;
+            })
             .doOnError(message -> this.logger.warn("Error: {}", message.getMessage(), message)) //
             .handle(this.handleStateChange) //
             .doOnNext(this.handleEnvChange) //
@@ -196,7 +201,12 @@ public final class ReactorNettyClient implements Client {
             this.logger.warn("Error: {}", message.getMessage(), message);
             this.isClosed.set(true);
             connection.channel().close();
-        }).doOnNext(message -> this.logger.debug("Request:  {}", message))
+        }).as(it -> {
+            if (this.logger.isDebugEnabled()) {
+                return it.doOnNext(message -> this.logger.debug("Request: {}", message));
+            }
+            return it;
+        })
             .concatMap(
                 message -> connection.outbound().sendObject(message.encode(connection.outbound().alloc())))
             .subscribe();

@@ -41,7 +41,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Prepared {@link Statement} with parameter markers executed against a Microsoft SQL Server database.
+ * Parametrized {@link Statement} with parameter markers executed against a Microsoft SQL Server database.
  * <p>
  * T-SQL uses named parameters that are at-prefixed ({@literal @}). Examples for parameter names are:
  * <pre class="code">
@@ -54,7 +54,7 @@ import java.util.regex.Pattern;
  *
  * @author Mark Paluch
  */
-final class PreparedMssqlStatement implements MssqlStatement {
+final class ParametrizedMssqlStatement implements MssqlStatement {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -66,22 +66,25 @@ final class PreparedMssqlStatement implements MssqlStatement {
 
     private final Codecs codecs;
 
+    private final boolean preferCursoredExecution;
+
     private final ParsedQuery parsedQuery;
 
     private final Bindings bindings = new Bindings();
 
     private String[] generatedColumns;
 
-    PreparedMssqlStatement(Client client, ConnectionOptions connectionOptions, String sql) {
+    ParametrizedMssqlStatement(Client client, ConnectionOptions connectionOptions, String sql) {
 
         this.statementCache = connectionOptions.getPreparedStatementCache();
         this.client = client;
         this.codecs = connectionOptions.getCodecs();
+        this.preferCursoredExecution = connectionOptions.prefersCursors(sql);
         this.parsedQuery = ParsedQuery.parse(sql);
     }
 
     @Override
-    public PreparedMssqlStatement add() {
+    public ParametrizedMssqlStatement add() {
         this.bindings.finish();
         return this;
     }
@@ -106,7 +109,13 @@ final class PreparedMssqlStatement implements MssqlStatement {
 
                 logger.debug("Start exchange for {}", sql);
 
-                Flux<Message> exchange = CursoredQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, sql, it, 128);
+                Flux<Message> exchange;
+
+                if (preferCursoredExecution) {
+                    exchange = RpcQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, sql, it, 128);
+                } else {
+                    exchange = RpcQueryMessageFlow.exchange(this.client, sql, it);
+                }
 
                 if (useGeneratedKeysClause) {
                     exchange = exchange.transform(GeneratedValues::reduceToSingleCountDoneToken);
@@ -121,7 +130,7 @@ final class PreparedMssqlStatement implements MssqlStatement {
     }
 
     @Override
-    public PreparedMssqlStatement returnGeneratedValues(String... columns) {
+    public ParametrizedMssqlStatement returnGeneratedValues(String... columns) {
 
         Assert.requireNonNull(columns, "columns must not be null");
 
@@ -147,7 +156,7 @@ final class PreparedMssqlStatement implements MssqlStatement {
     }
 
     @Override
-    public PreparedMssqlStatement bind(Object identifier, Object value) {
+    public ParametrizedMssqlStatement bind(Object identifier, Object value) {
 
         Assert.requireNonNull(identifier, "identifier must not be null");
         Assert.isInstanceOf(String.class, identifier, "identifier must be a String");
@@ -161,7 +170,7 @@ final class PreparedMssqlStatement implements MssqlStatement {
     }
 
     @Override
-    public PreparedMssqlStatement bind(int index, Object value) {
+    public ParametrizedMssqlStatement bind(int index, Object value) {
 
         Assert.requireNonNull(value, "value must not be null");
 
@@ -169,7 +178,7 @@ final class PreparedMssqlStatement implements MssqlStatement {
     }
 
     @Override
-    public PreparedMssqlStatement bindNull(Object identifier, Class<?> type) {
+    public ParametrizedMssqlStatement bindNull(Object identifier, Class<?> type) {
 
         Assert.requireNonNull(identifier, "Identifier must not be null");
         Assert.isInstanceOf(String.class, identifier, "Identifier must be a String");
@@ -180,7 +189,7 @@ final class PreparedMssqlStatement implements MssqlStatement {
     }
 
     @Override
-    public PreparedMssqlStatement bindNull(int index, Class<?> type) {
+    public ParametrizedMssqlStatement bindNull(int index, Class<?> type) {
 
         Assert.requireNonNull(type, "Type must not be null");
 

@@ -55,7 +55,7 @@ final class SimpleCursoredMssqlStatement extends SimpleMssqlStatement {
 
             logger.debug("Start exchange for {}", sql);
 
-            return CursoredQueryMessageFlow.exchange(this.client, this.codecs, this.sql, FETCH_SIZE) //
+            return RpcQueryMessageFlow.exchange(this.client, this.codecs, this.sql, FETCH_SIZE) //
                 .windowUntil(DoneInProcToken.class::isInstance) //
                 .map(it -> MssqlResult.toResult(this.codecs, it));
         });

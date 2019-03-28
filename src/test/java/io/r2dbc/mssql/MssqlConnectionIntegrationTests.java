@@ -166,7 +166,7 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
     }
 
     @Test
-    void shouldInsertAndSelectUsingPaging() {
+    void shouldInsertAndSelectUsingPagingAndDirectMode() {
 
         createTable(connection);
 
@@ -193,6 +193,27 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
             .flatMap(it -> it.map((row, rowMetadata) -> row.get("id", Integer.class)))
             .as(StepVerifier::create)
             .expectNext(3)
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldInsertAndSelectUsingPagingAndCursors() {
+
+        createTable(connection);
+
+        insertRecord(connection, 1);
+        insertRecord(connection, 2);
+        insertRecord(connection, 3);
+
+        Flux.from(connection.createStatement("SELECT * FROM r2dbc_example ORDER BY id OFFSET @Offset ROWS" +
+            "  FETCH NEXT @Rows ROWS ONLY /* cursored */")
+            .bind("Offset", 0)
+            .bind("Rows", 2)
+            .execute())
+            .flatMap(it -> it.map((row, rowMetadata) -> row.get("id", Integer.class)))
+            .as(StepVerifier::create)
+            .expectNext(1)
+            .expectNext(2)
             .verifyComplete();
     }
 
