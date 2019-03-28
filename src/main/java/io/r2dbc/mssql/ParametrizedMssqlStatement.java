@@ -30,6 +30,7 @@ import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 
+import javax.script.Bindings;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -56,7 +57,7 @@ import java.util.regex.Pattern;
  */
 final class ParametrizedMssqlStatement implements MssqlStatement {
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(ParametrizedMssqlStatement.class);
 
     private static final Pattern PARAMETER_MATCHER = Pattern.compile("@([\\p{Alpha}@][@$\\d\\w_]{0,127})");
 
@@ -107,7 +108,9 @@ final class ParametrizedMssqlStatement implements MssqlStatement {
         return bindingEmitter.startWith(iterator.next())
             .flatMap(it -> {
 
-                logger.debug("Start exchange for {}", sql);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Start exchange for {}", sql);
+                }
 
                 Flux<Message> exchange;
 

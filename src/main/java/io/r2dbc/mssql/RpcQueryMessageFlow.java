@@ -57,7 +57,7 @@ import static io.r2dbc.mssql.util.PredicateUtils.or;
  */
 final class RpcQueryMessageFlow {
 
-    static final Logger LOG = LoggerFactory.getLogger(RpcQueryMessageFlow.class);
+    private static final Logger logger = LoggerFactory.getLogger(RpcQueryMessageFlow.class);
 
     static final RpcRequest.OptionFlags NO_METADATA = RpcRequest.OptionFlags.empty().disableMetadata();
 
@@ -125,13 +125,7 @@ final class RpcQueryMessageFlow {
                     returnValue.release();
                 }
 
-                if (it instanceof RowToken) {
-                    state.hasSeenRows = true;
-                }
-
-                if (it instanceof ErrorToken) {
-                    state.hasSeenError = true;
-                }
+                state.update(it);
             })
             .handle(MssqlException::handleErrorResponse)
             .<Message>handle((message, sink) -> {
@@ -185,13 +179,7 @@ final class RpcQueryMessageFlow {
                     returnValue.release();
                 }
 
-                if (it instanceof RowToken) {
-                    state.hasSeenRows = true;
-                }
-
-                if (it instanceof ErrorToken) {
-                    state.hasSeenError = true;
-                }
+                state.update(it);
             })
             .handle(MssqlException::handleErrorResponse)
             .<Message>handle((message, sink) -> {
@@ -258,7 +246,7 @@ final class RpcQueryMessageFlow {
                         if (returnValue.getOrdinal() == 0) {
 
                             int preparedStatementHandle = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
-                            LOG.debug("Prepared statement with handle: {}", preparedStatementHandle);
+                            logger.debug("Prepared statement with handle: {}", preparedStatementHandle);
                             statementCache.putHandle(preparedStatementHandle, query, binding);
                         }
                     }
@@ -269,13 +257,7 @@ final class RpcQueryMessageFlow {
                     }
                 }
 
-                if (it instanceof RowToken) {
-                    state.hasSeenRows = true;
-                }
-
-                if (it instanceof ErrorToken) {
-                    state.hasSeenError = true;
-                }
+                state.update(it);
             })
             .handle(MssqlException::handleErrorResponse)
             .<Message>handle((message, sink) -> {
@@ -290,7 +272,7 @@ final class RpcQueryMessageFlow {
     private static int parseCursorId(Codecs codecs, CursorState state, ReturnValue returnValue) {
 
         Integer cursorId = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
-        LOG.debug("CursorId: {}", cursorId);
+        logger.debug("CursorId: {}", cursorId);
         return cursorId;
     }
 
@@ -580,6 +562,16 @@ final class RpcQueryMessageFlow {
         volatile boolean directMode;
 
         Phase phase = Phase.NONE;
+
+        void update(Message it) {
+            if (it instanceof RowToken) {
+                hasSeenRows = true;
+            }
+
+            if (it instanceof ErrorToken) {
+                hasSeenError = true;
+            }
+        }
 
         enum Phase {
             NONE, FETCHING, CLOSING, CLOSED, ERROR

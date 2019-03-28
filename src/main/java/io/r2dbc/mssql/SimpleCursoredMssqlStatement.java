@@ -35,7 +35,7 @@ final class SimpleCursoredMssqlStatement extends SimpleMssqlStatement {
 
     public static final int FETCH_SIZE = 128;
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(SimpleCursoredMssqlStatement.class);
 
     /**
      * Creates a new {@link SimpleCursoredMssqlStatement}.
@@ -53,7 +53,9 @@ final class SimpleCursoredMssqlStatement extends SimpleMssqlStatement {
 
         return Flux.defer(() -> {
 
-            logger.debug("Start exchange for {}", sql);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Start exchange for {}", sql);
+            }
 
             return RpcQueryMessageFlow.exchange(this.client, this.codecs, this.sql, FETCH_SIZE) //
                 .windowUntil(DoneInProcToken.class::isInstance) //

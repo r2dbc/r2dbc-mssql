@@ -66,7 +66,7 @@ import java.util.function.Consumer;
  */
 public final class ReactorNettyClient implements Client {
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(ReactorNettyClient.class);
 
     private final AtomicReference<ByteBufAllocator> byteBufAllocator = new AtomicReference<>();
 
@@ -84,12 +84,14 @@ public final class ReactorNettyClient implements Client {
 
     private final Consumer<Message> handleInfoToken = handleMessage(AbstractInfoToken.class, (token) -> {
 
-        if (token.getClassification() == AbstractInfoToken.Classification.INFORMATIONAL) {
-            this.logger.debug("Info: Code [{}] Severity [{}]: {}", token.getNumber(), token.getClassification(),
-                token.getMessage());
-        } else {
-            this.logger.debug("Warning: Code [{}] Severity [{}]: {}", token.getNumber(), token.getClassification(),
-                token.getMessage());
+        if (logger.isDebugEnabled()) {
+            if (token.getClassification() == AbstractInfoToken.Classification.INFORMATIONAL) {
+                logger.debug("Info: Code [{}] Severity [{}]: {}", token.getNumber(), token.getClassification(),
+                    token.getMessage());
+            } else {
+                logger.debug("Warning: Code [{}] Severity [{}]: {}", token.getNumber(), token.getClassification(),
+                    token.getMessage());
+            }
         }
     });
 
@@ -101,7 +103,7 @@ public final class ReactorNettyClient implements Client {
             try {
                 listener.onEnvironmentChange(event);
             } catch (Exception e) {
-                this.logger.warn("Failed onEnvironmentChange() in {}", listener, e);
+                logger.warn("Failed onEnvironmentChange() in {}", listener, e);
             }
         }
     });
@@ -180,12 +182,12 @@ public final class ReactorNettyClient implements Client {
                 return Mono.error(new ProtocolException(String.format("Unexpected protocol message: [%s]", it)));
             }) //
             .as(it -> {
-                if (this.logger.isDebugEnabled()) {
-                    return it.doOnNext(message -> this.logger.debug("Response: {}", message));
+                if (logger.isDebugEnabled()) {
+                    return it.doOnNext(message -> logger.debug("Response: {}", message));
                 }
                 return it;
             })
-            .doOnError(message -> this.logger.warn("Error: {}", message.getMessage(), message)) //
+            .doOnError(message -> logger.warn("Error: {}", message.getMessage(), message)) //
             .handle(this.handleStateChange) //
             .doOnNext(this.handleEnvChange) //
             .doOnNext(this.featureAckChange) //
@@ -198,12 +200,12 @@ public final class ReactorNettyClient implements Client {
                 responses::next, responses::error, responses::complete);
 
         this.requestProcessor.doOnError(message -> {
-            this.logger.warn("Error: {}", message.getMessage(), message);
+            logger.warn("Error: {}", message.getMessage(), message);
             this.isClosed.set(true);
             connection.channel().close();
         }).as(it -> {
-            if (this.logger.isDebugEnabled()) {
-                return it.doOnNext(message -> this.logger.debug("Request: {}", message));
+            if (logger.isDebugEnabled()) {
+                return it.doOnNext(message -> logger.debug("Request: {}", message));
             }
             return it;
         })
@@ -293,7 +295,7 @@ public final class ReactorNettyClient implements Client {
 
             return Mono.create(it -> {
 
-                ReactorNettyClient.this.isClosed.set(true);
+                isClosed.set(true);
 
                 connection.channel().disconnect().addListener((ChannelFutureListener) future ->
                 {
@@ -384,7 +386,7 @@ public final class ReactorNettyClient implements Client {
                     throw ProtocolException.invalidTds("Transaction descriptor length mismatch");
                 }
 
-                if (ReactorNettyClient.this.logger.isDebugEnabled()) {
+                if (logger.isDebugEnabled()) {
 
                     String op;
                     if (token.getChangeType() == EnvChangeToken.EnvChangeType.BeginTx) {
@@ -393,31 +395,31 @@ public final class ReactorNettyClient implements Client {
                         op = "enlisted";
                     }
 
-                    ReactorNettyClient.this.logger.debug(String.format("Transaction %s", op));
+                    logger.debug(String.format("Transaction %s", op));
                 }
 
-                ReactorNettyClient.this.transactionStatus.set(TransactionStatus.STARTED);
-                ReactorNettyClient.this.transactionDescriptor.set(TransactionDescriptor.from(descriptor));
+                transactionStatus.set(TransactionStatus.STARTED);
+                transactionDescriptor.set(TransactionDescriptor.from(descriptor));
             }
 
             if (token.getChangeType() == EnvChangeToken.EnvChangeType.CommitTx) {
 
-                if (ReactorNettyClient.this.logger.isDebugEnabled()) {
-                    ReactorNettyClient.this.logger.debug("Transaction committed");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Transaction committed");
                 }
 
-                ReactorNettyClient.this.transactionStatus.set(TransactionStatus.EXPLICIT);
-                ReactorNettyClient.this.transactionDescriptor.set(TransactionDescriptor.empty());
+                transactionStatus.set(TransactionStatus.EXPLICIT);
+                transactionDescriptor.set(TransactionDescriptor.empty());
             }
 
             if (token.getChangeType() == EnvChangeToken.EnvChangeType.RollbackTx) {
 
-                if (ReactorNettyClient.this.logger.isDebugEnabled()) {
-                    ReactorNettyClient.this.logger.debug("Transaction rolled back");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Transaction rolled back");
                 }
 
-                ReactorNettyClient.this.transactionStatus.set(TransactionStatus.EXPLICIT);
-                ReactorNettyClient.this.transactionDescriptor.set(TransactionDescriptor.empty());
+                transactionStatus.set(TransactionStatus.EXPLICIT);
+                transactionDescriptor.set(TransactionDescriptor.empty());
             }
         }
     }
@@ -430,7 +432,7 @@ public final class ReactorNettyClient implements Client {
             if (event.getToken().getChangeType() == EnvChangeToken.EnvChangeType.SQLCollation) {
 
                 Collation collation = Collation.decode(Unpooled.wrappedBuffer(event.getToken().getNewValue()));
-                ReactorNettyClient.this.databaseCollation.set(Optional.of(collation));
+                databaseCollation.set(Optional.of(collation));
             }
         }
     }

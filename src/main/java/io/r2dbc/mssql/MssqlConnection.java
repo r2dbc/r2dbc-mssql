@@ -44,7 +44,7 @@ public final class MssqlConnection implements Connection {
 
     private static final Pattern SAVEPOINT_PATTERN = Pattern.compile("[\\d\\w_]{1,32}");
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(MssqlConnection.class);
 
     private final Client client;
 
@@ -62,14 +62,14 @@ public final class MssqlConnection implements Connection {
         return useTransactionStatus(tx -> {
 
             if (tx == TransactionStatus.STARTED) {
-                this.logger.debug("Skipping begin transaction because status is [{}]", tx);
+                logger.debug("Skipping begin transaction because status is [{}]", tx);
                 return Mono.empty();
             }
 
             String sql = tx == TransactionStatus.AUTO_COMMIT ? "SET IMPLICIT_TRANSACTIONS OFF; " : "";
             sql += "BEGIN TRANSACTION";
 
-            this.logger.debug("Beginning transaction from status [{}]", tx);
+            logger.debug("Beginning transaction from status [{}]", tx);
 
             return QueryMessageFlow.exchange(this.client, sql).handle(MssqlException::handleErrorResponse);
         });
@@ -86,11 +86,11 @@ public final class MssqlConnection implements Connection {
         return useTransactionStatus(tx -> {
 
             if (tx != TransactionStatus.STARTED) {
-                this.logger.debug("Skipping commit transaction because status is [{}]", tx);
+                logger.debug("Skipping commit transaction because status is [{}]", tx);
                 return Mono.empty();
             }
 
-            this.logger.debug("Committing transaction with status [{}]", tx);
+            logger.debug("Committing transaction with status [{}]", tx);
 
             return QueryMessageFlow.exchange(this.client, "IF @@TRANCOUNT > 0 COMMIT TRANSACTION").handle(MssqlException::handleErrorResponse);
         });
@@ -110,11 +110,11 @@ public final class MssqlConnection implements Connection {
         return useTransactionStatus(tx -> {
 
             if (tx != TransactionStatus.STARTED) {
-                this.logger.debug("Skipping savepoint creation because status is [{}]", tx);
+                logger.debug("Skipping savepoint creation because status is [{}]", tx);
                 return Mono.empty();
             }
 
-            this.logger.debug("Creating savepoint for transaction with status [{}]", tx);
+            logger.debug("Creating savepoint for transaction with status [{}]", tx);
 
             return QueryMessageFlow.exchange(this.client, String.format("IF @@TRANCOUNT = 0 BEGIN BEGIN TRANSACTION IF @@TRANCOUNT = 2 COMMIT TRANSACTION END SAVE TRANSACTION %s", name)) //
                 .handle(MssqlException::handleErrorResponse);
@@ -125,7 +125,7 @@ public final class MssqlConnection implements Connection {
     public MssqlStatement createStatement(String sql) {
 
         Assert.requireNonNull(sql, "SQL must not be null");
-        this.logger.debug("Creating statement for SQL: [{}]", sql);
+        logger.debug("Creating statement for SQL: [{}]", sql);
 
         if (ParametrizedMssqlStatement.supports(sql)) {
             return new ParametrizedMssqlStatement(this.client, this.connectionOptions, sql);
@@ -149,11 +149,11 @@ public final class MssqlConnection implements Connection {
         return useTransactionStatus(tx -> {
 
             if (tx != TransactionStatus.STARTED) {
-                this.logger.debug("Skipping rollback transaction because status is [{}]", tx);
+                logger.debug("Skipping rollback transaction because status is [{}]", tx);
                 return Mono.empty();
             }
 
-            this.logger.debug("Rolling back transaction with status [{}]", tx);
+            logger.debug("Rolling back transaction with status [{}]", tx);
 
             return QueryMessageFlow.exchange(this.client, "IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION").handle(MssqlException::handleErrorResponse);
         });
@@ -168,11 +168,11 @@ public final class MssqlConnection implements Connection {
         return useTransactionStatus(tx -> {
 
             if (tx != TransactionStatus.STARTED) {
-                this.logger.debug("Skipping rollback transaction to savepoint [{}] because status is [{}]", name, tx);
+                logger.debug("Skipping rollback transaction to savepoint [{}] because status is [{}]", name, tx);
                 return Mono.empty();
             }
 
-            this.logger.debug("Rolling back transaction to savepoint [{}] with status [{}]", name, tx);
+            logger.debug("Rolling back transaction to savepoint [{}] with status [{}]", name, tx);
 
             return QueryMessageFlow.exchange(this.client, String.format("ROLLBACK TRANSACTION %s", name)).handle(MssqlException::handleErrorResponse);
         });

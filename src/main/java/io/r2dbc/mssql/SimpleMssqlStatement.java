@@ -33,7 +33,7 @@ import reactor.core.publisher.Flux;
  */
 class SimpleMssqlStatement implements MssqlStatement {
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(SimpleMssqlStatement.class);
 
     final Client client;
 
@@ -99,7 +99,9 @@ class SimpleMssqlStatement implements MssqlStatement {
         boolean useGeneratedKeysClause = GeneratedValues.shouldExpectGeneratedKeys(this.generatedColumns);
         String sql = useGeneratedKeysClause ? GeneratedValues.augmentQuery(this.sql, generatedColumns) : this.sql;
 
-        logger.debug("Start exchange for {}", sql);
+        if (logger.isDebugEnabled()) {
+            logger.debug("Start exchange for {}", sql);
+        }
 
         Flux<Message> exchange = QueryMessageFlow.exchange(this.client, sql);
 

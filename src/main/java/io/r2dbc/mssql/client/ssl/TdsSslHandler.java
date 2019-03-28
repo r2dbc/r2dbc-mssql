@@ -61,7 +61,7 @@ import java.security.cert.X509Certificate;
 @ChannelHandler.Sharable
 public final class TdsSslHandler extends ChannelDuplexHandler {
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(TdsSslHandler.class);
 
     private volatile SslHandler sslHandler;
 
@@ -232,7 +232,9 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
         if (requiresWrapping()) {
 
-            logger.debug("Write wrapping: Append to output buffer");
+            if (logger.isDebugEnabled()) {
+                logger.debug("Write wrapping: Append to output buffer");
+            }
 
             ByteBuf sslPayload = (ByteBuf) msg;
 
@@ -284,7 +286,9 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
         if (requiresWrapping()) {
 
-            logger.debug("Write wrapping: Flushing output buffer and enable auto-read");
+            if (logger.isDebugEnabled()) {
+                logger.debug("Write wrapping: Flushing output buffer and enable auto-read");
+            }
 
             ByteBuf message = this.outputBuffer;
             this.outputBuffer = ctx.alloc().buffer();
