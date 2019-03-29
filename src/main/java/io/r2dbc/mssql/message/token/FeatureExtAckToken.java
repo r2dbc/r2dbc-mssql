@@ -29,7 +29,7 @@ import java.util.List;
  *
  * @author Mark Paluch
  */
-public class FeatureExtAckToken extends AbstractDataToken {
+public final class FeatureExtAckToken extends AbstractDataToken {
 
     public static final byte TYPE = (byte) 0xAE;
 

@@ -31,7 +31,7 @@ import java.util.List;
  *
  * @author Mark Paluch
  */
-public class NbcRowToken extends RowToken {
+public final class NbcRowToken extends RowToken {
 
     public static final byte TYPE = (byte) 0xD2;
 

@@ -22,6 +22,7 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.ColumnMetadataToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
+import io.r2dbc.mssql.message.token.NbcRowToken;
 import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Result;
@@ -29,17 +30,13 @@ import io.r2dbc.spi.Row;
 import io.r2dbc.spi.RowMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
-import static reactor.function.TupleUtils.function;
-
 /**
- * Simple {@link Result} of query results.
+ * {@link Result} of query results.
  *
  * @author Mark Paluch
  */
@@ -47,23 +44,22 @@ public final class MssqlResult implements Result {
 
     private static final Logger logger = LoggerFactory.getLogger(MssqlResult.class);
 
-    private final Flux<MssqlRow> rows;
+    private final Codecs codecs;
 
-    private final Mono<Long> rowsUpdated;
+    private final Flux<Message> messages;
 
-    /**
-     * Creates a new {@link MssqlResult}.
-     *
-     * @param rows        stream of {@link MssqlRow}.
-     * @param rowsUpdated publisher of the updated row count.
-     */
-    private MssqlResult(Flux<MssqlRow> rows, Mono<Long> rowsUpdated) {
-        this.rows = rows;
-        this.rowsUpdated = rowsUpdated;
+    private volatile MssqlRowMetadata rowMetadata;
+
+    private volatile Throwable throwable;
+
+    public MssqlResult(Codecs codecs, Flux<Message> messages) {
+
+        this.codecs = codecs;
+        this.messages = messages;
     }
 
     /**
-     * Create a non-cursored {@link MssqlResult}.
+     * Create a {@link MssqlResult}.
      *
      * @param codecs   the codecs to use.
      * @param messages message stream.
@@ -75,60 +71,89 @@ public final class MssqlResult implements Result {
         Assert.requireNonNull(messages, "Messages must not be null");
 
         logger.debug("Creating new result");
-        EmitterProcessor<Message> processor = EmitterProcessor.create(false);
 
-        Flux<Message> firstMessages = processor.cache();
+        return new MssqlResult(codecs, messages);
+    }
 
-        Mono<MssqlRowMetadata> columnDescriptions = firstMessages
-            .ofType(ColumnMetadataToken.class)
-            .filter(it -> !it.getColumns().isEmpty())
-            .as(it -> {
-                if (logger.isDebugEnabled()) {
-                    return it.doOnNext(cd -> logger.debug("Result column definition: {}", cd));
+    @Override
+    public Mono<Integer> getRowsUpdated() {
+
+        return messages()
+            .<Long>handle((message, sink) -> {
+
+                ReferenceCountUtil.release(message);
+
+                if (message instanceof AbstractDoneToken) {
+
+                    AbstractDoneToken doneToken = (AbstractDoneToken) message;
+                    if (doneToken.hasCount()) {
+
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Incoming row count: {}", doneToken);
+                        }
+
+                        sink.next(doneToken.getRowCount());
+                    }
                 }
-                return it;
-            })
-            .map(it -> MssqlRowMetadata.create(codecs, it))
-            .singleOrEmpty()
-            .cache();
+            }).reduce(Long::sum).map(Long::intValue);
+    }
 
-        Flux<MssqlRow> rows = processor
-            .startWith(firstMessages)
-            .ofType(RowToken.class)
-            .zipWith(columnDescriptions.repeat())
-            .map(function((dataToken, metadata) -> MssqlRow.toRow(codecs, dataToken, metadata)));
+    @Override
+    public <T> Flux<T> map(BiFunction<Row, RowMetadata, ? extends T> f) {
 
-        // Release unused tokens directly.
-        Mono<Long> rowsUpdated = firstMessages
-            .doOnNext(ReferenceCountUtil::release)
-            .ofType(AbstractDoneToken.class)
-            .filter(it -> it.hasCount())
-            .as(it -> {
-                if (logger.isDebugEnabled()) {
-                    return it.doOnNext(count -> logger.debug("Incoming row count: {}", count));
-                }
-                return it;
-            })
-            .map(AbstractDoneToken::getRowCount)
-            .collectList()
-            .handle((longs, sink) -> {
+        Assert.requireNonNull(f, "Mapping function must not be null");
 
-                if (!longs.isEmpty()) {
 
-                    long sum = 0;
+        Flux<MssqlRow> rows = messages()
+            .handle((message, sink) -> {
 
-                    for (Long count : longs) {
-                        sum += count;
+                if (message.getClass() == ColumnMetadataToken.class) {
+
+                    ColumnMetadataToken token = (ColumnMetadataToken) message;
+
+                    if (token.getColumns().isEmpty()) {
+                        return;
                     }
 
-                    sink.next(sum);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Result column definition: {}", message);
+                    }
+
+                    this.rowMetadata = MssqlRowMetadata.create(codecs, token);
+
+                    return;
                 }
+
+                if (message.getClass() == RowToken.class || message.getClass() == NbcRowToken.class) {
+
+                    MssqlRowMetadata rowMetadata = this.rowMetadata;
+
+                    if (rowMetadata == null) {
+                        sink.error(new IllegalStateException("No MssqlRowMetadata available"));
+                        return;
+                    }
+                    sink.next(MssqlRow.toRow(codecs, (RowToken) message, rowMetadata));
+                    return;
+                }
+
+                ReferenceCountUtil.release(message);
             });
 
-        AtomicReference<RuntimeException> exceptionRef = new AtomicReference<>();
-        messages.<Message>handle((message, sink) -> {
+        return rows
+            .map((row) -> {
+                try {
+                    return f.apply(row, row.getMetadata());
+                } finally {
+                    row.release();
+                }
+            });
+    }
 
-            RuntimeException exception = exceptionRef.get();
+    private Flux<Message> messages() {
+
+        return messages.handle((message, sink) -> {
+
+            Throwable exception = this.throwable;
 
             if (AbstractDoneToken.isDone(message)) {
                 if (exception != null) {
@@ -144,35 +169,13 @@ public final class MssqlResult implements Result {
                 if (exception != null) {
                     exception.addSuppressed(mssqlException);
                 } else {
-                    exceptionRef.set(mssqlException);
+                    this.throwable = mssqlException;
                 }
 
                 return;
             }
 
             sink.next(message);
-        }).subscribe(processor);
-
-        return new MssqlResult(rows, rowsUpdated);
-    }
-
-    @Override
-    public Mono<Integer> getRowsUpdated() {
-        return this.rowsUpdated.map(Long::intValue);
-    }
-
-    @Override
-    public <T> Flux<T> map(BiFunction<Row, RowMetadata, ? extends T> f) {
-
-        Assert.requireNonNull(f, "Mapping function must not be null");
-
-        return this.rows
-            .map((row) -> {
-                try {
-                    return f.apply(row, row.getMetadata());
-                } finally {
-                    row.release();
-                }
-            });
+        });
     }
 }

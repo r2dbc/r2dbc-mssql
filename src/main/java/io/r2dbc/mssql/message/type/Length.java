@@ -34,6 +34,29 @@ public final class Length {
 
     public static final int UNKNOWN_STREAM_LENGTH = -1;
 
+    private static final int CACHE_ENTRIES = 1024;
+
+    private static final Length NULL;
+
+    private static final Length CACHE[];
+
+    private static final Length UNKNOWN_NULL;
+
+    private static final Length UNKNOWN;
+
+    static {
+
+        CACHE = new Length[CACHE_ENTRIES];
+
+        for (int i = 0; i < CACHE_ENTRIES; i++) {
+            CACHE[i] = new Length(i, false);
+        }
+
+        NULL = new Length(0, true);
+        UNKNOWN = new Length(UNKNOWN_STREAM_LENGTH, false);
+        UNKNOWN_NULL = new Length(UNKNOWN_STREAM_LENGTH, true);
+    }
+
     private final int length;
 
     private final boolean isNull;
@@ -49,7 +72,7 @@ public final class Length {
      * @return a {@link Length} for {@code null}.
      */
     public static Length nullLength() {
-        return new Length(0, true);
+        return of(0, true);
     }
 
     /**
@@ -58,7 +81,7 @@ public final class Length {
      * @return a {@link Length} for a non-{@code null} value of the given {@code length}.
      */
     public static Length of(int length) {
-        return new Length(length, false);
+        return of(length, false);
     }
 
     /**
@@ -69,7 +92,24 @@ public final class Length {
      * @return the {@link Length}.
      */
     public static Length of(int length, boolean isNull) {
-        return new Length(length, isNull);
+
+        if (length == UNKNOWN_STREAM_LENGTH) {
+            return isNull ? UNKNOWN_NULL : UNKNOWN;
+        }
+
+        if (isNull) {
+            return NULL;
+        }
+
+        if (length < 0) {
+            throw new IllegalArgumentException("length must be greater or equal to zero");
+        }
+
+        if (length > (CACHE_ENTRIES - 1)) {
+            return new Length(length, isNull);
+        }
+
+        return CACHE[length];
     }
 
     /**
@@ -88,20 +128,20 @@ public final class Length {
                 long length = buffer.readLong();
                 buffer.resetReaderIndex();
 
-                return new Length(UNKNOWN_STREAM_LENGTH, length == PLP_NULL);
+                return Length.of(UNKNOWN_STREAM_LENGTH, length == PLP_NULL);
             }
 
             case FIXEDLENTYPE:
-                return new Length(type.getMaxLength(), type.getMaxLength() == 0);
+                return Length.of(type.getMaxLength(), type.getMaxLength() == 0);
 
             case BYTELENTYPE: {
                 int length = Decode.uByte(buffer);
-                return new Length(length, length == 0);
+                return Length.of(length, length == 0);
             }
 
             case USHORTLENTYPE: {
                 int length = Decode.uShort(buffer);
-                return new Length(length == USHORT_NULL ? 0 : length, length == USHORT_NULL);
+                return Length.of(length == USHORT_NULL ? 0 : length, length == USHORT_NULL);
             }
 
             case LONGLENTYPE: {
@@ -122,16 +162,16 @@ public final class Length {
                     int valueLength = Decode.asLong(buffer);
 
 
-                    return new Length(valueLength, false);
+                    return Length.of(valueLength, false);
                 }
 
                 if (serverType == SqlServerType.SQL_VARIANT) {
                     int valueLength = Decode.intBigEndian(buffer);
-                    return new Length(valueLength, valueLength == 0);
+                    return Length.of(valueLength, valueLength == 0);
                 }
 
                 int length = Decode.uShort(buffer);
-                return new Length(length == USHORT_NULL ? 0 : length, length == USHORT_NULL);
+                return Length.of(length == USHORT_NULL ? 0 : length, length == USHORT_NULL);
             }
         }
 

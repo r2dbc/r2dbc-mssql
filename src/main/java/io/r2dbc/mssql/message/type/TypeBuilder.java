@@ -418,7 +418,11 @@ enum TypeBuilder {
         TdsDataType tdsType = TdsDataType.valueOf(Decode.uByte(buffer));
 
         TypeBuilder typeBuilder = builderMap.get(tdsType);
-        Assert.state(typeBuilder != null, "TypeBuilder for " + tdsType + " not available");
+
+        if (typeBuilder == null) {
+            throw new IllegalStateException("TypeBuilder for " + tdsType + " not available");
+        }
+
         return typeBuilder.build(typeInfo, buffer);
     }
 

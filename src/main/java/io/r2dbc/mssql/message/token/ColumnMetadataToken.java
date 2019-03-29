@@ -54,7 +54,7 @@ public final class ColumnMetadataToken extends AbstractDataToken {
     private ColumnMetadataToken(List<Column> columns) {
 
         super(TYPE);
-        this.columns = Collections.unmodifiableList(Assert.requireNonNull(columns, "Columns must not be null"));
+        this.columns = Assert.requireNonNull(columns, "Columns must not be null");
 
         Map<String, Column> byName = new LinkedHashMap<>(this.columns.size());
 
@@ -62,7 +62,7 @@ public final class ColumnMetadataToken extends AbstractDataToken {
             byName.put(column.getName(), column);
         }
 
-        this.namedColumns = Collections.unmodifiableMap(byName);
+        this.namedColumns = byName;
     }
 
     /**
@@ -120,7 +120,7 @@ public final class ColumnMetadataToken extends AbstractDataToken {
             }
         }
 
-        return new ColumnMetadataToken(Collections.unmodifiableList(columns));
+        return new ColumnMetadataToken(columns);
     }
 
     private static Column decodeColumn(ByteBuf buffer, boolean encryptionSupported, int columnIndex) {

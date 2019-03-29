@@ -34,7 +34,9 @@ import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.token.AbstractInfoToken;
 import io.r2dbc.mssql.message.token.EnvChangeToken;
+import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.FeatureExtAckToken;
+import io.r2dbc.mssql.message.token.InfoToken;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
 import org.reactivestreams.Publisher;
@@ -82,7 +84,7 @@ public final class ReactorNettyClient implements Client {
 
     private final List<EnvironmentChangeListener> envChangeListeners = new ArrayList<>();
 
-    private final Consumer<Message> handleInfoToken = handleMessage(AbstractInfoToken.class, (token) -> {
+    private final Consumer<AbstractInfoToken> infoTokenConsumer = (token) -> {
 
         if (logger.isDebugEnabled()) {
             if (token.getClassification() == AbstractInfoToken.Classification.INFORMATIONAL) {
@@ -93,9 +95,13 @@ public final class ReactorNettyClient implements Client {
                     token.getMessage());
             }
         }
-    });
+    };
 
-    private final Consumer<Message> handleEnvChange = handleMessage(EnvChangeToken.class, (token) -> {
+    private final Consumer<Message> handleInfoToken = handleExact(InfoToken.class, infoTokenConsumer::accept);
+
+    private final Consumer<Message> handleErrorToken = handleExact(ErrorToken.class, infoTokenConsumer::accept);
+
+    private final Consumer<Message> handleEnvChange = handleExact(EnvChangeToken.class, (token) -> {
 
         EnvironmentChangeEvent event = new EnvironmentChangeEvent(token);
 
@@ -108,7 +114,7 @@ public final class ReactorNettyClient implements Client {
         }
     });
 
-    private final Consumer<Message> featureAckChange = handleMessage(FeatureExtAckToken.class, (token) -> {
+    private final Consumer<Message> featureAckChange = handleExact(FeatureExtAckToken.class, (token) -> {
 
         for (FeatureExtAckToken.FeatureToken featureToken : token.getFeatureTokens()) {
 
@@ -187,11 +193,18 @@ public final class ReactorNettyClient implements Client {
                 }
                 return it;
             })
+            .as(it -> {
+                if (logger.isDebugEnabled()) {
+                    return it.doOnNext(handleInfoToken).doOnNext(handleErrorToken);
+                }
+                return it;
+            })
             .doOnError(message -> logger.warn("Error: {}", message.getMessage(), message)) //
             .handle(this.handleStateChange) //
-            .doOnNext(this.handleEnvChange) //
-            .doOnNext(this.featureAckChange) //
-            .doOnNext(this.handleInfoToken)
+            .doOnNext(m -> {
+                this.handleEnvChange.accept(m);
+                this.featureAckChange.accept(m);
+            }) //
             .doOnError(ProtocolException.class, e -> {
                 this.isClosed.set(true);
                 connection.channel().close();
@@ -362,9 +375,9 @@ public final class ReactorNettyClient implements Client {
     }
 
     @SuppressWarnings("unchecked")
-    private static <T extends Message> Consumer<Message> handleMessage(Class<T> type, Consumer<T> consumer) {
+    private static <T extends Message> Consumer<Message> handleExact(Class<T> type, Consumer<T> consumer) {
         return (message) -> {
-            if (type.isInstance(message)) {
+            if (type == message.getClass()) {
                 consumer.accept((T) message);
             }
         };
