@@ -16,6 +16,8 @@
 
 package io.r2dbc.mssql;
 
+import java.util.function.Function;
+
 /**
  * Cache for prepared statements.
  *
@@ -46,6 +48,16 @@ interface PreparedStatementCache {
      * @param binding bound parameters. Parameter types impact the prepared query.
      */
     void putHandle(int handle, String sql, Binding binding);
+
+    /**
+     * Returns the parsed and potentially cached representation of the {@code sql} statement.
+     *
+     * @param sql           query to parse.
+     * @param parseFunction parse function.
+     * @param <T>
+     * @return the parsed SQL representation.
+     */
+    <T> T getParsedSql(String sql, Function<String, T> parseFunction);
 
     /**
      * Returns the number of cached prepared statement handles in this cache.

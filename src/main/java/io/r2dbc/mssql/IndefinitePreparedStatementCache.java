@@ -20,6 +20,7 @@ import io.r2dbc.mssql.util.Assert;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 /**
  * Cache that stores prepared statement handles eternally.
@@ -29,6 +30,8 @@ import java.util.concurrent.ConcurrentHashMap;
 class IndefinitePreparedStatementCache implements PreparedStatementCache {
 
     private final Map<String, Integer> preparedStatements = new ConcurrentHashMap<>();
+
+    private final Map<String, Object> parsedSql = new ConcurrentHashMap<>();
 
     @Override
     public int getHandle(String sql, Binding binding) {
@@ -48,6 +51,12 @@ class IndefinitePreparedStatementCache implements PreparedStatementCache {
         this.preparedStatements.put(createKey(sql, binding), handle);
     }
 
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T> T getParsedSql(String sql, Function<String, T> parseFunction) {
+        return (T) this.parsedSql.computeIfAbsent(sql, parseFunction);
+    }
+
     @Override
     public int size() {
         return this.preparedStatements.size();
@@ -61,7 +70,8 @@ class IndefinitePreparedStatementCache implements PreparedStatementCache {
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [preparedStatements=").append(preparedStatements);
+        sb.append(" [preparedStatements=").append(this.preparedStatements);
+        sb.append(", parsedSql=").append(this.parsedSql);
         sb.append(']');
         return sb.toString();
     }

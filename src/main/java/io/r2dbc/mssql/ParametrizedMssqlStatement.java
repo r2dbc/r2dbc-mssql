@@ -30,7 +30,6 @@ import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 
-import javax.script.Bindings;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -81,7 +80,7 @@ final class ParametrizedMssqlStatement implements MssqlStatement {
         this.client = client;
         this.codecs = connectionOptions.getCodecs();
         this.preferCursoredExecution = connectionOptions.prefersCursors(sql);
-        this.parsedQuery = ParsedQuery.parse(sql);
+        this.parsedQuery = this.statementCache.getParsedSql(sql, ParsedQuery::parse);
     }
 
     @Override
@@ -229,10 +228,10 @@ final class ParametrizedMssqlStatement implements MssqlStatement {
      * @return {@literal true} if supported.
      * @throws IllegalArgumentException when {@code sql} is {@code null}.
      */
-    public static boolean supports(CharSequence sql) {
+    public static boolean supports(String sql) {
 
         Assert.requireNonNull(sql, "SQL must not be null");
-        return PARAMETER_MATCHER.matcher(sql).find();
+        return sql.lastIndexOf('@') != -1 && PARAMETER_MATCHER.matcher(sql).find();
     }
 
     /**

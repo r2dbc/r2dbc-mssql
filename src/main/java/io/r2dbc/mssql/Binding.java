@@ -68,7 +68,7 @@ class Binding {
             return formalRepresentation;
         }
 
-        StringBuilder builder = new StringBuilder();
+        StringBuilder builder = new StringBuilder(this.parameters.size() * 16);
         this.parameters.forEach((name, encoded) -> {
 
             if (builder.length() != 0) {
