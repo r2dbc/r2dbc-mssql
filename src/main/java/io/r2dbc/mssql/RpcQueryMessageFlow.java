@@ -255,6 +255,8 @@ final class RpcQueryMessageFlow {
                     if (returnValue.getOrdinal() == 1) {
                         state.cursorId = parseCursorId(codecs, state, returnValue);
                     }
+
+                    returnValue.release();
                 }
 
                 state.update(it);
