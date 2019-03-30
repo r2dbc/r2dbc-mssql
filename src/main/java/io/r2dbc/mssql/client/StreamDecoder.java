@@ -17,12 +17,13 @@
 package io.r2dbc.mssql.client;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.CompositeByteBuf;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.header.Header;
 import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.util.Assert;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.SynchronousSink;
 import reactor.util.annotation.Nullable;
 
 import java.util.List;
@@ -69,9 +70,7 @@ final class StreamDecoder {
             if (state.header == null) {
 
                 if (!Header.canDecode(state.remainder)) {
-                    this.state.set(state.retain());
-                    sink.complete();
-                    return state;
+                    return retain(state, sink);
                 }
 
                 state = state.readHeader();
@@ -82,9 +81,7 @@ final class StreamDecoder {
                 Header header = state.getRequiredHeader();
 
                 if (!state.canReadChunk()) {
-                    this.state.set(state.retain());
-                    sink.complete();
-                    return state;
+                    return retain(state, sink);
                 }
 
                 state = state.readChunk();
@@ -101,15 +98,14 @@ final class StreamDecoder {
                     }
 
                     if (state.hasAggregatedBodyRemainder()) {
-                        this.state.set(state.retain());
+                        return retain(state, sink);
                     }
                 } else {
                     state.aggregatedBodyReaderIndex(readerIndex);
-                    this.state.set(state.retain());
+                    return retain(state, sink);
                 }
 
                 sink.complete();
-
                 return state;
             } catch (Exception e) {
                 sink.error(e);
@@ -123,6 +119,12 @@ final class StreamDecoder {
         }).flatMapIterable(Function.identity());
     }
 
+    DecoderState retain(DecoderState state, SynchronousSink<?> sink) {
+        this.state.set(state.retain());
+        sink.complete();
+        return state;
+    }
+
     @Nullable
     DecoderState getDecoderState() {
         return this.state.get();
@@ -133,23 +135,18 @@ final class StreamDecoder {
      */
     static class DecoderState {
 
-        final ByteBuf remainder;
+        CompositeByteBuf remainder;
 
-        final ByteBuf aggregatedBody;
+        CompositeByteBuf aggregatedBody;
 
         @Nullable
-        final Header header;
+        Header header;
 
-        private DecoderState(ByteBuf remainder, ByteBuf aggregatedBody, @Nullable Header header) {
+        private DecoderState(CompositeByteBuf remainder, CompositeByteBuf aggregatedBody, @Nullable Header header) {
+
             this.remainder = remainder;
-            this.aggregatedBody = aggregatedBody;
             this.header = header;
-        }
-
-        private DecoderState(ByteBuf initialBuffer, ByteBuf aggregatedBody) {
-            this.remainder = initialBuffer;
             this.aggregatedBody = aggregatedBody;
-            this.header = null;
         }
 
         /**
@@ -159,13 +156,38 @@ final class StreamDecoder {
          * @return the initial {@link DecoderState}.
          */
         static DecoderState initial(ByteBuf initialBuffer) {
-            return new DecoderState(initialBuffer, Unpooled.EMPTY_BUFFER);
+
+            CompositeByteBuf composite = initialBuffer.alloc().compositeBuffer();
+            composite.addComponent(true, initialBuffer.retain());
+
+            CompositeByteBuf aggregatedBody = initialBuffer.alloc().compositeBuffer();
+
+            return new DecoderState(composite, aggregatedBody, null);
+        }
+
+        /**
+         * Create a new {@link DecoderState} by appending a new raw remaining {@link ByteBuf data buffer}.
+         *
+         * @param in
+         * @return
+         */
+        DecoderState andChunk(ByteBuf in) {
+            this.remainder.addComponent(true, in.retain());
+            return newState(this.remainder, this.aggregatedBody, this.header);
+        }
+
+        DecoderState newState(CompositeByteBuf remainder, CompositeByteBuf aggregatedBody, @Nullable Header header) {
+
+            this.remainder = remainder;
+            this.aggregatedBody = aggregatedBody;
+            this.header = header;
+
+            return this;
         }
 
         boolean canReadChunk() {
 
             int requiredChunkLength = getChunkLength();
-
             return this.remainder.readableBytes() >= requiredChunkLength;
         }
 
@@ -221,7 +243,7 @@ final class StreamDecoder {
          * @return the new {@link DecoderState}.
          */
         DecoderState readHeader() {
-            return new DecoderState(this.remainder, this.aggregatedBody, Header.decode(this.remainder));
+            return newState(this.remainder, this.aggregatedBody, Header.decode(this.remainder));
         }
 
         /**
@@ -232,25 +254,9 @@ final class StreamDecoder {
          */
         DecoderState readChunk() {
 
-            if (this.aggregatedBody == Unpooled.EMPTY_BUFFER) {
+            this.aggregatedBody.addComponent(true, this.remainder.readRetainedSlice(getChunkLength()));
 
-                ByteBuf unchunkedBodyData = this.remainder.copy(this.remainder.readerIndex(), getChunkLength());
-                this.remainder.skipBytes(getChunkLength());
-                return new DecoderState(this.remainder, unchunkedBodyData, null);
-            }
-
-            ByteBuf unchunkedBodyData = this.aggregatedBody.writeBytes(this.remainder.readSlice(getChunkLength()));
-            return new DecoderState(this.remainder, unchunkedBodyData, getRequiredHeader());
-        }
-
-        /**
-         * Create a new {@link DecoderState} by appending a new raw remaining {@link ByteBuf data buffer}.
-         *
-         * @param in
-         * @return
-         */
-        DecoderState andChunk(ByteBuf in) {
-            return new DecoderState(Unpooled.wrappedBuffer(this.remainder, in), this.aggregatedBody, this.header);
+            return newState(this.remainder, this.aggregatedBody, null);
         }
 
         /**
@@ -259,8 +265,13 @@ final class StreamDecoder {
          * @return {@code this} {@link DecoderState}.
          */
         DecoderState retain() {
+
+            this.remainder.consolidate();
             this.remainder.retain();
+
+            this.aggregatedBody.consolidate();
             this.aggregatedBody.retain();
+
             return this;
         }
 
@@ -268,11 +279,12 @@ final class StreamDecoder {
          * Release this {@link DecoderState} (i.e. decrement ref count).
          */
         void release() {
+
             this.remainder.release();
             this.aggregatedBody.release();
         }
 
-        private int getChunkLength() {
+        int getChunkLength() {
             return getRequiredHeader().getLength() - Header.LENGTH;
         }
     }

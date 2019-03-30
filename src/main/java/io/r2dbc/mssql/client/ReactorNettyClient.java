@@ -177,7 +177,6 @@ public final class ReactorNettyClient implements Client {
                 if (it instanceof ByteBuf) {
 
                     ByteBuf buffer = (ByteBuf) it;
-                    buffer.retain();
                     return decoder.decode(buffer, this.decodeFunction.get());
                 }
 

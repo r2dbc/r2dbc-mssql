@@ -61,7 +61,8 @@ class StreamDecoderUnitTests {
             .verifyComplete();
 
         assertThat(decoder.getDecoderState()).isNull();
-        assertThat(buffer.refCnt()).isEqualTo(0);
+        assertThat(buffer.refCnt()).isEqualTo(1);
+        buffer.release();
     }
 
     @Test
@@ -84,7 +85,7 @@ class StreamDecoderUnitTests {
         assertThat(state.header).isNull();
         assertThat(state.remainder.readableBytes()).isEqualTo(1);
         assertThat(state.aggregatedBody.readableBytes()).isEqualTo(0);
-        assertThat(partial.refCnt()).isEqualTo(1);
+        assertThat(partial.refCnt()).isEqualTo(2);
 
         ByteBuf nextPacket = TestByteBufAllocator.TEST.buffer();
         nextPacket.writeBytes(new byte[]{1, 0, 0x15, 0, 0, 0, 0});
@@ -97,9 +98,11 @@ class StreamDecoderUnitTests {
             .verifyComplete();
 
         assertThat(decoder.getDecoderState()).isNull();
-        assertThat(partial.refCnt()).isEqualTo(0);
+        assertThat(partial.refCnt()).isEqualTo(1);
+        assertThat(nextPacket.refCnt()).isEqualTo(1);
 
-        assertThat(nextPacket.refCnt()).isEqualTo(0);
+        partial.release();
+        nextPacket.release();
     }
 
     @Test
@@ -128,7 +131,9 @@ class StreamDecoderUnitTests {
         assertThat(state.remainder.readableBytes()).isEqualTo(1);
         assertThat(state.aggregatedBody.readableBytes()).isEqualTo(0);
 
+        state.release();
         assertThat(buffer.refCnt()).isEqualTo(1);
+        buffer.release();
     }
 
     @Test
@@ -159,6 +164,8 @@ class StreamDecoderUnitTests {
         assertThat(state.header).isNotNull().isEqualTo(header2);
         assertThat(state.remainder.readableBytes()).isEqualTo(3);
         assertThat(state.aggregatedBody.readableBytes()).isEqualTo(0);
+
+        buffer.release();
     }
 
     @Test
@@ -191,7 +198,7 @@ class StreamDecoderUnitTests {
         assertThat(state.header).isNotNull().isEqualTo(header2);
         assertThat(state.remainder.readableBytes()).isEqualTo(3);
         assertThat(state.aggregatedBody.readableBytes()).isEqualTo(0);
-        assertThat(buffer.refCnt()).isEqualTo(1);
+        assertThat(buffer.refCnt()).isEqualTo(2);
 
         Flux<Message> secondMessage = decoder.decode(nextBuffer, ConnectionState.POST_LOGIN.decoder(CLIENT));
 
@@ -201,8 +208,11 @@ class StreamDecoderUnitTests {
 
         assertThat(decoder.getDecoderState()).isNull();
 
-        assertThat(buffer.refCnt()).isEqualTo(0);
-        assertThat(nextBuffer.refCnt()).isEqualTo(0);
+        assertThat(buffer.refCnt()).isEqualTo(1);
+        assertThat(nextBuffer.refCnt()).isEqualTo(1);
+
+        buffer.release();
+        nextBuffer.release();
     }
 
     @Test
@@ -236,7 +246,7 @@ class StreamDecoderUnitTests {
         assertThat(state.header).isNull(); // header completed
         assertThat(state.remainder.readableBytes()).isEqualTo(0);
         assertThat(state.aggregatedBody.readableBytes()).isEqualTo(3);
-        assertThat(firstChunk.refCnt()).isEqualTo(1);
+        assertThat(firstChunk.refCnt()).isEqualTo(2);
 
         Flux<Message> nextAttempt = decoder.decode(lastChunk, ConnectionState.POST_LOGIN.decoder(CLIENT));
 
@@ -246,7 +256,10 @@ class StreamDecoderUnitTests {
 
         assertThat(decoder.getDecoderState()).isNull();
 
-        assertThat(firstChunk.refCnt()).isEqualTo(0);
-        assertThat(lastChunk.refCnt()).isEqualTo(0);
+        assertThat(firstChunk.refCnt()).isEqualTo(1);
+        assertThat(lastChunk.refCnt()).isEqualTo(1);
+
+        firstChunk.release();
+        lastChunk.release();
     }
 }
