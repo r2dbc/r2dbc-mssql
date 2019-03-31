@@ -261,6 +261,25 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
         insertRecord(connection, 2);
     }
 
+    @Test
+    void shouldRejectMultipleParametrizedExecutions() {
+
+        createTable(connection);
+
+        Flux<MssqlResult> prepared = Flux.from(connection.createStatement("SELECT * FROM r2dbc_example ORDER BY id OFFSET @Offset ROWS")
+            .bind("Offset", 0)
+            .execute());
+
+        prepared.flatMap(MssqlResult::getRowsUpdated)
+            .as(StepVerifier::create)
+            .expectNextCount(1)
+            .verifyComplete();
+
+        prepared.flatMap(MssqlResult::getRowsUpdated)
+            .as(StepVerifier::create)
+            .verifyError(IllegalStateException.class);
+    }
+
     private void createTable(MssqlConnection connection) {
 
         connection.createStatement("DROP TABLE r2dbc_example").execute()

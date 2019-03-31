@@ -16,7 +16,7 @@
 
 package io.r2dbc.mssql;
 
-
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.codec.Encoded;
 import io.r2dbc.mssql.message.type.TdsDataType;
@@ -72,5 +72,18 @@ class BindingUnitTests {
         assertThat(binding.getParameters()).isNotEmpty();
         assertThat(binding.isEmpty()).isFalse();
         assertThat(binding.size()).isEqualTo(1);
+    }
+
+    @Test
+    void shouldClearBindings() {
+
+        Binding binding = new Binding();
+
+        ByteBuf buffer = Unpooled.buffer();
+        binding.add("foo", Encoded.of(TdsDataType.INT8, buffer));
+        binding.clear();
+
+        assertThat(binding.isEmpty()).isTrue();
+        assertThat(buffer.refCnt()).isZero();
     }
 }

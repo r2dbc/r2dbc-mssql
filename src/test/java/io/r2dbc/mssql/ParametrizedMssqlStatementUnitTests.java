@@ -71,6 +71,14 @@ class ParametrizedMssqlStatementUnitTests {
     }
 
     @Test
+    void executeWithoutBindingsShouldFail() {
+
+        ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
+
+        assertThatThrownBy(statement::execute).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
     void shouldBindParameterByIndex() {
 
         ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");

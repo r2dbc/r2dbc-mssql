@@ -57,6 +57,20 @@ class Binding {
     }
 
     /**
+     * Clear/release binding values.
+     */
+    void clear() {
+
+        parameters.forEach((s, encoded) -> {
+            while (encoded.refCnt() > 0) {
+                encoded.release();
+            }
+        });
+
+        parameters.clear();
+    }
+
+    /**
      * Returns a formal representation of the bound parameters such as {@literal @P0 VARCHAR(8000), @P1 DECIMAL(12,6)}
      *
      * @return a formal representation of the bound parameters.

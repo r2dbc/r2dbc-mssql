@@ -36,7 +36,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -74,6 +73,8 @@ final class ParametrizedMssqlStatement implements MssqlStatement {
 
     private String[] generatedColumns;
 
+    private volatile boolean executed = false;
+
     ParametrizedMssqlStatement(Client client, ConnectionOptions connectionOptions, String sql) {
 
         this.statementCache = connectionOptions.getPreparedStatementCache();
@@ -85,6 +86,8 @@ final class ParametrizedMssqlStatement implements MssqlStatement {
 
     @Override
     public ParametrizedMssqlStatement add() {
+
+        assertNotExecuted();
         this.bindings.finish();
         return this;
     }
@@ -92,43 +95,64 @@ final class ParametrizedMssqlStatement implements MssqlStatement {
     @Override
     public Flux<MssqlResult> execute() {
 
-        Iterator<Binding> iterator = new Vector<>(this.bindings.bindings).iterator();
+        Iterator<Binding> iterator = new ArrayList<>(this.bindings.bindings).iterator();
 
         if (!iterator.hasNext()) {
-            return Flux.empty();
+            throw new IllegalStateException(String.format("No parameters bound for query '%s'", this.parsedQuery.sql));
         }
 
-        boolean useGeneratedKeysClause = GeneratedValues.shouldExpectGeneratedKeys(this.generatedColumns);
-        String sql = useGeneratedKeysClause ? GeneratedValues.augmentQuery(this.parsedQuery.sql, generatedColumns) : this.parsedQuery.sql;
+        if (!this.bindings.getCurrent().isEmpty()) {
+            assertNotExecuted();
+        }
 
-        EmitterProcessor<Binding> bindingEmitter = EmitterProcessor.create(true);
-        FluxSink<Binding> boundRequests = bindingEmitter.sink();
+        return Flux.defer(() -> {
 
-        return bindingEmitter.startWith(iterator.next())
-            .flatMap(it -> {
+            assertNotExecuted();
 
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Start exchange for {}", sql);
-                }
+            this.executed = true;
 
-                Flux<Message> exchange;
+            boolean useGeneratedKeysClause = GeneratedValues.shouldExpectGeneratedKeys(this.generatedColumns);
+            String sql = useGeneratedKeysClause ? GeneratedValues.augmentQuery(this.parsedQuery.sql, generatedColumns) : this.parsedQuery.sql;
 
-                if (preferCursoredExecution) {
-                    exchange = RpcQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, sql, it, 128);
-                } else {
-                    exchange = RpcQueryMessageFlow.exchange(this.client, sql, it);
-                }
+            EmitterProcessor<Binding> bindingEmitter = EmitterProcessor.create(true);
+            FluxSink<Binding> boundRequests = bindingEmitter.sink();
 
-                if (useGeneratedKeysClause) {
-                    exchange = exchange.transform(GeneratedValues::reduceToSingleCountDoneToken);
-                }
+            return bindingEmitter.startWith(iterator.next())
+                .flatMap(it -> {
 
-                return exchange.doOnComplete(() -> {
-                    tryNextBinding(iterator, boundRequests);
-                });
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Start exchange for {}", sql);
+                    }
 
-            }).windowUntil(DoneInProcToken.class::isInstance) //
-            .map(it -> MssqlResult.toResult(this.codecs, it));
+                    Flux<Message> exchange;
+
+                    if (preferCursoredExecution) {
+                        exchange = RpcQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, sql, it, 128);
+                    } else {
+                        exchange = RpcQueryMessageFlow.exchange(this.client, sql, it);
+                    }
+
+                    if (useGeneratedKeysClause) {
+                        exchange = exchange.transform(GeneratedValues::reduceToSingleCountDoneToken);
+                    }
+
+                    return exchange.doOnComplete(() -> {
+                        tryNextBinding(iterator, boundRequests);
+                    });
+
+                }).windowUntil(DoneInProcToken.class::isInstance) //
+                .map(it -> MssqlResult.toResult(this.codecs, it));
+        }).doOnCancel(() -> clearBindings(iterator))
+            .doOnError(e -> clearBindings(iterator));
+    }
+
+    private void clearBindings(Iterator<Binding> iterator) {
+
+        while (iterator.hasNext()) {
+            // exhaust iterator
+        }
+
+        this.bindings.clear();
     }
 
     @Override
@@ -167,7 +191,8 @@ final class ParametrizedMssqlStatement implements MssqlStatement {
 
         String parameterName = (String) identifier;
         validateParameterName(parameterName);
-        this.bindings.getCurrent().add(parameterName, encoded);
+        addBinding(parameterName, encoded);
+
         return this;
     }
 
@@ -186,7 +211,11 @@ final class ParametrizedMssqlStatement implements MssqlStatement {
         Assert.isInstanceOf(String.class, identifier, "Identifier must be a String");
         Assert.requireNonNull(type, "type must not be null");
 
-        this.bindings.getCurrent().add((String) identifier, this.codecs.encodeNull(this.client.getByteBufAllocator(), type));
+        if (executed) {
+            throw new IllegalStateException("Statement was already executed");
+        }
+
+        addBinding((String) identifier, this.codecs.encodeNull(this.client.getByteBufAllocator(), type));
         return this;
     }
 
@@ -195,8 +224,21 @@ final class ParametrizedMssqlStatement implements MssqlStatement {
 
         Assert.requireNonNull(type, "Type must not be null");
 
-        this.bindings.getCurrent().add(getParameterName(index), this.codecs.encodeNull(this.client.getByteBufAllocator(), type));
+        addBinding(getParameterName(index), this.codecs.encodeNull(this.client.getByteBufAllocator(), type));
         return this;
+    }
+
+    private void addBinding(String name, Encoded parameter) {
+
+        assertNotExecuted();
+
+        this.bindings.getCurrent().add(name, parameter);
+    }
+
+    private void assertNotExecuted() {
+        if (this.executed) {
+            throw new IllegalStateException("Statement was already executed");
+        }
     }
 
     /**
@@ -531,5 +573,13 @@ final class ParametrizedMssqlStatement implements MssqlStatement {
 
             return this.current;
         }
+
+        /**
+         * Clear/release binding values.
+         */
+        void clear() {
+            bindings.forEach(Binding::clear);
+        }
+
     }
 }
