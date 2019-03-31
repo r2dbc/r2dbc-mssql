@@ -131,10 +131,6 @@ public final class MssqlConnection implements Connection {
             return new ParametrizedMssqlStatement(this.client, this.connectionOptions, sql);
         }
 
-        if (SimpleCursoredMssqlStatement.supports(sql) && this.connectionOptions.prefersCursors(sql)) {
-            return new SimpleCursoredMssqlStatement(this.client, this.connectionOptions, sql);
-        }
-
         return new SimpleMssqlStatement(this.client, this.connectionOptions, sql);
     }
 

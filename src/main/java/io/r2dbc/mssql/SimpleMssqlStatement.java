@@ -20,28 +20,31 @@ import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
+import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.Assert;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
+
+import java.util.Locale;
+import java.util.function.Predicate;
 
 /**
  * Simple SQL statement without SQL parameter (variables) using direct ({@link SqlBatch}) execution.
  *
  * @author Mark Paluch
  */
-class SimpleMssqlStatement implements MssqlStatement {
+final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlStatement {
 
     private static final Logger logger = LoggerFactory.getLogger(SimpleMssqlStatement.class);
 
-    final Client client;
+    private final Client client;
 
-    final Codecs codecs;
+    private final Codecs codecs;
 
-    final String sql;
-
-    String[] generatedColumns;
+    private final String sql;
 
     /**
      * Creates a new {@link SimpleMssqlStatement}.
@@ -52,6 +55,8 @@ class SimpleMssqlStatement implements MssqlStatement {
      * @throws IllegalArgumentException when {@link Client}, {@link ConnectionOptions}, or {@code sql} is {@code null}.
      */
     SimpleMssqlStatement(Client client, ConnectionOptions connectionOptions, String sql) {
+
+        super(connectionOptions.prefersCursors(sql) || prefersCursors(sql));
 
         Assert.requireNonNull(client, "Client must not be null");
         Assert.requireNonNull(connectionOptions, "ConnectionOptions must not be null");
@@ -96,31 +101,74 @@ class SimpleMssqlStatement implements MssqlStatement {
     @Override
     public Flux<MssqlResult> execute() {
 
+        int effectiveFetchSize = getEffectiveFetchSize();
+
         return Flux.defer(() -> {
-            boolean useGeneratedKeysClause = GeneratedValues.shouldExpectGeneratedKeys(this.generatedColumns);
-            String sql = useGeneratedKeysClause ? GeneratedValues.augmentQuery(this.sql, generatedColumns) : this.sql;
 
-            if (logger.isDebugEnabled()) {
-                logger.debug("Start exchange for {}", sql);
+            boolean useGeneratedKeysClause = GeneratedValues.shouldExpectGeneratedKeys(this.getGeneratedColumns());
+            String sql = useGeneratedKeysClause ? GeneratedValues.augmentQuery(this.sql, getGeneratedColumns()) : this.sql;
+
+            Flux<Message> exchange;
+
+            if (effectiveFetchSize > 0) {
+
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Start cursored exchange for {} with fetch size {}", sql, effectiveFetchSize);
+                }
+
+                exchange = RpcQueryMessageFlow.exchange(this.client, this.codecs, this.sql, effectiveFetchSize);
+
+                return createResultStream(useGeneratedKeysClause, exchange, DoneInProcToken.class::isInstance);
+            } else {
+
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Start direct exchange for {}", sql);
+                }
+
+                exchange = QueryMessageFlow.exchange(this.client, sql);
+
+                return createResultStream(useGeneratedKeysClause, exchange, AbstractDoneToken.class::isInstance);
             }
-
-            Flux<Message> exchange = QueryMessageFlow.exchange(this.client, sql);
-
-            if (useGeneratedKeysClause) {
-                exchange = exchange.transform(GeneratedValues::reduceToSingleCountDoneToken);
-            }
-
-            return exchange.windowUntil(AbstractDoneToken.class::isInstance) //
-                .map(it -> MssqlResult.toResult(this.codecs, it));
         });
+    }
+
+    private Publisher<MssqlResult> createResultStream(boolean useGeneratedKeysClause, Flux<Message> exchange, Predicate<Message> windowUntil) {
+        if (useGeneratedKeysClause) {
+            exchange = exchange.transform(GeneratedValues::reduceToSingleCountDoneToken);
+        }
+
+        return exchange.windowUntil(windowUntil) //
+            .map(it -> MssqlResult.toResult(this.codecs, it));
     }
 
     @Override
     public SimpleMssqlStatement returnGeneratedValues(String... columns) {
 
-        Assert.requireNonNull(columns, "columns must not be null");
-
-        this.generatedColumns = columns;
+        super.returnGeneratedValues(columns);
         return this;
+    }
+
+    @Override
+    public SimpleMssqlStatement fetchSize(int fetchSize) {
+
+        super.fetchSize(fetchSize);
+        return this;
+    }
+
+    /**
+     * Returns {@literal true} if the query is supported by this {@link MssqlStatement}. Cursored execution is supported for {@literal SELECT} queries.
+     *
+     * @param sql the query to inspect.
+     * @return {@literal true} if the {@code sql} query is supported.
+     */
+    static boolean prefersCursors(String sql) {
+
+        if (sql.isEmpty()) {
+            return false;
+        }
+
+        char c = sql.charAt(0);
+
+        return (c == 's' || c == 'S') && sql.toLowerCase(Locale.ENGLISH).startsWith("select");
     }
 }

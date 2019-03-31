@@ -19,7 +19,6 @@ package io.r2dbc.mssql;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.TestClient;
 import io.r2dbc.mssql.client.TransactionStatus;
-import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
@@ -232,21 +231,6 @@ class MssqlConnectionUnitTests {
 
         verify(clientMock).getTransactionStatus();
         verifyNoMoreInteractions(clientMock);
-    }
-
-    @Test
-    void shouldConsiderCursorPreferenceForSimpleStatement() {
-
-        MssqlConnection cursored = new MssqlConnection(mock(Client.class), new ConnectionOptions(sql -> true, new DefaultCodecs(), new IndefinitePreparedStatementCache()));
-
-        assertThat(cursored.createStatement("SELECT *")).isExactlyInstanceOf(SimpleCursoredMssqlStatement.class);
-        assertThat(cursored.createStatement("INSERT *")).isExactlyInstanceOf(SimpleMssqlStatement.class);
-
-
-        MssqlConnection direct = new MssqlConnection(mock(Client.class), new ConnectionOptions(sql -> false, new DefaultCodecs(), new IndefinitePreparedStatementCache()));
-
-        assertThat(direct.createStatement("SELECT *")).isExactlyInstanceOf(SimpleMssqlStatement.class);
-        assertThat(direct.createStatement("INSERT *")).isExactlyInstanceOf(SimpleMssqlStatement.class);
     }
 
     @ParameterizedTest

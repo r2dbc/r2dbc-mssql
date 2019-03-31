@@ -55,4 +55,12 @@ public interface MssqlStatement extends Statement {
 
     @Override
     MssqlStatement returnGeneratedValues(String... strings);
+
+    /**
+     * Configure the desired fetch size. A non-zero fetch size switches to cursored execution overriding cursored/direct execution preference. Configuring fetch size to zero uses direct execution.
+     *
+     * @param fetchSize the fetch size. Must not be negative.
+     * @return {@code this} {@link MssqlStatement}.
+     */
+    MssqlStatement fetchSize(int fetchSize);
 }

@@ -53,7 +53,7 @@ import java.util.regex.Pattern;
  *
  * @author Mark Paluch
  */
-final class ParametrizedMssqlStatement implements MssqlStatement {
+final class ParametrizedMssqlStatement extends MssqlStatementSupport implements MssqlStatement {
 
     private static final Logger logger = LoggerFactory.getLogger(ParametrizedMssqlStatement.class);
 
@@ -65,22 +65,23 @@ final class ParametrizedMssqlStatement implements MssqlStatement {
 
     private final Codecs codecs;
 
-    private final boolean preferCursoredExecution;
-
     private final ParsedQuery parsedQuery;
 
     private final Bindings bindings = new Bindings();
-
-    private String[] generatedColumns;
 
     private volatile boolean executed = false;
 
     ParametrizedMssqlStatement(Client client, ConnectionOptions connectionOptions, String sql) {
 
+        super(connectionOptions.prefersCursors(sql));
+
+        Assert.requireNonNull(client, "Client must not be null");
+        Assert.requireNonNull(connectionOptions, "ConnectionOptions must not be null");
+        Assert.requireNonNull(sql, "SQL must not be null");
+
         this.statementCache = connectionOptions.getPreparedStatementCache();
         this.client = client;
         this.codecs = connectionOptions.getCodecs();
-        this.preferCursoredExecution = connectionOptions.prefersCursors(sql);
         this.parsedQuery = this.statementCache.getParsedSql(sql, ParsedQuery::parse);
     }
 
@@ -105,14 +106,15 @@ final class ParametrizedMssqlStatement implements MssqlStatement {
             assertNotExecuted();
         }
 
+        int effectiveFetchSize = getEffectiveFetchSize();
         return Flux.defer(() -> {
 
             assertNotExecuted();
 
             this.executed = true;
 
-            boolean useGeneratedKeysClause = GeneratedValues.shouldExpectGeneratedKeys(this.generatedColumns);
-            String sql = useGeneratedKeysClause ? GeneratedValues.augmentQuery(this.parsedQuery.sql, generatedColumns) : this.parsedQuery.sql;
+            boolean useGeneratedKeysClause = GeneratedValues.shouldExpectGeneratedKeys(this.getGeneratedColumns());
+            String sql = useGeneratedKeysClause ? GeneratedValues.augmentQuery(this.parsedQuery.sql, getGeneratedColumns()) : this.parsedQuery.sql;
 
             EmitterProcessor<Binding> bindingEmitter = EmitterProcessor.create(true);
             FluxSink<Binding> boundRequests = bindingEmitter.sink();
@@ -120,15 +122,22 @@ final class ParametrizedMssqlStatement implements MssqlStatement {
             return bindingEmitter.startWith(iterator.next())
                 .flatMap(it -> {
 
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Start exchange for {}", sql);
-                    }
 
                     Flux<Message> exchange;
 
-                    if (preferCursoredExecution) {
-                        exchange = RpcQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, sql, it, 128);
+                    if (effectiveFetchSize > 0) {
+
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Start cursored exchange for {} with fetch size {}", sql, effectiveFetchSize);
+                        }
+
+                        exchange = RpcQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, sql, it, effectiveFetchSize);
                     } else {
+
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Start direct exchange for {}", sql);
+                        }
+
                         exchange = RpcQueryMessageFlow.exchange(this.client, sql, it);
                     }
 
@@ -158,9 +167,14 @@ final class ParametrizedMssqlStatement implements MssqlStatement {
     @Override
     public ParametrizedMssqlStatement returnGeneratedValues(String... columns) {
 
-        Assert.requireNonNull(columns, "columns must not be null");
+        super.returnGeneratedValues(columns);
+        return this;
+    }
 
-        this.generatedColumns = columns;
+    @Override
+    public ParametrizedMssqlStatement fetchSize(int fetchSize) {
+
+        super.fetchSize(fetchSize);
         return this;
     }
 

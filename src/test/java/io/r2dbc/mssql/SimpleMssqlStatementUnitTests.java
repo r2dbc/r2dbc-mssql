@@ -16,7 +16,9 @@
 
 package io.r2dbc.mssql;
 
+import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.TestClient;
+import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ServerCharset;
@@ -26,14 +28,21 @@ import io.r2dbc.mssql.message.token.DataToken;
 import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.message.token.RowTokenFactory;
+import io.r2dbc.mssql.message.token.RpcRequest;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.message.token.Tabular;
+import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.message.type.LengthStrategy;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.spi.ColumnMetadata;
 import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
 
@@ -46,6 +55,10 @@ import java.util.Map;
 
 import static io.r2dbc.mssql.message.type.TypeInformation.Builder;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link MssqlResult}.
@@ -74,7 +87,7 @@ class SimpleMssqlStatementUnitTests {
 
         TestClient client = TestClient.builder().expectRequest(batch).thenRespond(tabular.getTokens().toArray(new DataToken[0])).build();
 
-        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo");
+        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo").fetchSize(0);
 
         statement.execute()
             .flatMap(Result::getRowsUpdated)
@@ -105,7 +118,7 @@ class SimpleMssqlStatementUnitTests {
 
         TestClient client = TestClient.builder().expectRequest(batch).thenRespond(tabular.getTokens().toArray(new DataToken[0])).build();
 
-        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo");
+        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo").fetchSize(0);
 
         statement.execute()
             .flatMap(result -> result.map((row, md) -> {
@@ -127,6 +140,105 @@ class SimpleMssqlStatementUnitTests {
             .verifyComplete();
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldPreferCursoredExecution() {
+
+        Client client = mockClient();
+
+        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo");
+
+        statement.execute().as(StepVerifier::create)
+            .verifyComplete();
+
+        ArgumentCaptor<Publisher<Message>> captor = ArgumentCaptor.forClass(Publisher.class);
+
+        verify(client).exchange((Publisher) captor.capture());
+
+        StepVerifier.create(captor.getValue())
+            .consumeNextWith(it -> assertThat(it)
+                .isInstanceOf(RpcRequest.class))
+            .thenCancel()
+            .verify();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldForceDirectExecution() {
+
+        Client client = mockClient();
+
+        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo").fetchSize(0);
+
+        statement.execute().as(StepVerifier::create)
+            .verifyComplete();
+
+        ArgumentCaptor<Publisher<Message>> captor = ArgumentCaptor.forClass(Publisher.class);
+
+        verify(client).exchange((Publisher) captor.capture());
+
+        StepVerifier.create(captor.getValue())
+            .consumeNextWith(it -> assertThat(it)
+                .isInstanceOf(SqlBatch.class))
+            .thenCancel()
+            .verify();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldPreferDirectExecution() {
+
+        Client client = mockClient();
+
+        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "INSERT INTO");
+
+        statement.execute().as(StepVerifier::create)
+            .verifyComplete();
+
+        ArgumentCaptor<Publisher<Message>> captor = ArgumentCaptor.forClass(Publisher.class);
+
+        verify(client).exchange((Publisher) captor.capture());
+
+        StepVerifier.create(captor.getValue())
+            .consumeNextWith(it -> assertThat(it)
+                .isInstanceOf(SqlBatch.class))
+            .thenCancel()
+            .verify();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldForceCursoredExecution() {
+
+        Client client = mockClient();
+
+        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "INSERT INTO").fetchSize(1);
+
+        statement.execute().as(StepVerifier::create)
+            .verifyComplete();
+
+        ArgumentCaptor<Publisher<Message>> captor = ArgumentCaptor.forClass(Publisher.class);
+
+        verify(client).exchange((Publisher) captor.capture());
+
+        StepVerifier.create(captor.getValue())
+            .consumeNextWith(it -> assertThat(it)
+                .isInstanceOf(RpcRequest.class))
+            .thenCancel()
+            .verify();
+    }
+
+    private static Client mockClient() {
+
+        Client client = mock(Client.class);
+
+        when(client.getRequiredCollation()).thenReturn(Collation.RAW);
+        when(client.getTransactionDescriptor()).thenReturn(TransactionDescriptor.empty());
+        when(client.exchange(any())).thenReturn(Flux.empty());
+
+        return client;
+    }
+
     private static Column createColumn(int index, String name, SqlServerType serverType, int length, LengthStrategy lengthStrategy, @Nullable Charset charset) {
 
         Builder builder = TypeInformation.builder().withServerType(serverType).withMaxLength(length).withLengthStrategy(lengthStrategy);
@@ -136,5 +248,17 @@ class SimpleMssqlStatementUnitTests {
         TypeInformation type = builder.build();
 
         return new Column(index, name, type, null);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"select", "SELECT", "sElEcT"})
+    void shouldAcceptQueries(String query) {
+        assertThat(SimpleMssqlStatement.prefersCursors(query)).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {" select", "sp_cursor", "INSERT"})
+    void shouldRejectQueries(String query) {
+        assertThat(SimpleMssqlStatement.prefersCursors(query)).isFalse();
     }
 }
