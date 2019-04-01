@@ -112,6 +112,21 @@ class StringCodecUnitTests {
     }
 
     @Test
+    void shouldDecodeVarcharMax() {
+
+        TypeInformation type =
+            builder().withMaxLength(50).withLengthStrategy(LengthStrategy.PARTLENTYPE).withPrecision(50).withServerType(SqlServerType.VARCHAR).withCharset(ServerCharset.CP1252.charset()).build();
+
+        ByteBuf data = TestByteBufAllocator.TEST.buffer();
+        Encode.uLongLong(data, 6);
+        data.writeCharSequence("foobar", ServerCharset.CP1252.charset());
+
+        String value = StringCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), String.class);
+
+        assertThat(value).isEqualTo("foobar");
+    }
+
+    @Test
     void shouldDecodeNvarchar() {
 
         TypeInformation type =

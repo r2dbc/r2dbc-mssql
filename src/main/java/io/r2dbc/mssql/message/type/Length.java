@@ -23,12 +23,13 @@ import io.r2dbc.mssql.message.tds.ProtocolException;
 
 /**
  * Descriptor for data length in row results.
+ * Use {@link Length} to encode/decode length headers of a PLP chunk and {@link PlpLength} to
+ * encode/decode the the total PLP stream length.
  *
  * @author Mark Paluch
+ * @see PlpLength
  */
 public final class Length {
-
-    public static final long PLP_NULL = 0xFFFFFFFFFFFFFFFFL;
 
     public static final int USHORT_NULL = 65535;
 
@@ -124,11 +125,8 @@ public final class Length {
         switch (type.getLengthStrategy()) {
 
             case PARTLENTYPE: {
-                buffer.markReaderIndex();
-                long length = buffer.readLong();
-                buffer.resetReaderIndex();
-
-                return Length.of(UNKNOWN_STREAM_LENGTH, length == PLP_NULL);
+                int length = Decode.asInt(buffer);
+                return Length.of(length, false);
             }
 
             case FIXEDLENTYPE:

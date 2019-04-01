@@ -17,8 +17,19 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.message.tds.ServerCharset;
+import io.r2dbc.mssql.message.type.LengthStrategy;
+import io.r2dbc.mssql.message.type.SqlServerType;
+import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.HexUtils;
 import org.junit.jupiter.api.Test;
+
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -83,5 +94,102 @@ class RowTokenUnitTests {
             "2408FED478E94628C6400437423146";
 
         CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(row), buffer -> RowToken.canDecode(buffer, columns.getColumns()));
+    }
+
+    @Test
+    void shouldDecodeIntAndVarcharMax() throws IOException {
+
+        TypeInformation integerType = TypeInformation.builder().withServerType(SqlServerType.INTEGER).withLengthStrategy(LengthStrategy.BYTELENTYPE).build();
+        TypeInformation plpType = TypeInformation.builder().withServerType(SqlServerType.VARCHARMAX).withLengthStrategy(LengthStrategy.PARTLENTYPE).withCharset(ServerCharset.CP1252.charset()).build();
+
+        Column id = new Column(0, "id", integerType);
+        Column content = new Column(1, "content", plpType);
+        ColumnMetadataToken columns = ColumnMetadataToken.create(Arrays.asList(id, content));
+
+        ByteBuf rowData = loadRowData("int-varcharmax-data.txt");
+
+        RowToken row = RowToken.decode(rowData, columns.getColumns());
+
+        assertThat(row.getColumnData(0).readableBytes()).isEqualTo(5);
+        assertThat(row.getColumnData(1).readableBytes()).isEqualTo(10008);
+    }
+
+    @Test
+    void shouldDecodeIntAndVarcharMaxNull() {
+
+        TypeInformation integerType = TypeInformation.builder().withServerType(SqlServerType.INTEGER).withLengthStrategy(LengthStrategy.BYTELENTYPE).build();
+        TypeInformation plpType = TypeInformation.builder().withServerType(SqlServerType.VARCHARMAX).withLengthStrategy(LengthStrategy.PARTLENTYPE).withCharset(ServerCharset.CP1252.charset()).build();
+
+        Column id = new Column(0, "id", integerType);
+        Column content = new Column(1, "content", plpType);
+        ColumnMetadataToken columns = ColumnMetadataToken.create(Arrays.asList(id, content));
+
+        ByteBuf rowData = HexUtils.decodeToByteBuf("04 01 00 00 00 FF FF FF FF FF FF FF FF");
+
+        RowToken row = RowToken.decode(rowData, columns.getColumns());
+
+        assertThat(row.getColumnData(0).readableBytes()).isEqualTo(5);
+        assertThat(row.getColumnData(1)).isNull();
+    }
+
+    @Test
+    void canDecodeShouldReportPlpDecodability() throws IOException {
+
+        TypeInformation integerType = TypeInformation.builder().withServerType(SqlServerType.INTEGER).withLengthStrategy(LengthStrategy.BYTELENTYPE).build();
+        TypeInformation plpType = TypeInformation.builder().withServerType(SqlServerType.VARCHARMAX).withLengthStrategy(LengthStrategy.PARTLENTYPE).withCharset(ServerCharset.CP1252.charset()).build();
+
+        Column id = new Column(0, "id", integerType);
+        Column content = new Column(1, "content", plpType);
+        ColumnMetadataToken columns = ColumnMetadataToken.create(Arrays.asList(id, content));
+
+        ByteBuf rowData = loadRowData("int-varcharmax-data.txt");
+        CanDecodeTestSupport.testCanDecode(rowData, buffer -> RowToken.canDecode(buffer, columns.getColumns()));
+    }
+
+    @Test
+    void shouldReleaseBuffersProperly() throws IOException {
+
+        TypeInformation integerType = TypeInformation.builder().withServerType(SqlServerType.INTEGER).withLengthStrategy(LengthStrategy.BYTELENTYPE).build();
+        TypeInformation plpType = TypeInformation.builder().withServerType(SqlServerType.VARCHARMAX).withLengthStrategy(LengthStrategy.PARTLENTYPE).withCharset(ServerCharset.CP1252.charset()).build();
+
+        Column id = new Column(0, "id", integerType);
+        Column content = new Column(1, "content", plpType);
+        ColumnMetadataToken columns = ColumnMetadataToken.create(Arrays.asList(id, content));
+
+        ByteBuf rowData = loadRowData("int-varcharmax-data.txt");
+
+        RowToken row = RowToken.decode(rowData, columns.getColumns());
+
+        ByteBuf idData = row.getColumnData(0);
+        ByteBuf contentData = row.getColumnData(1);
+
+        assertThat(idData.refCnt()).isNotZero();
+        assertThat(contentData.refCnt()).isNotZero();
+
+        rowData.release();
+        row.release();
+
+        assertThat(idData.refCnt()).isZero();
+        assertThat(contentData.refCnt()).isZero();
+    }
+
+    private static ByteBuf loadRowData(String resource) throws IOException {
+
+        StringBuffer buffer = new StringBuffer();
+
+        try (InputStream in = RowTokenUnitTests.class.getClassLoader().getResourceAsStream(resource)) {
+
+            if (in == null) {
+                throw new FileNotFoundException(resource);
+            }
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                buffer.append(line);
+            }
+        }
+
+        return HexUtils.decodeToByteBuf(buffer.toString());
     }
 }

@@ -17,6 +17,7 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.message.type.LengthStrategy;
 import io.r2dbc.mssql.util.HexUtils;
 import org.junit.jupiter.api.Test;
 
@@ -47,5 +48,29 @@ class ColumnMetadataTokenUnitTests {
         ColumnMetadataToken metadata = ColumnMetadataToken.decode(buffer, true);
 
         assertThat(metadata.getColumns()).hasSize(4).extracting(Column::getName).containsSequence("employee_id", "last_name", "first_name", "salary");
+    }
+
+    @Test
+    void shouldDecodeIntAndVarcharMaxColumns() {
+
+        // columns: id INT, content VARCHAR(MAX)
+        String encoded = "02 00 00 00 00 00 00" +
+            "00 09 00 26 04 02 69 00 64 00 00 00 00 00 09 00" +
+            "A7 FF FF 09 04 D0 00 34 07 63 00 6F 00 6E 00 74" +
+            "00 65 00 6E 00 74 00";
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf(encoded);
+
+        ColumnMetadataToken metadata = ColumnMetadataToken.decode(buffer, true);
+
+        assertThat(metadata.getColumns()).hasSize(2);
+
+        Column id = metadata.getColumns().get(0);
+        assertThat(id.getName()).isEqualTo("id");
+        assertThat(id.getType().getLengthStrategy()).isEqualTo(LengthStrategy.BYTELENTYPE);
+
+        Column content = metadata.getColumns().get(1);
+        assertThat(content.getName()).isEqualTo("content");
+        assertThat(content.getType().getLengthStrategy()).isEqualTo(LengthStrategy.PARTLENTYPE);
     }
 }

@@ -88,7 +88,7 @@ abstract class AbstractCodec<T> implements Codec<T> {
     }
 
     @Nullable
-    public final T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type) {
+    public T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type) {
 
         Assert.requireNonNull(decodable, "Decodable must not be null");
         Assert.requireNonNull(type, "Type must not be null");

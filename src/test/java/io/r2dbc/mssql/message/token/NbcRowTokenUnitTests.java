@@ -17,6 +17,9 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.message.tds.ServerCharset;
+import io.r2dbc.mssql.message.type.LengthStrategy;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.Types;
@@ -70,5 +73,23 @@ class NbcRowTokenUnitTests {
         String data = "1C 04 01 00 00 00 01 00 61 02 00 78 61 04 01 00 00 00";
 
         CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), buffer -> NbcRowToken.canDecode(buffer, columns));
+    }
+
+    @Test
+    void shouldDecodePlpNull() {
+
+        TypeInformation integerType = TypeInformation.builder().withServerType(SqlServerType.INTEGER).withLengthStrategy(LengthStrategy.BYTELENTYPE).build();
+        TypeInformation plpType = TypeInformation.builder().withServerType(SqlServerType.VARCHARMAX).withLengthStrategy(LengthStrategy.PARTLENTYPE).withCharset(ServerCharset.CP1252.charset()).build();
+
+        Column id = new Column(0, "id", integerType);
+        Column content = new Column(1, "content", plpType);
+        ColumnMetadataToken columns = ColumnMetadataToken.create(Arrays.asList(id, content));
+
+        ByteBuf rowData = HexUtils.decodeToByteBuf("02 04 01 00 00 00");
+
+        NbcRowToken row = NbcRowToken.decode(rowData, columns.getColumns());
+
+        assertThat(row.getColumnData(0).readableBytes()).isEqualTo(5);
+        assertThat(row.getColumnData(1)).isNull();
     }
 }

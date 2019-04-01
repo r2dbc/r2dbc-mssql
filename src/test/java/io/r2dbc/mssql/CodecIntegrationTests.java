@@ -137,7 +137,27 @@ class CodecIntegrationTests extends IntegrationTestSupport {
 
     @Test
     void shouldEncodeStringAsNVarchar() {
-        testType(connection, "NVARCHAR(255)", "Hello, World!");
+        testType(connection, "NVARCHAR(255)", "Hello, World! äöü");
+    }
+
+    @Test
+    void shouldEncodeStringAsVarcharMax() {
+        testType(connection, "VARCHAR(MAX)", "Hello, World!");
+    }
+
+    @Test
+    void shouldEncodeStringAsNVarcharMax() {
+        testType(connection, "NVARCHAR(MAX)", "Hello, World! äöü");
+    }
+
+    @Test
+    void shouldEncodeStringAsText() {
+        testType(connection, "TEXT", "Hello, World!");
+    }
+
+    @Test
+    void shouldEncodeStringAsNText() {
+        testType(connection, "NTEXT", "Hello, World! äöü");
     }
 
     private void testType(MssqlConnection connection, String columnType, Object value) {

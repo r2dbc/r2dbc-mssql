@@ -21,10 +21,13 @@ import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.message.type.Length;
+import io.r2dbc.mssql.message.type.LengthStrategy;
+import io.r2dbc.mssql.message.type.PlpLength;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeUtils;
+import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
 import java.nio.charset.Charset;
@@ -51,23 +54,25 @@ final class StringCodec extends AbstractCodec<String> {
      */
     public static final StringCodec INSTANCE = new StringCodec();
 
-    private static final Set<SqlServerType> SUPPORTED_TYPES = EnumSet.of(SqlServerType.CHAR, SqlServerType.NCHAR, SqlServerType.NVARCHAR, SqlServerType.VARCHAR, SqlServerType.GUID);
+    private static final Set<SqlServerType> SUPPORTED_TYPES = EnumSet.of(SqlServerType.CHAR, SqlServerType.NCHAR,
+        SqlServerType.VARCHAR, SqlServerType.NVARCHAR,
+        SqlServerType.VARCHARMAX, SqlServerType.NVARCHARMAX,
+        SqlServerType.TEXT, SqlServerType.NTEXT,
+        SqlServerType.GUID);
 
     private StringCodec() {
         super(String.class);
     }
 
-
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, String value) {
-
 
         TdsDataType dataType = getDataType(context.getDirection(), value);
         ByteBuf buffer = allocator.buffer((value.length() * 2) + 7);
 
         doEncode(buffer, context.getDirection(), context.getCollation(), value);
 
-        if (dataType == TdsDataType.NVARCHAR) {
+        if (dataType == TdsDataType.NVARCHAR || dataType == TdsDataType.NCHAR) {
             return new NvarcharEncoded(dataType, buffer);
         }
 
@@ -89,6 +94,29 @@ final class StringCodec extends AbstractCodec<String> {
     @Override
     boolean doCanDecode(TypeInformation typeInformation) {
         return SUPPORTED_TYPES.contains(typeInformation.getServerType());
+    }
+
+    @Nullable
+    public String decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends String> type) {
+
+        Assert.requireNonNull(decodable, "Decodable must not be null");
+        Assert.requireNonNull(type, "Type must not be null");
+
+        if (buffer == null) {
+            return null;
+        }
+
+        Length length;
+
+        if (decodable.getType().getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
+
+            PlpLength plpLength = PlpLength.decode(buffer, decodable.getType());
+            length = Length.of(Math.toIntExact(plpLength.getLength()), plpLength.isNull());
+        } else {
+            length = Length.decode(buffer, decodable.getType());
+        }
+
+        return doDecode(buffer, length, decodable.getType(), type);
     }
 
     @Override

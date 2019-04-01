@@ -10,10 +10,9 @@ This driver provides the following features:
 * Login with username/password with temporary SSL encryption
 * Full SSL encryption support (for e.g. Azure usage).
 * Transaction Control
-* Simple (un-cursored) execution of SQL batches
-* Execution of prepared statements
-* Execution of SQL cursored statements
-* Read support for all data types except binary types (BLOB)
+* Simple execution of SQL batches (direct and cursored execution)
+* Execution of parametrized statements (direct and cursored execution)
+* Extensive type support (including `TEXT`, `VARCHAR(MAX)`, and national variants, see below for exceptions)
 
 Next steps:
 
@@ -164,12 +163,12 @@ This reference table shows the type mapping between [Microsoft SQL Server][m] an
 | [`money`][sql-money-ref]                  | [`BigDecimal`][java-bigdecimal-ref]
 | [`char`][sql-(var)char-ref]               | [`String`][java-string-ref]
 | [`varchar`][sql-(var)char-ref]            | [`String`][java-string-ref]
-| [`varcharmax`][sql-(var)char-ref]         | Not yet supported.
+| [`varcharmax`][sql-(var)char-ref]         | [`String`][java-string-ref]
 | [`nchar`][sql-n(var)char-ref]             | [`String`][java-string-ref]
 | [`nvarchar`][sql-n(var)char-ref]          | [`String`][java-string-ref]
-| [`nvarcharmax`][sql-n(var)char-ref]       | Not yet supported.
-| [`text`][sql-(n)text-ref]                 | Not yet supported.
-| [`ntext`][sql-(n)text-ref]                | Not yet supported.
+| [`nvarcharmax`][sql-n(var)char-ref]       | [`String`][java-string-ref]
+| [`text`][sql-(n)text-ref]                 | [`String`][java-string-ref]
+| [`ntext`][sql-(n)text-ref]                | [`String`][java-string-ref]
 | [`image`][sql-(n)text-ref]                | Not yet supported.
 | [`binary`][sql-binary-ref]                | Not yet supported.
 | [`varbinary`][sql-binary-ref]             | Not yet supported.
@@ -181,6 +180,9 @@ This reference table shows the type mapping between [Microsoft SQL Server][m] an
 | [`geography`][sql-geography-ref]          | Not yet supported.
 
 Types in **bold** indicate the native (default) Java type.
+
+**Note:** `text`, `ntext`, `varchar(max)` and `nvarchar(max)` values are fully materialized in the client before decoding. 
+Make sure to account for proper memory sizing.
 
 
 [sql-bit-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/bit-transact-sql?view=sql-server-2017

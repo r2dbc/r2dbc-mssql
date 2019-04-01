@@ -17,17 +17,24 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.util.AbstractReferenceCounted;
-import io.netty.util.ReferenceCounted;
+import io.netty.util.ReferenceCountUtil;
 import io.r2dbc.mssql.message.type.Length;
+import io.r2dbc.mssql.message.type.LengthStrategy;
+import io.r2dbc.mssql.message.type.PlpLength;
 import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
+import java.nio.Buffer;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Row token message containing row bytes.
+ * Extends {@link AbstractReferenceCounted} to release associated {@link ByteBuf}s once the row is de-allocated.
+ *
+ * <p><strong>Note:</strong> PLP values are aggregated in a single {@link ByteBuf} and not yet streamed. This is to be fixed.
  *
  * @author Mark Paluch
  */
@@ -37,18 +44,13 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
 
     private final List<ByteBuf> data;
 
-    private final ReferenceCounted toRelease;
-
     /**
      * Creates a {@link RowToken}.
      *
-     * @param data      the row data.
-     * @param toRelease item to {@link ReferenceCounted#release()} on {@link #deallocate() de-allocation}.
+     * @param data the row data.
      */
-    RowToken(List<ByteBuf> data, ReferenceCounted toRelease) {
-
+    RowToken(List<ByteBuf> data) {
         this.data = Assert.requireNonNull(data, "Row data must not be null");
-        this.toRelease = toRelease;
     }
 
     /**
@@ -63,15 +65,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
         Assert.requireNonNull(buffer, "Data buffer must not be null");
         Assert.requireNonNull(columns, "List of Columns must not be null");
 
-        ByteBuf copy = buffer.copy();
-
-        int start = copy.readerIndex();
-        RowToken rowToken = doDecode(copy, columns);
-        int fastForward = copy.readerIndex() - start;
-
-        buffer.skipBytes(fastForward);
-
-        return rowToken;
+        return doDecode(buffer, columns);
     }
 
     /**
@@ -105,9 +99,26 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
 
     static boolean canDecodeColumn(ByteBuf buffer, Column column) {
 
+        if (column.getType().getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
+            return canDecodePlp(buffer, column);
+        }
+
+        return doCanDecode(buffer, column);
+    }
+
+    /**
+     * Returns whether the {@link Buffer} with a scalar size can be decoded.
+     *
+     * @param buffer
+     * @param column
+     * @return
+     */
+    private static boolean doCanDecode(ByteBuf buffer, Column column) {
+
         buffer.markReaderIndex();
 
         int startRead = buffer.readerIndex();
+
 
         if (!Length.canDecode(buffer, column.getType())) {
             return false;
@@ -129,6 +140,46 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
         return false;
     }
 
+    /**
+     * Returns whether a PLP stream can be decoded.
+     *
+     * @param buffer
+     * @param column
+     * @return
+     * @see LengthStrategy#PARTLENTYPE
+     */
+    private static boolean canDecodePlp(ByteBuf buffer, Column column) {
+
+        if (!PlpLength.canDecode(buffer, column.getType())) {
+            return false;
+        }
+
+        PlpLength totalLength = PlpLength.decode(buffer, column.getType());
+
+        if (totalLength.isNull()) {
+            return true;
+        }
+
+        while (true) {
+
+            if (!Length.canDecode(buffer, column.getType())) {
+                return false;
+            }
+
+            Length chunkLength = Length.decode(buffer, column.getType());
+
+            if (chunkLength.getLength() == 0) {
+                return true;
+            }
+
+            if (buffer.readableBytes() >= chunkLength.getLength()) {
+                buffer.skipBytes(chunkLength.getLength());
+            } else {
+                return false;
+            }
+        }
+    }
+
     private static RowToken doDecode(ByteBuf buffer, List<Column> columns) {
 
         List<ByteBuf> data = new ArrayList<>(columns.size());
@@ -137,7 +188,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
             data.add(decodeColumnData(buffer, column));
         }
 
-        return new RowToken(data, buffer);
+        return new RowToken(data);
     }
 
     /**
@@ -147,16 +198,75 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      * @param column the column.
      * @return
      */
+    @Nullable
     static ByteBuf decodeColumnData(ByteBuf buffer, Column column) {
 
         buffer.markReaderIndex();
+        if (column.getType().getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
+            return doDecodePlp(buffer, column);
+        } else {
+            return doDecode(buffer, column);
+        }
+    }
+
+    /**
+     * Decode a scalar length value. Returns {@code null} if {@link Length#isNull()}.
+     *
+     * @param buffer
+     * @param column
+     * @return
+     */
+    @Nullable
+    private static ByteBuf doDecode(ByteBuf buffer, Column column) {
+
         int startRead = buffer.readerIndex();
         Length length = Length.decode(buffer, column.getType());
-        int endRead = buffer.readerIndex();
-        buffer.resetReaderIndex();
 
+        if (length.isNull()) {
+            return null;
+        }
+
+        int endRead = buffer.readerIndex();
         int descriptorLength = endRead - startRead;
-        return buffer.readSlice(descriptorLength + length.getLength());
+
+        buffer.resetReaderIndex();
+        return buffer.readRetainedSlice(descriptorLength + length.getLength());
+    }
+
+    /**
+     * Decode a PLP stream value. Returns {@code null} if {@link Length#isNull()}.
+     *
+     * @param buffer
+     * @param column
+     * @return
+     */
+    @Nullable
+    private static ByteBuf doDecodePlp(ByteBuf buffer, Column column) {
+
+        PlpLength totalLength = PlpLength.decode(buffer, column.getType());
+
+        if (totalLength.isNull()) {
+            return null;
+        }
+
+        CompositeByteBuf plpData = buffer.alloc().compositeBuffer();
+        ByteBuf length = buffer.alloc().buffer(8);
+        totalLength.encode(length);
+
+        plpData.addComponent(true, length);
+
+        while (true) {
+
+            Length chunkLength = Length.decode(buffer, column.getType());
+
+            if (chunkLength.getLength() == 0) {
+                break;
+            }
+
+            plpData.addComponent(true, buffer.readRetainedSlice(chunkLength.getLength()));
+        }
+
+        return plpData;
     }
 
     /**
@@ -182,13 +292,11 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
 
     @Override
     public RowToken touch(Object hint) {
-
-        this.toRelease.touch(hint);
         return this;
     }
 
     @Override
     protected void deallocate() {
-        this.toRelease.release();
+        data.forEach(ReferenceCountUtil::release);
     }
 }

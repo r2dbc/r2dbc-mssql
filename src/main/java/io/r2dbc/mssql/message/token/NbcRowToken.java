@@ -18,7 +18,6 @@ package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.util.Assert;
 
@@ -28,6 +27,7 @@ import java.util.List;
 
 /**
  * NBC Row (Null-bitmap compressed row). Expresses nullability through a bitmap.
+ * <p><strong>Note:</strong> PLP values are aggregated in a single {@link ByteBuf} and not yet streamed. This is to be fixed.
  *
  * @author Mark Paluch
  */
@@ -41,11 +41,10 @@ public final class NbcRowToken extends RowToken {
      * Creates a {@link NbcRowToken}.
      *
      * @param data       the row data.
-     * @param toRelease  item to {@link ReferenceCounted#release()} on {@link #deallocate() de-allocation}.
      * @param nullMarker {@code null} bitmap.
      */
-    private NbcRowToken(List<ByteBuf> data, ReferenceCounted toRelease, boolean[] nullMarker) {
-        super(data, toRelease);
+    private NbcRowToken(List<ByteBuf> data, boolean[] nullMarker) {
+        super(data);
         this.nullMarker = nullMarker;
     }
 
@@ -61,15 +60,7 @@ public final class NbcRowToken extends RowToken {
         Assert.requireNonNull(buffer, "Data buffer must not be null");
         Assert.requireNonNull(columns, "List of Columns must not be null");
 
-        ByteBuf copy = buffer.copy();
-
-        int start = copy.readerIndex();
-        NbcRowToken rowToken = doDecode(copy, columns);
-        int fastForward = copy.readerIndex() - start;
-
-        buffer.skipBytes(fastForward);
-
-        return rowToken;
+        return doDecode(buffer, columns);
     }
 
     /**
@@ -135,7 +126,7 @@ public final class NbcRowToken extends RowToken {
             }
         }
 
-        return new NbcRowToken(data, buffer, nullMarkers);
+        return new NbcRowToken(data, nullMarkers);
     }
 
     private static boolean[] getNullBitmap(ByteBuf buffer, List<Column> columns) {
