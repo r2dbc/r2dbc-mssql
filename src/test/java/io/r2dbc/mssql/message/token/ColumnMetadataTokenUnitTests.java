@@ -18,6 +18,7 @@ package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.type.LengthStrategy;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.util.HexUtils;
 import org.junit.jupiter.api.Test;
 
@@ -72,5 +73,36 @@ class ColumnMetadataTokenUnitTests {
         Column content = metadata.getColumns().get(1);
         assertThat(content.getName()).isEqualTo("content");
         assertThat(content.getType().getLengthStrategy()).isEqualTo(LengthStrategy.PARTLENTYPE);
+    }
+
+    @Test
+    void shouldDecodeIntBinaryAndVarbinaryColumns() {
+
+        // columns: id INT, binfix BINARY(10), binvar VARBINARY(255)
+        String encoded = "03 00 00 00 00 00 00" +
+            "00 08 00 38 02 69 00 64 00 00 00 00 00 09 00 AD" +
+            "0A 00 06 62 00 69 00 6E 00 66 00 69 00 78 00 00" +
+            "00 00 00 09 00 A5 FF 00 06 62 00 69 00 6E 00 76" +
+            "00 61 00 72 00";
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf(encoded);
+
+        ColumnMetadataToken metadata = ColumnMetadataToken.decode(buffer, true);
+
+        assertThat(metadata.getColumns()).hasSize(3);
+
+        Column id = metadata.getColumns().get(0);
+        assertThat(id.getName()).isEqualTo("id");
+        assertThat(id.getType().getLengthStrategy()).isEqualTo(LengthStrategy.FIXEDLENTYPE);
+
+        Column binfix = metadata.getColumns().get(1);
+        assertThat(binfix.getName()).isEqualTo("binfix");
+        assertThat(binfix.getType().getLengthStrategy()).isEqualTo(LengthStrategy.USHORTLENTYPE);
+        assertThat(binfix.getType().getServerType()).isEqualTo(SqlServerType.BINARY);
+
+        Column binvar = metadata.getColumns().get(2);
+        assertThat(binvar.getName()).isEqualTo("binvar");
+        assertThat(binvar.getType().getLengthStrategy()).isEqualTo(LengthStrategy.USHORTLENTYPE);
+        assertThat(binvar.getType().getServerType()).isEqualTo(SqlServerType.VARBINARY);
     }
 }

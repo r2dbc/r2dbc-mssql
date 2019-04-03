@@ -12,11 +12,10 @@ This driver provides the following features:
 * Transaction Control
 * Simple execution of SQL batches (direct and cursored execution)
 * Execution of parametrized statements (direct and cursored execution)
-* Extensive type support (including `TEXT`, `VARCHAR(MAX)`, and national variants, see below for exceptions)
+* Extensive type support (including `TEXT`, `VARCHAR(MAX)`, `IMAGE`, `VARBINARY(MAX)` and national variants, see below for exceptions)
 
 Next steps:
 
-* Add encoding for remaining codecs (VARBINARY, XML, UDT)
 * Execution of stored procedures 
 * Add support for TVP and UDTs
 
@@ -158,7 +157,7 @@ This reference table shows the type mapping between [Microsoft SQL Server][m] an
 | [`date`][sql-date-ref]                    | [`LocalDate`][java-ld-ref] 
 | [`time`][sql-time-ref]                    | [`LocalTime`][java-lt-ref] 
 | [`datetimeoffset`][sql-dtof-ref]          | [**`OffsetDateTime`**][java-odt-ref], [`ZonedDateTime`][java-zdt-ref]  
-| [`timestamp`][sql-timestamp-ref]          | `byte[]`
+| [`timestamp`][sql-timestamp-ref]          | [`byte[]`][java-byte-ref]
 | [`smallmoney`][sql-money-ref]             | [`BigDecimal`][java-bigdecimal-ref]
 | [`money`][sql-money-ref]                  | [`BigDecimal`][java-bigdecimal-ref]
 | [`char`][sql-(var)char-ref]               | [`String`][java-string-ref]
@@ -169,10 +168,10 @@ This reference table shows the type mapping between [Microsoft SQL Server][m] an
 | [`nvarcharmax`][sql-n(var)char-ref]       | [`String`][java-string-ref]
 | [`text`][sql-(n)text-ref]                 | [`String`][java-string-ref]
 | [`ntext`][sql-(n)text-ref]                | [`String`][java-string-ref]
-| [`image`][sql-(n)text-ref]                | Not yet supported.
-| [`binary`][sql-binary-ref]                | Not yet supported.
-| [`varbinary`][sql-binary-ref]             | Not yet supported.
-| [`varbinarymax`][sql-binary-ref]          | Not yet supported.
+| [`image`][sql-(n)text-ref]                | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref]
+| [`binary`][sql-binary-ref]                | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref]
+| [`varbinary`][sql-binary-ref]             | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref]
+| [`varbinarymax`][sql-binary-ref]          | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref]
 | [`sql_variant`][sql-sql-variant-ref]      | Not yet supported.
 | [`xml`][sql-xml-ref]                      | Not yet supported.
 | [`udt`][sql-udt-ref]                      | Not yet supported.
@@ -181,8 +180,8 @@ This reference table shows the type mapping between [Microsoft SQL Server][m] an
 
 Types in **bold** indicate the native (default) Java type.
 
-**Note:** `text`, `ntext`, `varchar(max)` and `nvarchar(max)` values are fully materialized in the client before decoding. 
-Make sure to account for proper memory sizing.
+**Note:** BLOB (`image`, `binary`, `varbinary` and `varbinary(max)`) and CLOB (`text`, `ntext`, `varchar(max)` and `nvarchar(max)`)
+values are fully materialized in the client before decoding. Make sure to account for proper memory sizing.
 
 
 [sql-bit-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/bit-transact-sql?view=sql-server-2017
@@ -212,6 +211,7 @@ Make sure to account for proper memory sizing.
 [java-bigdecimal-ref]: https://docs.oracle.com/javase/8/docs/api/java/math/BigDecimal.html
 [java-boolean-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Boolean.html
 [java-byte-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Byte.html
+[java-ByteBuffer-ref]: https://docs.oracle.com/javase/8/docs/api/java/nio/ByteBuffer.html
 [java-double-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Double.html
 [java-float-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Float.html
 [java-integer-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Integer.html

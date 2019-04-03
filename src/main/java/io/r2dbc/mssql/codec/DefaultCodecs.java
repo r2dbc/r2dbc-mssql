@@ -46,6 +46,7 @@ public final class DefaultCodecs implements Codecs {
 
             // Prioritized Codecs
             StringCodec.INSTANCE,
+            BinaryCodec.INSTANCE,
 
             BooleanCodec.INSTANCE,
             ByteCodec.INSTANCE,

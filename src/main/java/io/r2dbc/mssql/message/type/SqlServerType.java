@@ -50,7 +50,7 @@ public enum SqlServerType {
     NVARCHARMAX(Category.LONG_NCHARACTER, "nvarchar"),
     NTEXT(Category.LONG_NCHARACTER,     "ntext", TdsDataType.NTEXT),
     BINARY(Category.BINARY,             "binary"),
-    VARBINARY(Category.BINARY,          "varbinary"),
+    VARBINARY(Category.BINARY, "varbinary", 8000, TdsDataType.BIGVARBINARY),
     VARBINARYMAX(Category.LONG_BINARY,  "varbinary"),
     IMAGE(Category.LONG_BINARY,         "image", TdsDataType.IMAGE),
     DECIMAL(Category.NUMERIC,           "decimal",          38, TdsDataType.DECIMALN),

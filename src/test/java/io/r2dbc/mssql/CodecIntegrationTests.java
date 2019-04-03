@@ -26,6 +26,7 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -33,6 +34,8 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests for {@link DefaultCodecs} testing all known codecs with pre-defined values and {@code null} values.
@@ -52,7 +55,7 @@ class CodecIntegrationTests extends IntegrationTestSupport {
 
     @Test
     void shouldEncodeBooleanAsTinyint() {
-        testType(connection, "TINYINT", true, (byte) 1);
+        testType(connection, "TINYINT", true, Boolean.class, (byte) 1);
     }
 
     @Test
@@ -117,7 +120,7 @@ class CodecIntegrationTests extends IntegrationTestSupport {
 
     @Test
     void shouldEncodeZonedDateTimeAsDatetimeoffset() {
-        testType(connection, "DATETIMEOFFSET", ZonedDateTime.parse("2018-08-27T17:41:14.890+00:45"), OffsetDateTime.parse("2018-08-27T17:41:14.890+00:45"));
+        testType(connection, "DATETIMEOFFSET", ZonedDateTime.parse("2018-08-27T17:41:14.890+00:45"), ZonedDateTime.class, OffsetDateTime.parse("2018-08-27T17:41:14.890+00:45"));
     }
 
     @Test
@@ -160,11 +163,52 @@ class CodecIntegrationTests extends IntegrationTestSupport {
         testType(connection, "NTEXT", "Hello, World! äöü");
     }
 
-    private void testType(MssqlConnection connection, String columnType, Object value) {
-        testType(connection, columnType, value, value);
+
+    @Test
+    void shouldEncodeByteArrayAsBinary() {
+        testType(connection, "BINARY(9)", "foobarbaz".getBytes());
     }
 
-    private void testType(MssqlConnection connection, String columnType, Object value, Object expectedGetObjectValue) {
+    @Test
+    void shouldEncodeByteArrayAsVarBinary() {
+        testType(connection, "VARBINARY(9)", "foobarbaz".getBytes());
+    }
+
+    @Test
+    void shouldEncodeByteArrayAsVarBinaryMax() {
+        testType(connection, "VARBINARY(MAX)", "foobarbaz".getBytes());
+    }
+
+    @Test
+    void shouldEncodeByteArrayAsImage() {
+        testType(connection, "IMAGE", "foobarbaz".getBytes());
+    }
+
+    @Test
+    void shouldEncodeByteBufferAsBinary() {
+        testType(connection, "BINARY(9)", ByteBuffer.wrap("foobarbaz".getBytes()), ByteBuffer.class, "foobarbaz".getBytes());
+    }
+
+    @Test
+    void shouldEncodeByteBufferAsVarBinary() {
+        testType(connection, "VARBINARY(9)", ByteBuffer.wrap("foobarbaz".getBytes()), ByteBuffer.class, "foobarbaz".getBytes());
+    }
+
+    @Test
+    void shouldEncodeByteBufferAsVarBinaryMax() {
+        testType(connection, "VARBINARY(MAX)", ByteBuffer.wrap("foobarbaz".getBytes()), ByteBuffer.class, "foobarbaz".getBytes());
+    }
+
+    @Test
+    void shouldEncodeByteBufferAsImage() {
+        testType(connection, "IMAGE", ByteBuffer.wrap("foobarbaz".getBytes()), ByteBuffer.class, "foobarbaz".getBytes());
+    }
+
+    private void testType(MssqlConnection connection, String columnType, Object value) {
+        testType(connection, columnType, value, value.getClass(), value);
+    }
+
+    private void testType(MssqlConnection connection, String columnType, Object value, Class<?> valueClass, Object expectedGetObjectValue) {
 
         createTable(connection, columnType);
 
@@ -176,18 +220,22 @@ class CodecIntegrationTests extends IntegrationTestSupport {
             .expectNext(1)
             .verifyComplete();
 
+        if (value instanceof ByteBuffer) {
+            ((ByteBuffer) value).rewind();
+        }
+
         connection.createStatement("SELECT my_col FROM codec_test")
             .execute()
-            .flatMap(it -> it.map((row, rowMetadata) -> (Object) row.get("my_col", value.getClass())))
+            .flatMap(it -> it.map((row, rowMetadata) -> (Object) row.get("my_col", valueClass)))
             .as(StepVerifier::create)
-            .expectNext(value)
+            .consumeNextWith(actual -> assertThat(actual).isEqualTo(value))
             .verifyComplete();
 
         connection.createStatement("SELECT my_col FROM codec_test")
             .execute()
             .flatMap(it -> it.map((row, rowMetadata) -> row.get("my_col")))
             .as(StepVerifier::create)
-            .expectNext(expectedGetObjectValue)
+            .consumeNextWith(actual -> assertThat(actual).isEqualTo(expectedGetObjectValue))
             .verifyComplete();
 
         Flux.from(connection.createStatement("UPDATE codec_test SET my_col = @P0")
@@ -200,7 +248,7 @@ class CodecIntegrationTests extends IntegrationTestSupport {
 
         connection.createStatement("SELECT my_col FROM codec_test")
             .execute()
-            .flatMap(it -> it.map((row, rowMetadata) -> Optional.ofNullable((Object) row.get("my_col", value.getClass()))))
+            .flatMap(it -> it.map((row, rowMetadata) -> Optional.ofNullable((Object) row.get("my_col", valueClass))))
             .as(StepVerifier::create)
             .expectNext(Optional.empty())
             .verifyComplete();
