@@ -40,7 +40,7 @@ import java.util.UUID;
  * Codec for character values that are represented as {@link String}.
  *
  * <ul>
- * <li>Server types: (N)(VAR)CHAR, {@link SqlServerType#GUID}</li>
+ * <li>Server types: (N)(VAR)CHAR, (N)TEXT {@link SqlServerType#GUID}</li>
  * <li>Java type: {@link String}</li>
  * <li>Downcast: to {@link UUID#toString()}</li>
  * </ul>
@@ -76,7 +76,7 @@ final class StringCodec extends AbstractCodec<String> {
             return new NvarcharEncoded(dataType, buffer);
         }
 
-        return Encoded.of(dataType, buffer);
+        return new VarcharEncoded(dataType, buffer);
     }
 
     @Override
@@ -251,7 +251,7 @@ final class StringCodec extends AbstractCodec<String> {
 
     static class NvarcharEncoded extends RpcEncoding.HintedEncoded {
 
-        private final int maxLength = TypeUtils.SHORT_VARTYPE_MAX_BYTES / 2;
+        private static final String FORMAL_TYPE = SqlServerType.NVARCHAR + "(" + (TypeUtils.SHORT_VARTYPE_MAX_BYTES / 2) + ")";
 
         NvarcharEncoded(TdsDataType dataType, ByteBuf value) {
             super(dataType, SqlServerType.NVARCHAR, value);
@@ -259,7 +259,21 @@ final class StringCodec extends AbstractCodec<String> {
 
         @Override
         public String getFormalType() {
-            return super.getFormalType() + "(" + this.maxLength + ")";
+            return FORMAL_TYPE;
+        }
+    }
+
+    static class VarcharEncoded extends RpcEncoding.HintedEncoded {
+
+        private static final String FORMAL_TYPE = SqlServerType.VARCHAR + "(" + TypeUtils.SHORT_VARTYPE_MAX_BYTES + ")";
+
+        VarcharEncoded(TdsDataType dataType, ByteBuf value) {
+            super(dataType, SqlServerType.NVARCHAR, value);
+        }
+
+        @Override
+        public String getFormalType() {
+            return FORMAL_TYPE;
         }
     }
 }
