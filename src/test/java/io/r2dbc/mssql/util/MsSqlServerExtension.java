@@ -16,16 +16,11 @@
 
 package io.r2dbc.mssql.util;
 
-import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.springframework.boot.jdbc.DataSourceBuilder;
-import org.springframework.jdbc.core.JdbcOperations;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.containers.MSSQLServerContainer;
-import reactor.util.annotation.Nullable;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -49,33 +44,16 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
 
     private final boolean useTestContainer = sqlServer instanceof TestContainer;
 
-    private HikariDataSource dataSource;
-
-    private JdbcOperations jdbcOperations;
-
     @Override
     public void beforeAll(ExtensionContext context) {
 
         if (this.useTestContainer) {
             this.container.start();
         }
-
-        this.dataSource = DataSourceBuilder.create()
-            .type(HikariDataSource.class)
-            .url(this.sqlServer.getJdbcUrl())
-            .username(this.container.getUsername())
-            .password(this.container.getPassword())
-            .build();
-
-        this.dataSource.setMaximumPoolSize(1);
-
-        this.jdbcOperations = new JdbcTemplate(this.dataSource);
     }
 
     @Override
     public void afterAll(ExtensionContext context) {
-
-        this.dataSource.close();
 
         if (this.useTestContainer) {
             this.container.stop();
@@ -84,11 +62,6 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
 
     public String getHost() {
         return this.sqlServer.getHost();
-    }
-
-    @Nullable
-    public JdbcOperations getJdbcOperations() {
-        return this.jdbcOperations;
     }
 
     public String getPassword() {
@@ -108,8 +81,6 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
      */
     interface DatabaseContainer {
 
-        String getJdbcUrl();
-
         String getHost();
 
         int getPort();
@@ -121,11 +92,6 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
     static class External implements DatabaseContainer {
 
         public static final External INSTANCE = new External();
-
-        @Override
-        public String getJdbcUrl() {
-            return String.format("jdbc:sqlserver://%s:%d", getHost(), getPort());
-        }
 
         @Override
         public String getHost() {
@@ -163,11 +129,6 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
 
         TestContainer(JdbcDatabaseContainer<?> container) {
             this.container = container;
-        }
-
-        @Override
-        public String getJdbcUrl() {
-            return this.container.getJdbcUrl();
         }
 
         @Override
