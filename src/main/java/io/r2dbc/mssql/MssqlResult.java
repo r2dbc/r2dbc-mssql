@@ -25,6 +25,7 @@ import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.NbcRowToken;
 import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.spi.R2dbcException;
 import io.r2dbc.spi.Result;
 import io.r2dbc.spi.Row;
 import io.r2dbc.spi.RowMetadata;
@@ -44,6 +45,8 @@ public final class MssqlResult implements Result {
 
     private static final Logger logger = LoggerFactory.getLogger(MssqlResult.class);
 
+    private final String sql;
+
     private final Codecs codecs;
 
     private final Flux<Message> messages;
@@ -52,8 +55,9 @@ public final class MssqlResult implements Result {
 
     private volatile Throwable throwable;
 
-    public MssqlResult(Codecs codecs, Flux<Message> messages) {
+    public MssqlResult(String sql, Codecs codecs, Flux<Message> messages) {
 
+        this.sql = sql;
         this.codecs = codecs;
         this.messages = messages;
     }
@@ -61,18 +65,20 @@ public final class MssqlResult implements Result {
     /**
      * Create a {@link MssqlResult}.
      *
+     * @param sql      the underlying SQL statement.
      * @param codecs   the codecs to use.
      * @param messages message stream.
      * @return {@link Result} object.
      */
-    static MssqlResult toResult(Codecs codecs, Flux<Message> messages) {
+    static MssqlResult toResult(String sql, Codecs codecs, Flux<Message> messages) {
 
+        Assert.requireNonNull(sql, "SQL must not be null");
         Assert.requireNonNull(codecs, "Codecs must not be null");
         Assert.requireNonNull(messages, "Messages must not be null");
 
         logger.debug("Creating new result");
 
-        return new MssqlResult(codecs, messages);
+        return new MssqlResult(sql, codecs, messages);
     }
 
     @Override
@@ -164,7 +170,7 @@ public final class MssqlResult implements Result {
 
             if (message instanceof ErrorToken) {
 
-                MssqlException mssqlException = MssqlException.create((ErrorToken) message);
+                R2dbcException mssqlException = ExceptionFactory.createException((ErrorToken) message, this.sql);
 
                 if (exception != null) {
                     exception.addSuppressed(mssqlException);

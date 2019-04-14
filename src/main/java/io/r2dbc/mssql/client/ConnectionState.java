@@ -80,7 +80,7 @@ public enum ConnectionState {
                 return true;
             }
 
-            throw new ProtocolException("Unsupported SQL server version: " + version.getVersion());
+            throw ProtocolException.unsupported("Unsupported SQL server version: " + version.getVersion());
         }
 
         @Override
@@ -128,7 +128,7 @@ public enum ConnectionState {
         @Override
         MessageDecoder decoder(Client client) {
             return (header, byteBuf) -> {
-                throw new ProtocolException("Nothing to decode during SSL negotiation");
+                throw ProtocolException.invalidTds("Nothing to decode during SSL negotiation");
             };
         }
     },

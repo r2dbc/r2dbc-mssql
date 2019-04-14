@@ -38,7 +38,7 @@ import java.util.regex.Pattern;
  * @author Hebert Coelho
  * @see MssqlConnection
  * @see MssqlResult
- * @see MssqlException
+ * @see ErrorDetails
  */
 public final class MssqlConnection implements Connection {
 
@@ -71,7 +71,7 @@ public final class MssqlConnection implements Connection {
 
             logger.debug("Beginning transaction from status [{}]", tx);
 
-            return QueryMessageFlow.exchange(this.client, sql).handle(MssqlException::handleErrorResponse);
+            return exchange(sql);
         });
     }
 
@@ -92,7 +92,7 @@ public final class MssqlConnection implements Connection {
 
             logger.debug("Committing transaction with status [{}]", tx);
 
-            return QueryMessageFlow.exchange(this.client, "IF @@TRANCOUNT > 0 COMMIT TRANSACTION").handle(MssqlException::handleErrorResponse);
+            return exchange("IF @@TRANCOUNT > 0 COMMIT TRANSACTION");
         });
     }
 
@@ -116,8 +116,7 @@ public final class MssqlConnection implements Connection {
 
             logger.debug("Creating savepoint for transaction with status [{}]", tx);
 
-            return QueryMessageFlow.exchange(this.client, String.format("IF @@TRANCOUNT = 0 BEGIN BEGIN TRANSACTION IF @@TRANCOUNT = 2 COMMIT TRANSACTION END SAVE TRANSACTION %s", name)) //
-                .handle(MssqlException::handleErrorResponse);
+            return exchange(String.format("IF @@TRANCOUNT = 0 BEGIN BEGIN TRANSACTION IF @@TRANCOUNT = 2 COMMIT TRANSACTION END SAVE TRANSACTION %s", name));
         });
     }
 
@@ -151,7 +150,7 @@ public final class MssqlConnection implements Connection {
 
             logger.debug("Rolling back transaction with status [{}]", tx);
 
-            return QueryMessageFlow.exchange(this.client, "IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION").handle(MssqlException::handleErrorResponse);
+            return exchange("IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION");
         });
     }
 
@@ -170,7 +169,7 @@ public final class MssqlConnection implements Connection {
 
             logger.debug("Rolling back transaction to savepoint [{}] with status [{}]", name, tx);
 
-            return QueryMessageFlow.exchange(this.client, String.format("ROLLBACK TRANSACTION %s", name)).handle(MssqlException::handleErrorResponse);
+            return exchange(String.format("ROLLBACK TRANSACTION %s", name));
         });
     }
 
@@ -194,9 +193,13 @@ public final class MssqlConnection implements Connection {
     public Mono<Void> setTransactionIsolationLevel(MssqlIsolationLevel isolationLevel) {
         Assert.requireNonNull(isolationLevel, "IsolationLevel must not be null");
 
-        return QueryMessageFlow
-            .exchange(this.client, "SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql())
-            .handle(MssqlException::handleErrorResponse).then();
+        return exchange("SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql());
+    }
+
+    private Mono<Void> exchange(String sql) {
+
+        ExceptionFactory factory = ExceptionFactory.withSql(sql);
+        return QueryMessageFlow.exchange(this.client, sql).handle(factory::handleErrorResponse).then();
     }
 
     Client getClient() {

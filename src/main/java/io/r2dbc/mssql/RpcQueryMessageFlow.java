@@ -113,6 +113,7 @@ final class RpcQueryMessageFlow {
 
         Flux<Message> exchange = client.exchange(outbound.startWith(spExecuteSql(query, binding, client.getRequiredCollation(), client.getTransactionDescriptor())));
 
+        ExceptionFactory factory = ExceptionFactory.withSql(query);
         OnCursorComplete cursorComplete = new OnCursorComplete(inbound);
 
         Flux<Message> messages = firstMessages //
@@ -127,7 +128,7 @@ final class RpcQueryMessageFlow {
 
                 state.update(it);
             })
-            .handle(MssqlException::handleErrorResponse)
+            .handle(factory::handleErrorResponse)
             .<Message>handle((message, sink) -> {
                 handleMessage(client, 0, requests, state, message, sink, cursorComplete);
             })
@@ -161,6 +162,7 @@ final class RpcQueryMessageFlow {
 
         Flux<Message> exchange = client.exchange(outbound.startWith(spCursorOpen(query, client.getRequiredCollation(), client.getTransactionDescriptor())));
 
+        ExceptionFactory factory = ExceptionFactory.withSql(query);
         OnCursorComplete cursorComplete = new OnCursorComplete(inbound);
 
         Flux<Message> messages = firstMessages //
@@ -181,7 +183,7 @@ final class RpcQueryMessageFlow {
 
                 state.update(it);
             })
-            .handle(MssqlException::handleErrorResponse)
+            .handle(factory::handleErrorResponse)
             .<Message>handle((message, sink) -> {
                 handleMessage(client, fetchSize, requests, state, message, sink, cursorComplete);
             })
@@ -230,6 +232,7 @@ final class RpcQueryMessageFlow {
 
         Flux<Message> exchange = client.exchange(outbound.startWith(rpcRequest));
 
+        ExceptionFactory factory = ExceptionFactory.withSql(query);
         OnCursorComplete cursorComplete = new OnCursorComplete(inbound);
 
         Flux<Message> messages = firstMessages //
@@ -261,7 +264,7 @@ final class RpcQueryMessageFlow {
 
                 state.update(it);
             })
-            .handle(MssqlException::handleErrorResponse)
+            .handle(factory::handleErrorResponse)
             .<Message>handle((message, sink) -> {
                 handleMessage(client, fetchSize, requests, state, message, sink, cursorComplete);
             })

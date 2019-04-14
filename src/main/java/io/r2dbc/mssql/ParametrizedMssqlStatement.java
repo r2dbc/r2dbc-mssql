@@ -150,7 +150,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
                     });
 
                 }).windowUntil(DoneInProcToken.class::isInstance) //
-                .map(it -> MssqlResult.toResult(this.codecs, it));
+                .map(it -> MssqlResult.toResult(this.parsedQuery.getSql(), this.codecs, it));
         }).doOnCancel(() -> clearBindings(iterator))
             .doOnError(e -> clearBindings(iterator));
     }

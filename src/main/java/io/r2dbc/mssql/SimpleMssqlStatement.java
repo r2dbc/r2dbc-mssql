@@ -138,7 +138,7 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
         }
 
         return exchange.windowUntil(windowUntil) //
-            .map(it -> MssqlResult.toResult(this.codecs, it));
+            .map(it -> MssqlResult.toResult(this.sql, this.codecs, it));
     }
 
     @Override

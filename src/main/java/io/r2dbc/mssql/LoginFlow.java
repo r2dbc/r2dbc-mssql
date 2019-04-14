@@ -105,12 +105,12 @@ final class LoginFlow {
                     }
 
                     if (message instanceof ErrorToken) {
-                        MssqlException.handleErrorResponse(message, sink);
+                        sink.error(ExceptionFactory.createException((ErrorToken) message, ""));
                         client.close().subscribe();
                         return;
                     }
 
-                    throw new ProtocolException(String.format("Unexpected login flow message: %s", message));
+                    throw ProtocolException.unsupported(String.format("Unexpected login flow message: %s", message));
                 } catch (Exception e) {
                     requests.error(e);
                     sink.error(e);
@@ -143,6 +143,6 @@ final class LoginFlow {
             return TDSVersion.VER_YUKON;
         }
 
-        throw new ProtocolException("Unsupported server version: " + serverVersion);
+        throw ProtocolException.unsupported("Unsupported server version: " + serverVersion);
     }
 }

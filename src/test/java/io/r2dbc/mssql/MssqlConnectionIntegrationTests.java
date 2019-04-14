@@ -18,6 +18,7 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.util.IntegrationTestSupport;
 import io.r2dbc.spi.ColumnMetadata;
+import io.r2dbc.spi.R2dbcPermissionDeniedException;
 import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -69,7 +70,7 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
 
         connectionFactory.create()
             .as(StepVerifier::create)
-            .expectError(MssqlException.class)
+            .expectError(R2dbcPermissionDeniedException.class)
             .verify();
     }
 

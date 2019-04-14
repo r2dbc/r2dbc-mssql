@@ -134,7 +134,7 @@ public final class ReactorNettyClient implements Client {
                 if (this.state.compareAndSet(connectionState, nextState)) {
                     this.decodeFunction.set(nextState.decoder(this));
                 } else {
-                    sink.error(new ProtocolException(String.format("Cannot advance state from [%s]", connectionState)));
+                    sink.error(ProtocolException.invalidTds(String.format("Cannot advance state from [%s]", connectionState)));
                 }
             }
 
@@ -184,7 +184,7 @@ public final class ReactorNettyClient implements Client {
                     return Mono.just((Message) it);
                 }
 
-                return Mono.error(new ProtocolException(String.format("Unexpected protocol message: [%s]", it)));
+                return Mono.error(ProtocolException.unsupported(String.format("Unexpected protocol message: [%s]", it)));
             }) //
             .as(it -> {
                 if (logger.isDebugEnabled()) {

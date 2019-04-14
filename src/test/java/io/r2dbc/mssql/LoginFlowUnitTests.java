@@ -20,6 +20,7 @@ import io.r2dbc.mssql.client.TestClient;
 import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.Prelogin;
+import io.r2dbc.spi.R2dbcPermissionDeniedException;
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
 
@@ -78,7 +79,7 @@ class LoginFlowUnitTests {
 
         TestClient client = TestClient.builder()
             .assertNextRequestWith(actual -> assertThat(actual).isInstanceOf(Prelogin.class))
-            .thenRespond(new ErrorToken(0, 0, (byte) 0x00, (byte) 0x25, "some error", "", "", 0))
+            .thenRespond(new ErrorToken(0, 0, (byte) 0x00, (byte) 0x0E, "some error", "", "", 0))
             .expectClose()
             .build();
 
@@ -86,7 +87,7 @@ class LoginFlowUnitTests {
 
         LoginFlow.exchange(client, login)
             .as(StepVerifier::create)
-            .expectError(MssqlException.class)
+            .expectError(R2dbcPermissionDeniedException.class)
             .verify();
     }
 }

@@ -104,7 +104,7 @@ public final class Collation {
         try {
             return new Collation(lcid, sortId);
         } catch (UnsupportedEncodingException e) {
-            throw new ProtocolException(e, ProtocolException.DRIVER_ERROR_UNSUPPORTED_CONFIG);
+            throw ProtocolException.unsupported(e);
         }
     }
 
@@ -124,7 +124,7 @@ public final class Collation {
         try {
             return new Collation(info, sortId);
         } catch (UnsupportedEncodingException e) {
-            throw new ProtocolException(e, ProtocolException.DRIVER_ERROR_UNSUPPORTED_CONFIG);
+            throw ProtocolException.unsupported(e);
         }
     }
 

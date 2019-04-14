@@ -44,7 +44,7 @@ class MssqlResultUnitTests {
         DoneToken done = DoneToken.create(0);
         Iterator<Message> iterator = Stream.of(error, done).map(Message.class::cast).iterator();
 
-        MssqlResult result = MssqlResult.toResult(new DefaultCodecs(), Flux.fromIterable(() -> iterator));
+        MssqlResult result = MssqlResult.toResult("", new DefaultCodecs(), Flux.fromIterable(() -> iterator));
 
         result.getRowsUpdated()
             .as(StepVerifier::create)

@@ -16,7 +16,7 @@
 
 package io.r2dbc.mssql.message.tds;
 
-import io.r2dbc.mssql.AbstractMssqlException;
+import io.r2dbc.spi.R2dbcNonTransientResourceException;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -26,7 +26,25 @@ import reactor.util.annotation.Nullable;
  *
  * @author Mark Paluch
  */
-public final class ProtocolException extends AbstractMssqlException {
+public final class ProtocolException extends R2dbcNonTransientResourceException {
+
+    public static final int DRIVER_ERROR_NONE = 0;
+
+    public static final int DRIVER_ERROR_FROM_DATABASE = 2;
+
+    public static final int DRIVER_ERROR_IO_FAILED = 3;
+
+    public static final int DRIVER_ERROR_INVALID_TDS = 4;
+
+    public static final int DRIVER_ERROR_SSL_FAILED = 5;
+
+    public static final int DRIVER_ERROR_UNSUPPORTED_CONFIG = 6;
+
+    public static final int DRIVER_ERROR_INTERMITTENT_TLS_FAILED = 7;
+
+    public static final int ERROR_SOCKET_TIMEOUT = 8;
+
+    public static final int ERROR_QUERY_TIMEOUT = 9;
 
     /**
      * Creates a new exception.
@@ -44,7 +62,7 @@ public final class ProtocolException extends AbstractMssqlException {
      * @param driverErrorCode the driver error code.
      */
     public ProtocolException(@Nullable String reason, int driverErrorCode) {
-        super(reason, null, DRIVER_ERROR_NONE);
+        super(reason, null, driverErrorCode);
     }
 
     /**
@@ -60,12 +78,14 @@ public final class ProtocolException extends AbstractMssqlException {
     /**
      * Creates a new exception.
      *
+     * @param reason          the reason for the error. Set as the exception's message and retrieved with {@link #getMessage()}.
      * @param cause           the cause
      * @param driverErrorCode the driver error code.
      */
-    public ProtocolException(@Nullable Throwable cause, int driverErrorCode) {
-        super(null, null, driverErrorCode, cause);
+    public ProtocolException(@Nullable String reason, @Nullable Throwable cause, int driverErrorCode) {
+        super(reason, null, driverErrorCode, cause);
     }
+
 
     /**
      * Create a new {@link ProtocolException} for invalid TDS.
@@ -85,5 +105,14 @@ public final class ProtocolException extends AbstractMssqlException {
      */
     public static ProtocolException unsupported(String reason) {
         return new ProtocolException(reason, DRIVER_ERROR_UNSUPPORTED_CONFIG);
+    }
+
+    /**
+     * Create a new {@link ProtocolException} for an unsupported configuration.
+     *
+     * @return the {@link ProtocolException}
+     */
+    public static ProtocolException unsupported(Throwable cause) {
+        return new ProtocolException(null, cause, DRIVER_ERROR_UNSUPPORTED_CONFIG);
     }
 }
