@@ -72,11 +72,12 @@ class GeneratedValuesUnitTests {
 
         ReturnStatus status = ReturnStatus.create(2);
         DoneToken count = DoneToken.count(10);
+        ReturnStatus finalSegment = ReturnStatus.create(2);
 
-        Flux.just(status, count, SslState.CONNECTION, DoneToken.create(1)) //
+        Flux.just(status, count, SslState.CONNECTION, DoneToken.create(1), finalSegment) //
             .transform(GeneratedValues::reduceToSingleCountDoneToken) //
             .as(StepVerifier::create) //
-            .expectNext(status, SslState.CONNECTION, count) //
+            .expectNext(status, SslState.CONNECTION, count, finalSegment) //
             .verifyComplete();
     }
 }

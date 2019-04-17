@@ -64,7 +64,6 @@ final class GeneratedValues {
 
                         rerouteCountFrame.set(false);
                         sink.next(countToken.get());
-                        sink.complete();
                         return;
                     }
                 }
