@@ -20,6 +20,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LogLevel;
@@ -171,6 +173,21 @@ public final class ReactorNettyClient implements Client {
         this.envChangeListeners.add(new TransactionListener());
         this.envChangeListeners.add(new CollationListener());
 
+        connection.addHandlerFirst(new ChannelInboundHandlerAdapter() {
+
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+
+                // Server has closed the connection without us wanting to close it
+                // Typically happens if we send data asynchronously (i.e. previous command didn't complete).
+                if (isClosed.compareAndSet(false, true)) {
+                    logger.warn("Connection has been closed by peer");
+                }
+
+                super.channelInactive(ctx);
+            }
+        });
+
         connection.inbound().receiveObject() //
             .concatMap(it -> {
 
@@ -205,17 +222,14 @@ public final class ReactorNettyClient implements Client {
                 this.featureAckChange.accept(m);
             }) //
             .doOnError(ProtocolException.class, e -> {
+                logger.warn("Error: {}", e.getMessage(), e);
                 this.isClosed.set(true);
                 connection.channel().close();
             })
             .subscribe(
                 responses::next, responses::error, responses::complete);
 
-        this.requestProcessor.doOnError(message -> {
-            logger.warn("Error: {}", message.getMessage(), message);
-            this.isClosed.set(true);
-            connection.channel().close();
-        }).as(it -> {
+        this.requestProcessor.as(it -> {
             if (logger.isDebugEnabled()) {
                 return it.doOnNext(message -> logger.debug("Request: {}", message));
             }
@@ -223,6 +237,11 @@ public final class ReactorNettyClient implements Client {
         })
             .concatMap(
                 message -> connection.outbound().sendObject(message.encode(connection.outbound().alloc())))
+            .doOnError(throwable -> {
+                logger.warn("Error: {}", throwable.getMessage(), throwable);
+                this.isClosed.set(true);
+                connection.channel().close();
+            })
             .subscribe();
     }
 
@@ -268,6 +287,8 @@ public final class ReactorNettyClient implements Client {
         Assert.requireNonNull(connectTimeout, "connect timeout must not be null");
         Assert.requireNonNull(host, "host must not be null");
 
+        logger.debug("connect()");
+
         PacketIdProvider packetIdProvider = PacketIdProvider.atomic();
 
         TdsEncoder tdsEncoder = new TdsEncoder(packetIdProvider);
@@ -280,16 +301,15 @@ public final class ReactorNettyClient implements Client {
             .doOnNext(it -> {
 
                 ChannelPipeline pipeline = it.channel().pipeline();
-                InternalLogger logger = InternalLoggerFactory.getInstance(ReactorNettyClient.class);
-
                 pipeline.addFirst(tdsEncoder.getClass().getName(), tdsEncoder);
 
                 TdsSslHandler handler = new TdsSslHandler(packetIdProvider);
                 pipeline.addAfter(tdsEncoder.getClass().getName(), handler.getClass().getName(), handler);
 
-                if (logger.isDebugEnabled()) {
+                InternalLogger logger = InternalLoggerFactory.getInstance(ReactorNettyClient.class);
+                if (logger.isTraceEnabled()) {
                     pipeline.addFirst(LoggingHandler.class.getSimpleName(),
-                        new LoggingHandler(ReactorNettyClient.class, LogLevel.DEBUG));
+                        new LoggingHandler(ReactorNettyClient.class, LogLevel.TRACE));
                 }
             });
 
@@ -298,7 +318,12 @@ public final class ReactorNettyClient implements Client {
 
     @Override
     public Mono<Void> close() {
+
+        logger.debug("close()");
+
         return Mono.defer(() -> {
+
+            logger.debug("close(subscribed)");
             Connection connection = this.connection.getAndSet(null);
 
             if (connection == null) {
@@ -307,16 +332,17 @@ public final class ReactorNettyClient implements Client {
 
             return Mono.create(it -> {
 
-                isClosed.set(true);
+                if (isClosed.compareAndSet(false, true)) {
 
-                connection.channel().disconnect().addListener((ChannelFutureListener) future ->
-                {
-                    if (future.isSuccess()) {
-                        it.success();
-                    } else {
-                        it.error(future.cause());
-                    }
-                });
+                    connection.channel().disconnect().addListener((ChannelFutureListener) future ->
+                    {
+                        if (future.isSuccess()) {
+                            it.success();
+                        } else {
+                            it.error(future.cause());
+                        }
+                    });
+                }
             });
         });
     }
@@ -326,7 +352,12 @@ public final class ReactorNettyClient implements Client {
 
         Assert.requireNonNull(requests, "Requests must not be null");
 
+        logger.debug("exchange()");
+
         return Flux.defer(() -> {
+
+            logger.debug("exchange(subscribed)");
+
             if (this.isClosed.get()) {
                 return Flux.error(new IllegalStateException("Cannot exchange messages because the connection is closed"));
             }

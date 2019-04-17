@@ -19,11 +19,11 @@
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%date{HH:mm:ss.SSS} %-12thread %-20logger %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd} | %d{HH:mm:ss.SSS} | %-20.20thread | %5p | %logger{25} | %m%n</pattern>
         </encoder>
     </appender>
 
-    <logger name="io.r2dbc.mssql"      level="INFO"/>
+    <logger name="io.r2dbc.mssql" level="TRACE"/>
     <logger name="org.testcontainers"  level="INFO"/>
     <logger name="reactor.ipc.netty"   level="WARN"/>
     <logger name="stream"              level="INFO"/>
