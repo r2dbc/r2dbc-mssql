@@ -141,11 +141,11 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
     }
 
     /**
-     * Returns whether a PLP stream can be decoded.
+     * Returns whether a PLP stream can be decoded where can be decoded means that we have received at least the PLP length header.
      *
-     * @param buffer
-     * @param column
-     * @return
+     * @param buffer data buffer.
+     * @param column the related column.
+     * @return {@literal true} if the PLP sream can be decoded.
      * @see LengthStrategy#PARTLENTYPE
      */
     private static boolean canDecodePlp(ByteBuf buffer, Column column) {
@@ -212,8 +212,8 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
     /**
      * Decode a scalar length value. Returns {@code null} if {@link Length#isNull()}.
      *
-     * @param buffer
-     * @param column
+     * @param buffer the data buffer.
+     * @param column the column.
      * @return
      */
     @Nullable
@@ -234,10 +234,10 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
     }
 
     /**
-     * Decode a PLP stream value. Returns {@code null} if {@link Length#isNull()}.
+     * Decode a PLP stream value. Returns {@code null} if {@link Length#isNull()}. The decoded value contains an entire PLP token stream with chunk headers.
      *
-     * @param buffer
-     * @param column
+     * @param buffer the data buffer.
+     * @param column the column.
      * @return
      */
     @Nullable
@@ -263,6 +263,10 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
                 break;
             }
 
+            length = buffer.alloc().buffer(4);
+            chunkLength.encode(length, column.getType());
+
+            plpData.addComponent(true, length);
             plpData.addComponent(true, buffer.readRetainedSlice(chunkLength.getLength()));
         }
 

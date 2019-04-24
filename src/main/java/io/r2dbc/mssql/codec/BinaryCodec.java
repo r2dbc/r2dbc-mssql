@@ -154,17 +154,27 @@ public class BinaryCodec implements Codec<Object> {
 
     Object doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends Object> valueType) {
 
-        if (valueType.isAssignableFrom(byte[].class)) {
 
-            byte[] bytes = new byte[length.getLength()];
+        byte[] bytes = new byte[length.getLength()];
+
+        if (type.getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
+
+            int index = 0;
+            while (buffer.isReadable()) {
+
+                Length chunkLength = Length.decode(buffer, type);
+                buffer.readBytes(bytes, index, chunkLength.getLength());
+                index += chunkLength.getLength();
+            }
+        } else {
             buffer.readBytes(bytes);
+        }
+
+        if (valueType.isAssignableFrom(byte[].class)) {
             return bytes;
         }
 
-        ByteBuffer bytes = ByteBuffer.allocate(length.getLength());
-        buffer.readBytes(bytes);
-        bytes.flip();
-        return bytes;
+        return ByteBuffer.wrap(bytes);
     }
 
     static class VarbinaryEncoded extends RpcEncoding.HintedEncoded {

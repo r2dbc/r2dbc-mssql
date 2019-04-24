@@ -111,7 +111,7 @@ class RowTokenUnitTests {
         RowToken row = RowToken.decode(rowData, columns.getColumns());
 
         assertThat(row.getColumnData(0).readableBytes()).isEqualTo(5);
-        assertThat(row.getColumnData(1).readableBytes()).isEqualTo(10008);
+        assertThat(row.getColumnData(1).readableBytes()).isEqualTo(10016);
     }
 
     @Test

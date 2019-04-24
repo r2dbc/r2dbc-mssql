@@ -119,6 +119,7 @@ class StringCodecUnitTests {
 
         ByteBuf data = TestByteBufAllocator.TEST.buffer();
         Encode.uLongLong(data, 6);
+        Encode.asInt(data, 6);
         data.writeCharSequence("foobar", ServerCharset.CP1252.charset());
 
         String value = StringCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), String.class);

@@ -134,6 +134,21 @@ final class StringCodec extends AbstractCodec<String> {
 
         Charset charset = typeInformation.getCharset();
 
+        if (typeInformation.getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
+
+            StringBuilder result = new StringBuilder();
+
+            while (buffer.isReadable()) {
+
+                Length chunkLength = Length.decode(buffer, typeInformation);
+
+                result.append(buffer.toString(buffer.readerIndex(), chunkLength.getLength(), charset));
+                buffer.skipBytes(chunkLength.getLength());
+            }
+
+            return result.toString();
+        }
+
         String value = buffer.toString(buffer.readerIndex(), length.getLength(), charset);
         buffer.skipBytes(length.getLength());
 

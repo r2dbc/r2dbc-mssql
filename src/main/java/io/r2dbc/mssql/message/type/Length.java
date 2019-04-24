@@ -225,7 +225,6 @@ public final class Length {
                         return true;
                     }
 
-
                     // skip(24) is to skip the textptr and timestamp fields
                     return buffer.readableBytes() >= 24 + /* int */ 4;
                 }
@@ -246,8 +245,7 @@ public final class Length {
         switch (type.getLengthStrategy()) {
 
             case PARTLENTYPE:
-
-                buffer.writeLong(getLength());
+                Encode.asInt(buffer, getLength());
                 return;
 
             case FIXEDLENTYPE:
