@@ -18,6 +18,8 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.util.IntegrationTestSupport;
+import io.r2dbc.spi.Blob;
+import io.r2dbc.spi.Clob;
 import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -34,6 +36,7 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -145,24 +148,35 @@ class CodecIntegrationTests extends IntegrationTestSupport {
 
     @Test
     void shouldEncodeStringAsVarcharMax() {
-        testType(connection, "VARCHAR(MAX)", "Hello, World!");
+        testType(connection, "VARCHAR(MAX)", "Hello, World!", String.class, actual -> {
+            assertThat(actual).isInstanceOf(Clob.class);
+            Mono.from(((Clob) actual).discard()).subscribe();
+        });
     }
 
     @Test
     void shouldEncodeStringAsNVarcharMax() {
-        testType(connection, "NVARCHAR(MAX)", "Hello, World! äöü");
+        testType(connection, "NVARCHAR(MAX)", "Hello, World! äöü", String.class, actual -> {
+            assertThat(actual).isInstanceOf(Clob.class);
+            Mono.from(((Clob) actual).discard()).subscribe();
+        });
     }
 
     @Test
     void shouldEncodeStringAsText() {
-        testType(connection, "TEXT", "Hello, World!");
+        testType(connection, "TEXT", "Hello, World!", String.class, actual -> {
+            assertThat(actual).isInstanceOf(Clob.class);
+            Mono.from(((Clob) actual).discard()).subscribe();
+        });
     }
 
     @Test
     void shouldEncodeStringAsNText() {
-        testType(connection, "NTEXT", "Hello, World! äöü");
+        testType(connection, "NTEXT", "Hello, World! äöü", String.class, actual -> {
+            assertThat(actual).isInstanceOf(Clob.class);
+            Mono.from(((Clob) actual).discard()).subscribe();
+        });
     }
-
 
     @Test
     void shouldEncodeByteArrayAsBinary() {
@@ -176,12 +190,12 @@ class CodecIntegrationTests extends IntegrationTestSupport {
 
     @Test
     void shouldEncodeByteArrayAsVarBinaryMax() {
-        testType(connection, "VARBINARY(MAX)", "foobarbaz".getBytes());
+        testType(connection, "VARBINARY(MAX)", "foobarbaz".getBytes(), byte[].class, actual -> assertThat(actual).isInstanceOf(Blob.class));
     }
 
     @Test
     void shouldEncodeByteArrayAsImage() {
-        testType(connection, "IMAGE", "foobarbaz".getBytes());
+        testType(connection, "IMAGE", "foobarbaz".getBytes(), byte[].class, actual -> assertThat(actual).isInstanceOf(Blob.class));
     }
 
     @Test
@@ -196,12 +210,18 @@ class CodecIntegrationTests extends IntegrationTestSupport {
 
     @Test
     void shouldEncodeByteBufferAsVarBinaryMax() {
-        testType(connection, "VARBINARY(MAX)", ByteBuffer.wrap("foobarbaz".getBytes()), ByteBuffer.class, "foobarbaz".getBytes());
+        testType(connection, "VARBINARY(MAX)", ByteBuffer.wrap("foobarbaz".getBytes()), ByteBuffer.class, actual -> {
+            assertThat(actual).isInstanceOf(Blob.class);
+            Mono.from(((Blob) actual).discard()).subscribe();
+        });
     }
 
     @Test
     void shouldEncodeByteBufferAsImage() {
-        testType(connection, "IMAGE", ByteBuffer.wrap("foobarbaz".getBytes()), ByteBuffer.class, "foobarbaz".getBytes());
+        testType(connection, "IMAGE", ByteBuffer.wrap("foobarbaz".getBytes()), ByteBuffer.class, actual -> {
+            assertThat(actual).isInstanceOf(Blob.class);
+            Mono.from(((Blob) actual).discard()).subscribe();
+        });
     }
 
     private void testType(MssqlConnection connection, String columnType, Object value) {
@@ -209,6 +229,10 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     }
 
     private void testType(MssqlConnection connection, String columnType, Object value, Class<?> valueClass, Object expectedGetObjectValue) {
+        testType(connection, columnType, value, valueClass, actual -> assertThat(actual).isEqualTo(expectedGetObjectValue));
+    }
+
+    private void testType(MssqlConnection connection, String columnType, Object value, Class<?> valueClass, Consumer<Object> nativeValueConsumer) {
 
         createTable(connection, columnType);
 
@@ -235,7 +259,7 @@ class CodecIntegrationTests extends IntegrationTestSupport {
             .execute()
             .flatMap(it -> it.map((row, rowMetadata) -> row.get("my_col")))
             .as(StepVerifier::create)
-            .consumeNextWith(actual -> assertThat(actual).isEqualTo(expectedGetObjectValue))
+            .consumeNextWith(nativeValueConsumer)
             .verifyComplete();
 
         Flux.from(connection.createStatement("UPDATE codec_test SET my_col = @P0")

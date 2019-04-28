@@ -17,6 +17,7 @@
 package io.r2dbc.mssql.client;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
@@ -50,7 +51,6 @@ import io.r2dbc.mssql.util.Assert;
  * @see TdsPacket
  * @see HeaderOptions
  * @see TdsFragment
- * TODO: Prevent buffer underrun if FirstTdsPacket contains less bytes than the negotiated packet size.
  */
 public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements EnvironmentChangeListener {
 
@@ -59,7 +59,7 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
      */
     public static final int INITIAL_PACKET_SIZE = 8000;
 
-    private ByteBuf lastChunkRemainder;
+    private CompositeByteBuf lastChunkRemainder;
 
     private final PacketIdProvider packetIdProvider;
 
@@ -196,6 +196,10 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
         this.packetSize = packetSize;
     }
 
+    public int getPacketSize() {
+        return this.packetSize;
+    }
+
     private static HeaderOptions getLastHeader(HeaderOptions headerOptions) {
         return HeaderOptions.create(headerOptions.getType(), headerOptions.getStatus().and(Status.StatusBit.EOM));
     }
@@ -218,25 +222,38 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
 
     private void writeSingleMessage(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf body, HeaderOptions headerOptions, boolean lastLogicalPacket) {
 
-        HeaderOptions optionsToUse = lastLogicalPacket ? getLastHeader(headerOptions) : headerOptions;
+        if (lastLogicalPacket || getBytesToWrite(body.readableBytes()) == getPacketSize()) {
 
-        int messageLength = getBytesToWrite(body.readableBytes());
-        ByteBuf buffer = ctx.alloc().buffer(messageLength);
-        Header header = Header.create(optionsToUse, messageLength, this.packetIdProvider);
+            HeaderOptions optionsToUse = lastLogicalPacket ? getLastHeader(headerOptions) : headerOptions;
 
-        header.encode(buffer);
+            int messageLength = getBytesToWrite(body.readableBytes());
+            ByteBuf buffer = ctx.alloc().buffer(messageLength);
+            Header header = Header.create(optionsToUse, messageLength, this.packetIdProvider);
 
-        if (this.lastChunkRemainder != null) {
+            header.encode(buffer);
 
-            buffer.writeBytes(this.lastChunkRemainder);
+            if (this.lastChunkRemainder != null) {
 
-            this.lastChunkRemainder.release();
-            this.lastChunkRemainder = null;
+                buffer.writeBytes(this.lastChunkRemainder);
+
+                this.lastChunkRemainder.release();
+                this.lastChunkRemainder = null;
+            }
+
+            buffer.writeBytes(body);
+
+            ctx.write(buffer, promise);
+        } else {
+
+            // Prevent partial packets/buffer underrun if not the last packet.
+            if (this.lastChunkRemainder == null) {
+                this.lastChunkRemainder = body.alloc().compositeBuffer();
+            }
+
+            this.lastChunkRemainder.addComponent(true, body.retain());
+
+            ctx.write(Unpooled.EMPTY_BUFFER, promise);
         }
-
-        buffer.writeBytes(body);
-
-        ctx.write(buffer, promise);
     }
 
     private void writeChunkedMessage(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf body, HeaderOptions headerOptions, boolean lastLogicalPacket) {
@@ -266,7 +283,8 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
                 if (!lastLogicalPacket && !requiresChunking(body.readableBytes())) {
 
                     // Prevent partial packets/buffer underrun if not the last packet.
-                    this.lastChunkRemainder = body.retain();
+                    this.lastChunkRemainder = body.alloc().compositeBuffer();
+                    this.lastChunkRemainder.addComponent(true, body.retain());
                     break;
                 }
 

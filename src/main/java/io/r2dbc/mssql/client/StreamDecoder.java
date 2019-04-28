@@ -78,6 +78,8 @@ final class StreamDecoder {
 
             try {
 
+
+                // TODO: Large chunked messages (e.g.70k) reads chunk size of first header and does not de-chunk remainder
                 Header header = state.getRequiredHeader();
 
                 if (!state.canReadChunk()) {

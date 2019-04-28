@@ -55,7 +55,6 @@ import reactor.netty.tcp.TcpClient;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -99,9 +98,9 @@ public final class ReactorNettyClient implements Client {
         }
     };
 
-    private final Consumer<Message> handleInfoToken = handleExact(InfoToken.class, infoTokenConsumer::accept);
+    private final Consumer<Message> handleInfoToken = handleExact(InfoToken.class, this.infoTokenConsumer::accept);
 
-    private final Consumer<Message> handleErrorToken = handleExact(ErrorToken.class, infoTokenConsumer::accept);
+    private final Consumer<Message> handleErrorToken = handleExact(ErrorToken.class, this.infoTokenConsumer::accept);
 
     private final Consumer<Message> handleEnvChange = handleExact(EnvChangeToken.class, (token) -> {
 
@@ -155,12 +154,14 @@ public final class ReactorNettyClient implements Client {
 
     private final AtomicReference<MessageDecoder> decodeFunction = new AtomicReference<>(ConnectionState.PRELOGIN.decoder(this));
 
+    private final TdsEncoder tdsEncoder;
+
     /**
      * Creates a new frame processor connected to a given TCP connection.
      *
      * @param connection the TCP connection
      */
-    private ReactorNettyClient(Connection connection, List<EnvironmentChangeListener> envChangeListeners) {
+    private ReactorNettyClient(Connection connection, TdsEncoder tdsEncoder) {
         Assert.requireNonNull(connection, "Connection must not be null");
 
         FluxSink<Message> responses = this.responseProcessor.sink();
@@ -169,9 +170,11 @@ public final class ReactorNettyClient implements Client {
 
         this.byteBufAllocator.set(connection.outbound().alloc());
         this.connection.set(connection);
-        this.envChangeListeners.addAll(envChangeListeners);
+        this.envChangeListeners.add(tdsEncoder);
         this.envChangeListeners.add(new TransactionListener());
         this.envChangeListeners.add(new CollationListener());
+
+        this.tdsEncoder = tdsEncoder;
 
         connection.addHandlerFirst(new ChannelInboundHandlerAdapter() {
 
@@ -180,7 +183,7 @@ public final class ReactorNettyClient implements Client {
 
                 // Server has closed the connection without us wanting to close it
                 // Typically happens if we send data asynchronously (i.e. previous command didn't complete).
-                if (isClosed.compareAndSet(false, true)) {
+                if (ReactorNettyClient.this.isClosed.compareAndSet(false, true)) {
                     logger.warn("Connection has been closed by peer");
                 }
 
@@ -211,7 +214,7 @@ public final class ReactorNettyClient implements Client {
             })
             .as(it -> {
                 if (logger.isDebugEnabled()) {
-                    return it.doOnNext(handleInfoToken).doOnNext(handleErrorToken);
+                    return it.doOnNext(this.handleInfoToken).doOnNext(this.handleErrorToken);
                 }
                 return it;
             })
@@ -236,7 +239,7 @@ public final class ReactorNettyClient implements Client {
             return it;
         })
             .concatMap(
-                message -> connection.outbound().sendObject(message.encode(connection.outbound().alloc())))
+                message -> connection.outbound().sendObject(message.encode(connection.outbound().alloc(), this.tdsEncoder.getPacketSize())))
             .doOnError(throwable -> {
                 logger.warn("Error: {}", throwable.getMessage(), throwable);
                 this.isClosed.set(true);
@@ -313,7 +316,7 @@ public final class ReactorNettyClient implements Client {
                 }
             });
 
-        return connection.map(it -> new ReactorNettyClient(it, Collections.singletonList(tdsEncoder)));
+        return connection.map(it -> new ReactorNettyClient(it, tdsEncoder));
     }
 
     @Override
@@ -332,7 +335,7 @@ public final class ReactorNettyClient implements Client {
 
             return Mono.create(it -> {
 
-                if (isClosed.compareAndSet(false, true)) {
+                if (this.isClosed.compareAndSet(false, true)) {
 
                     connection.channel().disconnect().addListener((ChannelFutureListener) future ->
                     {
@@ -464,8 +467,8 @@ public final class ReactorNettyClient implements Client {
         }
 
         private void updateStatus(TransactionStatus status, TransactionDescriptor descriptor) {
-            transactionStatus.set(status);
-            transactionDescriptor.set(descriptor);
+            ReactorNettyClient.this.transactionStatus.set(status);
+            ReactorNettyClient.this.transactionDescriptor.set(descriptor);
         }
     }
 
@@ -477,7 +480,7 @@ public final class ReactorNettyClient implements Client {
             if (event.getToken().getChangeType() == EnvChangeToken.EnvChangeType.SQLCollation) {
 
                 Collation collation = Collation.decode(Unpooled.wrappedBuffer(event.getToken().getNewValue()));
-                databaseCollation.set(Optional.of(collation));
+                ReactorNettyClient.this.databaseCollation.set(Optional.of(collation));
             }
         }
     }

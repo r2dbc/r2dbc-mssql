@@ -199,7 +199,7 @@ public final class RpcEncoding {
      * @param scale      type scale.
      * @return the encoded {@code null} value.
      */
-    public static <T> Encoded encodeTemporalNull(ByteBufAllocator allocator, SqlServerType serverType, int scale) {
+    public static Encoded encodeTemporalNull(ByteBufAllocator allocator, SqlServerType serverType, int scale) {
 
         Assert.notNull(serverType.getNullableType(), "Server type does not declare a nullable type");
         ByteBuf buffer = allocator.buffer(1);

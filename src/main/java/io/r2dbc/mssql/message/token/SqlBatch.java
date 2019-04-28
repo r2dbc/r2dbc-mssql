@@ -79,7 +79,7 @@ public final class SqlBatch implements ClientMessage, TokenStream {
     }
 
     @Override
-    public Publisher<TdsFragment> encode(ByteBufAllocator allocator) {
+    public Publisher<TdsFragment> encode(ByteBufAllocator allocator, int packetSize) {
 
         Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
 

@@ -112,6 +112,23 @@ public final class RpcParameterContext {
         return this.collation;
     }
 
+    /**
+     * Return the required {@link Collation} or throw {@link IllegalStateException} if no {@link Collation} is set.
+     *
+     * @return the collation.
+     * @throws IllegalArgumentException if the {@link Collation} is not set.
+     */
+    public Collation getRequiredCollation() {
+
+        Collation collation = getCollation();
+
+        if (collation == null) {
+            throw new IllegalStateException("No Collation set");
+        }
+
+        return collation;
+    }
+
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();

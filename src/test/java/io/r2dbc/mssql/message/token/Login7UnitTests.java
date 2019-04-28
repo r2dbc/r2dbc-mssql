@@ -80,7 +80,7 @@ final class Login7UnitTests {
             .clientLibraryVersion(Version.parse("6.4"))
             .tdsVersion(TDSVersion.VER_DENALI).build();
 
-        Mono.from(login7.encode(TestByteBufAllocator.TEST))
+        Mono.from(login7.encode(TestByteBufAllocator.TEST, 0))
             .cast(ContextualTdsFragment.class)
             .as(StepVerifier::create)
             .consumeNextWith(actual -> {

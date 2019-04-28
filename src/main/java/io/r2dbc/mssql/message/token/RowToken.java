@@ -119,7 +119,6 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
 
         int startRead = buffer.readerIndex();
 
-
         if (!Length.canDecode(buffer, column.getType())) {
             return false;
         }

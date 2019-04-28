@@ -105,7 +105,6 @@ class StringCodecUnitTests {
         Encode.uShort(data, 6);
         data.writeCharSequence("foobar", ServerCharset.CP1252.charset());
 
-
         String value = StringCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), String.class);
 
         assertThat(value).isEqualTo("foobar");

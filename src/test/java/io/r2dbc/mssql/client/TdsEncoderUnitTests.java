@@ -142,7 +142,9 @@ class TdsEncoderUnitTests {
     void shouldEncodeTdsFragment() {
 
         EmbeddedChannel channel = new EmbeddedChannel();
-        channel.pipeline().addFirst(new TdsEncoder(PacketIdProvider.just(42)));
+        TdsEncoder tdsEncoder = new TdsEncoder(PacketIdProvider.just(42));
+        tdsEncoder.setPacketSize(10);
+        channel.pipeline().addFirst(tdsEncoder);
 
         TdsFragment fragment = TdsPackets.create(Unpooled.wrappedBuffer("ab".getBytes()));
 
@@ -171,22 +173,25 @@ class TdsEncoderUnitTests {
     void shouldEncodeMessageSequence() {
 
         EmbeddedChannel channel = new EmbeddedChannel();
-        channel.pipeline().addFirst(new TdsEncoder(PacketIdProvider.just(42)));
+
+        TdsEncoder encoder = new TdsEncoder(PacketIdProvider.just(42));
+        encoder.setPacketSize(10);
+        channel.pipeline().addFirst(encoder);
 
         TdsFragment first = TdsPackets.first(HeaderOptions.create(Type.PRE_LOGIN, empty()),
             Unpooled.wrappedBuffer("ab".getBytes()));
 
         TdsFragment last = TdsPackets.last(Unpooled.wrappedBuffer("ab".getBytes()));
 
-        channel.writeOutbound(first, Unpooled.wrappedBuffer("foo".getBytes()), last,
-            Unpooled.wrappedBuffer("foo".getBytes()));
+        channel.writeOutbound(first, Unpooled.wrappedBuffer("fo".getBytes()), last,
+            Unpooled.wrappedBuffer("fo".getBytes()));
 
         assertThat(channel).outbound().hasByteBufMessage().isEncodedAs(buffer -> {
             encodeExpectation(buffer, StatusBit.NORMAL, 0x0a, "ab");
         });
 
         assertThat(channel).outbound().hasByteBufMessage().isEncodedAs(buffer -> {
-            encodeExpectation(buffer, StatusBit.EOM, 0x0b, "foo");
+            encodeExpectation(buffer, StatusBit.EOM, 0x0a, "fo");
         });
 
         assertThat(channel).outbound().hasByteBufMessage().isEncodedAs(buffer -> {
@@ -194,7 +199,7 @@ class TdsEncoderUnitTests {
         });
 
         assertThat(channel).outbound().hasByteBufMessage().isEncodedAs(buffer -> {
-            buffer.writeBytes("foo".getBytes());
+            buffer.writeBytes("fo".getBytes());
         });
     }
 

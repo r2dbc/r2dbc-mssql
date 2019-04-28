@@ -31,9 +31,10 @@ public interface ClientMessage extends Message {
     /**
      * Encode a message into a {@link ByteBuf data buffer}.
      *
-     * @param allocator the {@link ByteBufAllocator} to use to get a {@link ByteBuf data buffer} to write into.
+     * @param allocator  the {@link ByteBufAllocator} to use to get a {@link ByteBuf data buffer} to write into.
+     * @param packetSize packet size hint.
      * @return a {@link Publisher} that produces the {@link ByteBuf} containing the encoded message.
      */
-    Publisher<TdsFragment> encode(ByteBufAllocator allocator);
+    Publisher<TdsFragment> encode(ByteBufAllocator allocator, int packetSize);
 
 }

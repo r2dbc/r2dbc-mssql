@@ -41,7 +41,7 @@ final class PreloginUnitTests {
 
         Prelogin prelogin = Prelogin.builder().build();
 
-        Mono.from(prelogin.encode(TestByteBufAllocator.TEST))
+        Mono.from(prelogin.encode(TestByteBufAllocator.TEST, 0))
             .cast(ContextualTdsFragment.class)
             .as(StepVerifier::create)
             .consumeNextWith(actual -> {

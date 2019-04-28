@@ -18,7 +18,10 @@ package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.codec.Encoded;
+import io.r2dbc.mssql.codec.PlpEncoded;
 import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.codec.RpcEncoding;
 import io.r2dbc.mssql.message.ClientMessage;
@@ -32,12 +35,15 @@ import io.r2dbc.mssql.message.tds.TdsPackets;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
 import org.reactivestreams.Publisher;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * RPC request to invoke stored procedures.
@@ -160,11 +166,12 @@ public final class RpcRequest implements ClientMessage, TokenStream {
     }
 
     @Override
-    public Publisher<TdsFragment> encode(ByteBufAllocator allocator) {
+    public Publisher<TdsFragment> encode(ByteBufAllocator allocator, int packetSize) {
 
         Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
 
-        return Mono.fromSupplier(() -> {
+
+        return Flux.defer(() -> {
 
             int name = 2 + (this.procName != null ? this.procName.length() * 2 : 0);
             int length = 4 + name + this.allHeaders.getLength();
@@ -173,14 +180,106 @@ public final class RpcRequest implements ClientMessage, TokenStream {
                 length += descriptor.estimateLength();
             }
 
-            ByteBuf buffer = allocator.buffer(length);
+            ByteBuf scalarBuffer = allocator.buffer(length);
 
-            encode(buffer);
-            return TdsPackets.create(HEADER, buffer);
+            encodeHeader(scalarBuffer);
+
+            boolean hasPlpSegments = false;
+
+            for (ParameterDescriptor descriptor : this.parameterDescriptors) {
+                if (descriptor instanceof EncodedRpcParameter) {
+                    if (((EncodedRpcParameter) descriptor).getValue() instanceof PlpEncoded) {
+                        hasPlpSegments = true;
+                    }
+                }
+            }
+
+            if (!hasPlpSegments) {
+
+                for (ParameterDescriptor descriptor : this.parameterDescriptors) {
+                    descriptor.encode(scalarBuffer);
+                }
+
+                return Flux.just(TdsPackets.create(HEADER, scalarBuffer));
+            }
+
+            AtomicReference<ByteBuf> firstBufferHolder = new AtomicReference<>(scalarBuffer);
+            AtomicBoolean first = new AtomicBoolean(true);
+            return Flux.fromIterable(this.parameterDescriptors).concatMap(it -> {
+
+                ByteBuf buffer = getByteBuf(firstBufferHolder, allocator, it);
+
+                if (it instanceof EncodedRpcParameter && ((EncodedRpcParameter) it).getValue() instanceof PlpEncoded) {
+
+                    EncodedRpcParameter parameter = (EncodedRpcParameter) it;
+                    PlpEncoded encoded = (PlpEncoded) parameter.getValue();
+
+                    parameter.encodeHeader(buffer);
+                    encoded.encodeHeader(buffer);
+
+                    AtomicReference<ByteBuf> firstChunk = new AtomicReference<>(buffer);
+
+                    Flux<ByteBuf> tdsFragments = encoded.chunked(() -> packetSize * 4, true).map(chunk -> {
+
+                        if (firstChunk.compareAndSet(buffer, null)) {
+
+                            CompositeByteBuf withInitialBuffer = allocator.compositeBuffer();
+
+                            withInitialBuffer.addComponent(true, buffer);
+                            withInitialBuffer.addComponent(true, chunk);
+
+                            return withInitialBuffer;
+                        }
+
+                        return chunk;
+                    });
+
+                    return tdsFragments.concatWith(Mono.create(sink -> {
+
+                        ByteBuf terminator = allocator.buffer();
+                        Encode.asInt(terminator, 0);
+
+                        sink.success(terminator);
+                    }));
+                }
+
+                it.encode(buffer);
+                return Mono.just(buffer);
+            }, 1).map(buf -> {
+
+                if (first.compareAndSet(true, false)) {
+                    return TdsPackets.first(HEADER, buf);
+                }
+
+                return TdsPackets.create(buf);
+
+            }).concatWith(Mono.create(sink -> {
+
+                ByteBuf firstBuffer = firstBufferHolder.getAndSet(null);
+
+                if (firstBuffer != null) {
+                    sink.success(TdsPackets.last(firstBuffer));
+                    return;
+                }
+
+                sink.success(TdsPackets.last(Unpooled.EMPTY_BUFFER));
+            }));
         });
     }
 
-    private void encode(ByteBuf buffer) {
+    private ByteBuf getByteBuf(AtomicReference<ByteBuf> firstBufferHolder, ByteBufAllocator allocator, ParameterDescriptor it) {
+
+        ByteBuf firstBuffer = firstBufferHolder.getAndSet(null);
+
+        if (firstBuffer != null) {
+            return firstBuffer;
+        }
+
+        int estimatedLength = it.estimateLength();
+        return estimatedLength > 0 ? allocator.buffer(estimatedLength) : allocator.buffer();
+    }
+
+    private void encodeHeader(ByteBuf buffer) {
 
         this.allHeaders.encode(buffer);
 
@@ -194,19 +293,15 @@ public final class RpcRequest implements ClientMessage, TokenStream {
 
         Encode.asByte(buffer, this.optionFlags.getValue());
         Encode.asByte(buffer, this.statusFlags);
-
-        for (ParameterDescriptor descriptor : this.parameterDescriptors) {
-            descriptor.encode(buffer);
-        }
     }
 
     @Nullable
     public String getProcName() {
-        return procName;
+        return this.procName;
     }
 
     public Integer getProcId() {
-        return procId;
+        return this.procId;
     }
 
     @Override
@@ -660,7 +755,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
     }
 
     /**
-     * Integer RPC parameter.
+     * RPC parameter.
      */
     static class EncodedRpcParameter extends ParameterDescriptor {
 
@@ -671,11 +766,19 @@ public final class RpcRequest implements ClientMessage, TokenStream {
             this.value = value;
         }
 
+        public Encoded getValue() {
+            return this.value;
+        }
+
         @Override
         void encode(ByteBuf buffer) {
-            RpcEncoding.encodeHeader(buffer, getName(), getDirection(), this.value.getDataType());
+            encodeHeader(buffer);
             buffer.writeBytes(this.value.getValue());
             this.value.release();
+        }
+
+        void encodeHeader(ByteBuf buffer) {
+            RpcEncoding.encodeHeader(buffer, getName(), getDirection(), this.value.getDataType());
         }
 
         @Override
@@ -692,11 +795,11 @@ public final class RpcRequest implements ClientMessage, TokenStream {
             if (this == o) {
                 return true;
             }
-            if (!(o instanceof RpcInt)) {
+            if (!(o instanceof EncodedRpcParameter)) {
                 return false;
             }
-            RpcInt rpcInt = (RpcInt) o;
-            return Objects.equals(this.value, rpcInt.value);
+            EncodedRpcParameter encodedRpcParameter = (EncodedRpcParameter) o;
+            return Objects.equals(this.value, encodedRpcParameter.value);
         }
 
         @Override

@@ -30,6 +30,8 @@ import java.nio.charset.Charset;
  */
 public final class Encode {
 
+    private static final int U_SHORT_MAX_VALUE = Math.abs(Short.MIN_VALUE) + Short.MAX_VALUE;
+
     private Encode() {
     }
 
@@ -93,13 +95,11 @@ public final class Encode {
         buffer.writeIntLE(value);
     }
 
-
     /**
      * Encode an unscaled {@link BigInteger} value. SQL server type {@code SMALLMONEY}.
      *
      * @param buffer the data buffer.
      * @param value  the value to encode.
-     * @return
      */
     public static void smallMoney(ByteBuf buffer, BigInteger value) {
         buffer.writeIntLE(value.intValue());
@@ -110,7 +110,6 @@ public final class Encode {
      *
      * @param buffer the data buffer.
      * @param value  the value to encode.
-     * @return
      */
     public static void money(ByteBuf buffer, BigInteger value) {
 
@@ -126,18 +125,15 @@ public final class Encode {
      *
      * @param buffer the data buffer.
      * @param value  the value to encode.
-     * @return
      */
     public static void bit(ByteBuf buffer, boolean value) {
         asByte(buffer, (byte) (value ? 1 : 0));
     }
 
-
     /**
      * Encode byte number. SQL server type {@code TINYINT}.
      *
      * @param buffer the data buffer.
-     * @return
      */
     public static void tinyInt(ByteBuf buffer, byte value) {
         asByte(buffer, value);
@@ -147,7 +143,6 @@ public final class Encode {
      * Encode short number. SQL server type {@code SMALLINT}.
      *
      * @param buffer the data buffer.
-     * @return
      */
     public static void smallInt(ByteBuf buffer, short value) {
         buffer.writeShortLE(value);
@@ -157,7 +152,6 @@ public final class Encode {
      * Encode integer number. SQL server type {@code INT}.
      *
      * @param buffer the data buffer.
-     * @return
      */
     public static void asInt(ByteBuf buffer, int value) {
         buffer.writeIntLE(value);
@@ -167,7 +161,6 @@ public final class Encode {
      * Encode long number. SQL server type {@code BIGINT}.
      *
      * @param buffer the data buffer.
-     * @return
      */
     public static void bigint(ByteBuf buffer, long value) {
         buffer.writeLongLE(value);
@@ -177,7 +170,6 @@ public final class Encode {
      * Encode unsigned long number. SQL server type {@code LONGLONG}.
      *
      * @param buffer the data buffer.
-     * @return
      */
     public static void uLongLong(ByteBuf buffer, long value) {
         buffer.writeLongLE(value);
@@ -190,6 +182,11 @@ public final class Encode {
      * @param value  the value to encode.
      */
     public static void uShort(ByteBuf buffer, int value) {
+
+        if (value > U_SHORT_MAX_VALUE) {
+            throw new IllegalArgumentException("Value " + value + " exceeds uShort.MAX_VALUE");
+        }
+
         buffer.writeShortLE(value);
     }
 
@@ -221,7 +218,10 @@ public final class Encode {
      */
     public static void uShortBE(ByteBuf buffer, int value) {
 
-        // TODO: Overflow
+        if (value > U_SHORT_MAX_VALUE) {
+            throw new IllegalArgumentException("Value " + value + " exceeds uShort.MAX_VALUE");
+        }
+
         buffer.writeShort(value);
     }
 
@@ -229,7 +229,6 @@ public final class Encode {
      * Encode a string. SQL server type {@code VARCHAR}/{@code NVARCHAR}.
      *
      * @param buffer the data buffer.
-     * @return
      */
     public static void uString(ByteBuf buffer, String value, Charset charset) {
 

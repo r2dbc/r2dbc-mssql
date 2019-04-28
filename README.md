@@ -160,18 +160,18 @@ This reference table shows the type mapping between [Microsoft SQL Server][m] an
 | [`timestamp`][sql-timestamp-ref]          | [`byte[]`][java-byte-ref]
 | [`smallmoney`][sql-money-ref]             | [`BigDecimal`][java-bigdecimal-ref]
 | [`money`][sql-money-ref]                  | [`BigDecimal`][java-bigdecimal-ref]
-| [`char`][sql-(var)char-ref]               | [`String`][java-string-ref]
-| [`varchar`][sql-(var)char-ref]            | [`String`][java-string-ref]
-| [`varcharmax`][sql-(var)char-ref]         | [`String`][java-string-ref]
-| [`nchar`][sql-n(var)char-ref]             | [`String`][java-string-ref]
-| [`nvarchar`][sql-n(var)char-ref]          | [`String`][java-string-ref]
-| [`nvarcharmax`][sql-n(var)char-ref]       | [`String`][java-string-ref]
-| [`text`][sql-(n)text-ref]                 | [`String`][java-string-ref]
-| [`ntext`][sql-(n)text-ref]                | [`String`][java-string-ref]
-| [`image`][sql-(n)text-ref]                | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref]
-| [`binary`][sql-binary-ref]                | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref]
-| [`varbinary`][sql-binary-ref]             | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref]
-| [`varbinarymax`][sql-binary-ref]          | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref]
+| [`char`][sql-(var)char-ref]               | [`String`][java-string-ref], `Clob`
+| [`varchar`][sql-(var)char-ref]            | [`String`][java-string-ref], `Clob`
+| [`varcharmax`][sql-(var)char-ref]         | [`String`][java-string-ref], `Clob`
+| [`nchar`][sql-n(var)char-ref]             | [`String`][java-string-ref], `Clob`
+| [`nvarchar`][sql-n(var)char-ref]          | [`String`][java-string-ref], `Clob`
+| [`nvarcharmax`][sql-n(var)char-ref]       | [`String`][java-string-ref], `Clob`
+| [`text`][sql-(n)text-ref]                 | [`String`][java-string-ref], `Clob`
+| [`ntext`][sql-(n)text-ref]                | [`String`][java-string-ref], `Clob`
+| [`image`][sql-(n)text-ref]                | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref], `Blob`
+| [`binary`][sql-binary-ref]                | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref], `Blob`
+| [`varbinary`][sql-binary-ref]             | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref], `Blob`
+| [`varbinarymax`][sql-binary-ref]          | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref], `Blob`
 | [`sql_variant`][sql-sql-variant-ref]      | Not yet supported.
 | [`xml`][sql-xml-ref]                      | Not yet supported.
 | [`udt`][sql-udt-ref]                      | Not yet supported.

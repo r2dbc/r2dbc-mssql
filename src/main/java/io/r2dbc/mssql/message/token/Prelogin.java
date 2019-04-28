@@ -170,7 +170,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
     }
 
     @Override
-    public Publisher<TdsFragment> encode(ByteBufAllocator allocator) {
+    public Publisher<TdsFragment> encode(ByteBufAllocator allocator, int packetSize) {
 
         Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
 

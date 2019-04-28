@@ -152,7 +152,7 @@ public final class Login7 implements TokenStream, ClientMessage {
     }
 
     @Override
-    public Publisher<TdsFragment> encode(ByteBufAllocator allocator) {
+    public Publisher<TdsFragment> encode(ByteBufAllocator allocator, int packetSize) {
 
         return Mono.fromSupplier(() -> {
 

@@ -242,7 +242,47 @@ public final class Length {
 
     public void encode(ByteBuf buffer, TypeInformation type) {
 
-        switch (type.getLengthStrategy()) {
+        LengthStrategy lengthStrategy = type.getLengthStrategy();
+
+        if (lengthStrategy == LengthStrategy.LONGLENTYPE) {
+
+            SqlServerType serverType = type.getServerType();
+
+            if (serverType == SqlServerType.TEXT || serverType == SqlServerType.IMAGE
+                || serverType == SqlServerType.NTEXT) {
+
+                if (isNull()) {
+                    Encode.asByte(buffer, (byte) 0);
+                    return;
+                }
+
+                // skip(24) is to skip the textptr and timestamp fields
+                buffer.skipBytes(24);
+                buffer.writeLong(getLength());
+                return;
+            }
+
+            if (serverType == SqlServerType.SQL_VARIANT) {
+
+                Encode.intBigEndian(buffer, getLength());
+                return;
+            }
+
+            if (isNull()) {
+                Encode.uShortBE(buffer, USHORT_NULL);
+            } else {
+                Encode.uShortBE(buffer, getLength());
+            }
+
+            return;
+        }
+
+        encode(buffer, lengthStrategy);
+    }
+
+    public void encode(ByteBuf buffer, LengthStrategy lengthStrategy) {
+
+        switch (lengthStrategy) {
 
             case PARTLENTYPE:
                 Encode.asInt(buffer, getLength());
@@ -269,42 +309,9 @@ public final class Length {
                 }
 
                 return;
-
-            case LONGLENTYPE:
-
-                SqlServerType serverType = type.getServerType();
-
-                if (serverType == SqlServerType.TEXT || serverType == SqlServerType.IMAGE
-                    || serverType == SqlServerType.NTEXT) {
-
-                    if (isNull()) {
-                        Encode.asByte(buffer, (byte) 0);
-                        return;
-                    }
-
-                    // skip(24) is to skip the textptr and timestamp fields
-                    buffer.skipBytes(24);
-                    buffer.writeLong(getLength());
-                    return;
-                }
-
-                if (serverType == SqlServerType.SQL_VARIANT) {
-
-                    Encode.intBigEndian(buffer, getLength());
-                    return;
-                }
-
-                if (isNull()) {
-                    Encode.uShortBE(buffer, USHORT_NULL);
-                } else {
-                    Encode.uShortBE(buffer, getLength());
-                }
-
-                return;
-
         }
 
-        throw ProtocolException.invalidTds("Cannot parse value LengthDescriptor");
+        throw ProtocolException.invalidTds("Cannot encode value LengthDescriptor for " + lengthStrategy);
     }
 
     public int getLength() {

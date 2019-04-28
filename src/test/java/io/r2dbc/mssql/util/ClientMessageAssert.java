@@ -56,7 +56,7 @@ public final class ClientMessageAssert extends AbstractObjectAssert<ClientMessag
      * @see TdsFragment
      */
     public TdsFragmentAssert encoded() {
-        return new TdsFragmentAssert(Mono.from(actual.encode(TestByteBufAllocator.TEST)).block());
+        return new TdsFragmentAssert(Mono.from(actual.encode(TestByteBufAllocator.TEST, 0)).block());
     }
 
     /**

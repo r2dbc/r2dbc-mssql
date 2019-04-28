@@ -32,9 +32,9 @@ import io.r2dbc.mssql.message.tds.ProtocolException;
  */
 public final class PlpLength {
 
-    public static final long PLP_NULL = 0xFFFFFFFFFFFFFFFFL;
+    public static final long PLP_NULL = 0xFF_FF_FF_FF_FF_FF_FF_FFL;
 
-    public static final long UNKNOWN_PLP_LEN = 0xFFFFFFFFFFFFFFFEL;
+    public static final long UNKNOWN_PLP_LEN = 0xFF_FF_FF_FF_FF_FF_FF_FEL;
 
     private final long length;
 
@@ -43,6 +43,15 @@ public final class PlpLength {
     private PlpLength(long length, boolean isNull) {
         this.length = length;
         this.isNull = isNull;
+    }
+
+    /**
+     * Creates a {@link PlpLength} that indicates the value length is unknown.
+     *
+     * @return a {@link PlpLength} with unknown length.
+     */
+    public static PlpLength unknown() {
+        return of(UNKNOWN_PLP_LEN, false);
     }
 
     /**
@@ -59,7 +68,7 @@ public final class PlpLength {
      *
      * @return a {@link PlpLength} for a non-{@code null} value of the given {@code length}.
      */
-    public static PlpLength of(int length) {
+    public static PlpLength of(long length) {
         return of(length, false);
     }
 
@@ -88,7 +97,6 @@ public final class PlpLength {
             long length = Decode.uLongLong(buffer);
             return PlpLength.of(length == PLP_NULL ? 0 : length, length == PLP_NULL);
         }
-
 
         throw ProtocolException.invalidTds("Cannot parse using " + type.getLengthStrategy());
     }
