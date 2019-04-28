@@ -101,7 +101,16 @@ class ParametrizedMssqlStatementUnitTests {
 
         ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
 
-        statement.bind(0, "firstname");
+        statement.bind("firstname", "firstname");
+        assertThat(statement.getBindings().first().getParameters()).containsKeys("firstname");
+    }
+
+    @Test
+    void shouldBindParameterByNameWithPrefix() {
+
+        ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
+
+        statement.bind("@firstname", "firstname");
         assertThat(statement.getBindings().first().getParameters()).containsKeys("firstname");
     }
 

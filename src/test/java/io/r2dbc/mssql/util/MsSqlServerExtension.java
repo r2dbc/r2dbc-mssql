@@ -16,11 +16,16 @@
 
 package io.r2dbc.mssql.util;
 
+import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.jdbc.core.JdbcOperations;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.containers.MSSQLServerContainer;
+import reactor.util.annotation.Nullable;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -40,6 +45,10 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
         }
     };
 
+    private HikariDataSource dataSource;
+
+    private JdbcOperations jdbcOperations;
+
     private final DatabaseContainer sqlServer = External.INSTANCE.isAvailable() ? External.INSTANCE : new TestContainer(container);
 
     private final boolean useTestContainer = sqlServer instanceof TestContainer;
@@ -50,6 +59,17 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
         if (this.useTestContainer) {
             this.container.start();
         }
+
+        this.dataSource = DataSourceBuilder.create()
+            .type(HikariDataSource.class)
+            .url("jdbc:sqlserver://" + getHost() + ":" + getPort() + ";database=master")
+            .username(getUsername())
+            .password(getPassword())
+            .build();
+
+        this.dataSource.setMaximumPoolSize(1);
+
+        this.jdbcOperations = new JdbcTemplate(this.dataSource);
     }
 
     @Override
@@ -62,6 +82,11 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
 
     public String getHost() {
         return this.sqlServer.getHost();
+    }
+
+    @Nullable
+    public JdbcOperations getJdbcOperations() {
+        return this.jdbcOperations;
     }
 
     public String getPassword() {
