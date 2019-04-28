@@ -263,15 +263,6 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         return this.bindings;
     }
 
-    /**
-     * Validate the parameter name exists.
-     *
-     * @param parameterName the parameter name.
-     */
-    private void validateParameterName(String parameterName) {
-        this.parsedQuery.getParameter(parameterName);
-    }
-
     private String getParameterName(int index) {
         return this.parsedQuery.getParameterName(index);
     }
@@ -434,27 +425,6 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
             }
 
             return new ParsedQuery(sql, variables);
-        }
-
-        /**
-         * Returns the  {@link ParsedParameter} by {@code name}.
-         *
-         * @param name the parameter name.
-         * @return the {@link ParsedParameter} whose name matches {@code name}.
-         */
-        ParsedParameter getParameter(String name) {
-
-            ParsedParameter parsedParameter = this.parametersByName.get(name);
-
-            if (name.startsWith("@")) {
-                parsedParameter = this.parametersByName.get(name.substring(1));
-            }
-
-            if (parsedParameter == null) {
-                throw new IllegalArgumentException(String.format("Parameter [%s] does not exist in query [%s]", name, this.sql));
-            }
-
-            return parsedParameter;
         }
 
         /**
