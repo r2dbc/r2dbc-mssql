@@ -252,7 +252,6 @@
                         <exclude>**/**IntegrationTests.java</exclude>
                     </excludes>
                     <includes>
-                        <include>**/*Example.java</include>
                         <include>**/*Tests.java</include>
                     </includes>
                 </configuration>
@@ -273,6 +272,7 @@
                 <configuration>
                     <runOrder>random</runOrder>
                     <includes>
+                        <include>**/*Example.java</include>
                         <include>**/**IntegrationTests.java</include>
                     </includes>
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
