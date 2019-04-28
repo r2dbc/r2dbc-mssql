@@ -62,9 +62,9 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
 
         this.dataSource = DataSourceBuilder.create()
             .type(HikariDataSource.class)
-            .url(this.container.getJdbcUrl())
-            .username(this.container.getUsername())
-            .password(this.container.getPassword())
+            .url("jdbc:sqlserver://" + getHost() + ":" + getPort() + ";database=master")
+            .username(getUsername())
+            .password(getPassword())
             .build();
 
         this.dataSource.setMaximumPoolSize(1);

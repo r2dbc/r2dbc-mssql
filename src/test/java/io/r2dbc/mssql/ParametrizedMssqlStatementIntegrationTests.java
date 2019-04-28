@@ -46,13 +46,12 @@ class ParametrizedMssqlStatementIntegrationTests extends IntegrationTestSupport 
 
         Flux.from(connection.createStatement("INSERT INTO r2dbc_example (first_name, last_name) values (@fn, @ln)")
             .bind("fn", "Walter").bind("ln", "White").add()
-            .bind("fn", "Hank").bind("ln", "Schrader").add()
-            .bind("fn", "Skyler").bind("ln", "White")
+            .bind("fn", "Hank").bind("@ln", "Schrader").add()
+            .bind("fn", "Skyler").bind("@ln", "White")
             .execute())
             .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
             .expectNext(1, 1, 1)
             .verifyComplete();
-
     }
 }

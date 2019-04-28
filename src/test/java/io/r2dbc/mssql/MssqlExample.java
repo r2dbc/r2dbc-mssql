@@ -16,12 +16,11 @@
 
 package io.r2dbc.mssql;
 
-import io.r2dbc.mssql.util.MsSqlServerExtension;
+import io.r2dbc.mssql.util.IntegrationTestSupport;
 import io.r2dbc.spi.ConnectionFactories;
 import io.r2dbc.spi.ConnectionFactory;
 import io.r2dbc.spi.ConnectionFactoryOptions;
 import io.r2dbc.spi.test.Example;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.jdbc.core.JdbcOperations;
 
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.MSSQL_DRIVER;
@@ -31,10 +30,7 @@ import static io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD;
 import static io.r2dbc.spi.ConnectionFactoryOptions.PORT;
 import static io.r2dbc.spi.ConnectionFactoryOptions.USER;
 
-final class MssqlExample implements Example<String> {
-
-    @RegisterExtension
-    static final MsSqlServerExtension SERVER = new MsSqlServerExtension();
+final class MssqlExample extends IntegrationTestSupport implements Example<String> {
 
     private final ConnectionFactory connectionFactory = ConnectionFactories.get(ConnectionFactoryOptions.builder()
         .option(DRIVER, MSSQL_DRIVER)

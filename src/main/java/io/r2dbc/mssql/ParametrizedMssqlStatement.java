@@ -204,8 +204,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         Encoded encoded = this.codecs.encode(this.client.getByteBufAllocator(), RpcParameterContext.in(this.client.getRequiredCollation()), value);
 
         String parameterName = (String) identifier;
-        validateParameterName(parameterName);
-        addBinding(parameterName, encoded);
+        addBinding(getParameterName(parameterName), encoded);
 
         return this;
     }
@@ -225,11 +224,11 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         Assert.isInstanceOf(String.class, identifier, "Identifier must be a String");
         Assert.requireNonNull(type, "type must not be null");
 
-        if (executed) {
+        if (this.executed) {
             throw new IllegalStateException("Statement was already executed");
         }
 
-        addBinding((String) identifier, this.codecs.encodeNull(this.client.getByteBufAllocator(), type));
+        addBinding(getParameterName((String) identifier), this.codecs.encodeNull(this.client.getByteBufAllocator(), type));
         return this;
     }
 
@@ -275,6 +274,10 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
     private String getParameterName(int index) {
         return this.parsedQuery.getParameterName(index);
+    }
+
+    private String getParameterName(String name) {
+        return this.parsedQuery.getParameterName(name);
     }
 
     /**
@@ -443,11 +446,36 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
             ParsedParameter parsedParameter = this.parametersByName.get(name);
 
+            if (name.startsWith("@")) {
+                parsedParameter = this.parametersByName.get(name.substring(1));
+            }
+
             if (parsedParameter == null) {
                 throw new IllegalArgumentException(String.format("Parameter [%s] does not exist in query [%s]", name, this.sql));
             }
 
             return parsedParameter;
+        }
+
+        /**
+         * Returns the  {@link ParsedParameter} name by {@code name}.
+         *
+         * @param name the parameter name.
+         * @return the {@link ParsedParameter} name.
+         */
+        String getParameterName(String name) {
+
+            ParsedParameter parsedParameter = this.parametersByName.get(name);
+
+            if (name.startsWith("@")) {
+                parsedParameter = this.parametersByName.get(name.substring(1));
+            }
+
+            if (parsedParameter == null) {
+                throw new IllegalArgumentException(String.format("Parameter [%s] does not exist in query [%s]", name, this.sql));
+            }
+
+            return parsedParameter.getName();
         }
 
         /**
@@ -592,7 +620,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
          * Clear/release binding values.
          */
         void clear() {
-            bindings.forEach(Binding::clear);
+            this.bindings.forEach(Binding::clear);
         }
 
     }
