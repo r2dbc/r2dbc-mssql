@@ -119,7 +119,7 @@ Supported ConnectionFactory Discovery Options:
 
 Core options:
 
-* `driver`: Must be `mysql`.
+* `driver`: Must be `mssql`.
 * `host`: Server hostname to connect to.
 * `port`: Server port to connect to. Defaults to `1433`.
 * `username`: Login username.
