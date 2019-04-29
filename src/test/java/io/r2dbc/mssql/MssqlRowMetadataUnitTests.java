@@ -28,7 +28,11 @@ import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.spi.Nullability;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static io.r2dbc.mssql.message.type.TypeInformation.builder;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,18 +48,18 @@ class MssqlRowMetadataUnitTests {
 
     TypeInformation integer = builder().withScale(5).withMaxLength(4).withPrecision(4).withLengthStrategy(LengthStrategy.FIXEDLENTYPE).withServerType(SqlServerType.INTEGER).build();
 
-    Column column = new Column(0, "foo", integer, null);
+    Column column = new Column(0, "foo", this.integer, null);
 
     ByteBuf data = Unpooled.wrappedBuffer(new byte[]{(byte) 0x42, 0, 0, 0});
 
-    RowToken rowToken = RowToken.decode(data, Collections.singletonList(column));
+    RowToken rowToken = RowToken.decode(this.data, Collections.singletonList(this.column));
 
-    MssqlRowMetadata rowMetadata = new MssqlRowMetadata(codecs, Collections.singletonList(column), Collections.singletonMap("foo", column));
+    MssqlRowMetadata rowMetadata = new MssqlRowMetadata(this.codecs, Collections.singletonList(this.column), Collections.singletonMap("foo", this.column));
 
     @Test
     void shouldLookupMetadataByName() {
 
-        MssqlColumnMetadata columnMetadata = rowMetadata.getColumnMetadata("foo");
+        MssqlColumnMetadata columnMetadata = this.rowMetadata.getColumnMetadata("foo");
 
         assertThat(columnMetadata).isNotNull();
         assertThat(columnMetadata.getName()).isEqualTo("foo");
@@ -63,13 +67,13 @@ class MssqlRowMetadataUnitTests {
         assertThat(columnMetadata.getPrecision()).isEqualTo(4);
         assertThat(columnMetadata.getScale()).isEqualTo(5);
         assertThat(columnMetadata.getNullability()).isEqualTo(Nullability.NON_NULL);
-        assertThat(columnMetadata.getNativeTypeMetadata()).isEqualTo(integer);
+        assertThat(columnMetadata.getNativeTypeMetadata()).isEqualTo(this.integer);
     }
 
     @Test
     void shouldLookupMetadataByIndex() {
 
-        MssqlColumnMetadata columnMetadata = rowMetadata.getColumnMetadata(0);
+        MssqlColumnMetadata columnMetadata = this.rowMetadata.getColumnMetadata(0);
 
         assertThat(columnMetadata).isNotNull();
         assertThat(columnMetadata.getName()).isEqualTo("foo");
@@ -77,6 +81,50 @@ class MssqlRowMetadataUnitTests {
 
     @Test
     void shouldReturnMetadataForAllColumns() {
-        assertThat(rowMetadata.getColumnMetadatas()).hasSize(1);
+        assertThat(this.rowMetadata.getColumnMetadatas()).hasSize(1);
+    }
+
+    @Test
+    void shouldReturnOrderedColumnNames() {
+
+        Column c1 = new Column(0, "one", this.integer, null);
+        Column c2 = new Column(1, "two", this.integer, null);
+        Column c3 = new Column(2, "three", this.integer, null);
+
+        Map<String, Column> nameKeyedColumns = new HashMap<>();
+        nameKeyedColumns.put(c1.getName(), c1);
+        nameKeyedColumns.put(c2.getName(), c2);
+        nameKeyedColumns.put(c3.getName(), c3);
+
+        MssqlRowMetadata rowMetadata = new MssqlRowMetadata(this.codecs, Arrays.asList(c1, c2, c3), nameKeyedColumns);
+
+        assertThat(rowMetadata.getColumnNames()).hasSize(3).contains("one").doesNotContain("four");
+        assertThat(rowMetadata.getColumnNames().contains("one")).isTrue();
+        assertThat(rowMetadata.getColumnNames().contains("four")).isFalse();
+
+        assertThat(rowMetadata.getColumnNames().contains("One")).isTrue();
+        assertThat(rowMetadata.getColumnNames().contains("óne")).isFalse();
+    }
+
+    @Test
+    void shouldConsiderIdenticalMatchWhenEscaped() {
+
+        Column c1 = new Column(0, "one", this.integer, null);
+        Column c2 = new Column(1, "two", this.integer, null);
+        Column c3 = new Column(1, "one", this.integer, null);
+
+        Map<String, Column> nameKeyedColumns = new HashMap<>();
+        nameKeyedColumns.put(c1.getName(), c1);
+        nameKeyedColumns.put(c2.getName(), c2);
+        nameKeyedColumns.put(c3.getName(), c3);
+
+        MssqlRowMetadata rowMetadata = new MssqlRowMetadata(this.codecs, Arrays.asList(c1, c2, c3), nameKeyedColumns);
+
+        assertThat(rowMetadata.getColumnNames()).hasSize(3).isNotEmpty();
+        assertThat(rowMetadata.getColumnNames().contains("one")).isTrue();
+        assertThat(rowMetadata.getColumnNames().contains("[one]")).isTrue();
+        assertThat(rowMetadata.getColumnNames().contains("[One]")).isFalse();
+        assertThat(rowMetadata.getColumnNames().iterator()).contains("one", "two", "one");
+        assertThat(rowMetadata.getColumnNames().stream().collect(Collectors.toList())).containsSequence("one", "two", "one");
     }
 }

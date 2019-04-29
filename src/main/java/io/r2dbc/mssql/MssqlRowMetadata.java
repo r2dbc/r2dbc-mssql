@@ -23,10 +23,12 @@ import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.RowMetadata;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-
+import java.util.TreeMap;
 
 /**
  * Microsoft SQL Server-specific {@link RowMetadata}.
@@ -39,6 +41,8 @@ final class MssqlRowMetadata extends ColumnSource implements RowMetadata {
 
     private final Map<Column, MssqlColumnMetadata> metadataCache = new HashMap<>();
 
+    private final ColumnSet columnset;
+
     /**
      * Creates a new {@link MssqlColumnMetadata}.
      *
@@ -47,8 +51,23 @@ final class MssqlRowMetadata extends ColumnSource implements RowMetadata {
      * @param nameKeyedColumns name-keyed {@link Map} of {@link Column}s.
      */
     MssqlRowMetadata(Codecs codecs, List<Column> columns, Map<String, Column> nameKeyedColumns) {
-        super(columns, nameKeyedColumns);
+        super(columns, getNameKeyedColumns(nameKeyedColumns));
         this.codecs = Assert.requireNonNull(codecs, "Codecs must not be null");
+
+        List<String> orderedColumns = new ArrayList<>(columns.size());
+        for (Column column : columns) {
+            orderedColumns.add(column.getName());
+        }
+
+        this.columnset = new ColumnSet(orderedColumns);
+    }
+
+    private static Map<String, Column> getNameKeyedColumns(Map<String, Column> nameKeyedColumns) {
+
+        Map<String, Column> columns = new TreeMap<>(EscapeAwareComparator.INSTANCE);
+        columns.putAll(nameKeyedColumns);
+
+        return columns;
     }
 
     /**
@@ -81,5 +100,10 @@ final class MssqlRowMetadata extends ColumnSource implements RowMetadata {
         }
 
         return metadatas;
+    }
+
+    @Override
+    public Collection<String> getColumnNames() {
+        return this.columnset;
     }
 }

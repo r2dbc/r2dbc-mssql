@@ -38,7 +38,7 @@ abstract class ColumnSource {
 
         Assert.requireNonNull(columns, "Columns must not be null");
         Assert.requireNonNull(nameKeyedColumns, "Name-keyed columns must not be null");
-        Assert.isTrue(columns.size() == nameKeyedColumns.size(), "The size of columns and name-keyed columns must be the same");
+        Assert.isTrue(columns.size() >= nameKeyedColumns.size(), "The size of columns must be greater or equal to nameKeyedColumns");
 
         this.columns = columns;
         this.nameKeyedColumns = nameKeyedColumns;
