@@ -25,7 +25,6 @@ import io.r2dbc.spi.RowMetadata;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -41,7 +40,7 @@ final class MssqlRowMetadata extends ColumnSource implements RowMetadata {
 
     private final Map<Column, MssqlColumnMetadata> metadataCache = new HashMap<>();
 
-    private final ColumnSet columnset;
+    private final CollatedCollection columnset;
 
     /**
      * Creates a new {@link MssqlColumnMetadata}.
@@ -59,7 +58,7 @@ final class MssqlRowMetadata extends ColumnSource implements RowMetadata {
             orderedColumns.add(column.getName());
         }
 
-        this.columnset = new ColumnSet(orderedColumns);
+        this.columnset = new CollatedCollection(orderedColumns);
     }
 
     private static Map<String, Column> getNameKeyedColumns(Map<String, Column> nameKeyedColumns) {

@@ -30,13 +30,13 @@ import java.util.TreeSet;
  *
  * @author Mark Paluch
  */
-final class ColumnSet implements Collection<String> {
+final class CollatedCollection implements Collection<String> {
 
     private final List<String> columns;
 
     private final TreeSet<String> lookup;
 
-    ColumnSet(List<String> columns) {
+    CollatedCollection(List<String> columns) {
 
         this.columns = Collections.unmodifiableList(columns);
         this.lookup = new TreeSet<>(EscapeAwareComparator.INSTANCE);
@@ -123,10 +123,10 @@ final class ColumnSet implements Collection<String> {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof ColumnSet)) {
+        if (!(o instanceof CollatedCollection)) {
             return false;
         }
-        ColumnSet other = (ColumnSet) o;
+        CollatedCollection other = (CollatedCollection) o;
         return
             Objects.equals(this.columns, other.columns);
     }
