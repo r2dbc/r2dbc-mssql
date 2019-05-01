@@ -124,7 +124,7 @@ class MssqlRowMetadataUnitTests {
         assertThat(rowMetadata.getColumnNames().contains("one")).isTrue();
         assertThat(rowMetadata.getColumnNames().contains("[one]")).isTrue();
         assertThat(rowMetadata.getColumnNames().contains("[One]")).isFalse();
-        assertThat(rowMetadata.getColumnNames().iterator()).contains("one", "two", "one");
+        assertThat(rowMetadata.getColumnNames().iterator()).toIterable().contains("one", "two", "one");
         assertThat(rowMetadata.getColumnNames().stream().collect(Collectors.toList())).containsSequence("one", "two", "one");
     }
 }

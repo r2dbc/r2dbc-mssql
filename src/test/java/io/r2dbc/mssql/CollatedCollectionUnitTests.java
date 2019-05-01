@@ -69,7 +69,7 @@ class CollatedCollectionUnitTests {
 
     @Test
     void iteratesOverColumnsInOrder() {
-        assertThat(collatedCollection.iterator()).containsSequence("one", "two", "three", "one");
+        assertThat(collatedCollection.iterator()).toIterable().containsSequence("one", "two", "three", "one");
     }
 
     @Test
