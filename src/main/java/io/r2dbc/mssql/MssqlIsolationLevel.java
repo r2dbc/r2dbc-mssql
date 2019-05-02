@@ -16,7 +16,6 @@
 
 package io.r2dbc.mssql;
 
-import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.IsolationLevel;
 
 /**
@@ -26,47 +25,38 @@ import io.r2dbc.spi.IsolationLevel;
  * <a href="https://docs.microsoft.com/en-us/sql/t-sql/statements/set-transaction-isolation-level-transact-sql?view=sql-server-2017">SQL Server Isolation Levels</a>
  *
  * @author Hebert Coelho
+ * @author Mark Paluch
  * @see IsolationLevel
  */
-public enum MssqlIsolationLevel {
+public final class MssqlIsolationLevel {
+
+    private MssqlIsolationLevel() {
+
+    }
 
     /**
      * The read committed isolation level.
      */
-    READ_COMMITTED("READ COMMITTED"),
+    public static final IsolationLevel READ_COMMITTED = IsolationLevel.READ_COMMITTED;
 
     /**
      * The read uncommitted isolation level.
      */
-    READ_UNCOMMITTED("READ UNCOMMITTED"),
+    public static final IsolationLevel READ_UNCOMMITTED = IsolationLevel.READ_UNCOMMITTED;
 
     /**
      * The repeatable read isolation level.
      */
-    REPEATABLE_READ("REPEATABLE READ"),
+    public static final IsolationLevel REPEATABLE_READ = IsolationLevel.REPEATABLE_READ;
 
     /**
      * The serializable isolation level.
      */
-    SERIALIZABLE("SERIALIZABLE"),
+    public static final IsolationLevel SERIALIZABLE = IsolationLevel.SERIALIZABLE;
 
     /**
      * The snapshot isolation level.
      */
-    SNAPSHOT("SNAPSHOT");
+    public static final IsolationLevel SNAPSHOT = IsolationLevel.valueOf("SNAPSHOT");
 
-    private final String sql;
-
-    MssqlIsolationLevel(String sql) {
-        this.sql = Assert.requireNonNull(sql, "sql must not be null");
-    }
-
-    /**
-     * Returns the SQL string represented by each value.
-     *
-     * @return the SQL string represented by each value
-     */
-    public String asSql() {
-        return this.sql;
-    }
 }

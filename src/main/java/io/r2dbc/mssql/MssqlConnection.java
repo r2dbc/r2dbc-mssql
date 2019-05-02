@@ -177,22 +177,6 @@ public final class MssqlConnection implements Connection {
     public Mono<Void> setTransactionIsolationLevel(IsolationLevel isolationLevel) {
         Assert.requireNonNull(isolationLevel, "IsolationLevel must not be null");
 
-        MssqlIsolationLevel specializedLevel = MssqlIsolationLevel.valueOf(isolationLevel.name());
-
-        return setTransactionIsolationLevel(specializedLevel);
-    }
-
-    /**
-     * Configures the SQL Server-specific isolation level for the current transaction.
-     *
-     * @param isolationLevel the isolation level for this transaction
-     * @return a {@link Publisher} that indicates that a transaction level has been configured
-     * @throws IllegalArgumentException if {@code isolationLevel} is {@code null}
-     * @see #setTransactionIsolationLevel(IsolationLevel)
-     */
-    public Mono<Void> setTransactionIsolationLevel(MssqlIsolationLevel isolationLevel) {
-        Assert.requireNonNull(isolationLevel, "IsolationLevel must not be null");
-
         return exchange("SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql());
     }
 

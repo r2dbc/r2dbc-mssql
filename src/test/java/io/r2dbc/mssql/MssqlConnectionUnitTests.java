@@ -25,9 +25,11 @@ import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.spi.IsolationLevel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import reactor.test.StepVerifier;
+
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -234,7 +236,7 @@ class MssqlConnectionUnitTests {
     }
 
     @ParameterizedTest
-    @EnumSource(IsolationLevel.class)
+    @MethodSource("isolationLevels")
     void shouldSetIsolationLevel(IsolationLevel isolationLevel) {
 
         TestClient client =
@@ -248,18 +250,9 @@ class MssqlConnectionUnitTests {
             .verifyComplete();
     }
 
-    @ParameterizedTest
-    @EnumSource(MssqlIsolationLevel.class)
-    void shouldSetMssqlIsolationLevel(MssqlIsolationLevel isolationLevel) {
-
-        TestClient client =
-            TestClient.builder().withTransactionStatus(TransactionStatus.EXPLICIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(),
-                "SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql().toUpperCase())).thenRespond(DoneToken.create(0)).build();
-
-        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
-
-        connection.setTransactionIsolationLevel(isolationLevel)
-            .as(StepVerifier::create)
-            .verifyComplete();
+    private static Stream<IsolationLevel> isolationLevels() {
+        return Stream.of(MssqlIsolationLevel.SERIALIZABLE, MssqlIsolationLevel.READ_COMMITTED,
+            MssqlIsolationLevel.READ_UNCOMMITTED, MssqlIsolationLevel.REPEATABLE_READ,
+            MssqlIsolationLevel.SNAPSHOT);
     }
 }
