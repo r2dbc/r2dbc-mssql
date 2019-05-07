@@ -24,9 +24,12 @@ import io.r2dbc.mssql.util.Assert;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Column metadata token.
@@ -48,7 +51,6 @@ public final class ColumnMetadataToken extends AbstractDataToken {
     /**
      * Creates a new {@link ColumnMetadataToken}.
      *
-     * @param type    token type.
      * @param columns the columns.
      */
     private ColumnMetadataToken(List<Column> columns) {
@@ -58,8 +60,11 @@ public final class ColumnMetadataToken extends AbstractDataToken {
 
         Map<String, Column> byName = new LinkedHashMap<>(this.columns.size());
 
+        Set<String> names = new HashSet<>();
         for (Column column : columns) {
-            byName.put(column.getName(), column);
+            if (names.add(column.getName().toLowerCase(Locale.ENGLISH))) {
+                byName.put(column.getName(), column);
+            }
         }
 
         this.namedColumns = byName;

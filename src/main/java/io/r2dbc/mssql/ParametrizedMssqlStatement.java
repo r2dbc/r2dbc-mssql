@@ -89,6 +89,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
     public ParametrizedMssqlStatement add() {
 
         assertNotExecuted();
+        this.bindings.validate(this.parsedQuery.getParameters());
         this.bindings.finish();
         return this;
     }
@@ -101,6 +102,8 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         if (!iterator.hasNext()) {
             throw new IllegalStateException(String.format("No parameters bound for query '%s'", this.parsedQuery.sql));
         }
+
+        this.bindings.validate(this.parsedQuery.getParameters());
 
         if (!this.bindings.getCurrent().isEmpty()) {
             assertNotExecuted();
@@ -568,6 +571,21 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         private final List<Binding> bindings = new ArrayList<>();
 
         private Binding current;
+
+        public void validate(List<ParsedParameter> parameters) {
+
+            for (Binding binding : this.bindings) {
+
+                Map<String, Encoded> bindingset = binding.getParameters();
+
+                for (ParsedParameter parameter : parameters) {
+
+                    if (!bindingset.containsKey(parameter.getName())) {
+                        throw new IllegalStateException("No parameter binding for " + parameter.getName());
+                    }
+                }
+            }
+        }
 
         private void finish() {
             this.current = null;

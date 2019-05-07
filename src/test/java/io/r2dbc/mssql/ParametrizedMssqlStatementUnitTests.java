@@ -123,6 +123,34 @@ class ParametrizedMssqlStatementUnitTests {
     }
 
     @Test
+    void shouldFailForMissingBinding() {
+
+        ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname AND lastname = @ln");
+
+        statement.bind("firstname", "fn");
+
+        assertThatThrownBy(statement::execute).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void shouldFailForMissingBindingByIndex() {
+
+        ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname AND lastname = @ln");
+
+        statement.bind(0, "fn");
+
+        assertThatThrownBy(statement::execute).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void shouldFailForMissingBindingInBatch() {
+
+        ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname AND lastname = @ln");
+
+        assertThatThrownBy(() -> statement.bind("firstname", "fn").add()).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
     void shouldCachePreparedStatementHandle() {
 
         Encoded encodedPreparedStatementHandle = new DefaultCodecs().encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), 1);
