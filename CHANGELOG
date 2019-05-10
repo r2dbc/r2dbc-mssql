@@ -1,6 +1,36 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.8.0.M8
+------------------
+* Upgrade to AssertJ 3.12.0 #72
+* Upgrade to Reactor Dysprosium M1 #71
+* Adapt to IsolationLevel changes (switch from enum to constant class) #70
+* Implement RowMetadata.getColumnNames() #64
+* Readme mentions mysql as driver identifier #62
+* Example Tests #60
+* Completion in GeneratedValues.reduceToSingleCountDoneToken(…) leaves non-consumed protocol messages on the wire #59
+* Add support for BLOB/CLOB types #58
+* Use R2DBC Exception hierarchy for driver exceptions #57
+* Reduce dependencies #56
+* Add configurable fetch size to MssqlStatement #55
+* Executing a parametrized Statement twice fails #54
+* Introduce cache for parsed SQL statements #53
+* Fix memory leak in cursored RPC flow #52
+* Reduce object allocations #51
+* SimpleMssqlStatement creates eagerly QueryMessageFlow #50
+* Defer error signal emission in MssqlResult until done token is processed #49
+* Introduce direct/cursored preference Predicate to prefer direct/cursored execution #48
+* Add support for SP_EXECUTESQL for simple parametrized statements #47
+* Query-Subscribers of Client.exchange(…) remain subscribed #46
+* Getting java.lang.IllegalStateException: Collation not available when querying the database. #37
+* Add ConnectionFactoryProvider.getDriver() implementation #31
+* Git ignore enhancement #30
+* Add support for varchar(max) and nvarchar(max) #28
+* Support SQL Server-specific transaction isolation levels by adding setTransactionIsolationLevel(MssqlIsolationLevel) to MssqlConnection #19
+* Document supported data types #18
+* Add support for binary types #3
+
 1.0.0.M7
 ------------------
 * Update changelog for M7 #25
