@@ -78,8 +78,6 @@ final class StreamDecoder {
 
             try {
 
-
-                // TODO: Large chunked messages (e.g.70k) reads chunk size of first header and does not de-chunk remainder
                 Header header = state.getRequiredHeader();
 
                 if (!state.canReadChunk()) {
@@ -256,7 +254,15 @@ final class StreamDecoder {
          */
         DecoderState readChunk() {
 
-            this.aggregatedBody.addComponent(true, this.remainder.readRetainedSlice(getChunkLength()));
+            do {
+
+                this.aggregatedBody.addComponent(true, this.remainder.readRetainedSlice(getChunkLength()));
+
+                if (!this.header.is(Status.StatusBit.EOM) && Header.canDecode(this.remainder)) {
+                    this.header = Header.decode(this.remainder);
+                }
+
+            } while (canReadChunk());
 
             return newState(this.remainder, this.aggregatedBody, null);
         }

@@ -24,11 +24,16 @@ import io.r2dbc.mssql.message.header.HeaderOptions;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
+import io.r2dbc.mssql.message.token.ColumnMetadataToken;
 import io.r2dbc.mssql.message.token.DoneToken;
+import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -261,5 +266,90 @@ class StreamDecoderUnitTests {
 
         firstChunk.release();
         lastChunk.release();
+    }
+
+    @Test
+    void shouldDecodeManyChunks() {
+
+        StreamDecoder decoder = new StreamDecoder();
+        MessageDecoder messageDecoder = ConnectionState.POST_LOGIN.decoder(CLIENT);
+
+        initializeColumMetadata(decoder, messageDecoder);
+
+        List<ByteBuf> chunks = createChunks();
+
+        // expect incomplete chunks to be empty
+        for (int i = 0; i < chunks.size() - 1; i++) {
+
+            decoder.decode(chunks.get(i), messageDecoder).as(StepVerifier::create)
+                .verifyComplete();
+        }
+
+        // Last chunk emits the data
+        decoder.decode(chunks.get(chunks.size() - 1), messageDecoder).as(StepVerifier::create)
+            .expectNextCount(1)
+            .verifyComplete();
+
+        StreamDecoder.DecoderState state = decoder.getDecoderState();
+        assertThat(state).isNull();
+        assertThat(decoder.getDecoderState()).isNull();
+    }
+
+    private List<ByteBuf> createChunks() {
+
+        ByteBuf row = HexUtils.decodeToByteBuf("D1010C00700061006C007500630068" +
+            "0004006D61726B080000000020A10700" +
+            "10F17B0DC7C7E5C54098C7A12F7E6867" +
+            "2408FED478E94628C6400437423146");
+
+        List<ByteBuf> chunks = new ArrayList<>();
+
+        while (row.isReadable()) {
+
+            int bytesToRead = row.readableBytes();
+
+            Status status = Status.empty();
+
+            if (bytesToRead > 10) {
+                bytesToRead = 10;
+            } else {
+                status = Status.of(Status.StatusBit.EOM);
+            }
+
+            Header header = Header.create(HeaderOptions.create(Type.TABULAR_RESULT, status), Header.LENGTH + bytesToRead, PacketIdProvider.just(1));
+            ByteBuf chunk = TestByteBufAllocator.TEST.buffer();
+            header.encode(chunk);
+            chunk.writeBytes(row, bytesToRead);
+
+            chunks.add(chunk);
+        }
+        return chunks;
+    }
+
+    private static void initializeColumMetadata(StreamDecoder decoder, MessageDecoder messageDecoder) {
+
+        // Required initialization. ColMetadata does not support yet chunking.
+        ByteBuf colmetadata = HexUtils.decodeToByteBuf("8107000000000000" +
+            "000800300B65006D0070006C006F0079" +
+            "00650065005F00690064000000000008" +
+            "00E764000904D00034096C0061007300" +
+            "74005F006E0061006D00650000000000" +
+            "0900A732000904D000340A6600690072" +
+            "00730074005F006E0061006D00650000" +
+            "00000009006E0806730061006C006100" +
+            "7200790000000000090024100366006F" +
+            "006F000000000009006D080366006C00" +
+            "74000000000009006D04036200610072" +
+            "00");
+
+        Header colHeader = Header.create(HeaderOptions.create(Type.TABULAR_RESULT, Status.of(Status.StatusBit.EOM)), Header.LENGTH + colmetadata.readableBytes(), PacketIdProvider.just(1));
+
+        ByteBuf initialize = TestByteBufAllocator.TEST.heapBuffer();
+        colHeader.encode(initialize);
+        initialize.writeBytes(colmetadata);
+
+        decoder.decode(initialize, messageDecoder).as(StepVerifier::create)
+            .assertNext(actual -> assertThat(actual).isInstanceOf(ColumnMetadataToken.class))
+            .verifyComplete();
     }
 }
