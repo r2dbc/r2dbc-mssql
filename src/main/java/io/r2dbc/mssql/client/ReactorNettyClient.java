@@ -58,7 +58,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -71,17 +70,11 @@ public final class ReactorNettyClient implements Client {
 
     private static final Logger logger = LoggerFactory.getLogger(ReactorNettyClient.class);
 
-    private final AtomicReference<ByteBufAllocator> byteBufAllocator = new AtomicReference<>();
+    private final ByteBufAllocator byteBufAllocator;
 
-    private final AtomicReference<Connection> connection = new AtomicReference<>();
+    private final Connection connection;
 
-    private final AtomicReference<TransactionDescriptor> transactionDescriptor = new AtomicReference<>(TransactionDescriptor.empty());
-
-    private final AtomicReference<TransactionStatus> transactionStatus = new AtomicReference<>(TransactionStatus.AUTO_COMMIT);
-
-    private final AtomicReference<Optional<Collation>> databaseCollation = new AtomicReference<>(Optional.empty());
-
-    private final AtomicBoolean encryptionSupported = new AtomicBoolean();
+    private final TdsEncoder tdsEncoder;
 
     private final List<EnvironmentChangeListener> envChangeListeners = new ArrayList<>();
 
@@ -120,27 +113,10 @@ public final class ReactorNettyClient implements Client {
         for (FeatureExtAckToken.FeatureToken featureToken : token.getFeatureTokens()) {
 
             if (featureToken instanceof FeatureExtAckToken.ColumnEncryption) {
-                this.encryptionSupported.set(true);
+                this.encryptionSupported = true;
             }
         }
     });
-
-    private final BiConsumer<Message, SynchronousSink<Message>> handleStateChange = handleMessage(Message.class,
-        (message, sink) -> {
-
-            ConnectionState connectionState = this.state.get();
-
-            if (connectionState.canAdvance(message)) {
-                ConnectionState nextState = connectionState.next(message, this.connection.get());
-                if (this.state.compareAndSet(connectionState, nextState)) {
-                    this.decodeFunction.set(nextState.decoder(this));
-                } else {
-                    sink.error(ProtocolException.invalidTds(String.format("Cannot advance state from [%s]", connectionState)));
-                }
-            }
-
-            sink.next(message);
-        });
 
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
@@ -150,11 +126,17 @@ public final class ReactorNettyClient implements Client {
 
     private final EmitterProcessor<Message> responseProcessor = EmitterProcessor.create(false);
 
-    private final AtomicReference<ConnectionState> state = new AtomicReference<>(ConnectionState.PRELOGIN);
+    private ConnectionState state = ConnectionState.PRELOGIN;
 
-    private final AtomicReference<MessageDecoder> decodeFunction = new AtomicReference<>(ConnectionState.PRELOGIN.decoder(this));
+    private MessageDecoder decodeFunction = ConnectionState.PRELOGIN.decoder(this);
 
-    private final TdsEncoder tdsEncoder;
+    private boolean encryptionSupported = false;
+
+    private volatile TransactionDescriptor transactionDescriptor = TransactionDescriptor.empty();
+
+    private volatile TransactionStatus transactionStatus = TransactionStatus.AUTO_COMMIT;
+
+    private volatile Optional<Collation> databaseCollation = Optional.empty();
 
     /**
      * Creates a new frame processor connected to a given TCP connection.
@@ -168,13 +150,13 @@ public final class ReactorNettyClient implements Client {
 
         StreamDecoder decoder = new StreamDecoder();
 
-        this.byteBufAllocator.set(connection.outbound().alloc());
-        this.connection.set(connection);
+        this.byteBufAllocator = connection.outbound().alloc();
+        this.connection = connection;
+        this.tdsEncoder = tdsEncoder;
+
         this.envChangeListeners.add(tdsEncoder);
         this.envChangeListeners.add(new TransactionListener());
         this.envChangeListeners.add(new CollationListener());
-
-        this.tdsEncoder = tdsEncoder;
 
         connection.addHandlerFirst(new ChannelInboundHandlerAdapter() {
 
@@ -191,13 +173,29 @@ public final class ReactorNettyClient implements Client {
             }
         });
 
+        BiConsumer<Message, SynchronousSink<Message>> handleStateChange = handleMessage(Message.class,
+            (message, sink) -> {
+
+                ConnectionState connectionState = this.state;
+
+                if (connectionState.canAdvance(message)) {
+
+                    ConnectionState nextState = connectionState.next(message, connection);
+
+                    this.state = nextState;
+                    this.decodeFunction = nextState.decoder(this);
+                }
+
+                sink.next(message);
+            });
+
         connection.inbound().receiveObject() //
             .concatMap(it -> {
 
                 if (it instanceof ByteBuf) {
 
                     ByteBuf buffer = (ByteBuf) it;
-                    return decoder.decode(buffer, this.decodeFunction.get());
+                    return decoder.decode(buffer, this.decodeFunction);
                 }
 
                 if (it instanceof Message) {
@@ -219,7 +217,7 @@ public final class ReactorNettyClient implements Client {
                 return it;
             })
             .doOnError(message -> logger.warn("Error: {}", message.getMessage(), message)) //
-            .handle(this.handleStateChange) //
+            .handle(handleStateChange) //
             .doOnNext(m -> {
                 this.handleEnvChange.accept(m);
                 this.featureAckChange.accept(m);
@@ -327,17 +325,12 @@ public final class ReactorNettyClient implements Client {
         return Mono.defer(() -> {
 
             logger.debug("close(subscribed)");
-            Connection connection = this.connection.getAndSet(null);
-
-            if (connection == null) {
-                return Mono.empty();
-            }
 
             return Mono.create(it -> {
 
                 if (this.isClosed.compareAndSet(false, true)) {
 
-                    connection.channel().disconnect().addListener((ChannelFutureListener) future ->
+                    this.connection.channel().disconnect().addListener((ChannelFutureListener) future ->
                     {
                         if (future.isSuccess()) {
                             it.success();
@@ -345,6 +338,8 @@ public final class ReactorNettyClient implements Client {
                             it.error(future.cause());
                         }
                     });
+                } else {
+                    it.success();
                 }
             });
         });
@@ -372,27 +367,27 @@ public final class ReactorNettyClient implements Client {
 
     @Override
     public ByteBufAllocator getByteBufAllocator() {
-        return this.byteBufAllocator.get();
+        return this.byteBufAllocator;
     }
 
     @Override
     public TransactionDescriptor getTransactionDescriptor() {
-        return this.transactionDescriptor.get();
+        return this.transactionDescriptor;
     }
 
     @Override
     public TransactionStatus getTransactionStatus() {
-        return this.transactionStatus.get();
+        return this.transactionStatus;
     }
 
     @Override
     public Optional<Collation> getDatabaseCollation() {
-        return this.databaseCollation.get();
+        return this.databaseCollation;
     }
 
     @Override
     public boolean isColumnEncryptionSupported() {
-        return this.encryptionSupported.get();
+        return this.encryptionSupported;
     }
 
     @SuppressWarnings("unchecked")
@@ -467,8 +462,8 @@ public final class ReactorNettyClient implements Client {
         }
 
         private void updateStatus(TransactionStatus status, TransactionDescriptor descriptor) {
-            ReactorNettyClient.this.transactionStatus.set(status);
-            ReactorNettyClient.this.transactionDescriptor.set(descriptor);
+            ReactorNettyClient.this.transactionStatus = status;
+            ReactorNettyClient.this.transactionDescriptor = descriptor;
         }
     }
 
@@ -480,7 +475,7 @@ public final class ReactorNettyClient implements Client {
             if (event.getToken().getChangeType() == EnvChangeToken.EnvChangeType.SQLCollation) {
 
                 Collation collation = Collation.decode(Unpooled.wrappedBuffer(event.getToken().getNewValue()));
-                ReactorNettyClient.this.databaseCollation.set(Optional.of(collation));
+                ReactorNettyClient.this.databaseCollation = Optional.of(collation);
             }
         }
     }
