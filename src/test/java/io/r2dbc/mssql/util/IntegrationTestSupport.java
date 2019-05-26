@@ -23,7 +23,9 @@ import io.r2dbc.spi.ConnectionFactories;
 import io.r2dbc.spi.ConnectionFactoryOptions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import reactor.test.StepVerifier;
 
 import java.util.function.Predicate;
 
@@ -64,6 +66,11 @@ public abstract class IntegrationTestSupport {
 
         connectionFactory = (MssqlConnectionFactory) ConnectionFactories.get(options);
         connection = connectionFactory.create().block();
+    }
+
+    @BeforeEach
+    void setUp() {
+        connection.setAutoCommit(true).as(StepVerifier::create).verifyComplete();
     }
 
     @AfterAll

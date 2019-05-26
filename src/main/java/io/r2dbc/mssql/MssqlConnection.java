@@ -50,10 +50,18 @@ public final class MssqlConnection implements Connection {
 
     private final ConnectionOptions connectionOptions;
 
+    private volatile boolean autoCommit;
+
+    private volatile IsolationLevel isolationLevel;
+
     MssqlConnection(Client client, ConnectionOptions connectionOptions) {
 
         this.client = Assert.requireNonNull(client, "Client must not be null");
         this.connectionOptions = Assert.requireNonNull(connectionOptions, "ConnectionOptions must not be null");
+
+        TransactionStatus transactionStatus = client.getTransactionStatus();
+        this.autoCommit = transactionStatus == TransactionStatus.AUTO_COMMIT;
+        this.isolationLevel = IsolationLevel.READ_COMMITTED;
     }
 
     @Override
@@ -66,7 +74,7 @@ public final class MssqlConnection implements Connection {
                 return Mono.empty();
             }
 
-            String sql = tx == TransactionStatus.AUTO_COMMIT ? "SET IMPLICIT_TRANSACTIONS OFF; " : "";
+            String sql = tx == TransactionStatus.AUTO_COMMIT ? "SET IMPLICIT_TRANSACTIONS ON; " : "";
             sql += "BEGIN TRANSACTION";
 
             logger.debug("Beginning transaction from status [{}]", tx);
@@ -109,14 +117,15 @@ public final class MssqlConnection implements Connection {
 
         return useTransactionStatus(tx -> {
 
-            if (tx != TransactionStatus.STARTED) {
-                logger.debug("Skipping savepoint creation because status is [{}]", tx);
-                return Mono.empty();
-            }
-
             logger.debug("Creating savepoint for transaction with status [{}]", tx);
 
-            return exchange(String.format("IF @@TRANCOUNT = 0 BEGIN BEGIN TRANSACTION IF @@TRANCOUNT = 2 COMMIT TRANSACTION END SAVE TRANSACTION %s", name));
+            if (this.autoCommit) {
+                logger.debug("Setting auto-commit mode to [false]");
+            }
+
+            return exchange(String.format("SET IMPLICIT_TRANSACTIONS ON; IF @@TRANCOUNT = 0 BEGIN BEGIN TRAN IF @@TRANCOUNT = 2 COMMIT TRAN END SAVE TRAN %s;", name)).doOnSuccess(ignore -> {
+                this.autoCommit = false;
+            });
         });
     }
 
@@ -135,7 +144,7 @@ public final class MssqlConnection implements Connection {
 
     @Override
     public Mono<Void> releaseSavepoint(String name) {
-        throw new UnsupportedOperationException("Savepoint releasing not supported with SQL Server");
+        return Mono.empty();
     }
 
     @Override
@@ -143,7 +152,7 @@ public final class MssqlConnection implements Connection {
 
         return useTransactionStatus(tx -> {
 
-            if (tx != TransactionStatus.STARTED) {
+            if (tx != TransactionStatus.STARTED && tx != TransactionStatus.EXPLICIT) {
                 logger.debug("Skipping rollback transaction because status is [{}]", tx);
                 return Mono.empty();
             }
@@ -173,11 +182,39 @@ public final class MssqlConnection implements Connection {
         });
     }
 
+    public boolean isAutoCommit() {
+        return this.autoCommit;
+    }
+
+    public Mono<Void> setAutoCommit(boolean autoCommit) {
+
+        return Mono.defer(() -> {
+
+            StringBuilder builder = new StringBuilder();
+
+            logger.debug("Setting auto-commit mode to [{}]", autoCommit);
+
+            if (this.autoCommit != autoCommit) {
+
+                logger.debug("Committing pending transactions");
+                builder.append("IF @@TRANCOUNT > 0 COMMIT TRAN;");
+            }
+
+            builder.append(autoCommit ? "SET IMPLICIT_TRANSACTIONS OFF;" : "SET IMPLICIT_TRANSACTIONS ON;");
+
+            return exchange(builder.toString()).doOnSuccess(ignore -> this.autoCommit = autoCommit);
+        });
+    }
+
+    public IsolationLevel getTransactionIsolationLevel() {
+        return this.isolationLevel;
+    }
+
     @Override
     public Mono<Void> setTransactionIsolationLevel(IsolationLevel isolationLevel) {
         Assert.requireNonNull(isolationLevel, "IsolationLevel must not be null");
 
-        return exchange("SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql());
+        return exchange("SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql()).doOnSuccess(ignore -> this.isolationLevel = isolationLevel);
     }
 
     private Mono<Void> exchange(String sql) {

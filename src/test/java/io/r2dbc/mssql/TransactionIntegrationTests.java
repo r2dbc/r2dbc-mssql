@@ -119,6 +119,63 @@ class TransactionIntegrationTests extends IntegrationTestSupport {
     }
 
     @Test
+    void autoCommitDisabled() {
+
+        createTable(connection);
+
+        connection.setAutoCommit(false)
+            .as(StepVerifier::create)
+            .verifyComplete();
+
+        connection.createStatement("INSERT INTO r2dbc_example VALUES(0, 'Walter', 'White')").execute()
+            .<Object>flatMap(Result::getRowsUpdated)
+            .concatWith(connection.rollbackTransaction())
+            .as(StepVerifier::create)
+            .expectNext(1).as("Affected Rows Count from first INSERT")
+            .verifyComplete();
+
+        connectionFactory.create().flatMapMany(c -> c.createStatement("SELECT * FROM r2dbc_example")
+            .execute().flatMap(it -> it.map((row, metadata) -> row.get("first_name"))))
+            .as(StepVerifier::create)
+            .verifyComplete();
+    }
+
+    @Test
+    void savepointStartsTransaction() {
+
+        createTable(connection);
+
+        connection.createStatement("INSERT INTO r2dbc_example VALUES(1, 'Jesse', 'Pinkman')")
+            .execute().flatMap(Result::getRowsUpdated)
+            .as(StepVerifier::create)
+            .expectNext(1)
+            .verifyComplete();
+
+        connection.createSavepoint("s1")
+            .thenMany(connection.createStatement("INSERT INTO r2dbc_example VALUES(0, 'Walter', 'White')").execute()
+                .<Object>flatMap(Result::getRowsUpdated))
+            .concatWith(Mono.fromSupplier(() -> connection.isAutoCommit()))
+            .concatWith(connection.rollbackTransaction())
+            .as(StepVerifier::create)
+            .expectNext(1).as("Affected Rows Count from first INSERT")
+            .expectNext(false).as("Auto-commit disabled by createSavepoint")
+            .verifyComplete();
+
+        connection.createStatement("INSERT INTO r2dbc_example VALUES(0, 'Walter', 'White')").execute()
+            .<Object>flatMap(Result::getRowsUpdated)
+            .concatWith(connection.rollbackTransaction())
+            .as(StepVerifier::create)
+            .expectNext(1).as("Affected Rows Count from second INSERT")
+            .verifyComplete();
+
+        connectionFactory.create().flatMapMany(c -> c.createStatement("SELECT * FROM r2dbc_example")
+            .execute().flatMap(it -> it.map((row, metadata) -> row.get("first_name"))))
+            .as(StepVerifier::create)
+            .expectNext("Jesse")
+            .verifyComplete();
+    }
+
+    @Test
     void commitTransaction() {
 
         createTable(connection);

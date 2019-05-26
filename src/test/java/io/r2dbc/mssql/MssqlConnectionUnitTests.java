@@ -34,6 +34,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -50,7 +51,7 @@ class MssqlConnectionUnitTests {
     void shouldBeginTransactionFromInitialState() {
 
         TestClient client =
-            TestClient.builder().expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "SET IMPLICIT_TRANSACTIONS OFF; BEGIN TRANSACTION")).thenRespond(DoneToken.create(0)).build();
+            TestClient.builder().expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "SET IMPLICIT_TRANSACTIONS ON; BEGIN TRANSACTION")).thenRespond(DoneToken.create(0)).build();
 
         MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
 
@@ -84,7 +85,7 @@ class MssqlConnectionUnitTests {
             .as(StepVerifier::create)
             .verifyComplete();
 
-        verify(clientMock).getTransactionStatus();
+        verify(clientMock, times(2)).getTransactionStatus();
         verifyNoMoreInteractions(clientMock);
     }
 
@@ -113,7 +114,7 @@ class MssqlConnectionUnitTests {
             .as(StepVerifier::create)
             .verifyComplete();
 
-        verify(clientMock).getTransactionStatus();
+        verify(clientMock, times(2)).getTransactionStatus();
         verifyNoMoreInteractions(clientMock);
     }
 
@@ -142,7 +143,7 @@ class MssqlConnectionUnitTests {
             .as(StepVerifier::create)
             .verifyComplete();
 
-        verify(clientMock).getTransactionStatus();
+        verify(clientMock, times(2)).getTransactionStatus();
         verifyNoMoreInteractions(clientMock);
     }
 
@@ -152,7 +153,7 @@ class MssqlConnectionUnitTests {
         Client clientMock = mock(Client.class);
         MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
 
-        assertThatThrownBy(() -> connection.releaseSavepoint("foo")).isInstanceOf(UnsupportedOperationException.class);
+        connection.releaseSavepoint("foo").as(StepVerifier::create).verifyComplete();
     }
 
     @ParameterizedTest
@@ -200,17 +201,16 @@ class MssqlConnectionUnitTests {
             .as(StepVerifier::create)
             .verifyComplete();
 
-        verify(clientMock).getTransactionStatus();
+        verify(clientMock, times(2)).getTransactionStatus();
         verifyNoMoreInteractions(clientMock);
     }
-
 
     @Test
     void shouldCreateSavepointFromExplicitTransaction() {
 
         TestClient client =
-            TestClient.builder().withTransactionStatus(TransactionStatus.STARTED).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "IF @@TRANCOUNT = 0 BEGIN BEGIN TRANSACTION IF " +
-                "@@TRANCOUNT = 2 COMMIT TRANSACTION END SAVE TRANSACTION foo")).thenRespond(DoneToken.create(0)).build();
+            TestClient.builder().withTransactionStatus(TransactionStatus.STARTED).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "SET IMPLICIT_TRANSACTIONS ON; IF @@TRANCOUNT = 0 " +
+                "BEGIN BEGIN TRAN IF @@TRANCOUNT = 2 COMMIT TRAN END SAVE TRAN foo;")).thenRespond(DoneToken.create(0)).build();
 
         MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
 
@@ -220,19 +220,17 @@ class MssqlConnectionUnitTests {
     }
 
     @Test
-    void shouldNotCreateSavepointInAutoCommitState() {
+    void createSavepoShouldBeginTransaction() {
 
-        Client clientMock = mock(Client.class);
-        when(clientMock.getTransactionStatus()).thenReturn(TransactionStatus.AUTO_COMMIT);
+        TestClient client =
+            TestClient.builder().withTransactionStatus(TransactionStatus.AUTO_COMMIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "SET IMPLICIT_TRANSACTIONS ON; IF @@TRANCOUNT =" +
+                " 0 BEGIN BEGIN TRAN IF @@TRANCOUNT = 2 COMMIT TRAN END SAVE TRAN foo;")).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
 
         connection.createSavepoint("foo")
             .as(StepVerifier::create)
             .verifyComplete();
-
-        verify(clientMock).getTransactionStatus();
-        verifyNoMoreInteractions(clientMock);
     }
 
     @ParameterizedTest
