@@ -16,9 +16,11 @@
 
 package io.r2dbc.mssql;
 
+import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.StringUtils;
+import reactor.netty.resources.ConnectionProvider;
 import reactor.util.annotation.Nullable;
 
 import java.net.InetAddress;
@@ -58,6 +60,8 @@ public final class MssqlConnectionConfiguration {
 
     private final String host;
 
+    private final String hostNameInCertificate;
+
     private final CharSequence password;
 
     private final Predicate<String> preferCursoredExecution;
@@ -68,7 +72,8 @@ public final class MssqlConnectionConfiguration {
 
     private final String username;
 
-    private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, Duration connectTimeout, @Nullable String database, String host, CharSequence password,
+    private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, Duration connectTimeout, @Nullable String database, String host, String hostNameInCertificate
+        , CharSequence password,
                                          Predicate<String> preferCursoredExecution, int port, boolean ssl, String username) {
 
         this.applicationName = applicationName;
@@ -76,6 +81,7 @@ public final class MssqlConnectionConfiguration {
         this.connectTimeout = Assert.requireNonNull(connectTimeout, "connect timeout must not be null");
         this.database = database;
         this.host = Assert.requireNonNull(host, "host must not be null");
+        this.hostNameInCertificate = Assert.requireNonNull(hostNameInCertificate, "hostNameInCertificate must not be null");
         this.password = Assert.requireNonNull(password, "password must not be null");
         this.preferCursoredExecution = Assert.requireNonNull(preferCursoredExecution, "preferCursoredExecution must not be null");
         this.port = port;
@@ -92,7 +98,11 @@ public final class MssqlConnectionConfiguration {
         return new Builder();
     }
 
-    public ConnectionOptions toConnectionOptions() {
+    ClientConfiguration toClientConfiguration() {
+        return new DefaultClientConfiguration(this.connectTimeout, this.host, this.hostNameInCertificate, this.port, this.ssl);
+    }
+
+    ConnectionOptions toConnectionOptions() {
         return new ConnectionOptions(this.preferCursoredExecution, new DefaultCodecs(), new IndefinitePreparedStatementCache());
     }
 
@@ -105,8 +115,9 @@ public final class MssqlConnectionConfiguration {
         sb.append(", connectTimeout=\"").append(this.connectTimeout).append('\"');
         sb.append(", database=\"").append(this.database).append('\"');
         sb.append(", host=\"").append(this.host).append('\"');
+        sb.append(", hostNameInCertificate=\"").append(this.hostNameInCertificate).append('\"');
         sb.append(", password=\"").append(repeat(this.password.length(), "*")).append('\"');
-        sb.append(", preferCursoredExecution=\"").append(preferCursoredExecution).append('\"');
+        sb.append(", preferCursoredExecution=\"").append(this.preferCursoredExecution).append('\"');
         sb.append(", port=").append(this.port);
         sb.append(", ssl=").append(this.ssl);
         sb.append(", username=\"").append(this.username).append('\"');
@@ -136,12 +147,16 @@ public final class MssqlConnectionConfiguration {
         return this.host;
     }
 
+    String getHostNameInCertificate() {
+        return this.hostNameInCertificate;
+    }
+
     CharSequence getPassword() {
         return this.password;
     }
 
     Predicate<String> getPreferCursoredExecution() {
-        return preferCursoredExecution;
+        return this.preferCursoredExecution;
     }
 
     int getPort() {
@@ -149,7 +164,7 @@ public final class MssqlConnectionConfiguration {
     }
 
     boolean useSsl() {
-        return ssl;
+        return this.ssl;
     }
 
     String getUsername() {
@@ -216,6 +231,8 @@ public final class MssqlConnectionConfiguration {
         private String database;
 
         private String host;
+
+        private String hostNameInCertificate;
 
         private Predicate<String> preferCursoredExecution = sql -> false;
 
@@ -303,6 +320,18 @@ public final class MssqlConnectionConfiguration {
         }
 
         /**
+         * Configure the expected hostname in the SSL certificate. Defaults to {@link #host(String)} if left unconfigured. Accepts wildcards such as {@code *.database.windows.net}.
+         *
+         * @param hostNameInCertificate the hostNameInCertificate
+         * @return this {@link Builder}
+         * @throws IllegalArgumentException if {@code hostNameInCertificate} is {@code null}
+         */
+        public Builder hostNameInCertificate(String hostNameInCertificate) {
+            this.hostNameInCertificate = Assert.requireNonNull(hostNameInCertificate, "hostNameInCertificate must not be null");
+            return this;
+        }
+
+        /**
          * Configure the password.
          *
          * @param password the password
@@ -367,8 +396,66 @@ public final class MssqlConnectionConfiguration {
          * @return a configured {@link MssqlConnectionConfiguration}.
          */
         public MssqlConnectionConfiguration build() {
-            return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, this.host, this.password, this.preferCursoredExecution, this.port,
+
+            if (this.hostNameInCertificate == null) {
+                this.hostNameInCertificate = this.host;
+            }
+
+            return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, this.host, this.hostNameInCertificate, this.password,
+                this.preferCursoredExecution, this.port,
                 this.ssl, this.username);
+        }
+    }
+
+    private static class DefaultClientConfiguration implements ClientConfiguration {
+
+        private Duration connectTimeout;
+
+        private String host;
+
+        private String hostNameInCertificate;
+
+        private int port;
+
+        private boolean ssl;
+
+        DefaultClientConfiguration(Duration connectTimeout, String host, String hostNameInCertificate, int port, boolean ssl) {
+
+            this.connectTimeout = connectTimeout;
+            this.host = host;
+            this.hostNameInCertificate = hostNameInCertificate;
+            this.port = port;
+            this.ssl = ssl;
+        }
+
+        @Override
+        public String getHost() {
+            return this.host;
+        }
+
+        @Override
+        public int getPort() {
+            return this.port;
+        }
+
+        @Override
+        public Duration getConnectTimeout() {
+            return this.connectTimeout;
+        }
+
+        @Override
+        public ConnectionProvider getConnectionProvider() {
+            return ConnectionProvider.newConnection();
+        }
+
+        @Override
+        public boolean isSslEnabled() {
+            return this.ssl;
+        }
+
+        @Override
+        public String getHostNameInCertificate() {
+            return this.hostNameInCertificate;
         }
     }
 }

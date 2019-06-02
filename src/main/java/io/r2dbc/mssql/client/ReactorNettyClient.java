@@ -271,22 +271,48 @@ public final class ReactorNettyClient implements Client {
         Assert.requireNonNull(connectTimeout, "connect timeout must not be null");
         Assert.requireNonNull(host, "host must not be null");
 
-        return connect(host, port, connectTimeout, ConnectionProvider.newConnection());
+        return connect(new ClientConfiguration() {
+
+            @Override
+            public String getHost() {
+                return host;
+            }
+
+            @Override
+            public int getPort() {
+                return port;
+            }
+
+            @Override
+            public Duration getConnectTimeout() {
+                return connectTimeout;
+            }
+
+            @Override
+            public ConnectionProvider getConnectionProvider() {
+                return ConnectionProvider.newConnection();
+            }
+
+            @Override
+            public boolean isSslEnabled() {
+                return false;
+            }
+
+            @Override
+            public String getHostNameInCertificate() {
+                return host;
+            }
+        });
     }
 
     /**
-     * Creates a new frame processor connected to a given host.
+     * Creates a new frame processor connected to {@link ClientConfiguration}.
      *
-     * @param host               the host to connect to
-     * @param port               the port to connect to
-     * @param connectTimeout     the connect timeout
-     * @param connectionProvider the connection provider resources
+     * @param configuration the client configuration
      */
-    private static Mono<ReactorNettyClient> connect(String host, int port, Duration connectTimeout, ConnectionProvider connectionProvider) {
+    public static Mono<ReactorNettyClient> connect(ClientConfiguration configuration) {
 
-        Assert.requireNonNull(connectionProvider, "connectionProvider must not be null");
-        Assert.requireNonNull(connectTimeout, "connect timeout must not be null");
-        Assert.requireNonNull(host, "host must not be null");
+        Assert.requireNonNull(configuration, "configuration must not be null");
 
         logger.debug("connect()");
 
@@ -294,17 +320,17 @@ public final class ReactorNettyClient implements Client {
 
         TdsEncoder tdsEncoder = new TdsEncoder(packetIdProvider);
 
-        Mono<? extends Connection> connection = TcpClient.create(connectionProvider)
-            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Math.toIntExact(connectTimeout.toMillis()))
-            .host(host)
-            .port(port)
+        Mono<? extends Connection> connection = TcpClient.create(configuration.getConnectionProvider())
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Math.toIntExact(configuration.getConnectTimeout().toMillis()))
+            .host(configuration.getHost())
+            .port(configuration.getPort())
             .connect()
             .doOnNext(it -> {
 
                 ChannelPipeline pipeline = it.channel().pipeline();
                 pipeline.addFirst(tdsEncoder.getClass().getName(), tdsEncoder);
 
-                TdsSslHandler handler = new TdsSslHandler(packetIdProvider);
+                TdsSslHandler handler = new TdsSslHandler(packetIdProvider, configuration);
                 pipeline.addAfter(tdsEncoder.getClass().getName(), handler.getClass().getName(), handler);
 
                 InternalLogger logger = InternalLoggerFactory.getInstance(ReactorNettyClient.class);

@@ -40,11 +40,12 @@ import reactor.util.annotation.Nullable;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
+import java.security.GeneralSecurityException;
 import java.security.KeyManagementException;
+import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 
 /**
  * SSL handling for TDS connections.
@@ -63,9 +64,11 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(TdsSslHandler.class);
 
-    private volatile SslHandler sslHandler;
-
     private final PacketIdProvider packetIdProvider;
+
+    private final SslConfiguration sslConfiguration;
+
+    private volatile SslHandler sslHandler;
 
     private ChannelHandlerContext context;
 
@@ -83,46 +86,46 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
      *
      * @param packetIdProvider the {@link PacketIdProvider} to create {@link Header}s to wrap the SSL handshake.
      */
-    public TdsSslHandler(PacketIdProvider packetIdProvider) {
+    public TdsSslHandler(PacketIdProvider packetIdProvider, SslConfiguration sslConfiguration) {
 
         Assert.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
+        Assert.requireNonNull(sslConfiguration, "SslConfiguration must not be null");
 
         this.packetIdProvider = packetIdProvider;
+        this.sslConfiguration = sslConfiguration;
     }
 
     /**
      * Create the {@link SslHandler}.
      *
+     * @param sslConfiguration the SSL configuration.
      * @return
      * @throws NoSuchAlgorithmException
      * @throws KeyManagementException
      */
-    private SslHandler createSslHandler() throws NoSuchAlgorithmException, KeyManagementException {
+    private static SslHandler createSslHandler(SslConfiguration sslConfiguration) throws GeneralSecurityException {
 
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         SSLContext sslContext = SSLContext.getInstance("TLS");
-        TrustManager tms[] = new TrustManager[]{new X509TrustManager() {
+        KeyStore ks = null;
+        tmf.init(ks);
 
-            @Override
-            public void checkClientTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
-
-            }
-
-            @Override
-            public void checkServerTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
-
-            }
-
-            @Override
-            public X509Certificate[] getAcceptedIssuers() {
-                return new X509Certificate[0];
-            }
-        }};
-
+        TrustManager[] trustManagers = tmf.getTrustManagers();
+        TrustManager[] tms = new TrustManager[]{getTrustManager(sslConfiguration, trustManagers[0])};
         sslContext.init(null, tms, null);
 
         SSLEngine sslEngine = sslContext.createSSLEngine();
         sslEngine.setUseClientMode(true);
         return new SslHandler(sslEngine);
+    }
+
+    private static TrustManager getTrustManager(SslConfiguration sslConfiguration, TrustManager trustManager) {
+
+        if (sslConfiguration.isSslEnabled()) {
+            return new ExpectedHostnameX509TrustManager((X509TrustManager) trustManager, sslConfiguration.getHostNameInCertificate());
+        }
+
+        return TrustAllTrustManager.INSTANCE;
     }
 
     /**
@@ -138,7 +141,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
         if (evt == SslState.LOGIN_ONLY || evt == SslState.CONNECTION) {
 
             this.state = (SslState) evt;
-            this.sslHandler = createSslHandler();
+            this.sslHandler = createSslHandler(this.sslConfiguration);
 
             logger.debug("Registering Context Proxy and SSL Event Handlers to propagate SSL events to channelRead()");
             ctx.pipeline().addAfter(getClass().getName(), ContextProxy.class.getName(), new ContextProxy());
@@ -370,7 +373,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
             return;
         }
 
-        if (handshakeDone && this.state == SslState.CONNECTION) {
+        if (this.handshakeDone && this.state == SslState.CONNECTION) {
             this.sslHandler.channelRead(ctx, msg);
             return;
         }
@@ -415,4 +418,5 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
             return (buffer.readableBytes() + Header.LENGTH) >= header.getLength();
         }
     }
+
 }

@@ -20,6 +20,7 @@ import io.r2dbc.mssql.util.IntegrationTestSupport;
 import io.r2dbc.spi.ColumnMetadata;
 import io.r2dbc.spi.R2dbcPermissionDeniedException;
 import io.r2dbc.spi.Result;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -105,6 +106,7 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
     }
 
     @Test
+    @Disabled("Requires certificate import into the truststore")
     void shouldInsertAndSelectUsingMapUsingTls() {
 
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()

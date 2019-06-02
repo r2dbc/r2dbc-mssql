@@ -17,6 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
+import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.mssql.client.ReactorNettyClient;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.ConnectionFactory;
@@ -45,7 +46,7 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         this(Mono.defer(() -> {
             Assert.requireNonNull(configuration, "configuration must not be null");
 
-            return ReactorNettyClient.connect(configuration.getHost(), configuration.getPort(), configuration.getConnectTimeout()).cast(Client.class);
+            return ReactorNettyClient.connect(configuration.toClientConfiguration()).cast(Client.class);
         }), configuration);
     }
 
@@ -64,11 +65,15 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
             return LoginFlow.exchange(client, loginConfiguration)
                 .doOnError(e -> client.close().subscribe());
         })
-            .map(it -> new MssqlConnection(it, connectionOptions));
+            .map(it -> new MssqlConnection(it, this.connectionOptions));
+    }
+
+    ClientConfiguration getClientConfiguration() {
+        return this.configuration.toClientConfiguration();
     }
 
     ConnectionOptions getConnectionOptions() {
-        return connectionOptions;
+        return this.connectionOptions;
     }
 
     @Override

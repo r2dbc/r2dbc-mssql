@@ -56,6 +56,11 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
     public static final Option<UUID> CONNECTION_ID = Option.valueOf("connectionId");
 
     /**
+     * Expected Hostname in SSL certificate. Supports wildcards.
+     */
+    public static final Option<String> HOSTNAME_IN_CERTIFICATE = Option.valueOf("hostNameInCertificate");
+
+    /**
      * Configure whether to prefer cursored execution on a statement-by-statement basis. Value can be {@link Boolean}, a {@link Predicate}, or a {@link Class class name}. The {@link Predicate}
      * accepts the SQL query string and returns a boolean flag indicating preference.
      * {@literal true} prefers cursors, {@literal false} prefers direct execution.
@@ -65,7 +70,12 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
     /**
      * Driver option value.
      */
-    public static final String MSSQL_DRIVER = "mssql";
+    public static final String MSSQL_DRIVER = "sqlserver";
+
+    /**
+     * Driver option value.
+     */
+    public static final String ALTERNATE_MSSQL_DRIVER = "mssql";
 
     @SuppressWarnings("unchecked")
     @Override
@@ -83,6 +93,12 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         Boolean ssl = connectionFactoryOptions.getValue(SSL);
         if (ssl != null && ssl) {
             builder.enableSsl();
+        }
+
+        String hostNameInCertificate = connectionFactoryOptions.getValue(HOSTNAME_IN_CERTIFICATE);
+
+        if (hostNameInCertificate != null) {
+            builder.hostNameInCertificate(hostNameInCertificate);
         }
 
         Integer port = connectionFactoryOptions.getValue(PORT);
@@ -137,8 +153,8 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         builder.applicationName(connectionFactoryOptions.getRequiredValue(USER));
 
         MssqlConnectionConfiguration configuration = builder.build();
-        if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Creating MssqlConnectionFactory with configuration [%s] from options [%s]", configuration, connectionFactoryOptions));
+        if (this.logger.isDebugEnabled()) {
+            this.logger.debug(String.format("Creating MssqlConnectionFactory with configuration [%s] from options [%s]", configuration, connectionFactoryOptions));
         }
         return new MssqlConnectionFactory(configuration);
     }
@@ -149,7 +165,7 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         Assert.requireNonNull(connectionFactoryOptions, "connectionFactoryOptions must not be null");
 
         String driver = connectionFactoryOptions.getValue(DRIVER);
-        if (driver == null || !driver.equals(MSSQL_DRIVER)) {
+        if (driver == null || !(driver.equals(MSSQL_DRIVER) || driver.equals(ALTERNATE_MSSQL_DRIVER))) {
             return false;
         }
 
@@ -161,11 +177,7 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
             return false;
         }
 
-        if (!connectionFactoryOptions.hasOption(USER)) {
-            return false;
-        }
-
-        return true;
+        return connectionFactoryOptions.hasOption(USER);
     }
 
     @Override

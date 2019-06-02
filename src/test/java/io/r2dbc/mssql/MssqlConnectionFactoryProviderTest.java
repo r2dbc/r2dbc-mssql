@@ -16,16 +16,19 @@
 
 package io.r2dbc.mssql;
 
+import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.spi.ConnectionFactoryOptions;
 import org.junit.jupiter.api.Test;
 
 import java.util.function.Predicate;
 
+import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.ALTERNATE_MSSQL_DRIVER;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.MSSQL_DRIVER;
 import static io.r2dbc.spi.ConnectionFactoryOptions.DRIVER;
 import static io.r2dbc.spi.ConnectionFactoryOptions.HOST;
 import static io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD;
 import static io.r2dbc.spi.ConnectionFactoryOptions.PORT;
+import static io.r2dbc.spi.ConnectionFactoryOptions.SSL;
 import static io.r2dbc.spi.ConnectionFactoryOptions.USER;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -100,6 +103,16 @@ final class MssqlConnectionFactoryProviderTest {
     }
 
     @Test
+    void supportsAlternateDriverId() {
+        assertThat(this.provider.supports(ConnectionFactoryOptions.builder()
+            .option(DRIVER, ALTERNATE_MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .build())).isTrue();
+    }
+
+    @Test
     void shouldConfigureWithStaticCursoredExecutionPreference() {
 
         MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
@@ -113,6 +126,24 @@ final class MssqlConnectionFactoryProviderTest {
         ConnectionOptions options = factory.getConnectionOptions();
 
         assertThat(options.prefersCursors("foo")).isTrue();
+    }
+
+    @Test
+    void shouldConfigureWithSsl() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(SSL, true)
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(MssqlConnectionFactoryProvider.HOSTNAME_IN_CERTIFICATE, "*.foo")
+            .build());
+
+        ClientConfiguration configuration = factory.getClientConfiguration();
+
+        assertThat(configuration.isSslEnabled()).isTrue();
+        assertThat(configuration.getHostNameInCertificate()).isEqualTo("*.foo");
     }
 
     @Test
@@ -133,8 +164,6 @@ final class MssqlConnectionFactoryProviderTest {
 
     @Test
     void shouldConfigureWithClassCursoredExecutionPreference() {
-
-        Predicate<String> preference = s -> s.equals("foo");
 
         MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
             .option(DRIVER, MSSQL_DRIVER)
