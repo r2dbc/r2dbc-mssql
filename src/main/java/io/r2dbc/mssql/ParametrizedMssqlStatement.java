@@ -278,7 +278,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
      * Returns whether the {@code sql} query is supported by this statement.
      *
      * @param sql the SQL to check.
-     * @return {@literal true} if supported.
+     * @return {@code true} if supported.
      * @throws IllegalArgumentException when {@code sql} is {@code null}.
      */
     public static boolean supports(String sql) {

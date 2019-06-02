@@ -366,7 +366,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          * Configure a procedure name.
          *
          * @param procName the name of the stored procedure to call.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withProcName(String procName) {
 
@@ -382,7 +382,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          * Configure a procedureId to call a pre-defined stored procedure.
          *
          * @param id the stored procedure Id. See {@link RpcRequest#Sp_Cursor} and other {@literal Sp_} constants.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withProcId(int id) {
 
@@ -398,7 +398,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          * @param direction RPC parameter direction (in/out).
          * @param collation parameter encoding.
          * @param value     the parameter value, can be {@code null}.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          * @throws IllegalArgumentException when {@link RpcDirection} or {@link Collation} is {@code null}.
          */
         public Builder withParameter(RpcDirection direction, Collation collation, @Nullable String value) {
@@ -416,7 +416,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          *
          * @param direction RPC parameter direction (in/out).
          * @param value     the parameter value, can be {@code null}.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          * @throws IllegalArgumentException when {@link RpcDirection} is {@code null}.
          */
         public Builder withParameter(RpcDirection direction, @Nullable Integer value) {
@@ -433,7 +433,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          *
          * @param direction RPC parameter direction (in/out).
          * @param value     the parameter value.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          * @throws IllegalArgumentException when {@link RpcDirection} or {@link Encoded} is {@code null}.
          */
         public Builder withParameter(RpcDirection direction, Encoded value) {
@@ -453,7 +453,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          * @param name      the parameter name
          * @param collation parameter encoding.
          * @param value     the parameter value, can be {@code null}.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          * @throws IllegalArgumentException when {@link RpcDirection}, {@code name} or {@link Collation} is {@code null}.
          */
         public Builder withNamedParameter(RpcDirection direction, String name, Collation collation, @Nullable String value) {
@@ -473,7 +473,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          * @param direction RPC parameter direction (in/out).
          * @param name      the parameter name
          * @param value     the parameter value, can be {@code null}.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          * @throws IllegalArgumentException when {@link RpcDirection} or {@code name} is {@code null}.
          */
         public Builder withNamedParameter(RpcDirection direction, String name, @Nullable Integer value) {
@@ -492,7 +492,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          * @param direction RPC parameter direction (in/out).
          * @param name      the parameter name
          * @param value     the parameter value.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          * @throws IllegalArgumentException when {@link RpcDirection}, {@code name}, or {@link Encoded} is {@code null}.
          */
         public Builder withNamedParameter(RpcDirection direction, String name, Encoded value) {
@@ -510,7 +510,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          * Configure a {@link TransactionDescriptor}.
          *
          * @param transactionDescriptor the transaction descriptor.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          * @throws IllegalArgumentException when {@link TransactionDescriptor} is {@code null}.
          */
         public Builder withTransactionDescriptor(TransactionDescriptor transactionDescriptor) {
@@ -524,7 +524,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
          * Configure the {@link OptionFlags}.
          *
          * @param optionFlags the option flags to use.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          * @throws IllegalArgumentException when {@link OptionFlags} is {@code null}.
          */
         public Builder withOptionFlags(OptionFlags optionFlags) {

@@ -40,7 +40,7 @@ interface Codec<T> {
      * Determine whether this {@link Codec} is capable of encoding the {@code value}.
      *
      * @param value the parameter value.
-     * @return {@literal true} if this {@link Codec} is able to encode the {@code value}.
+     * @return {@code true} if this {@link Codec} is able to encode the {@code value}.
      * @see #encodeNull
      */
     boolean canEncode(Object value);
@@ -59,7 +59,7 @@ interface Codec<T> {
      * Determine whether this {@link Codec} is capable of encoding a {@code null} value for the given {@link Class} type.
      *
      * @param type the desired value type.
-     * @return {@literal true} if this {@link Codec} is able to encode {@code null} values for the given {@link Class} type.
+     * @return {@code true} if this {@link Codec} is able to encode {@code null} values for the given {@link Class} type.
      * @see #encodeNull
      */
     boolean canEncodeNull(Class<?> type);
@@ -78,7 +78,7 @@ interface Codec<T> {
      *
      * @param decodable the decodable metadata.
      * @param type      the desired value type.
-     * @return {@literal true} if this codec is able to decode values of {@link TypeInformation}.
+     * @return {@code true} if this codec is able to decode values of {@link TypeInformation}.
      */
     boolean canDecode(Decodable decodable, Class<?> type);
 

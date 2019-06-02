@@ -91,10 +91,10 @@ final class GeneratedValues {
     }
 
     /**
-     * Returns {@literal true} whether {@code generatedColumns} indicate the caller to expect generated keys.
+     * Returns {@code true} whether {@code generatedColumns} indicate the caller to expect generated keys.
      *
      * @param generatedColumns column name for the generated keys. Can be {@code null}.
-     * @return {@literal true} whether {@code generatedColumns} indicates that keys should be generated.
+     * @return {@code true} whether {@code generatedColumns} indicates that keys should be generated.
      */
     static boolean shouldExpectGeneratedKeys(@Nullable String[] generatedColumns) {
         return generatedColumns != null;

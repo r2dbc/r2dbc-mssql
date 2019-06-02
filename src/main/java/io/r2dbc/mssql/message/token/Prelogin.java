@@ -289,7 +289,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
          * Configure the client-side connection {@link UUID}. Typically used for tracing.
          *
          * @param connectionId the connection UUID.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withConnectionId(UUID connectionId) {
 
@@ -303,7 +303,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
          * Configure the client-side activity {@link UUID}. Typically used for tracing.
          *
          * @param activityId the activity UUID.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withActivityId(UUID activityId) {
 
@@ -317,7 +317,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
          * Configure the client-side activity sequence. Typically used for tracing.
          *
          * @param activitySequence the activity sequence.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withActivitySequence(long activitySequence) {
 
@@ -330,7 +330,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
          * Configure the client-side Thread Id. Typically used for tracing.
          *
          * @param threadId the Thread Id.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withThreadId(int threadId) {
 
@@ -342,7 +342,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
         /**
          * Disable encryption.
          *
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withEncryptionDisabled() {
 
@@ -354,7 +354,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
         /**
          * Enable encryption.
          *
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withEncryptionEnabled() {
 
@@ -366,7 +366,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
         /**
          * Disable encryption by indicating encryption not supported.
          *
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withEncryptionNotSupported() {
 
@@ -790,9 +790,9 @@ public final class Prelogin implements TokenStream, ClientMessage {
         }
 
         /**
-         * Returns {@literal true} if the subsequent communication requires a SSL handshake.
+         * Returns {@code true} if the subsequent communication requires a SSL handshake.
          *
-         * @return {@literal true} if the subsequent communication requires a SSL handshake.
+         * @return {@code true} if the subsequent communication requires a SSL handshake.
          */
         public boolean requiresSslHandshake() {
             return getEncryption() == Prelogin.Encryption.ENCRYPT_REQ || getEncryption() == Prelogin.Encryption.ENCRYPT_OFF
@@ -800,18 +800,18 @@ public final class Prelogin implements TokenStream, ClientMessage {
         }
 
         /**
-         * Returns {@literal true} if a SSL handshake is required to enable SSL for sending the Login packet only.
+         * Returns {@code true} if a SSL handshake is required to enable SSL for sending the Login packet only.
          *
-         * @return {@literal true} if a SSL handshake is required to enable SSL for sending the Login packet only.
+         * @return {@code true} if a SSL handshake is required to enable SSL for sending the Login packet only.
          */
         public boolean requiresLoginSslHandshake() {
             return getEncryption() == Prelogin.Encryption.ENCRYPT_OFF;
         }
 
         /**
-         * Returns {@literal true} if a SSL handshake is required to enable SSL for the entire connection.
+         * Returns {@code true} if a SSL handshake is required to enable SSL for the entire connection.
          *
-         * @return {@literal true} if a SSL handshake is required to enable SSL for the entire connection.
+         * @return {@code true} if a SSL handshake is required to enable SSL for the entire connection.
          */
         public boolean requiresConnectionSslHandshake() {
             return getEncryption() == Encryption.ENCRYPT_ON || getEncryption() == Encryption.ENCRYPT_REQ;

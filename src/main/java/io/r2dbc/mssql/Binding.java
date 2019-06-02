@@ -61,13 +61,13 @@ class Binding {
      */
     void clear() {
 
-        parameters.forEach((s, encoded) -> {
+        this.parameters.forEach((s, encoded) -> {
             while (encoded.refCnt() > 0) {
                 encoded.release();
             }
         });
 
-        parameters.clear();
+        this.parameters.clear();
     }
 
     /**
@@ -121,7 +121,7 @@ class Binding {
     /**
      * Returns whether this {@link Binding} is empty (i.e. no parameters bound).
      *
-     * @return {@literal true} if no parameters were bound.
+     * @return {@code true} if no parameters were bound.
      */
     public boolean isEmpty() {
         return this.parameters.isEmpty();

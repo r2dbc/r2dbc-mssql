@@ -192,14 +192,14 @@ final class StreamDecoder {
         }
 
         /**
-         * @return {@literal true} if the remaining raw bytes (raw transport buffer) are not yet fully consumed.
+         * @return {@code true} if the remaining raw bytes (raw transport buffer) are not yet fully consumed.
          */
         boolean hasRawRemainder() {
             return this.remainder.readableBytes() != 0;
         }
 
         /**
-         * @return {@literal true} if the remaining aggregated body bytes (aggregation of body buffers without header) are not yet fully consumed.
+         * @return {@code true} if the remaining aggregated body bytes (aggregation of body buffers without header) are not yet fully consumed.
          */
         boolean hasAggregatedBodyRemainder() {
             return this.aggregatedBody.readableBytes() != 0;

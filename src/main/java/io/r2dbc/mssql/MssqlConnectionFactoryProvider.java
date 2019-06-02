@@ -63,7 +63,7 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
     /**
      * Configure whether to prefer cursored execution on a statement-by-statement basis. Value can be {@link Boolean}, a {@link Predicate}, or a {@link Class class name}. The {@link Predicate}
      * accepts the SQL query string and returns a boolean flag indicating preference.
-     * {@literal true} prefers cursors, {@literal false} prefers direct execution.
+     * {@code true} prefers cursors, {@code false} prefers direct execution.
      */
     public static final Option<Object> PREFER_CURSORED_EXECUTION = Option.valueOf("preferCursoredExecution");
 

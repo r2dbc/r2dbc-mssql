@@ -68,7 +68,7 @@ public final class NbcRowToken extends RowToken {
      *
      * @param buffer  the data buffer.
      * @param columns column descriptors.
-     * @return {@literal true} if the buffer contains sufficient data to entirely decode a row.
+     * @return {@code true} if the buffer contains sufficient data to entirely decode a row.
      */
     public static boolean canDecode(ByteBuf buffer, List<Column> columns) {
 

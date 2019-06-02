@@ -196,7 +196,7 @@ public class Header implements HeaderOptions {
     }
 
     /**
-     * @return {@literal true} if the header can be decoded.
+     * @return {@code true} if the header can be decoded.
      */
     public static boolean canDecode(ByteBuf buffer) {
         return buffer.readableBytes() >= LENGTH;

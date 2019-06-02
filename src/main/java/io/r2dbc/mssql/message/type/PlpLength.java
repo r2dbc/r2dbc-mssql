@@ -76,7 +76,7 @@ public final class PlpLength {
      * Creates a {@link PlpLength}.
      *
      * @param length value length.
-     * @param isNull {@literal true} if the value is {@code null}.
+     * @param isNull {@code true} if the value is {@code null}.
      * @return the {@link PlpLength}.
      */
     public static PlpLength of(long length, boolean isNull) {
@@ -106,7 +106,7 @@ public final class PlpLength {
      *
      * @param buffer the data buffer.
      * @param type   {@link TypeInformation}.
-     * @return {@literal true} if the buffer contains sufficient data to decode a {@link PlpLength}.
+     * @return {@code true} if the buffer contains sufficient data to decode a {@link PlpLength}.
      */
     public static boolean canDecode(ByteBuf buffer, TypeInformation type) {
 

@@ -84,7 +84,7 @@ public final class EnvChangeToken extends AbstractDataToken {
      * Check whether the {@link ByteBuf} can be decoded into an entire {@link EnvChangeType}.
      *
      * @param buffer the data buffer.
-     * @return {@literal true} if the buffer contains sufficient data to entirely decode a {@link EnvChangeType}.
+     * @return {@code true} if the buffer contains sufficient data to entirely decode a {@link EnvChangeType}.
      */
     public static boolean canDecode(ByteBuf buffer) {
 

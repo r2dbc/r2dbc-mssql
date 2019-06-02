@@ -91,14 +91,14 @@ public final class RpcParameterContext {
     }
 
     /**
-     * @return {@literal true} if this parameter is a in parameter.
+     * @return {@code true} if this parameter is a in parameter.
      */
     public boolean isIn() {
         return this.direction == RpcDirection.IN;
     }
 
     /**
-     * @return {@literal true} if this parameter is a out parameter.
+     * @return {@code true} if this parameter is a out parameter.
      */
     public boolean isOut() {
         return this.direction == RpcDirection.OUT;

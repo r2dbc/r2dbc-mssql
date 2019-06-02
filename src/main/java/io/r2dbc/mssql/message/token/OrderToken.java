@@ -72,22 +72,18 @@ class OrderToken extends AbstractDataToken {
      * Check whether the {@link ByteBuf} can be decoded into an entire {@link OrderToken}.
      *
      * @param buffer the data buffer.
-     * @return {@literal true} if the buffer contains sufficient data to entirely decode {@link OrderToken}
+     * @return {@code true} if the buffer contains sufficient data to entirely decode {@link OrderToken}
      */
     public static boolean canDecode(ByteBuf buffer) {
 
         Assert.requireNonNull(buffer, "Data buffer must not be null");
 
         Integer length = Decode.peekUShort(buffer);
-        if (length != null && buffer.readableBytes() >= length + /* length field */ 2) {
-            return true;
-        }
-
-        return false;
+        return length != null && buffer.readableBytes() >= length + /* length field */ 2;
     }
 
     public List<Integer> getOrderByColumns() {
-        return orderByColumns;
+        return this.orderByColumns;
     }
 
     @Override
@@ -99,7 +95,7 @@ class OrderToken extends AbstractDataToken {
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [orderByColumns=").append(orderByColumns);
+        sb.append(" [orderByColumns=").append(this.orderByColumns);
         sb.append(']');
         return sb.toString();
     }

@@ -36,8 +36,8 @@ final class X509CertificateUtil {
     /**
      * Extract the host name from the given {@link X509Certificate}.
      *
-     * @param cert
-     * @return
+     * @param cert the certificate.
+     * @return the extracted host name.
      */
     @Nullable
     static String getHostName(X509Certificate cert) {
@@ -49,10 +49,10 @@ final class X509CertificateUtil {
      * Returns the common name if successful, {@code null} if failed to find the common name.
      *
      * @param distinguishedName the DN
-     * @return
+     * @return the extracted host name.
      */
     @Nullable
-    static String extractCommonName(String distinguishedName) {
+    private static String extractCommonName(String distinguishedName) {
 
         int index;
         // canonical name converts entire name to lowercase

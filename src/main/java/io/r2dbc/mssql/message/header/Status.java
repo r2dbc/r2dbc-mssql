@@ -147,7 +147,7 @@ public class Status {
      * Check if the header status has set the {@link Status.StatusBit}.
      *
      * @param bit the status bit.
-     * @return {@literal true} of the bit is set; {@literal false} otherwise.
+     * @return {@code true} of the bit is set; {@code false} otherwise.
      */
     public boolean is(Status.StatusBit bit) {
 

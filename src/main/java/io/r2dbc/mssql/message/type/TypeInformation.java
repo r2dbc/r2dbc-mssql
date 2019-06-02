@@ -36,7 +36,7 @@ public interface TypeInformation {
      * Decode {@link TypeInformation} from the {@code ByteBuf}.
      *
      * @param buffer    the data {@link ByteBuf buffer}.
-     * @param readFlags {@literal true} to decode {@code flags} (typically used when not using encryption).
+     * @param readFlags {@code true} to decode {@code flags} (typically used when not using encryption).
      * @return the decoded {@link TypeInformation}.
      */
     static TypeInformation decode(ByteBuf buffer, boolean readFlags) {
@@ -47,8 +47,8 @@ public interface TypeInformation {
      * Check whether the {@link ByteBuf} contains sufficient readable bytes to decode the {@link TypeInformation}.
      *
      * @param buffer    the data buffer.
-     * @param readFlags {@literal true} to parse type flags.
-     * @return {@literal true} if the data buffer contains sufficient readable bytes to decode the {@link TypeInformation}.
+     * @param readFlags {@code true} to parse type flags.
+     * @return {@code true} if the data buffer contains sufficient readable bytes to decode the {@link TypeInformation}.
      */
     static boolean canDecode(ByteBuf buffer, boolean readFlags) {
         return TypeBuilder.canDecode(buffer, readFlags);
@@ -138,14 +138,14 @@ public interface TypeInformation {
     /**
      * Returns whether the type is nullable.
      *
-     * @return {@literal true} if the type is nullable.
+     * @return {@code true} if the type is nullable.
      */
     boolean isNullable();
 
     /**
      * Returns whether the type is case-sensitive.
      *
-     * @return {@literal true} if the type is case-sensitive.
+     * @return {@code true} if the type is case-sensitive.
      */
     boolean isCaseSensitive();
 
@@ -154,7 +154,7 @@ public interface TypeInformation {
     /**
      * Returns whether the type is encrypted.
      *
-     * @return {@literal true} if the type is encrypted.
+     * @return {@code true} if the type is encrypted.
      */
     boolean isEncrypted();
 
@@ -168,7 +168,7 @@ public interface TypeInformation {
     /**
      * Returns whether the type is an identity type.
      *
-     * @return {@literal true} if the type is an identity type.
+     * @return {@code true} if the type is an identity type.
      */
     boolean isIdentity();
 
@@ -215,7 +215,7 @@ public interface TypeInformation {
          * Configure the {@link Charset}.
          *
          * @param charset the charset to use.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withCharset(Charset charset) {
             this.charset = Assert.requireNonNull(charset, "Charset must not be null");
@@ -226,7 +226,7 @@ public interface TypeInformation {
          * Configure the {@link Collation}.
          *
          * @param collation the collation to use.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withCollation(Collation collation) {
             this.collation = Assert.requireNonNull(collation, "Collation must not be null");
@@ -237,7 +237,7 @@ public interface TypeInformation {
          * Configure the display size.
          *
          * @param displaySize the display size.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withDisplaySize(int displaySize) {
             this.displaySize = displaySize;
@@ -248,7 +248,7 @@ public interface TypeInformation {
          * Configure flags.
          *
          * @param flags
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withFlags(int flags) {
             this.flags = flags;
@@ -259,7 +259,7 @@ public interface TypeInformation {
          * Configure the {@link LengthStrategy}.
          *
          * @param lengthStrategy the display size.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withLengthStrategy(LengthStrategy lengthStrategy) {
             this.lengthStrategy = Assert.requireNonNull(lengthStrategy, "LengthStrategy must not be null");
@@ -270,7 +270,7 @@ public interface TypeInformation {
          * Configure the maximal maxLength.
          *
          * @param flags
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withMaxLength(int maxLength) {
             this.maxLength = maxLength;
@@ -281,7 +281,7 @@ public interface TypeInformation {
          * Configure the precision.
          *
          * @param precision
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withPrecision(int precision) {
             this.precision = precision;
@@ -292,7 +292,7 @@ public interface TypeInformation {
          * Configure the scale.
          *
          * @param scale
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withScale(int scale) {
             this.scale = scale;
@@ -303,7 +303,7 @@ public interface TypeInformation {
          * Configure the {@link SqlServerType}.
          *
          * @param serverType the server type.
-         * @return {@literal this} {@link Builder}.
+         * @return {@code this} {@link Builder}.
          */
         public Builder withServerType(SqlServerType serverType) {
             this.serverType = Assert.requireNonNull(serverType, "SqlServerType must not be null");

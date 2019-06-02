@@ -67,7 +67,7 @@ public class TabnameToken extends AbstractDataToken {
      * Check whether the {@link ByteBuf} can be decoded into an entire {@link TabnameToken}.
      *
      * @param buffer the data buffer.
-     * @return {@literal true} if the buffer contains sufficient data to entirely decode a {@link TabnameToken}.
+     * @return {@code true} if the buffer contains sufficient data to entirely decode a {@link TabnameToken}.
      */
     public static boolean canDecode(ByteBuf buffer) {
 

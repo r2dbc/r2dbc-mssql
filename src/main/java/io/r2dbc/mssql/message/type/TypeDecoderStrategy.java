@@ -27,7 +27,7 @@ public interface TypeDecoderStrategy {
      * Check whether the {@link ByteBuf} contains sufficient readable bytes to decode the {@link TypeInformation}.
      *
      * @param buffer the data buffer.
-     * @return {@literal true} if the data buffer contains sufficient readable bytes to decode the {@link TypeInformation}.
+     * @return {@code true} if the data buffer contains sufficient readable bytes to decode the {@link TypeInformation}.
      */
     boolean canDecode(ByteBuf buffer);
 

@@ -156,10 +156,10 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
     }
 
     /**
-     * Returns {@literal true} if the query is supported by this {@link MssqlStatement}. Cursored execution is supported for {@literal SELECT} queries.
+     * Returns {@code true} if the query is supported by this {@link MssqlStatement}. Cursored execution is supported for {@literal SELECT} queries.
      *
      * @param sql the query to inspect.
-     * @return {@literal true} if the {@code sql} query is supported.
+     * @return {@code true} if the {@code sql} query is supported.
      */
     static boolean prefersCursors(String sql) {
 

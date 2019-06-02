@@ -73,7 +73,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      *
      * @param buffer  the data buffer.
      * @param columns column descriptors.
-     * @return {@literal true} if the buffer contains sufficient data to entirely decode a row.
+     * @return {@code true} if the buffer contains sufficient data to entirely decode a row.
      */
     public static boolean canDecode(ByteBuf buffer, List<Column> columns) {
 
@@ -144,7 +144,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      *
      * @param buffer data buffer.
      * @param column the related column.
-     * @return {@literal true} if the PLP sream can be decoded.
+     * @return {@code true} if the PLP sream can be decoded.
      * @see LengthStrategy#PARTLENTYPE
      */
     private static boolean canDecodePlp(ByteBuf buffer, Column column) {
@@ -300,6 +300,6 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
 
     @Override
     protected void deallocate() {
-        data.forEach(ReferenceCountUtil::release);
+        this.data.forEach(ReferenceCountUtil::release);
     }
 }

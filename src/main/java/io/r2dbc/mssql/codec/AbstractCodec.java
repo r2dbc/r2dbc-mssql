@@ -126,7 +126,7 @@ abstract class AbstractCodec<T> implements Codec<T> {
      * Determine whether this {@link Codec} is capable of decoding column values based on the given {@link TypeInformation}.
      *
      * @param typeInformation the column type.
-     * @return {@literal true} if this codec is able to decode values of {@link TypeInformation}.
+     * @return {@code true} if this codec is able to decode values of {@link TypeInformation}.
      */
     abstract boolean doCanDecode(TypeInformation typeInformation);
 

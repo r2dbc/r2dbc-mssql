@@ -346,7 +346,7 @@ public final class MssqlConnectionConfiguration {
         /**
          * Configure whether to prefer cursored execution.
          *
-         * @param preferCursoredExecution {@literal true} prefers cursors, {@literal false} prefers direct execution. Defaults to direct execution.
+         * @param preferCursoredExecution {@code true} prefers cursors, {@code false} prefers direct execution. Defaults to direct execution.
          * @return this {@link Builder}
          * @throws IllegalArgumentException if {@code password} is {@code null}
          */
@@ -356,7 +356,7 @@ public final class MssqlConnectionConfiguration {
 
         /**
          * Configure whether to prefer cursored execution on a statement-by-statement basis. The {@link Predicate} accepts the SQL query string and returns a boolean flag indicating preference.
-         * {@literal true} prefers cursors, {@literal false} prefers direct execution. Defaults to direct execution.
+         * {@code true} prefers cursors, {@code false} prefers direct execution. Defaults to direct execution.
          *
          * @param preference the {@link Predicate}.
          * @return this {@link Builder}

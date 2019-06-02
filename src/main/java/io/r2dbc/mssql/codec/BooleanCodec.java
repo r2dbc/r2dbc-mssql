@@ -26,7 +26,7 @@ import io.r2dbc.mssql.message.type.SqlServerType;
  * <ul>
  * <li>Server types: Integer numbers</li>
  * <li>Java type: {@link Boolean}</li>
- * <li>Downcast: {@literal true} if the value  is not zero</li>
+ * <li>Downcast: {@code true} if the value  is not zero</li>
  * </ul>
  *
  * @author Mark Paluch

@@ -28,14 +28,14 @@ public final class TokenIdentifier {
     }
 
     /**
-     * @return {@literal true} if the token has a zero-length.
+     * @return {@code true} if the token has a zero-length.
      */
     public boolean isZeroLength() {
         return (this.value & 1 << 2) == 0 && (this.value & 1 << 3) != 0;
     }
 
     /**
-     * @return {@literal true} if the token has a fixed length.
+     * @return {@code true} if the token has a fixed length.
      * @see #getFixedLength()
      */
     public boolean isFixedLength() {
@@ -43,7 +43,7 @@ public final class TokenIdentifier {
     }
 
     /**
-     * @return {@literal true} if the token has a variable length.
+     * @return {@code true} if the token has a variable length.
      */
     public boolean isVariableLength() {
         return (this.value & 1 << 2) == 0 && (this.value & 1 << 3) == 0;

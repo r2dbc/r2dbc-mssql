@@ -95,7 +95,7 @@ public class PlpEncoded extends Encoded {
      * Transform the backing binary stream to a stream of binary chunks at the size provided by {@link IntSupplier chunk size supplier}.
      *
      * @param chunkSize       expected chunk size.
-     * @param withSizeHeaders {@literal true} to include PLP length headers (one unknown length and chunk length per chunk).
+     * @param withSizeHeaders {@code true} to include PLP length headers (one unknown length and chunk length per chunk).
      * @return
      */
     public Flux<ByteBuf> chunked(IntSupplier chunkSize, boolean withSizeHeaders) {

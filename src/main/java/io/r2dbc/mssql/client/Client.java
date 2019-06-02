@@ -88,7 +88,7 @@ public interface Client {
     /**
      * Returns whether the server supports column encryption.
      *
-     * @return {@literal true} if the server supports column encryption.
+     * @return {@code true} if the server supports column encryption.
      */
     boolean isColumnEncryptionSupported();
 }

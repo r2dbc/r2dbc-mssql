@@ -41,19 +41,19 @@ enum TypeBuilder {
 
     BIGINT(TdsDataType.INT8, TypeDecoderStrategies.create(SqlServerType.BIGINT, 8, // TDS length (bytes)
         Long.toString(Long.MAX_VALUE).length(), // precision (max numeric precision, in decimal digits)
-        ("-" + Long.toString(Long.MAX_VALUE)).length(), // column display size (includes sign)
+        ("-" + Long.MAX_VALUE).length(), // column display size (includes sign)
         0) // scale
     ),
 
     INTEGER(TdsDataType.INT4, TypeDecoderStrategies.create(SqlServerType.INTEGER, 4, // TDS length (bytes)
         Integer.toString(Integer.MAX_VALUE).length(), // precision (max numeric precision, in decimal digits)
-        ("-" + Integer.toString(Integer.MAX_VALUE)).length(), // column display size (includes sign)
+        ("-" + Integer.MAX_VALUE).length(), // column display size (includes sign)
         0) // scale
     ),
 
     SMALLINT(TdsDataType.INT2, TypeDecoderStrategies.create(SqlServerType.SMALLINT, 2, // TDS length (bytes)
         Short.toString(Short.MAX_VALUE).length(), // precision (max numeric precision, in decimal digits)
-        ("-" + Short.toString(Short.MAX_VALUE)).length(), // column display size (includes sign)
+        ("-" + Short.MAX_VALUE).length(), // column display size (includes sign)
         0) // scale
     ),
 
@@ -92,14 +92,14 @@ enum TypeBuilder {
     SMALLMONEY(TdsDataType.MONEY4, TypeDecoderStrategies.create(SqlServerType.SMALLMONEY, 4, // TDS length (bytes)
         Integer.toString(Integer.MAX_VALUE).length(), // precision (max unscaled numeric precision, in decimal
         // digits)
-        ("-" + "." + Integer.toString(Integer.MAX_VALUE)).length(), // column display size (includes sign and
+        ("-" + "." + Integer.MAX_VALUE).length(), // column display size (includes sign and
         // decimal for scale)
         4) // scale
     ),
 
     MONEY(TdsDataType.MONEY8, TypeDecoderStrategies.create(SqlServerType.MONEY, 8, // TDS length (bytes)
         Long.toString(Long.MAX_VALUE).length(), // precision (max unscaled numeric precision, in decimal digits)
-        ("-" + "." + Long.toString(Long.MAX_VALUE)).length(), // column display size (includes sign and decimal
+        ("-" + "." + Long.MAX_VALUE).length(), // column display size (includes sign and decimal
         // for scale)
         4) // scale
     ),
@@ -400,7 +400,7 @@ enum TypeBuilder {
      * Decode {@link TypeInformation} from the {@code ByteBuf}.
      *
      * @param buffer    the data {@link ByteBuf buffer}.
-     * @param readFlags {@literal true} to decode {@code flags} (typically used when not using encryption).
+     * @param readFlags {@code true} to decode {@code flags} (typically used when not using encryption).
      * @return the decoded {@link TypeInformation}.
      */
     static TypeInformation decode(ByteBuf buffer, boolean readFlags) {
@@ -430,8 +430,8 @@ enum TypeBuilder {
      * Check whether the {@link ByteBuf} contains sufficient readable bytes to decode the {@link TypeInformation}.
      *
      * @param buffer  the data buffer.
-     * @param boolean {@literal true} to parse type flags.
-     * @return {@literal true} if the data buffer contains sufficient readable bytes to decode the {@link TypeInformation}.
+     * @param boolean {@code true} to parse type flags.
+     * @return {@code true} if the data buffer contains sufficient readable bytes to decode the {@link TypeInformation}.
      */
     static boolean canDecode(ByteBuf buffer, boolean readFlags) {
 

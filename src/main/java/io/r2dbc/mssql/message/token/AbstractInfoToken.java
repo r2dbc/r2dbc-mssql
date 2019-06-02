@@ -94,7 +94,7 @@ public abstract class AbstractInfoToken extends AbstractDataToken {
      * Check whether the {@link ByteBuf} can be decoded into an entire {@link AbstractInfoToken}.
      *
      * @param buffer the data buffer.
-     * @return {@literal true} if the buffer contains sufficient data to entirely decode a {@link AbstractInfoToken}.
+     * @return {@code true} if the buffer contains sufficient data to entirely decode a {@link AbstractInfoToken}.
      */
     public static boolean canDecode(ByteBuf buffer) {
 

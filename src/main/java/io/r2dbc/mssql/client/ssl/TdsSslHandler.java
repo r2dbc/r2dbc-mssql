@@ -43,9 +43,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import java.security.GeneralSecurityException;
-import java.security.KeyManagementException;
 import java.security.KeyStore;
-import java.security.NoSuchAlgorithmException;
 
 /**
  * SSL handling for TDS connections.
@@ -99,9 +97,8 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
      * Create the {@link SslHandler}.
      *
      * @param sslConfiguration the SSL configuration.
-     * @return
-     * @throws NoSuchAlgorithmException
-     * @throws KeyManagementException
+     * @return the configured {@link SslHandler}.
+     * @throws GeneralSecurityException thrown on security API errors.
      */
     private static SslHandler createSslHandler(SslConfiguration sslConfiguration) throws GeneralSecurityException {
 
@@ -131,9 +128,9 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
     /**
      * Lazily register {@link SslHandler} if needed.
      *
-     * @param ctx
-     * @param evt
-     * @throws Exception
+     * @param ctx the {@link ChannelHandlerContext} for which the event is made.
+     * @param evt the user event.
+     * @throws Exception thrown if an error occurs
      */
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
@@ -211,10 +208,10 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
      * is swapped to {@link SslState#AFTER_LOGIN_ONLY} once login payload is written. We don't check actually whether the
      * payload is a login packet but rely on higher level layers to send the appropriate data.
      *
-     * @param ctx
-     * @param msg
-     * @param promise
-     * @throws Exception
+     * @param ctx     the {@link ChannelHandlerContext} for which the write operation is made
+     * @param msg     the message to write
+     * @param promise the {@link ChannelPromise} to notify once the operation completes
+     * @throws Exception thrown if an error occurs
      */
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
@@ -281,8 +278,8 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
      * Wrap SSL handshake in prelogin {@link Header}s. Delaying write to flush instead of writing each packet in a single
      * header.
      *
-     * @param ctx
-     * @throws Exception
+     * @param ctx the {@link ChannelHandlerContext} for which the flush operation is made.
+     * @throws Exception thrown if an error occurs.
      */
     @Override
     public void flush(ChannelHandlerContext ctx) throws Exception {
@@ -308,8 +305,8 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
      * underrun that wants to read from the transport. We need to make sure that write requests (that don't get flushed
      * explicitly) are sent so we can expect eventually a read.
      *
-     * @param ctx
-     * @throws Exception
+     * @param ctx the {@link ChannelHandlerContext} for which the read complete operation is made.
+     * @throws Exception thrown if an error occurs.
      */
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
@@ -324,9 +321,9 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
     /**
      * Route read events to the {@link SslHandler}. Strip off {@link Header} during handshake.
      *
-     * @param ctx
-     * @param msg
-     * @throws Exception
+     * @param ctx the {@link ChannelHandlerContext} for which the read operation is made.
+     * @param msg the message to read.
+     * @throws Exception thrown if an error occurs.
      */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -410,8 +407,8 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
         /**
          * Check if the full packet arrived. Since we've already read the header, we need to add {@link Header#LENGTH} to the calculation.
          *
-         * @param header
-         * @param buffer
+         * @param header TDS header.
+         * @param buffer body buffer.
          * @return
          */
         static boolean isCompletePacketAvailable(Header header, ByteBuf buffer) {

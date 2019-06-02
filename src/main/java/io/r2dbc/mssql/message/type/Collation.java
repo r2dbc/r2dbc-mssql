@@ -172,7 +172,7 @@ public final class Collation {
     /**
      * Returns whether the underlying encoding supports ASCII conversion.
      *
-     * @return {@literal true} if the underlying encoding supports ASCII conversion.
+     * @return {@code true} if the underlying encoding supports ASCII conversion.
      */
     boolean supportsAsciiConversion() {
         return this.serverCharset.supportsAsciiConversion();
@@ -181,7 +181,7 @@ public final class Collation {
     /**
      * Returns whether the underlying encoding allows fast-path ASCII conversion by filtering lower ASCII chars.
      *
-     * @return {@literal true} the underlying encoding allows fast-path ASCII.
+     * @return {@code true} the underlying encoding allows fast-path ASCII.
      */
     boolean hasAsciiCompatibleSBCS() {
         return this.serverCharset.hasAsciiCompatibleSBCS();

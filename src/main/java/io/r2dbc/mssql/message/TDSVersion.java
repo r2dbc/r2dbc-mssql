@@ -50,7 +50,7 @@ public enum TDSVersion {
      * Check is the reference {@link TDSVersion} is greater or equal to {@code this} version.
      *
      * @param reference the reference version.
-     * @return {@literal true} if the reference {@link TDSVersion} is greater or equal to {@code this} version.
+     * @return {@code true} if the reference {@link TDSVersion} is greater or equal to {@code this} version.
      */
     public boolean isGreateOrEqualsTo(TDSVersion reference) {
 

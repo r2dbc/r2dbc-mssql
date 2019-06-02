@@ -220,7 +220,7 @@ public enum ConnectionState {
      * Check whether the state can advance from the given {@link Message} into a differen {@link ConnectionState}.
      *
      * @param message the message to inspect.
-     * @return {@literal true} if the state can advance.
+     * @return {@code true} if the state can advance.
      */
     public abstract boolean canAdvance(Message message);
 

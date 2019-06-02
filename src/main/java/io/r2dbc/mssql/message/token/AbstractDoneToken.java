@@ -139,7 +139,7 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
      * Check whether the {@link ByteBuf} can be decoded into an entire {@link AbstractDoneToken}.
      *
      * @param buffer the data buffer.
-     * @return {@literal true} if the buffer contains sufficient data to entirely decode a {@link AbstractDoneToken}.
+     * @return {@code true} if the buffer contains sufficient data to entirely decode a {@link AbstractDoneToken}.
      * @throws IllegalArgumentException when {@link ByteBuf} is {@code null}.
      */
     public static boolean canDecode(ByteBuf buffer) {
@@ -171,21 +171,21 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
     }
 
     /**
-     * @return {@literal true} if this token indicates the response is done and has no more rows.
+     * @return {@code true} if this token indicates the response is done and has no more rows.
      */
     public boolean isDone() {
         return (getStatus() & DONE_MORE) == 0;
     }
 
     /**
-     * @return {@literal true} if this token indicates the response is not done yet and the stream contains more data.
+     * @return {@code true} if this token indicates the response is not done yet and the stream contains more data.
      */
     public boolean hasMore() {
         return (getStatus() & DONE_MORE) != 0;
     }
 
     /**
-     * @return {@literal true} if this token contains a row count and {@link #getRowCount()} has a valid value.
+     * @return {@code true} if this token contains a row count and {@link #getRowCount()} has a valid value.
      */
     public boolean hasCount() {
         return (getStatus() & DONE_COUNT) != 0;

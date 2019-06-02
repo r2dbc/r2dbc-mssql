@@ -39,7 +39,7 @@ public final class Length {
 
     private static final Length NULL;
 
-    private static final Length CACHE[];
+    private static final Length[] CACHE;
 
     private static final Length UNKNOWN_NULL;
 
@@ -89,7 +89,7 @@ public final class Length {
      * Creates a {@link Length}.
      *
      * @param length value length.
-     * @param isNull {@literal true} if the value is {@code null}.
+     * @param isNull {@code true} if the value is {@code null}.
      * @return the {@link Length}.
      */
     public static Length of(int length, boolean isNull) {
@@ -181,7 +181,7 @@ public final class Length {
      *
      * @param buffer the data buffer.
      * @param type   {@link TypeInformation}.
-     * @return {@literal true} if the buffer contains sufficient data to decode a {@link Length}.
+     * @return {@code true} if the buffer contains sufficient data to decode a {@link Length}.
      */
     public static boolean canDecode(ByteBuf buffer, TypeInformation type) {
 

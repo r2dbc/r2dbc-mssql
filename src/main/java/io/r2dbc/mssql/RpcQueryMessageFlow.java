@@ -83,7 +83,7 @@ final class RpcQueryMessageFlow {
 
     static final int SCROLLOPT_FAST_FORWARD = 16;
 
-    final static int SCROLLOPT_PARAMETERIZED_STMT = 4096;
+    static final int SCROLLOPT_PARAMETERIZED_STMT = 4096;
 
     static final int CCOPT_READ_ONLY = 1;
 
@@ -570,11 +570,11 @@ final class RpcQueryMessageFlow {
 
         void update(Message it) {
             if (it instanceof RowToken) {
-                hasSeenRows = true;
+                this.hasSeenRows = true;
             }
 
             if (it instanceof ErrorToken) {
-                hasSeenError = true;
+                this.hasSeenError = true;
             }
         }
 
@@ -612,7 +612,7 @@ final class RpcQueryMessageFlow {
                 subscription.cancel();
             }
 
-            upstream.onComplete();
+            this.upstream.onComplete();
         }
     }
 }

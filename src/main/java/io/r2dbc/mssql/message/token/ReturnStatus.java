@@ -64,7 +64,7 @@ public class ReturnStatus extends AbstractDataToken {
      * Check whether the {@link ByteBuf} can be decoded into a {@link ReturnStatus}.
      *
      * @param buffer the data buffer.
-     * @return {@literal true} if the buffer contains sufficient data to entirely decode a {@link ReturnStatus}.
+     * @return {@code true} if the buffer contains sufficient data to entirely decode a {@link ReturnStatus}.
      */
     public static boolean canDecode(ByteBuf buffer) {
 

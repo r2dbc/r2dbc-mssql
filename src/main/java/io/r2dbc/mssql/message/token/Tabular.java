@@ -75,7 +75,7 @@ public final class Tabular implements Message {
     /**
      * Creates a new {@link TabularDecoder}.
      *
-     * @param encryptionSupported {@literal true} if table column encryption is supported.
+     * @param encryptionSupported {@code true} if table column encryption is supported.
      * @return the decoder.
      */
     public static TabularDecoder createDecoder(boolean encryptionSupported) {
@@ -85,7 +85,7 @@ public final class Tabular implements Message {
     /**
      * Creates a new, stateful {@link DecodeFunction}.
      *
-     * @param encryptionSupported {@literal true} if table column encryption is supported.
+     * @param encryptionSupported {@code true} if table column encryption is supported.
      * @return the decoder.
      */
     private static DecodeFunction decodeFunction(boolean encryptionSupported) {

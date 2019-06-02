@@ -99,14 +99,14 @@ public enum ServerCharset {
     }
 
     /**
-     * Returns {@literal true} if the collation supports conversion to {@literal true}.
+     * Returns {@code true} if the collation supports conversion to {@code true}.
      */
     public boolean supportsAsciiConversion() {
         return this.supportsAsciiConversion;
     }
 
     /**
-     * Returns {@literal true} if the collation supports conversion to {@literal ascii} AND it uses a single-byte character set.
+     * Returns {@code true} if the collation supports conversion to {@literal ascii} AND it uses a single-byte character set.
      */
     public boolean hasAsciiCompatibleSBCS() {
         return this.hasAsciiCompatibleSBCS;

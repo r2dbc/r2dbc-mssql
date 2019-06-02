@@ -79,7 +79,7 @@ public class ColInfoToken extends AbstractDataToken {
      * Check whether the {@link ByteBuf} can be decoded into an entire {@link ColInfoToken}.
      *
      * @param buffer the data buffer.
-     * @return {@literal true} if the buffer contains sufficient data to entirely decode a {@link ColInfoToken}.
+     * @return {@code true} if the buffer contains sufficient data to entirely decode a {@link ColInfoToken}.
      */
     public static boolean canDecode(ByteBuf buffer) {
 
