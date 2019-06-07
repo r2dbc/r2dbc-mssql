@@ -249,20 +249,31 @@ final class StreamDecoder {
         /**
          * Read the body chunk and create a new {@link DecoderState}.
          * Body is read from the remainder by copying the contents to decouple the remainder from dechunked data. Otherwise we would probably overwrite remainder data with dechunking.
+         * Retains a new header if we were able to decode the header but not the rest of the chunk. Not retaining the header causes the header to be decoded on the next pass and that causes
+         * protocol out of sync.
+         * Drop the header if we were able to dechunk the remainder.
          *
          * @return the new {@link DecoderState}.
          */
         DecoderState readChunk() {
 
-            do {
+            boolean hasNewHeader;
 
+            do {
+                hasNewHeader = false;
                 this.aggregatedBody.addComponent(true, this.remainder.readRetainedSlice(getChunkLength()));
 
-                if (!this.header.is(Status.StatusBit.EOM) && Header.canDecode(this.remainder)) {
+                if (Header.canDecode(this.remainder)) {
+                    hasNewHeader = true;
                     this.header = Header.decode(this.remainder);
                 }
 
             } while (canReadChunk());
+
+
+            if (hasNewHeader) {
+                return newState(this.remainder, this.aggregatedBody, this.header);
+            }
 
             return newState(this.remainder, this.aggregatedBody, null);
         }
