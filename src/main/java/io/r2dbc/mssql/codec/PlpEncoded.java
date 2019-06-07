@@ -265,12 +265,21 @@ public class PlpEncoded extends Encoded {
 
                 this.aggregator = null;
                 this.actual.onComplete();
+            } else {
+                aggregator.discardReadComponents();
             }
         }
 
+        /**
+         * Emit a chunk from the buffer. At this point we need to make sure that buffers which get emitted do not hold a reference to the aggregator as they might cross thread boundaries.
+         *
+         * @param aggregator
+         * @param bytesToRead
+         */
         private void emitNext(CompositeByteBuf aggregator, int bytesToRead) {
 
-            ByteBuf buffer = aggregator.readRetainedSlice(bytesToRead);
+            ByteBuf buffer = aggregator.alloc().buffer(bytesToRead);
+            buffer.writeBytes(aggregator, bytesToRead);
 
             if (this.withSizeHeaders) {
 

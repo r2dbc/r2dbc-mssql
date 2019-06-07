@@ -21,7 +21,6 @@ import io.r2dbc.mssql.util.IntegrationTestSupport;
 import io.r2dbc.spi.Blob;
 import io.r2dbc.spi.Clob;
 import io.r2dbc.spi.Result;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
@@ -31,7 +30,6 @@ import reactor.test.StepVerifier;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.Optional;
-import java.util.Random;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -97,12 +95,10 @@ class LobIntegrationTests extends IntegrationTestSupport {
     }
 
     @Test
-    @Disabled
     void testBigBlob() {
 
+        int i = 1500; // ~ 382kb
         createTable(connection, "VARBINARY(MAX)");
-
-        int i = 50 + new Random().nextInt(1000);
 
         Flux.from(connection.createStatement("INSERT INTO lob_test values(@P0)")
             .bind("P0", Blob.from(Flux.range(0, i).map(it -> ByteBuffer.wrap(ALL_BYTES))))
@@ -116,7 +112,6 @@ class LobIntegrationTests extends IntegrationTestSupport {
             .execute()
             .flatMap(it -> it.map((row, rowMetadata) -> row.get("my_col", Blob.class)))
             .flatMap(Blob::stream)
-            .doOnNext(it -> System.out.println(it.remaining()))
             .map(Buffer::remaining)
             .collect(Collectors.summingInt(value -> value))
             .as(StepVerifier::create)
