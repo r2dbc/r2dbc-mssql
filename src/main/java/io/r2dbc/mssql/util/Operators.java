@@ -16,6 +16,7 @@
 
 package io.r2dbc.mssql.util;
 
+import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 
 /**
@@ -31,13 +32,31 @@ public final class Operators {
     /**
      * Replay signals from {@link Flux the source} until cancellation. Drains the source for data signals if the subscriber cancels the subscription.
      * <p>
-     * Draining data is required to complete a particular request/response window and clear the protocol state as client code expects to start a request/response conversation without any previous
+     * Draining data is required to complete a particular request/response window and clear the protocol state as client code expects to start a request/response conversation without leaving
+     * previous frames on the stack.
      *
-     * @param source
-     * @param <T>
-     * @return
+     * @param source the source to decorate.
+     * @param <T>    The type of values in both source and output sequences.
+     * @return decorated {@link Flux}.
      */
     public static <T> Flux<T> discardOnCancel(Flux<? extends T> source) {
-        return new FluxDiscardOnCancel<>(source);
+        return new FluxDiscardOnCancel<>(source, () -> {
+        });
+    }
+
+    /**
+     * Replay signals from {@link Flux the source} until cancellation. Drains the source for data signals if the subscriber cancels the subscription.
+     * <p>
+     * Draining data is required to complete a particular request/response window and clear the protocol state as client code expects to start a request/response conversation without leaving
+     * previous frames on the stack.
+     * <p>Propagates the {@link Subscription#cancel()}  signal to a {@link Runnable consumer}.
+     *
+     * @param source         the source to decorate.
+     * @param cancelConsumer {@link Runnable} notified when the resulting {@link Flux} receives a {@link Subscription#cancel() cancel} signal.
+     * @param <T>            The type of values in both source and output sequences.
+     * @return decorated {@link Flux}.
+     */
+    public static <T> Flux<T> discardOnCancel(Flux<? extends T> source, Runnable cancelConsumer) {
+        return new FluxDiscardOnCancel<>(source, cancelConsumer);
     }
 }

@@ -18,6 +18,8 @@ package io.r2dbc.mssql.util;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxOperator;
@@ -35,14 +37,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 class FluxDiscardOnCancel<T> extends FluxOperator<T, T> {
 
-    FluxDiscardOnCancel(Flux<? extends T> source) {
+    private static final Logger logger = LoggerFactory.getLogger(FluxDiscardOnCancel.class);
+
+    private final Runnable cancelConsumer;
+
+    FluxDiscardOnCancel(Flux<? extends T> source, Runnable cancelConsumer) {
         super(source);
-        onAssembly(this);
+        this.cancelConsumer = cancelConsumer;
     }
 
     @Override
     public void subscribe(CoreSubscriber<? super T> actual) {
-        source.subscribe(new FluxDiscardOnCancelSubscriber<>(actual));
+        this.source.subscribe(new FluxDiscardOnCancelSubscriber<>(actual, this.cancelConsumer));
     }
 
     static class FluxDiscardOnCancelSubscriber<T> extends AtomicBoolean implements CoreSubscriber<T>, Subscription {
@@ -51,14 +57,17 @@ class FluxDiscardOnCancel<T> extends FluxOperator<T, T> {
 
         final Context ctx;
 
+        final Runnable cancelConsumer;
+
         Subscription s;
 
         volatile boolean cancelled;
 
-        FluxDiscardOnCancelSubscriber(CoreSubscriber<T> actual) {
+        FluxDiscardOnCancelSubscriber(CoreSubscriber<T> actual, Runnable cancelConsumer) {
 
             this.actual = actual;
             this.ctx = actual.currentContext();
+            this.cancelConsumer = cancelConsumer;
         }
 
         @Override
@@ -66,42 +75,50 @@ class FluxDiscardOnCancel<T> extends FluxOperator<T, T> {
 
             if (Operators.validate(this.s, s)) {
                 this.s = s;
-                actual.onSubscribe(this);
+                this.actual.onSubscribe(this);
             }
         }
 
         @Override
         public void onNext(T t) {
 
-            if (cancelled) {
+            if (this.cancelled) {
                 Operators.onDiscard(t, this.ctx);
                 return;
             }
 
-            actual.onNext(t);
+            this.actual.onNext(t);
         }
 
         @Override
         public void onError(Throwable t) {
-            actual.onError(t);
+            this.actual.onError(t);
         }
 
         @Override
         public void onComplete() {
-            actual.onComplete();
+            this.actual.onComplete();
         }
 
         @Override
         public void request(long n) {
-            s.request(n);
+            this.s.request(n);
         }
 
         @Override
         public void cancel() {
 
             if (compareAndSet(false, true)) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("received cancel signal");
+                }
+                try {
+                    this.cancelConsumer.run();
+                } catch (Exception e) {
+                    Operators.onErrorDropped(e, this.ctx);
+                }
                 this.cancelled = true;
-                s.request(Long.MAX_VALUE);
+                this.s.request(Long.MAX_VALUE);
             }
         }
     }

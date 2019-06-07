@@ -34,6 +34,7 @@ import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.message.token.RpcRequest;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.mssql.util.Operators;
 import org.reactivestreams.Processor;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -99,9 +100,8 @@ final class RpcQueryMessageFlow {
     /**
      * Execute a direct query with parameters.
      *
-     * @param client    the {@link Client} to exchange messages with.
-     * @param query     the query to execute.
-     * @param fetchSize the number of rows to fetch. TODO: Try to determine fetch size from current demand and apply demand function.
+     * @param client the {@link Client} to exchange messages with.
+     * @param query  the query to execute.
      * @return the messages received in response to this exchange.
      */
     static Flux<Message> exchange(Client client, String query, Binding binding) {
@@ -141,7 +141,8 @@ final class RpcQueryMessageFlow {
         return messages.doOnSubscribe(ignore -> {
             QueryLogger.logQuery(client.getContext(), query);
             exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound);
-        });
+        })
+            .transform(it -> Operators.discardOnCancel(it, state::cancel));
     }
 
     /**
@@ -193,13 +194,13 @@ final class RpcQueryMessageFlow {
 
                 handleMessage(client, fetchSize, outbound, state, message, sink, cursorComplete);
             })
-            .filter(WINDOW_PREDICATE)
-            .doOnCancel(cursorComplete);
+            .filter(WINDOW_PREDICATE);
 
         return messages.doOnSubscribe(ignore -> {
             QueryLogger.logQuery(client.getContext(), query);
             exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound);
-        });
+        })
+            .transform(it -> Operators.discardOnCancel(it, state::cancel));
     }
 
     /**
@@ -273,13 +274,13 @@ final class RpcQueryMessageFlow {
 
                 handleMessage(client, fetchSize, outbound, state, message, sink, cursorComplete);
             })
-            .filter(WINDOW_PREDICATE)
-            .doOnCancel(cursorComplete);
+            .filter(WINDOW_PREDICATE);
 
         return messages.doOnSubscribe(ignore -> {
             QueryLogger.logQuery(client.getContext(), query);
             exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound);
-        });
+        })
+            .transform(it -> Operators.discardOnCancel(it, state::cancel));
     }
 
     private static int parseCursorId(Codecs codecs, CursorState state, ReturnValue returnValue) {
@@ -349,7 +350,7 @@ final class RpcQueryMessageFlow {
                 return;
             }
 
-            if ((state.hasMore && phase == Phase.NONE) || state.hasSeenRows) {
+            if (((state.hasMore && phase == Phase.NONE) || state.hasSeenRows) && state.wantsMore()) {
                 if (phase == Phase.NONE) {
                     state.phase = Phase.FETCHING;
                 }
@@ -564,7 +565,17 @@ final class RpcQueryMessageFlow {
 
         volatile boolean directMode;
 
+        volatile boolean cancelRequested;
+
         Phase phase = Phase.NONE;
+
+        boolean wantsMore() {
+            return !cancelRequested;
+        }
+
+        void cancel() {
+            this.cancelRequested = true;
+        }
 
         void update(Message it) {
             if (it instanceof RowToken) {

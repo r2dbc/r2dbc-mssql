@@ -24,6 +24,7 @@ import reactor.test.StepVerifier;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,7 +62,7 @@ class FluxDiscardOnCancelUnitTests {
         Iterator<Integer> items = createItems(4);
 
         Flux.fromIterable(() -> items)
-            .as(Operators::discardOnCancel)
+            .transform(Operators::discardOnCancel)
             .as(StepVerifier::create)
             .expectNextCount(4)
             .verifyComplete();
@@ -89,6 +90,24 @@ class FluxDiscardOnCancelUnitTests {
     }
 
     @Test
+    void considersCancelSignalPropagation() {
+
+        AtomicBoolean cancelled = new AtomicBoolean();
+
+        Iterator<Integer> items = createItems(4);
+
+        Flux.fromIterable(() -> items)
+            .as(it -> Operators.discardOnCancel(it, () -> cancelled.set(true)))
+            .as(it -> StepVerifier.create(it, 0))
+            .thenRequest(2)
+            .expectNext(0, 1)
+            .thenCancel()
+            .verify();
+
+        assertThat(cancelled).isTrue();
+    }
+
+    @Test
     void shouldNotConsumeItemsOnCancel() {
 
         Iterator<Integer> items = createItems(4);
@@ -100,7 +119,7 @@ class FluxDiscardOnCancelUnitTests {
             .thenCancel()
             .verify();
 
-        assertThat(items).contains(2, 3);
+        assertThat(items).toIterable().containsSequence(2, 3);
     }
 
     @Test
@@ -116,7 +135,7 @@ class FluxDiscardOnCancelUnitTests {
             .thenCancel()
             .verify();
 
-        assertThat(items).isEmpty();
+        assertThat(items).toIterable().isEmpty();
     }
 
     static Iterator<Integer> createItems(int count) {
