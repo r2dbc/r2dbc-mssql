@@ -1,4 +1,4 @@
-# Reactive Relational Database Connectivity Microsoft SQL Server Implementation
+# Reactive Relational Database Connectivity Microsoft SQL Server Implementation [![Concourse CI](https://ci.spring.io/api/v1/teams/r2dbc/pipelines/r2dbc/jobs/r2dbc-mssql/badge)](https://ci.spring.io/teams/r2dbc/pipelines/r2dbc/jobs/r2dbc-mssql/) 
 
 This project contains the [Microsoft SQL Server][m] implementation of the [R2DBC SPI][r]. This implementation is not intended to be used directly, but rather to be used as the backing implementation for a humane client library to delegate to
 
@@ -19,45 +19,23 @@ Next steps:
 * Execution of stored procedures 
 * Add support for TVP and UDTs
 
-## Maven
-Both milestone and snapshot artifacts (library, source, and javadoc) can be found in Maven repositories.
+## Code of Conduct
 
-```xml
-<dependency>
-  <groupId>io.r2dbc</groupId>
-  <artifactId>r2dbc-mssql</artifactId>
-  <version>1.0.0.BUILD-SNAPSHOT</version>
-</dependency>
+This project is governed by the [Spring Code of Conduct](CODE_OF_CONDUCT.adoc). By participating, you are expected to uphold this code of conduct. Please report unacceptable behavior to [spring-code-of-conduct@pivotal.io](mailto:spring-code-of-conduct@pivotal.io).
+
+## Getting Started
+
+Here is a quick teaser of how to use R2DBC MSSQL in Java:
+
+**URL Connection Factory Discovery**
+
+```java
+ConnectionFactory connectionFactory = ConnectionFactories.get("r2dbc:mssql://<host>:1433/<database>");
+
+Publisher<? extends Connection> connectionPublisher = connectionFactory.create();
 ```
 
-Artifacts can bound found at the following repositories.
-
-### Repositories
-```xml
-<repository>
-    <id>spring-snapshots</id>
-    <name>Spring Snapshots</name>
-    <url>https://repo.spring.io/snapshot</url>
-    <snapshots>
-        <enabled>true</enabled>
-    </snapshots>
-</repository>
-```
-
-```xml
-<repository>
-    <id>spring-milestones</id>
-    <name>Spring Milestones</name>
-    <url>https://repo.spring.io/milestone</url>
-    <snapshots>
-        <enabled>false</enabled>
-    </snapshots>
-</repository>
-```
-
-## Usage
-
-Connection Factory Discovery:
+**Programmatic Connection Factory Discovery**
 
 ```java
 ConnectionFactoryOptions options = builder()
@@ -81,7 +59,7 @@ Publisher<? extends Connection> connectionPublisher = connectionFactory.create()
 Mono<Connection> connectionMono = Mono.from(connectionFactory.create());
 ```
 
-Programmatic:
+**Programmatic Configuration**
 
 ```java
 MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
@@ -115,7 +93,7 @@ connection.createStatement("INSERT INTO person (id, first_name, last_name) VALUE
 
 Binding also allows positional index (zero-based) references. The parameter index is derived from the parameter discovery order when parsing the query.
 
-Supported ConnectionFactory Discovery Options:
+**Supported ConnectionFactory Discovery Options**
 
 Core options:
 
@@ -134,6 +112,40 @@ Additional options:
 * `ssl`: Whether to use transport-level encryption for the entire SQL server traffic, defaults to `false`.
 * `hostNameInCertificate`: Expected hostname in SSL certificate. Supports wildcards (e.g. `*.database.windows.net`)
 * `preferCursoredExecution`: Whether to prefer cursors  or direct execution for queries. Uses by default direct. Cursors require more round-trips but are more backpressure-friendly. Defaults to direct execution. Can be `boolean` or a `Predicate<String>` accepting the SQL query.
+
+### Maven configuration
+
+Add the Maven dependency and use our Maven milestone repository:
+
+```xml
+<dependency>
+  <groupId>io.r2dbc</groupId>
+  <artifactId>r2dbc-mssql</artifactId>
+  <version>0.8.0.M8</version>
+</dependency>
+
+<repository>
+    <id>spring-milestones</id>
+    <name>Spring Milestones</name>
+    <url>https://repo.spring.io/milestone</url>
+</repository>
+```
+
+If you'd rather like the latest snapshots of the upcoming major version, use our Maven snapshot repository and declare the appropriate dependency version.
+
+```xml
+<dependency>
+  <groupId>io.r2dbc</groupId>
+  <artifactId>r2dbc-mssql</artifactId>
+  <version>${version}.BUILD-SNAPSHOT</version>
+</dependency>
+
+<repository>
+  <id>spring-libs-snapshot</id>
+  <name>Spring Snapshot Repository</name>
+  <url>https://repo.spring.io/libs-snapshot</url>
+</repository>
+``` 
 
 ### Data Type Mapping 
 
@@ -226,7 +238,51 @@ values are fully materialized in the client before decoding. Make sure to accoun
 [java-uuid-ref]: https://docs.oracle.com/javase/8/docs/api/java/util/UUID.html
 [java-zdt-ref]: https://docs.oracle.com/javase/8/docs/api/java/time/ZonedDateTime.html
 
-## License
-This project is released under version 2.0 of the [Apache License][l].
+## Getting Help
 
-[l]: https://www.apache.org/licenses/LICENSE-2.0
+Having trouble with R2DBC? We'd love to help!
+
+* Check the [spec documentation](https://r2dbc.io/spec/0.8.0.M8/spec/html/), and [Javadocs](https://r2dbc.io/spec/0.8.0.M8/api/).
+* If you are upgrading, check out the [changelog](https://r2dbc.io/spec/0.8.0.M8/CHANGELOG.txt) for "new and noteworthy" features.
+* Ask a question - we monitor [stackoverflow.com](https://stackoverflow.com) for questions
+  tagged with [`r2dbc`](https://stackoverflow.com/tags/r2dbc). 
+  You can also chat with the community on [Gitter](https://gitter.im/r2dbc/r2dbc).
+* Report bugs with R2DBC MSSQL at [github.com/r2dbc/r2dbc-mssql/issues](https://github.com/r2dbc/r2dbc-mssql/issues).
+
+## Reporting Issues
+
+R2DBC uses GitHub as issue tracking system to record bugs and feature requests. 
+If you want to raise an issue, please follow the recommendations below:
+
+* Before you log a bug, please search the [issue tracker](https://github.com/r2dbc/r2dbc-mssql/issues) to see if someone has already reported the problem.
+* If the issue doesn't already exist, [create a new issue](https://github.com/r2dbc/r2dbc-mssql/issues/new).
+* Please provide as much information as possible with the issue report, we like to know the version of R2DBC MSSQL that you are using and JVM version.
+* If you need to paste code, or include a stack trace use Markdown ``` escapes before and after your text.
+* If possible try to create a test-case or project that replicates the issue. 
+Attach a link to your code or a compressed file containing your code.
+
+
+## Building from Source
+
+You don't need to build from source to use R2DBC MSSQL (binaries in [repo.spring.io](https://repo.spring.io)), but if you want to try out the latest and greatest, R2DBC MSSQL can be easily built with the
+[maven wrapper](https://github.com/takari/maven-wrapper). You also need JDK 1.8 and Docker to run integration tests.
+
+```bash
+ $ ./mvnw clean install
+```
+
+If you want to build with the regular `mvn` command, you will need [Maven v3.5.0 or above](https://maven.apache.org/run-maven/index.html).
+
+_Also see [CONTRIBUTING.adoc](CONTRIBUTING.adoc) if you wish to submit pull requests, and in particular please sign the [Contributor's Agreement](https://cla.pivotal.io/sign/spring) before your first change, however trivial._
+
+### Running JMH Benchmarks
+
+Running the JMH benchmarks builds and runs the benchmarks without running tests.
+
+```bash
+ $ ./mvnw clean install -Pjmh
+```
+
+## License
+
+R2DBC MSSQL is Open Source software released under the [Apache 2.0 license](https://www.apache.org/licenses/LICENSE-2.0.html).
