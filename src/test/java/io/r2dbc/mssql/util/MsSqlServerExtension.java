@@ -17,10 +17,10 @@
 package io.r2dbc.mssql.util;
 
 import com.zaxxer.hikari.HikariDataSource;
+import io.r2dbc.mssql.MssqlConnectionConfiguration;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.containers.JdbcDatabaseContainer;
@@ -29,6 +29,7 @@ import reactor.util.annotation.Nullable;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.function.Supplier;
 
 /**
  * Test container extension for Microsoft SQL Server.
@@ -36,37 +37,48 @@ import java.net.Socket;
 @SuppressWarnings({"unchecked", "rawtypes"})
 public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCallback {
 
-    private final MSSQLServerContainer<?> container = new MSSQLServerContainer() {
+    private volatile MSSQLServerContainer<?> containerInstance = null;
 
-        protected void configure() {
-            this.addExposedPort(MS_SQL_SERVER_PORT);
-            this.addEnv("ACCEPT_EULA", "Y");
-            this.addEnv("SA_PASSWORD", getPassword());
+    private final Supplier<MSSQLServerContainer<?>> container = () -> {
+
+        if (this.containerInstance != null) {
+            return this.containerInstance;
         }
+        return this.containerInstance = new MSSQLServerContainer() {
+
+            protected void configure() {
+                this.addExposedPort(MS_SQL_SERVER_PORT);
+                this.addEnv("ACCEPT_EULA", "Y");
+                this.addEnv("SA_PASSWORD", getPassword());
+            }
+        };
     };
 
     private HikariDataSource dataSource;
 
     private JdbcOperations jdbcOperations;
 
-    private final DatabaseContainer sqlServer = External.INSTANCE.isAvailable() ? External.INSTANCE : new TestContainer(container);
+    private final DatabaseContainer sqlServer = External.INSTANCE.isAvailable() ? External.INSTANCE : new TestContainer(this.container.get());
 
-    private final boolean useTestContainer = sqlServer instanceof TestContainer;
+    private final boolean useTestContainer = this.sqlServer instanceof TestContainer;
 
     @Override
     public void beforeAll(ExtensionContext context) {
+        initialize();
+    }
+
+    public void initialize() {
 
         if (this.useTestContainer) {
-            this.container.start();
+            this.container.get().start();
         }
 
-        this.dataSource = DataSourceBuilder.create()
-            .type(HikariDataSource.class)
-            .url("jdbc:sqlserver://" + getHost() + ":" + getPort() + ";database=master")
-            .username(getUsername())
-            .password(getPassword())
-            .build();
+        HikariDataSource hikariDataSource = new HikariDataSource();
+        hikariDataSource.setJdbcUrl("jdbc:sqlserver://" + getHost() + ":" + getPort() + ";database=master");
+        hikariDataSource.setUsername(getUsername());
+        hikariDataSource.setPassword(getPassword());
 
+        this.dataSource = hikariDataSource;
         this.dataSource.setMaximumPoolSize(1);
 
         this.jdbcOperations = new JdbcTemplate(this.dataSource);
@@ -76,12 +88,20 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
     public void afterAll(ExtensionContext context) {
 
         if (this.useTestContainer) {
-            this.container.stop();
+            this.container.get().stop();
         }
     }
 
-    public String getHost() {
-        return this.sqlServer.getHost();
+    public MssqlConnectionConfiguration.Builder configBuilder() {
+        return MssqlConnectionConfiguration.builder().host(getHost()).username(getUsername()).password(getPassword());
+    }
+
+    public MssqlConnectionConfiguration getConnectionConfiguration() {
+        return configBuilder().build();
+    }
+
+    public HikariDataSource getDataSource() {
+        return this.dataSource;
     }
 
     @Nullable
@@ -89,8 +109,8 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
         return this.jdbcOperations;
     }
 
-    public String getPassword() {
-        return this.container.getPassword();
+    public String getHost() {
+        return this.sqlServer.getHost();
     }
 
     public int getPort() {
@@ -98,7 +118,11 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
     }
 
     public String getUsername() {
-        return this.container.getUsername();
+        return this.sqlServer.getUsername();
+    }
+
+    public String getPassword() {
+        return this.sqlServer.getPassword();
     }
 
     /**
@@ -109,6 +133,10 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
         String getHost();
 
         int getPort();
+
+        String getUsername();
+
+        String getPassword();
     }
 
     /**
@@ -128,13 +156,23 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
             return 1433;
         }
 
+        @Override
+        public String getUsername() {
+            return "sa";
+        }
+
+        @Override
+        public String getPassword() {
+            return "A_Str0ng_Required_Password";
+        }
+
         /**
          * Returns whether this container is available.
          *
          * @return
          */
         @SuppressWarnings("try")
-        public boolean isAvailable() {
+        boolean isAvailable() {
 
             try (Socket ignored = new Socket(getHost(), getPort())) {
 
@@ -164,6 +202,16 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
         @Override
         public int getPort() {
             return this.container.getMappedPort(MSSQLServerContainer.MS_SQL_SERVER_PORT);
+        }
+
+        @Override
+        public String getUsername() {
+            return this.container.getUsername();
+        }
+
+        @Override
+        public String getPassword() {
+            return this.container.getPassword();
         }
     }
 }

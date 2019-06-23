@@ -44,7 +44,7 @@ import java.util.Set;
  *
  * @author Mark Paluch
  */
-public class BinaryCodec implements Codec<Object> {
+class BinaryCodec implements Codec<Object> {
 
     /**
      * Singleton instance.
