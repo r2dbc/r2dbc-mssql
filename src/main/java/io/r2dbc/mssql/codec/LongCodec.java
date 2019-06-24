@@ -38,6 +38,8 @@ final class LongCodec extends AbstractNumericCodec<Long> {
      */
     static final LongCodec INSTANCE = new LongCodec();
 
+    private static final byte[] NULL = ByteArray.fromEncoded((alloc) -> RpcEncoding.encodeNull(alloc, SqlServerType.BIGINT));
+
     private LongCodec() {
         super(Long.class, value -> value);
     }
@@ -49,6 +51,6 @@ final class LongCodec extends AbstractNumericCodec<Long> {
 
     @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.BIGINT);
+        return RpcEncoding.wrap(NULL, SqlServerType.BIGINT);
     }
 }

@@ -36,7 +36,9 @@ import io.r2dbc.mssql.message.type.TypeInformation;
  */
 final class FloatCodec extends AbstractCodec<Float> {
 
-    public static final FloatCodec INSTANCE = new FloatCodec();
+    static final FloatCodec INSTANCE = new FloatCodec();
+
+    private static final byte[] NULL = ByteArray.fromEncoded(alloc -> RpcEncoding.encodeNull(alloc, SqlServerType.REAL));
 
     private FloatCodec() {
         super(Float.class);
@@ -49,7 +51,7 @@ final class FloatCodec extends AbstractCodec<Float> {
 
     @Override
     Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.REAL);
+        return RpcEncoding.wrap(NULL, SqlServerType.REAL);
     }
 
     @Override

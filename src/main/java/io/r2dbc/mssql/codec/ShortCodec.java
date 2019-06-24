@@ -38,6 +38,8 @@ final class ShortCodec extends AbstractNumericCodec<Short> {
      */
     static final ShortCodec INSTANCE = new ShortCodec();
 
+    private static final byte[] NULL = ByteArray.fromEncoded((alloc) -> RpcEncoding.encodeNull(alloc, SqlServerType.SMALLINT));
+
     private ShortCodec() {
         super(Short.class, value -> (short) value);
     }
@@ -49,6 +51,6 @@ final class ShortCodec extends AbstractNumericCodec<Short> {
 
     @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.SMALLINT);
+        return RpcEncoding.wrap(NULL, SqlServerType.SMALLINT);
     }
 }

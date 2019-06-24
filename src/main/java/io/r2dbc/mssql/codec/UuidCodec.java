@@ -34,6 +34,8 @@ final class UuidCodec extends AbstractCodec<UUID> {
      */
     static final UuidCodec INSTANCE = new UuidCodec();
 
+    private static final byte[] NULL = ByteArray.fromEncoded(alloc -> RpcEncoding.encodeNull(alloc, SqlServerType.GUID));
+
     private UuidCodec() {
         super(UUID.class);
     }
@@ -53,7 +55,7 @@ final class UuidCodec extends AbstractCodec<UUID> {
 
     @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.GUID);
+        return RpcEncoding.wrap(NULL, SqlServerType.GUID);
     }
 
     @Override

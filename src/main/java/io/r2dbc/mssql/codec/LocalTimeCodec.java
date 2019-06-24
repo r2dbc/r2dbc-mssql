@@ -49,6 +49,8 @@ final class LocalTimeCodec extends AbstractCodec<LocalTime> {
      */
     private static final int[] SCALED_MULTIPLIERS = new int[]{10000000, 1000000, 100000, 10000, 1000, 100, 10, 1};
 
+    private static final byte[] NULL = ByteArray.fromEncoded((alloc) -> RpcEncoding.encodeTemporalNull(alloc, SqlServerType.TIME, 7));
+
     private LocalTimeCodec() {
         super(LocalTime.class);
     }
@@ -63,7 +65,7 @@ final class LocalTimeCodec extends AbstractCodec<LocalTime> {
 
     @Override
     Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.TIME, 7);
+        return RpcEncoding.wrap(NULL, SqlServerType.TIME);
     }
 
     @Override

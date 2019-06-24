@@ -18,7 +18,6 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.BenchmarkSettings;
-import io.r2dbc.mssql.util.TestByteBufAllocator;
 
 /**
  * Settings for codec benchmarks.
@@ -27,5 +26,5 @@ import io.r2dbc.mssql.util.TestByteBufAllocator;
  */
 public abstract class CodecBenchmarkSupport extends BenchmarkSettings {
 
-    static final ByteBufAllocator alloc = TestByteBufAllocator.TEST;
+    static final ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
 }

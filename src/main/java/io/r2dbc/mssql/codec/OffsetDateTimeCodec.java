@@ -49,6 +49,8 @@ final class OffsetDateTimeCodec extends AbstractCodec<OffsetDateTime> {
      */
     public static final OffsetDateTimeCodec INSTANCE = new OffsetDateTimeCodec();
 
+    private static final byte[] NULL = ByteArray.fromEncoded((alloc) -> RpcEncoding.encodeTemporalNull(alloc, SqlServerType.DATETIMEOFFSET, 7));
+
     private OffsetDateTimeCodec() {
         super(OffsetDateTime.class);
     }
@@ -68,7 +70,7 @@ final class OffsetDateTimeCodec extends AbstractCodec<OffsetDateTime> {
 
     @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.DATETIMEOFFSET, 7);
+        return RpcEncoding.wrap(NULL, SqlServerType.DATETIMEOFFSET);
     }
 
     @Override

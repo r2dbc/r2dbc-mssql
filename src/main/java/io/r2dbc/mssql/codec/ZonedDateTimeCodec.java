@@ -41,7 +41,9 @@ final class ZonedDateTimeCodec extends AbstractCodec<ZonedDateTime> {
     /**
      * Singleton instance.
      */
-    public static final ZonedDateTimeCodec INSTANCE = new ZonedDateTimeCodec();
+    static final ZonedDateTimeCodec INSTANCE = new ZonedDateTimeCodec();
+
+    private static final byte[] NULL = ByteArray.fromEncoded((alloc) -> RpcEncoding.encodeTemporalNull(alloc, SqlServerType.DATETIMEOFFSET, 7));
 
     private ZonedDateTimeCodec() {
         super(ZonedDateTime.class);
@@ -54,7 +56,7 @@ final class ZonedDateTimeCodec extends AbstractCodec<ZonedDateTime> {
 
     @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.DATETIMEOFFSET, 7);
+        return RpcEncoding.wrap(NULL, SqlServerType.DATETIMEOFFSET);
     }
 
     @Override

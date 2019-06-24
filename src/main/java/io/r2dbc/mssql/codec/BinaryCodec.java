@@ -18,6 +18,7 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.LengthStrategy;
@@ -50,6 +51,15 @@ class BinaryCodec implements Codec<Object> {
      * Singleton instance.
      */
     public static final BinaryCodec INSTANCE = new BinaryCodec();
+
+    private static final byte[] NULL = ByteArray.fromBuffer((alloc) ->
+    {
+        ByteBuf buffer = alloc.buffer(4);
+        Encode.uShort(buffer, SqlServerType.VARBINARY.getMaxLength());
+        Encode.uShort(buffer, Length.USHORT_NULL);
+
+        return buffer;
+    });
 
     private static final Set<SqlServerType> SUPPORTED_TYPES = EnumSet.of(SqlServerType.BINARY, SqlServerType.VARBINARY,
         SqlServerType.VARBINARYMAX, SqlServerType.IMAGE);
@@ -106,14 +116,7 @@ class BinaryCodec implements Codec<Object> {
 
     @Override
     public Encoded encodeNull(ByteBufAllocator allocator) {
-
-        Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
-
-        ByteBuf buffer = allocator.buffer(4);
-        Encode.uShort(buffer, SqlServerType.VARBINARY.getMaxLength());
-        Encode.uShort(buffer, Length.USHORT_NULL);
-
-        return new VarbinaryEncoded(TdsDataType.BIGVARBINARY, buffer);
+        return new VarbinaryEncoded(TdsDataType.BIGVARBINARY, Unpooled.wrappedBuffer(NULL));
     }
 
     @Override

@@ -38,6 +38,8 @@ final class IntegerCodec extends AbstractNumericCodec<Integer> {
      */
     static final IntegerCodec INSTANCE = new IntegerCodec();
 
+    private static final byte[] NULL = ByteArray.fromEncoded((alloc) -> RpcEncoding.encodeNull(alloc, SqlServerType.INTEGER));
+
     private IntegerCodec() {
         super(Integer.class, value -> (int) value);
     }
@@ -49,6 +51,6 @@ final class IntegerCodec extends AbstractNumericCodec<Integer> {
 
     @Override
     Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.INTEGER);
+        return RpcEncoding.wrap(NULL, SqlServerType.INTEGER);
     }
 }

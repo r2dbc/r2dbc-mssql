@@ -18,6 +18,7 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.SqlServerType;
@@ -40,14 +41,25 @@ import java.math.BigInteger;
  */
 final class DecimalCodec extends AbstractCodec<BigDecimal> {
 
+    static final DecimalCodec INSTANCE = new DecimalCodec();
+
     private static final int MAX_PRECISION = 38;
 
-    static final DecimalCodec INSTANCE = new DecimalCodec();
+    private static final byte[] NULL = ByteArray.fromBuffer(alloc -> {
+
+        ByteBuf buffer = alloc.buffer(4);
+
+        Encode.asByte(buffer, 0x11);
+        Encode.asByte(buffer, SqlServerType.DECIMAL.getMaxLength());
+        Encode.asByte(buffer, 0); // scale
+        Encode.asByte(buffer, 0); // length
+
+        return buffer;
+    });
 
     private DecimalCodec() {
         super(BigDecimal.class);
     }
-
 
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, BigDecimal value) {
@@ -60,15 +72,7 @@ final class DecimalCodec extends AbstractCodec<BigDecimal> {
 
     @Override
     Encoded doEncodeNull(ByteBufAllocator allocator) {
-
-        ByteBuf buffer = allocator.buffer(4);
-
-        Encode.asByte(buffer, 0x11);
-        Encode.asByte(buffer, SqlServerType.DECIMAL.getMaxLength());
-        Encode.asByte(buffer, 0); // scale
-        Encode.asByte(buffer, 0); // length
-
-        return new DecimalEncoded(TdsDataType.DECIMALN, buffer, MAX_PRECISION, 0);
+        return new DecimalEncoded(TdsDataType.DECIMALN, Unpooled.wrappedBuffer(NULL), MAX_PRECISION, 0);
     }
 
     @Override

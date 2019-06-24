@@ -50,6 +50,8 @@ final class LocalDateCodec extends AbstractCodec<LocalDate> {
      */
     private static final LocalDate DATE_ZERO = LocalDate.of(1, 1, 1);
 
+    private static final byte[] NULL = ByteArray.fromEncoded((alloc) -> RpcEncoding.encodeTemporalNull(alloc, SqlServerType.DATE));
+
     private LocalDateCodec() {
         super(LocalDate.class);
     }
@@ -66,7 +68,7 @@ final class LocalDateCodec extends AbstractCodec<LocalDate> {
 
     @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.DATE);
+        return RpcEncoding.wrap(NULL, SqlServerType.DATE);
     }
 
     @Override

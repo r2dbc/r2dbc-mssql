@@ -59,6 +59,8 @@ final class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
 
     private static final long NANOS_PER_MILLISECOND = TimeUnit.MILLISECONDS.toNanos(1);
 
+    private static final byte[] NULL = ByteArray.fromEncoded((alloc) -> RpcEncoding.encodeTemporalNull(alloc, SqlServerType.DATETIME2, 7));
+
     private LocalDateTimeCodec() {
         super(LocalDateTime.class);
     }
@@ -74,7 +76,7 @@ final class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
 
     @Override
     Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeTemporalNull(allocator, SqlServerType.DATETIME2, 7);
+        return RpcEncoding.wrap(NULL, SqlServerType.DATETIME2);
     }
 
     @Override

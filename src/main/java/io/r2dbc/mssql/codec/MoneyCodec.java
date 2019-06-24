@@ -56,6 +56,8 @@ final class MoneyCodec extends AbstractCodec<BigDecimal> {
      */
     private static final int SMALL_MONEY_LENGTH = 4;
 
+    private static final byte[] NULL = ByteArray.fromEncoded(alloc -> RpcEncoding.encodeNull(alloc, SqlServerType.MONEY));
+
     private MoneyCodec() {
         super(BigDecimal.class);
     }
@@ -67,7 +69,7 @@ final class MoneyCodec extends AbstractCodec<BigDecimal> {
 
     @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.MONEY);
+        return RpcEncoding.wrap(NULL, SqlServerType.MONEY);
     }
 
     @Override

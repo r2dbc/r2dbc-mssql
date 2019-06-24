@@ -38,6 +38,8 @@ final class BooleanCodec extends AbstractNumericCodec<Boolean> {
      */
     static final BooleanCodec INSTANCE = new BooleanCodec();
 
+    private static final byte[] NULL = ByteArray.fromEncoded((alloc) -> RpcEncoding.encodeNull(alloc, SqlServerType.TINYINT));
+
     private BooleanCodec() {
         super(Boolean.class, value -> value != 0);
     }
@@ -49,6 +51,6 @@ final class BooleanCodec extends AbstractNumericCodec<Boolean> {
 
     @Override
     Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.TINYINT);
+        return RpcEncoding.wrap(NULL, SqlServerType.TINYINT);
     }
 }

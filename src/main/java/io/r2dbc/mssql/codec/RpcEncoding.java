@@ -18,6 +18,7 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.message.type.LengthStrategy;
@@ -172,6 +173,21 @@ public final class RpcEncoding {
         ByteBuf buffer = prepareBuffer(allocator, serverType.getNullableType().getLengthStrategy(), serverType.getMaxLength(), 0);
 
         return new HintedEncoded(serverType.getNullableType(), serverType, buffer);
+    }
+
+    /**
+     * Wrap a binary encoded RPC parameter and apply a {@link SqlServerType} hint.
+     *
+     * @param buffer     the encoded buffer.
+     * @param serverType the server data type. Used to derive the nullable {@link TdsDataType}.
+     * @return the encoded {@code null} value.
+     */
+    public static Encoded wrap(byte[] buffer, SqlServerType serverType) {
+
+        Assert.isTrue(serverType.getMaxLength() > 0, "Server type does not declare a max length");
+        Assert.notNull(serverType.getNullableType(), "Server type does not declare a nullable type");
+
+        return new HintedEncoded(serverType.getNullableType(), serverType, Unpooled.wrappedBuffer(buffer));
     }
 
     /**

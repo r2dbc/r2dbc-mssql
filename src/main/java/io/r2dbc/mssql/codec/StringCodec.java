@@ -18,6 +18,7 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.message.type.Length;
@@ -52,13 +53,24 @@ final class StringCodec extends AbstractCodec<String> {
     /**
      * Singleton instance.
      */
-    public static final StringCodec INSTANCE = new StringCodec();
+    static final StringCodec INSTANCE = new StringCodec();
 
     private static final Set<SqlServerType> SUPPORTED_TYPES = EnumSet.of(SqlServerType.CHAR, SqlServerType.NCHAR,
         SqlServerType.VARCHAR, SqlServerType.NVARCHAR,
         SqlServerType.VARCHARMAX, SqlServerType.NVARCHARMAX,
         SqlServerType.TEXT, SqlServerType.NTEXT,
         SqlServerType.GUID);
+
+    private static final byte[] NULL = ByteArray.fromBuffer(alloc -> {
+
+        ByteBuf buffer = alloc.buffer(8);
+
+        Encode.uShort(buffer, TypeUtils.SHORT_VARTYPE_MAX_BYTES);
+        Collation.RAW.encode(buffer);
+        Encode.uShort(buffer, -1);
+
+        return buffer;
+    });
 
     private StringCodec() {
         super(String.class);
@@ -81,14 +93,7 @@ final class StringCodec extends AbstractCodec<String> {
 
     @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
-
-        ByteBuf buffer = allocator.buffer();
-
-        Encode.uShort(buffer, TypeUtils.SHORT_VARTYPE_MAX_BYTES);
-        Collation.RAW.encode(buffer);
-        Encode.uShort(buffer, -1);
-
-        return new NvarcharEncoded(TdsDataType.NVARCHAR, buffer);
+        return new NvarcharEncoded(TdsDataType.NVARCHAR, Unpooled.wrappedBuffer(NULL));
     }
 
     @Override

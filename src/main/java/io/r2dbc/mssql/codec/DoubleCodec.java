@@ -39,6 +39,8 @@ final class DoubleCodec extends AbstractCodec<Double> {
 
     public static final DoubleCodec INSTANCE = new DoubleCodec();
 
+    private static final byte[] NULL = ByteArray.fromEncoded((alloc) -> RpcEncoding.encodeNull(alloc, SqlServerType.FLOAT));
+
     private DoubleCodec() {
         super(Double.class);
     }
@@ -50,7 +52,7 @@ final class DoubleCodec extends AbstractCodec<Double> {
 
     @Override
     Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return RpcEncoding.encodeNull(allocator, SqlServerType.FLOAT);
+        return RpcEncoding.wrap(NULL, SqlServerType.FLOAT);
     }
 
     @Override
