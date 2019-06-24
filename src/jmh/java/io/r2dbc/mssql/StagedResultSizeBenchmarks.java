@@ -120,6 +120,7 @@ public class StagedResultSizeBenchmarks extends BenchmarkSettings {
     public void simpleDirectR2dbc(ConnectionHolder connectionHolder, Blackhole voodoo) {
 
         io.r2dbc.spi.Statement statement = connectionHolder.r2dbc.createStatement("SELECT * FROM result_sizes");
+        ((MssqlStatement) statement).fetchSize(0);
 
         String name = Flux.from(statement.execute()).flatMap(it -> it.map((row, rowMetadata) -> row.get("name", String.class))).blockLast();
 
@@ -171,6 +172,7 @@ public class StagedResultSizeBenchmarks extends BenchmarkSettings {
     public void parametrizedDirectR2dbc(ConnectionHolder connectionHolder, Blackhole voodoo) throws SQLException {
 
         io.r2dbc.spi.Statement statement = connectionHolder.r2dbc.createStatement("SELECT * FROM result_sizes WHERE name != @P0").bind("P0", "foo");
+        ((MssqlStatement) statement).fetchSize(0);
 
         String name = Flux.from(statement.execute()).flatMap(it -> it.map((row, rowMetadata) -> row.get("name", String.class))).blockLast();
 
