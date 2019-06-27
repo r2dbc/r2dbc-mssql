@@ -36,9 +36,7 @@ import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.token.AbstractInfoToken;
 import io.r2dbc.mssql.message.token.EnvChangeToken;
-import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.FeatureExtAckToken;
-import io.r2dbc.mssql.message.token.InfoToken;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
 import org.reactivestreams.Publisher;
@@ -80,22 +78,16 @@ public final class ReactorNettyClient implements Client {
 
     private final Consumer<AbstractInfoToken> infoTokenConsumer = (token) -> {
 
-        if (logger.isDebugEnabled()) {
-            if (token.getClassification() == AbstractInfoToken.Classification.INFORMATIONAL) {
-                logger.debug("Info: Code [{}] Severity [{}]: {}", token.getNumber(), token.getClassification(),
-                    token.getMessage());
-            } else {
-                logger.debug("Warning: Code [{}] Severity [{}]: {}", token.getNumber(), token.getClassification(),
-                    token.getMessage());
-            }
+        if (token.getClassification() == AbstractInfoToken.Classification.INFORMATIONAL) {
+            logger.debug("Info: Code [{}] Severity [{}]: {}", token.getNumber(), token.getClassification(),
+                token.getMessage());
+        } else {
+            logger.debug("Warning: Code [{}] Severity [{}]: {}", token.getNumber(), token.getClassification(),
+                token.getMessage());
         }
     };
 
-    private final Consumer<Message> handleInfoToken = handleExact(InfoToken.class, this.infoTokenConsumer::accept);
-
-    private final Consumer<Message> handleErrorToken = handleExact(ErrorToken.class, this.infoTokenConsumer::accept);
-
-    private final Consumer<Message> handleEnvChange = handleExact(EnvChangeToken.class, (token) -> {
+    private final Consumer<EnvChangeToken> handleEnvChange = (token) -> {
 
         EnvironmentChangeEvent event = new EnvironmentChangeEvent(token);
 
@@ -106,9 +98,9 @@ public final class ReactorNettyClient implements Client {
                 logger.warn("Failed onEnvironmentChange() in {}", listener, e);
             }
         }
-    });
+    };
 
-    private final Consumer<Message> featureAckChange = handleExact(FeatureExtAckToken.class, (token) -> {
+    private final Consumer<FeatureExtAckToken> featureAckChange = (token) -> {
 
         for (FeatureExtAckToken.FeatureToken featureToken : token.getFeatureTokens()) {
 
@@ -116,7 +108,7 @@ public final class ReactorNettyClient implements Client {
                 this.encryptionSupported = true;
             }
         }
-    });
+    };
 
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
@@ -146,7 +138,6 @@ public final class ReactorNettyClient implements Client {
     private ReactorNettyClient(Connection connection, TdsEncoder tdsEncoder) {
         Assert.requireNonNull(connection, "Connection must not be null");
 
-        FluxSink<Message> responses = this.responseProcessor.sink();
 
         StreamDecoder decoder = new StreamDecoder();
 
@@ -173,7 +164,7 @@ public final class ReactorNettyClient implements Client {
             }
         });
 
-        BiConsumer<Message, SynchronousSink<Message>> handleStateChange = handleMessage(Message.class,
+        BiConsumer<Message, SynchronousSink<Message>> handleStateChange =
             (message, sink) -> {
 
                 ConnectionState connectionState = this.state;
@@ -185,9 +176,9 @@ public final class ReactorNettyClient implements Client {
                     this.state = nextState;
                     this.decodeFunction = nextState.decoder(this);
                 }
+            };
 
-                sink.next(message);
-            });
+        boolean debugEnabled = logger.isDebugEnabled();
 
         connection.inbound().receiveObject() //
             .concatMap(it -> {
@@ -203,35 +194,39 @@ public final class ReactorNettyClient implements Client {
                 }
 
                 return Mono.error(ProtocolException.unsupported(String.format("Unexpected protocol message: [%s]", it)));
-            }) //
-            .as(it -> {
-                if (logger.isDebugEnabled()) {
-                    return it.doOnNext(message -> logger.debug("Response: {}", message));
+            }).<Message>handle((message, sink) -> {
+
+
+            if (debugEnabled) {
+                logger.debug("Response: {}", message);
+
+                if (message instanceof AbstractInfoToken) {
+                    this.infoTokenConsumer.accept((AbstractInfoToken) message);
                 }
-                return it;
-            })
-            .as(it -> {
-                if (logger.isDebugEnabled()) {
-                    return it.doOnNext(this.handleInfoToken).doOnNext(this.handleErrorToken);
-                }
-                return it;
-            })
-            .doOnError(message -> logger.warn("Error: {}", message.getMessage(), message)) //
-            .handle(handleStateChange) //
-            .doOnNext(m -> {
-                this.handleEnvChange.accept(m);
-                this.featureAckChange.accept(m);
-            }) //
-            .doOnError(ProtocolException.class, e -> {
-                logger.warn("Error: {}", e.getMessage(), e);
+            }
+
+            handleStateChange.accept(message, sink);
+
+            if (message.getClass() == EnvChangeToken.class) {
+                this.handleEnvChange.accept((EnvChangeToken) message);
+            }
+
+            if (message.getClass() == FeatureExtAckToken.class) {
+                this.featureAckChange.accept((FeatureExtAckToken) message);
+            }
+
+            sink.next(message);
+        }).doOnError(e -> {
+
+            logger.warn("Error: {}", e.getMessage(), e);
+            if (e instanceof ProtocolException) {
                 this.isClosed.set(true);
                 connection.channel().close();
-            })
-            .subscribe(
-                responses::next, responses::error, responses::complete);
+            }
+        }).subscribe(this.responseProcessor);
 
         this.requestProcessor.as(it -> {
-            if (logger.isDebugEnabled()) {
+            if (debugEnabled) {
                 return it.doOnNext(message -> logger.debug("Request: {}", message));
             }
             return it;
