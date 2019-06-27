@@ -68,6 +68,8 @@ public final class ReactorNettyClient implements Client {
 
     private static final Logger logger = LoggerFactory.getLogger(ReactorNettyClient.class);
 
+    private static final boolean DEBUG_ENABLED = logger.isDebugEnabled();
+
     private final ByteBufAllocator byteBufAllocator;
 
     private final Connection connection;
@@ -178,7 +180,6 @@ public final class ReactorNettyClient implements Client {
                 }
             };
 
-        boolean debugEnabled = logger.isDebugEnabled();
 
         connection.inbound().receiveObject() //
             .concatMap(it -> {
@@ -197,7 +198,7 @@ public final class ReactorNettyClient implements Client {
             }).<Message>handle((message, sink) -> {
 
 
-            if (debugEnabled) {
+            if (DEBUG_ENABLED) {
                 logger.debug("Response: {}", message);
 
                 if (message instanceof AbstractInfoToken) {
@@ -225,14 +226,16 @@ public final class ReactorNettyClient implements Client {
             }
         }).subscribe(this.responseProcessor);
 
-        this.requestProcessor.as(it -> {
-            if (debugEnabled) {
-                return it.doOnNext(message -> logger.debug("Request: {}", message));
-            }
-            return it;
-        })
+        this.requestProcessor
             .concatMap(
-                message -> connection.outbound().sendObject(message.encode(connection.outbound().alloc(), this.tdsEncoder.getPacketSize())))
+                message -> {
+
+                    if (DEBUG_ENABLED) {
+                        logger.debug("Request: {}", message);
+                    }
+
+                    return connection.outbound().sendObject(message.encode(connection.outbound().alloc(), this.tdsEncoder.getPacketSize()));
+                })
             .doOnError(throwable -> {
                 logger.warn("Error: {}", throwable.getMessage(), throwable);
                 this.isClosed.set(true);
@@ -367,11 +370,30 @@ public final class ReactorNettyClient implements Client {
     }
 
     @Override
+    public Flux<Message> exchange(ClientMessage request) {
+
+        Assert.requireNonNull(requests, "Requests must not be null");
+
+        if (DEBUG_ENABLED) {
+            logger.debug(String.format("exchange(%s)", request));
+        }
+
+        if (this.isClosed.get()) {
+            return Flux.error(new IllegalStateException("Cannot exchange messages because the connection is closed"));
+        }
+
+        return this.responseProcessor
+            .doOnSubscribe(s -> this.requests.next(request));
+    }
+
+    @Override
     public Flux<Message> exchange(Publisher<? extends ClientMessage> requests) {
 
         Assert.requireNonNull(requests, "Requests must not be null");
 
-        logger.debug("exchange()");
+        if (DEBUG_ENABLED) {
+            logger.debug("exchange()");
+        }
 
         return Flux.defer(() -> {
 
@@ -448,7 +470,7 @@ public final class ReactorNettyClient implements Client {
                     throw ProtocolException.invalidTds("Transaction descriptor length mismatch");
                 }
 
-                if (logger.isDebugEnabled()) {
+                if (DEBUG_ENABLED) {
 
                     String op;
                     if (token.getChangeType() == EnvChangeToken.EnvChangeType.BeginTx) {
@@ -465,7 +487,7 @@ public final class ReactorNettyClient implements Client {
 
             if (token.getChangeType() == EnvChangeToken.EnvChangeType.CommitTx) {
 
-                if (logger.isDebugEnabled()) {
+                if (DEBUG_ENABLED) {
                     logger.debug("Transaction committed");
                 }
 
@@ -474,7 +496,7 @@ public final class ReactorNettyClient implements Client {
 
             if (token.getChangeType() == EnvChangeToken.EnvChangeType.RollbackTx) {
 
-                if (logger.isDebugEnabled()) {
+                if (DEBUG_ENABLED) {
                     logger.debug("Transaction rolled back");
                 }
 

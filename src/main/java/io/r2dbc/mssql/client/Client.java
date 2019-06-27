@@ -44,6 +44,16 @@ public interface Client {
     /**
      * Perform an exchange of messages.
      *
+     * @param request the {@link ClientMessage} to be sent.
+     * @return a {@link Flux} of incoming messages that ends with the end of the frame.
+     */
+    default Flux<Message> exchange(ClientMessage request) {
+        return exchange(Mono.just(request));
+    }
+
+    /**
+     * Perform an exchange of messages.
+     *
      * @param requests the publisher of outbound messages
      * @return a {@link Flux} of incoming messages that ends with the end of the frame.
      */

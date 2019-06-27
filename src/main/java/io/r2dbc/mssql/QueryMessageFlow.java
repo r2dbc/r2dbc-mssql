@@ -23,7 +23,6 @@ import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.Assert;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 /**
  * Simple (direct) query message flow using {@link SqlBatch}.
@@ -45,10 +44,8 @@ final class QueryMessageFlow {
         Assert.requireNonNull(client, "Client must not be null");
         Assert.requireNonNull(query, "Query must not be null");
 
-        return client.exchange(Mono.just(SqlBatch.create(1, client.getTransactionDescriptor(), query)).doOnNext(it -> {
-            QueryLogger.logQuery(it.getSql());
-
-        })) //
+        return client.exchange(SqlBatch.create(1, client.getTransactionDescriptor(), query))
+            .doOnSubscribe(ignore -> QueryLogger.logQuery(query))
             .handle((message, sink) -> {
 
                 sink.next(message);

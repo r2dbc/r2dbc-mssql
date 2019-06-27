@@ -55,7 +55,7 @@ public class StatementBenchmarks extends BenchmarkSettings {
 
         final Connection jdbc;
 
-        final io.r2dbc.spi.Connection r2dbc;
+        final MssqlConnection r2dbc;
 
         public ConnectionHolder() {
 
@@ -105,9 +105,11 @@ public class StatementBenchmarks extends BenchmarkSettings {
     }
 
     @Benchmark
+    @Testable
     public void simpleDirectR2dbc(ConnectionHolder connectionHolder, Blackhole voodoo) {
 
-        io.r2dbc.spi.Statement statement = connectionHolder.r2dbc.createStatement("SELECT * FROM simple_test");
+        MssqlStatement statement = connectionHolder.r2dbc.createStatement("SELECT * FROM simple_test");
+        statement.fetchSize(0);
 
         String name = Flux.from(statement.execute()).flatMap(it -> it.map((row, rowMetadata) -> row.get("name", String.class))).blockLast();
 

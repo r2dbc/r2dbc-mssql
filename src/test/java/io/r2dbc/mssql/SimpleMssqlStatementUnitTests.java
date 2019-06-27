@@ -18,6 +18,7 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.TestClient;
+import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.tds.Encode;
@@ -173,15 +174,10 @@ class SimpleMssqlStatementUnitTests {
         statement.execute().as(StepVerifier::create)
             .verifyComplete();
 
-        ArgumentCaptor<Publisher<Message>> captor = ArgumentCaptor.forClass(Publisher.class);
+        ArgumentCaptor<ClientMessage> captor = ArgumentCaptor.forClass(ClientMessage.class);
 
-        verify(client).exchange((Publisher) captor.capture());
-
-        StepVerifier.create(captor.getValue())
-            .consumeNextWith(it -> assertThat(it)
-                .isInstanceOf(SqlBatch.class))
-            .thenCancel()
-            .verify();
+        verify(client).exchange(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(SqlBatch.class);
     }
 
     @Test
@@ -195,15 +191,10 @@ class SimpleMssqlStatementUnitTests {
         statement.execute().as(StepVerifier::create)
             .verifyComplete();
 
-        ArgumentCaptor<Publisher<Message>> captor = ArgumentCaptor.forClass(Publisher.class);
+        ArgumentCaptor<ClientMessage> captor = ArgumentCaptor.forClass(ClientMessage.class);
 
-        verify(client).exchange((Publisher) captor.capture());
-
-        StepVerifier.create(captor.getValue())
-            .consumeNextWith(it -> assertThat(it)
-                .isInstanceOf(SqlBatch.class))
-            .thenCancel()
-            .verify();
+        verify(client).exchange(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(SqlBatch.class);
     }
 
     @Test
@@ -228,13 +219,15 @@ class SimpleMssqlStatementUnitTests {
             .verify();
     }
 
+    @SuppressWarnings("unchecked")
     private static Client mockClient() {
 
         Client client = mock(Client.class);
 
         when(client.getRequiredCollation()).thenReturn(Collation.RAW);
         when(client.getTransactionDescriptor()).thenReturn(TransactionDescriptor.empty());
-        when(client.exchange(any())).thenReturn(Flux.empty());
+        when(client.exchange(any(ClientMessage.class))).thenReturn(Flux.empty());
+        when(client.exchange(any(Publisher.class))).thenReturn(Flux.empty());
 
         return client;
     }
