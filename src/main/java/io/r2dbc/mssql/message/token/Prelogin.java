@@ -31,8 +31,6 @@ import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.tds.TdsFragment;
 import io.r2dbc.mssql.util.Assert;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.nio.charset.StandardCharsets;
@@ -170,18 +168,14 @@ public final class Prelogin implements TokenStream, ClientMessage {
     }
 
     @Override
-    public Publisher<TdsFragment> encode(ByteBufAllocator allocator, int packetSize) {
+    public TdsFragment encode(ByteBufAllocator allocator, int packetSize) {
 
         Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
 
-        return Mono.fromSupplier(() -> {
+        ByteBuf buffer = allocator.buffer(getSize(this.tokens));
+        encode(buffer);
 
-            ByteBuf buffer = allocator.buffer(getSize(this.tokens));
-
-            encode(buffer);
-
-            return new ContextualTdsFragment(HEADER_OPTIONS, buffer);
-        });
+        return new ContextualTdsFragment(HEADER_OPTIONS, buffer);
     }
 
     /**

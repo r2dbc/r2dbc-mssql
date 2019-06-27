@@ -25,6 +25,7 @@ import io.r2dbc.mssql.message.tds.TdsFragment;
 import io.r2dbc.mssql.message.tds.TdsPacket;
 import org.assertj.core.api.AbstractObjectAssert;
 import org.assertj.core.api.Assertions;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.Charset;
@@ -55,8 +56,16 @@ public final class ClientMessageAssert extends AbstractObjectAssert<ClientMessag
      *
      * @see TdsFragment
      */
+    @SuppressWarnings("unchecked")
     public TdsFragmentAssert encoded() {
-        return new TdsFragmentAssert(Mono.from(actual.encode(TestByteBufAllocator.TEST, 0)).block());
+
+        Object encoded = this.actual.encode(TestByteBufAllocator.TEST, 0);
+
+        if (encoded instanceof TdsFragment) {
+            return new TdsFragmentAssert((TdsFragment) encoded);
+        }
+
+        return new TdsFragmentAssert(Mono.from((Publisher<TdsFragment>) encoded).block());
     }
 
     /**

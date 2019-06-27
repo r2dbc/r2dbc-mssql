@@ -29,8 +29,6 @@ import io.r2dbc.mssql.message.tds.TdsPackets;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.DriverVersion;
 import io.r2dbc.mssql.util.Version;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
@@ -152,15 +150,12 @@ public final class Login7 implements TokenStream, ClientMessage {
     }
 
     @Override
-    public Publisher<TdsFragment> encode(ByteBufAllocator allocator, int packetSize) {
+    public TdsFragment encode(ByteBufAllocator allocator, int packetSize) {
 
-        return Mono.fromSupplier(() -> {
+        ByteBuf buffer = allocator.buffer(this.estimatedPacketLength);
 
-            ByteBuf buffer = allocator.buffer(this.estimatedPacketLength);
-
-            encode(buffer);
-            return TdsPackets.create(header, buffer);
-        });
+        encode(buffer);
+        return TdsPackets.create(header, buffer);
     }
 
     void encode(ByteBuf buffer) {

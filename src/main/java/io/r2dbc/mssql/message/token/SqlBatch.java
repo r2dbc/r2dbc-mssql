@@ -27,8 +27,6 @@ import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.TdsFragment;
 import io.r2dbc.mssql.message.tds.TdsPackets;
 import io.r2dbc.mssql.util.Assert;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Mono;
 
 import java.util.Objects;
 
@@ -79,20 +77,16 @@ public final class SqlBatch implements ClientMessage, TokenStream {
     }
 
     @Override
-    public Publisher<TdsFragment> encode(ByteBufAllocator allocator, int packetSize) {
+    public TdsFragment encode(ByteBufAllocator allocator, int packetSize) {
 
         Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
 
-        return Mono.fromSupplier(() -> {
+        int length = this.allHeaders.getLength() + (this.sql.length() * 2);
 
-            int length = this.allHeaders.getLength() + (this.sql.length() * 2);
+        ByteBuf buffer = allocator.buffer(length);
+        encode(buffer);
 
-            ByteBuf buffer = allocator.buffer(length);
-
-            encode(buffer);
-
-            return TdsPackets.create(this.header, buffer);
-        });
+        return TdsPackets.create(this.header, buffer);
     }
 
     void encode(ByteBuf buffer) {

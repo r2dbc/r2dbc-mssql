@@ -140,7 +140,6 @@ public final class ReactorNettyClient implements Client {
     private ReactorNettyClient(Connection connection, TdsEncoder tdsEncoder) {
         Assert.requireNonNull(connection, "Connection must not be null");
 
-
         StreamDecoder decoder = new StreamDecoder();
 
         this.byteBufAllocator = connection.outbound().alloc();
@@ -197,7 +196,6 @@ public final class ReactorNettyClient implements Client {
                 return Mono.error(ProtocolException.unsupported(String.format("Unexpected protocol message: [%s]", it)));
             }).<Message>handle((message, sink) -> {
 
-
             if (DEBUG_ENABLED) {
                 logger.debug("Response: {}", message);
 
@@ -234,7 +232,13 @@ public final class ReactorNettyClient implements Client {
                         logger.debug("Request: {}", message);
                     }
 
-                    return connection.outbound().sendObject(message.encode(connection.outbound().alloc(), this.tdsEncoder.getPacketSize()));
+                    Object encoded = message.encode(connection.outbound().alloc(), this.tdsEncoder.getPacketSize());
+
+                    if (encoded instanceof Publisher) {
+                        return connection.outbound().sendObject((Publisher) encoded);
+                    }
+
+                    return connection.outbound().sendObject(encoded);
                 })
             .doOnError(throwable -> {
                 logger.warn("Error: {}", throwable.getMessage(), throwable);

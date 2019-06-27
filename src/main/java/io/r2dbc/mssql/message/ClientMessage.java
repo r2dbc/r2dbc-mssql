@@ -29,12 +29,12 @@ import org.reactivestreams.Publisher;
 public interface ClientMessage extends Message {
 
     /**
-     * Encode a message into a {@link ByteBuf data buffer}.
+     * Encode a message into a {@link TdsFragment data buffer}. Can encode either to a scalar {@link TdsFragment} or a {@link Publisher} of {@link TdsFragment}.
      *
      * @param allocator  the {@link ByteBufAllocator} to use to get a {@link ByteBuf data buffer} to write into.
      * @param packetSize packet size hint.
-     * @return a {@link Publisher} that produces the {@link ByteBuf} containing the encoded message.
+     * @return a scalar {@link TdsFragment} or a {@link Publisher} that produces the {@link TdsFragment} containing the encoded message.
      */
-    Publisher<TdsFragment> encode(ByteBufAllocator allocator, int packetSize);
+    Object encode(ByteBufAllocator allocator, int packetSize);
 
 }
