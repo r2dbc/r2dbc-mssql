@@ -109,6 +109,11 @@ public final class TestClient implements Client {
     }
 
     @Override
+    public ConnectionContext getContext() {
+        return new ConnectionContext();
+    }
+
+    @Override
     public TransactionDescriptor getTransactionDescriptor() {
         return TransactionDescriptor.empty();
     }

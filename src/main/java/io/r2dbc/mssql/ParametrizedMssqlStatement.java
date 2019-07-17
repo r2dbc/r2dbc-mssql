@@ -17,6 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
+import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.Encoded;
 import io.r2dbc.mssql.codec.RpcParameterContext;
@@ -55,13 +56,17 @@ import java.util.regex.Pattern;
  */
 final class ParametrizedMssqlStatement extends MssqlStatementSupport implements MssqlStatement {
 
-    private static final Logger logger = LoggerFactory.getLogger(ParametrizedMssqlStatement.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ParametrizedMssqlStatement.class);
+
+    private static final boolean DEBUG_ENABLED = LOGGER.isDebugEnabled();
 
     private static final Pattern PARAMETER_MATCHER = Pattern.compile("@([\\p{Alpha}@][@$\\d\\w_]{0,127})");
 
     private final PreparedStatementCache statementCache;
 
     private final Client client;
+
+    private final ConnectionContext context;
 
     private final Codecs codecs;
 
@@ -81,6 +86,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
         this.statementCache = connectionOptions.getPreparedStatementCache();
         this.client = client;
+        this.context = client.getContext();
         this.codecs = connectionOptions.getCodecs();
         this.parsedQuery = this.statementCache.getParsedSql(sql, ParsedQuery::parse);
     }
@@ -130,15 +136,15 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
                     if (effectiveFetchSize > 0) {
 
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("Start cursored exchange for {} with fetch size {}", sql, effectiveFetchSize);
+                        if (DEBUG_ENABLED) {
+                            LOGGER.debug(this.context.getMessage("Start cursored exchange for {} with fetch size {}"), sql, effectiveFetchSize);
                         }
 
                         exchange = RpcQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, sql, it, effectiveFetchSize);
                     } else {
 
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("Start direct exchange for {}", sql);
+                        if (DEBUG_ENABLED) {
+                            LOGGER.debug(this.context.getMessage("Start direct exchange for {}"), sql);
                         }
 
                         exchange = RpcQueryMessageFlow.exchange(this.client, sql, it);
@@ -153,7 +159,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
                     });
 
                 }).windowUntil(DoneInProcToken.class::isInstance) //
-                .map(it -> MssqlResult.toResult(this.parsedQuery.getSql(), this.codecs, it));
+                .map(it -> MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it));
         }).doOnCancel(() -> clearBindings(iterator))
             .doOnError(e -> clearBindings(iterator));
     }

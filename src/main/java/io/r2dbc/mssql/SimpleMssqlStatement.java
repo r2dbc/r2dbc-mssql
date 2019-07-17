@@ -17,6 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
+import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
@@ -44,6 +45,8 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
 
     private final Codecs codecs;
 
+    private final ConnectionContext context;
+
     private final String sql;
 
     /**
@@ -65,6 +68,7 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
         Assert.isTrue(sql.trim().length() > 0, "SQL must contain text");
 
         this.client = client;
+        this.context = client.getContext();
         this.codecs = connectionOptions.getCodecs();
         this.sql = sql;
     }
@@ -113,7 +117,7 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
             if (effectiveFetchSize > 0) {
 
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Start cursored exchange for {} with fetch size {}", sql, effectiveFetchSize);
+                    logger.debug(this.context.getMessage("Start cursored exchange for {} with fetch size {}"), sql, effectiveFetchSize);
                 }
 
                 exchange = RpcQueryMessageFlow.exchange(this.client, this.codecs, this.sql, effectiveFetchSize);
@@ -122,7 +126,7 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
             } else {
 
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Start direct exchange for {}", sql);
+                    logger.debug(this.context.getMessage("Start direct exchange for {}"), sql);
                 }
 
                 exchange = QueryMessageFlow.exchange(this.client, sql);
@@ -138,7 +142,7 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
         }
 
         return exchange.windowUntil(windowUntil) //
-            .map(it -> MssqlResult.toResult(this.sql, this.codecs, it));
+            .map(it -> MssqlResult.toResult(this.sql, this.context, this.codecs, it));
     }
 
     @Override

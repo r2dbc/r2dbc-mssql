@@ -117,7 +117,7 @@ final class RpcQueryMessageFlow {
         OnCursorComplete cursorComplete = new OnCursorComplete(inbound);
 
         Flux<Message> messages = firstMessages //
-            .doOnSubscribe(ignore -> QueryLogger.logQuery(query))
+            .doOnSubscribe(ignore -> QueryLogger.logQuery(client.getContext(), query))
             .doOnNext(it -> {
 
                 if (it instanceof ReturnValue) {
@@ -166,7 +166,7 @@ final class RpcQueryMessageFlow {
         OnCursorComplete cursorComplete = new OnCursorComplete(inbound);
 
         Flux<Message> messages = firstMessages //
-            .doOnSubscribe(ignore -> QueryLogger.logQuery(query))
+            .doOnSubscribe(ignore -> QueryLogger.logQuery(client.getContext(), query))
             .doOnNext(it -> {
 
                 if (it instanceof ReturnValue) {
@@ -236,7 +236,7 @@ final class RpcQueryMessageFlow {
         OnCursorComplete cursorComplete = new OnCursorComplete(inbound);
 
         Flux<Message> messages = firstMessages //
-            .doOnSubscribe(ignore -> QueryLogger.logQuery(query))
+            .doOnSubscribe(ignore -> QueryLogger.logQuery(client.getContext(), query))
             .doOnNext(it -> {
 
                 if (it instanceof ReturnValue) {

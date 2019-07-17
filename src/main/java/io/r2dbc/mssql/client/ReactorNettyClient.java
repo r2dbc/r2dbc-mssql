@@ -51,10 +51,12 @@ import reactor.netty.Connection;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
 
+import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -70,6 +72,8 @@ public final class ReactorNettyClient implements Client {
 
     private static final boolean DEBUG_ENABLED = logger.isDebugEnabled();
 
+    private final ConnectionContext context;
+
     private final ByteBufAllocator byteBufAllocator;
 
     private final Connection connection;
@@ -78,29 +82,9 @@ public final class ReactorNettyClient implements Client {
 
     private final List<EnvironmentChangeListener> envChangeListeners = new ArrayList<>();
 
-    private final Consumer<AbstractInfoToken> infoTokenConsumer = (token) -> {
+    private final Consumer<AbstractInfoToken> infoTokenConsumer;
 
-        if (token.getClassification() == AbstractInfoToken.Classification.INFORMATIONAL) {
-            logger.debug("Info: Code [{}] Severity [{}]: {}", token.getNumber(), token.getClassification(),
-                token.getMessage());
-        } else {
-            logger.debug("Warning: Code [{}] Severity [{}]: {}", token.getNumber(), token.getClassification(),
-                token.getMessage());
-        }
-    };
-
-    private final Consumer<EnvChangeToken> handleEnvChange = (token) -> {
-
-        EnvironmentChangeEvent event = new EnvironmentChangeEvent(token);
-
-        for (EnvironmentChangeListener listener : this.envChangeListeners) {
-            try {
-                listener.onEnvironmentChange(event);
-            } catch (Exception e) {
-                logger.warn("Failed onEnvironmentChange() in {}", listener, e);
-            }
-        }
-    };
+    private final Consumer<EnvChangeToken> handleEnvChange;
 
     private final Consumer<FeatureExtAckToken> featureAckChange = (token) -> {
 
@@ -135,12 +119,39 @@ public final class ReactorNettyClient implements Client {
     /**
      * Creates a new frame processor connected to a given TCP connection.
      *
-     * @param connection the TCP connection
+     * @param connection        the TCP connection
+     * @param connectionContext
      */
-    private ReactorNettyClient(Connection connection, TdsEncoder tdsEncoder) {
+    private ReactorNettyClient(Connection connection, TdsEncoder tdsEncoder, ConnectionContext connectionContext) {
         Assert.requireNonNull(connection, "Connection must not be null");
 
+        this.context = connectionContext;
+
         StreamDecoder decoder = new StreamDecoder();
+
+        this.infoTokenConsumer = (token) -> {
+
+            if (token.getClassification() == AbstractInfoToken.Classification.INFORMATIONAL) {
+                logger.debug(this.context.getMessage("Info: Code [{}] Severity [{}]: {}"), token.getNumber(), token.getClassification(),
+                    token.getMessage());
+            } else {
+                logger.debug(this.context.getMessage("Warning: Code [{}] Severity [{}]: {}"), token.getNumber(), token.getClassification(),
+                    token.getMessage());
+            }
+        };
+
+        this.handleEnvChange = (token) -> {
+
+            EnvironmentChangeEvent event = new EnvironmentChangeEvent(token);
+
+            for (EnvironmentChangeListener listener : this.envChangeListeners) {
+                try {
+                    listener.onEnvironmentChange(event);
+                } catch (Exception e) {
+                    logger.warn(this.context.getMessage("Failed onEnvironmentChange() in {}"), listener, e);
+                }
+            }
+        };
 
         this.byteBufAllocator = connection.outbound().alloc();
         this.connection = connection;
@@ -158,7 +169,7 @@ public final class ReactorNettyClient implements Client {
                 // Server has closed the connection without us wanting to close it
                 // Typically happens if we send data asynchronously (i.e. previous command didn't complete).
                 if (ReactorNettyClient.this.isClosed.compareAndSet(false, true)) {
-                    logger.warn("Connection has been closed by peer");
+                    logger.warn(ReactorNettyClient.this.context.getMessage("Connection has been closed by peer"));
                 }
 
                 super.channelInactive(ctx);
@@ -197,7 +208,7 @@ public final class ReactorNettyClient implements Client {
             }).<Message>handle((message, sink) -> {
 
             if (DEBUG_ENABLED) {
-                logger.debug("Response: {}", message);
+                logger.debug(this.context.getMessage("Response: {}"), message);
 
                 if (message instanceof AbstractInfoToken) {
                     this.infoTokenConsumer.accept((AbstractInfoToken) message);
@@ -217,7 +228,7 @@ public final class ReactorNettyClient implements Client {
             sink.next(message);
         }).doOnError(e -> {
 
-            logger.warn("Error: {}", e.getMessage(), e);
+            logger.warn(this.context.getMessage("Error: {}"), e.getMessage(), e);
             if (e instanceof ProtocolException) {
                 this.isClosed.set(true);
                 connection.channel().close();
@@ -229,7 +240,7 @@ public final class ReactorNettyClient implements Client {
                 message -> {
 
                     if (DEBUG_ENABLED) {
-                        logger.debug("Request: {}", message);
+                        logger.debug(this.context.getMessage("Request: {}"), message);
                     }
 
                     Object encoded = message.encode(connection.outbound().alloc(), this.tdsEncoder.getPacketSize());
@@ -241,7 +252,7 @@ public final class ReactorNettyClient implements Client {
                     return connection.outbound().sendObject(encoded);
                 })
             .doOnError(throwable -> {
-                logger.warn("Error: {}", throwable.getMessage(), throwable);
+                logger.warn(this.context.getMessage("Error: {}"), throwable.getMessage(), throwable);
                 this.isClosed.set(true);
                 connection.channel().close();
             })
@@ -304,19 +315,22 @@ public final class ReactorNettyClient implements Client {
             public String getHostNameInCertificate() {
                 return host;
             }
-        });
+        }, null, null);
     }
 
     /**
      * Creates a new frame processor connected to {@link ClientConfiguration}.
      *
-     * @param configuration the client configuration
+     * @param configuration   the client configuration
+     * @param applicationName
+     * @param connectionId
      */
-    public static Mono<ReactorNettyClient> connect(ClientConfiguration configuration) {
+    public static Mono<ReactorNettyClient> connect(ClientConfiguration configuration, @Nullable String applicationName, @Nullable UUID connectionId) {
 
         Assert.requireNonNull(configuration, "configuration must not be null");
 
-        logger.debug("connect()");
+        ConnectionContext connectionContext = new ConnectionContext(applicationName, connectionId);
+        logger.debug(connectionContext.getMessage("connect()"));
 
         PacketIdProvider packetIdProvider = PacketIdProvider.atomic();
 
@@ -332,7 +346,7 @@ public final class ReactorNettyClient implements Client {
                 ChannelPipeline pipeline = it.channel().pipeline();
                 pipeline.addFirst(tdsEncoder.getClass().getName(), tdsEncoder);
 
-                TdsSslHandler handler = new TdsSslHandler(packetIdProvider, configuration);
+                TdsSslHandler handler = new TdsSslHandler(packetIdProvider, configuration, connectionContext.withChannelId(it.channel().toString()));
                 pipeline.addAfter(tdsEncoder.getClass().getName(), handler.getClass().getName(), handler);
 
                 InternalLogger logger = InternalLoggerFactory.getInstance(ReactorNettyClient.class);
@@ -342,17 +356,17 @@ public final class ReactorNettyClient implements Client {
                 }
             });
 
-        return connection.map(it -> new ReactorNettyClient(it, tdsEncoder));
+        return connection.map(it -> new ReactorNettyClient(it, tdsEncoder, connectionContext.withChannelId(it.channel().toString())));
     }
 
     @Override
     public Mono<Void> close() {
 
-        logger.debug("close()");
+        logger.debug(this.context.getMessage("close()"));
 
         return Mono.defer(() -> {
 
-            logger.debug("close(subscribed)");
+            logger.debug(this.context.getMessage("close(subscribed)"));
 
             return Mono.create(it -> {
 
@@ -376,10 +390,10 @@ public final class ReactorNettyClient implements Client {
     @Override
     public Flux<Message> exchange(ClientMessage request) {
 
-        Assert.requireNonNull(requests, "Requests must not be null");
+        Assert.requireNonNull(request, "Requests must not be null");
 
         if (DEBUG_ENABLED) {
-            logger.debug(String.format("exchange(%s)", request));
+            logger.debug(String.format(this.context.getMessage("exchange(%s)"), request));
         }
 
         if (this.isClosed.get()) {
@@ -396,12 +410,12 @@ public final class ReactorNettyClient implements Client {
         Assert.requireNonNull(requests, "Requests must not be null");
 
         if (DEBUG_ENABLED) {
-            logger.debug("exchange()");
+            logger.debug(this.context.getMessage("exchange()"));
         }
 
         return Flux.defer(() -> {
 
-            logger.debug("exchange(subscribed)");
+            logger.debug(this.context.getMessage("exchange(subscribed)"));
 
             if (this.isClosed.get()) {
                 return Flux.error(new IllegalStateException("Cannot exchange messages because the connection is closed"));
@@ -415,6 +429,11 @@ public final class ReactorNettyClient implements Client {
     @Override
     public ByteBufAllocator getByteBufAllocator() {
         return this.byteBufAllocator;
+    }
+
+    @Override
+    public ConnectionContext getContext() {
+        return this.context;
     }
 
     @Override
@@ -436,6 +455,7 @@ public final class ReactorNettyClient implements Client {
     public boolean isColumnEncryptionSupported() {
         return this.encryptionSupported;
     }
+
 
     @SuppressWarnings("unchecked")
     private static <T extends Message> BiConsumer<Message, SynchronousSink<Message>> handleMessage(Class<T> type,
@@ -483,7 +503,7 @@ public final class ReactorNettyClient implements Client {
                         op = "enlisted";
                     }
 
-                    logger.debug(String.format("Transaction %s", op));
+                    logger.debug(String.format(ReactorNettyClient.this.context.getMessage("Transaction %s"), op));
                 }
 
                 updateStatus(TransactionStatus.STARTED, TransactionDescriptor.from(descriptor));
@@ -492,7 +512,7 @@ public final class ReactorNettyClient implements Client {
             if (token.getChangeType() == EnvChangeToken.EnvChangeType.CommitTx) {
 
                 if (DEBUG_ENABLED) {
-                    logger.debug("Transaction committed");
+                    logger.debug(context.getMessage("Transaction committed"));
                 }
 
                 updateStatus(TransactionStatus.EXPLICIT, TransactionDescriptor.empty());
@@ -501,7 +521,7 @@ public final class ReactorNettyClient implements Client {
             if (token.getChangeType() == EnvChangeToken.EnvChangeType.RollbackTx) {
 
                 if (DEBUG_ENABLED) {
-                    logger.debug("Transaction rolled back");
+                    logger.debug(context.getMessage("Transaction rolled back"));
                 }
 
                 updateStatus(TransactionStatus.EXPLICIT, TransactionDescriptor.empty());

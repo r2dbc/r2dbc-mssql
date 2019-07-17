@@ -67,6 +67,13 @@ public interface Client {
     ByteBufAllocator getByteBufAllocator();
 
     /**
+     * Returns the {@link ConnectionContext}.
+     *
+     * @return the {@link ConnectionContext}.
+     */
+    ConnectionContext getContext();
+
+    /**
      * Returns the {@link TransactionDescriptor}.
      *
      * @return the {@link TransactionDescriptor} describing the server-side transaction.

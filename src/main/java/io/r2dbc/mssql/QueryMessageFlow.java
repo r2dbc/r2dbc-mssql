@@ -45,7 +45,7 @@ final class QueryMessageFlow {
         Assert.requireNonNull(query, "Query must not be null");
 
         return client.exchange(SqlBatch.create(1, client.getTransactionDescriptor(), query))
-            .doOnSubscribe(ignore -> QueryLogger.logQuery(query))
+            .doOnSubscribe(ignore -> QueryLogger.logQuery(client.getContext(), query))
             .handle((message, sink) -> {
 
                 sink.next(message);

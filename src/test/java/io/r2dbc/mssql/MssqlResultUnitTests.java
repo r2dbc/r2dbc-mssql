@@ -17,6 +17,7 @@
 package io.r2dbc.mssql;
 
 
+import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.DoneToken;
@@ -44,7 +45,7 @@ class MssqlResultUnitTests {
         DoneToken done = DoneToken.create(0);
         Iterator<Message> iterator = Stream.of(error, done).map(Message.class::cast).iterator();
 
-        MssqlResult result = MssqlResult.toResult("", new DefaultCodecs(), Flux.fromIterable(() -> iterator));
+        MssqlResult result = MssqlResult.toResult("", new ConnectionContext(), new DefaultCodecs(), Flux.fromIterable(() -> iterator));
 
         result.getRowsUpdated()
             .as(StepVerifier::create)

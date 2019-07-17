@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.ssl.SslHandler;
+import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.client.ConnectionState;
 import io.r2dbc.mssql.client.TdsEncoder;
 import io.r2dbc.mssql.message.header.Header;
@@ -60,7 +61,11 @@ import java.security.KeyStore;
 @ChannelHandler.Sharable
 public final class TdsSslHandler extends ChannelDuplexHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(TdsSslHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(TdsSslHandler.class);
+
+    public static final boolean DEBUG_ENABLED = LOGGER.isDebugEnabled();
+
+    private final ConnectionContext connectionContext;
 
     private final PacketIdProvider packetIdProvider;
 
@@ -83,14 +88,17 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
      * Creates a new {@link TdsSslHandler}.
      *
      * @param packetIdProvider the {@link PacketIdProvider} to create {@link Header}s to wrap the SSL handshake.
+     * @param context
      */
-    public TdsSslHandler(PacketIdProvider packetIdProvider, SslConfiguration sslConfiguration) {
+    public TdsSslHandler(PacketIdProvider packetIdProvider, SslConfiguration sslConfiguration, ConnectionContext context) {
 
         Assert.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
         Assert.requireNonNull(sslConfiguration, "SslConfiguration must not be null");
+        Assert.requireNonNull(context, "ConnectionContext must not be null");
 
         this.packetIdProvider = packetIdProvider;
         this.sslConfiguration = sslConfiguration;
+        this.connectionContext = context;
     }
 
     /**
@@ -140,7 +148,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
             this.state = (SslState) evt;
             this.sslHandler = createSslHandler(this.sslConfiguration);
 
-            logger.debug("Registering Context Proxy and SSL Event Handlers to propagate SSL events to channelRead()");
+            LOGGER.debug(this.connectionContext.getMessage("Registering Context Proxy and SSL Event Handlers to propagate SSL events to channelRead()"));
             ctx.pipeline().addAfter(getClass().getName(), ContextProxy.class.getName(), new ContextProxy());
             ctx.pipeline().addAfter(ContextProxy.class.getName(), SslEventHandler.class.getName(), new SslEventHandler());
 
@@ -153,7 +161,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
         if (evt == SslState.NEGOTIATED) {
 
-            logger.debug("SSL Handshake done");
+            LOGGER.debug(this.connectionContext.getMessage("SSL Handshake done"));
 
             ctx.write(TdsEncoder.ResetHeader.INSTANCE, ctx.voidPromise());
             this.handshakeDone = true;
@@ -164,7 +172,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
             // 3. TDS
             if (this.state == SslState.CONNECTION) {
 
-                logger.debug("Reordering handlers for full SSL usage");
+                LOGGER.debug(this.connectionContext.getMessage("Reordering handlers for full SSL usage"));
 
                 ctx.pipeline().remove(this);
                 ctx.pipeline().addFirst(this);
@@ -232,8 +240,8 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
         if (requiresWrapping()) {
 
-            if (logger.isDebugEnabled()) {
-                logger.debug("Write wrapping: Append to output buffer");
+            if (DEBUG_ENABLED) {
+                LOGGER.debug(this.connectionContext.getMessage("Write wrapping: Append to output buffer"));
             }
 
             ByteBuf sslPayload = (ByteBuf) msg;
@@ -286,8 +294,8 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
         if (requiresWrapping()) {
 
-            if (logger.isDebugEnabled()) {
-                logger.debug("Write wrapping: Flushing output buffer and enable auto-read");
+            if (DEBUG_ENABLED) {
+                LOGGER.debug(this.connectionContext.getMessage("Write wrapping: Flushing output buffer and enable auto-read"));
             }
 
             ByteBuf message = this.outputBuffer;

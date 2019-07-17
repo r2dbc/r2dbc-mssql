@@ -17,6 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.netty.util.ReferenceCountUtil;
+import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
@@ -43,9 +44,13 @@ import java.util.function.BiFunction;
  */
 public final class MssqlResult implements Result {
 
-    private static final Logger logger = LoggerFactory.getLogger(MssqlResult.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MssqlResult.class);
+
+    public static final boolean DEBUG_ENABLED = LOGGER.isDebugEnabled();
 
     private final String sql;
+
+    private final ConnectionContext context;
 
     private final Codecs codecs;
 
@@ -55,9 +60,10 @@ public final class MssqlResult implements Result {
 
     private volatile Throwable throwable;
 
-    public MssqlResult(String sql, Codecs codecs, Flux<Message> messages) {
+    private MssqlResult(String sql, ConnectionContext context, Codecs codecs, Flux<Message> messages) {
 
         this.sql = sql;
+        this.context = context;
         this.codecs = codecs;
         this.messages = messages;
     }
@@ -70,15 +76,16 @@ public final class MssqlResult implements Result {
      * @param messages message stream.
      * @return {@link Result} object.
      */
-    static MssqlResult toResult(String sql, Codecs codecs, Flux<Message> messages) {
+    static MssqlResult toResult(String sql, ConnectionContext context, Codecs codecs, Flux<Message> messages) {
 
         Assert.requireNonNull(sql, "SQL must not be null");
         Assert.requireNonNull(codecs, "Codecs must not be null");
+        Assert.requireNonNull(context, "ConnectionContext must not be null");
         Assert.requireNonNull(messages, "Messages must not be null");
 
-        logger.debug("Creating new result");
+        LOGGER.debug(context.getMessage("Creating new result"));
 
-        return new MssqlResult(sql, codecs, messages);
+        return new MssqlResult(sql, context, codecs, messages);
     }
 
     @Override
@@ -94,8 +101,8 @@ public final class MssqlResult implements Result {
                     AbstractDoneToken doneToken = (AbstractDoneToken) message;
                     if (doneToken.hasCount()) {
 
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("Incoming row count: {}", doneToken);
+                        if (DEBUG_ENABLED) {
+                            LOGGER.debug(this.context.getMessage("Incoming row count: {}"), doneToken);
                         }
 
                         sink.next(doneToken.getRowCount());
@@ -121,11 +128,11 @@ public final class MssqlResult implements Result {
                         return;
                     }
 
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Result column definition: {}", message);
+                    if (DEBUG_ENABLED) {
+                        LOGGER.debug(this.context.getMessage("Result column definition: {}"), message);
                     }
 
-                    this.rowMetadata = MssqlRowMetadata.create(codecs, token);
+                    this.rowMetadata = MssqlRowMetadata.create(this.codecs, token);
 
                     return;
                 }
@@ -138,7 +145,7 @@ public final class MssqlResult implements Result {
                         sink.error(new IllegalStateException("No MssqlRowMetadata available"));
                         return;
                     }
-                    sink.next(MssqlRow.toRow(codecs, (RowToken) message, rowMetadata));
+                    sink.next(MssqlRow.toRow(this.codecs, (RowToken) message, rowMetadata));
                     return;
                 }
 
@@ -157,7 +164,7 @@ public final class MssqlResult implements Result {
 
     private Flux<Message> messages() {
 
-        return messages.handle((message, sink) -> {
+        return this.messages.handle((message, sink) -> {
 
             Throwable exception = this.throwable;
 

@@ -130,11 +130,11 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
 
             String value = (String) preferCursoredExecution;
             if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
-                builder.preferCursoredExecution((Boolean.valueOf(value)));
+                builder.preferCursoredExecution((Boolean.parseBoolean(value)));
             } else {
 
                 try {
-                    Object predicate = Class.forName(value).newInstance();
+                    Object predicate = Class.forName(value).getConstructor().newInstance();
                     if (predicate instanceof Predicate) {
                         builder.preferCursoredExecution((Predicate<String>) predicate);
                     } else {

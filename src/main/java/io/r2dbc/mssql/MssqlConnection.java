@@ -17,6 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
+import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.client.TransactionStatus;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Batch;
@@ -48,6 +49,8 @@ public final class MssqlConnection implements Connection {
 
     private final Client client;
 
+    private final ConnectionContext context;
+
     private final ConnectionOptions connectionOptions;
 
     private volatile boolean autoCommit;
@@ -57,6 +60,7 @@ public final class MssqlConnection implements Connection {
     MssqlConnection(Client client, ConnectionOptions connectionOptions) {
 
         this.client = Assert.requireNonNull(client, "Client must not be null");
+        this.context = client.getContext();
         this.connectionOptions = Assert.requireNonNull(connectionOptions, "ConnectionOptions must not be null");
 
         TransactionStatus transactionStatus = client.getTransactionStatus();
@@ -70,14 +74,13 @@ public final class MssqlConnection implements Connection {
         return useTransactionStatus(tx -> {
 
             if (tx == TransactionStatus.STARTED) {
-                logger.debug("Skipping begin transaction because status is [{}]", tx);
+                logger.debug(this.context.getMessage("Skipping begin transaction because status is [{}]"), tx);
                 return Mono.empty();
             }
 
-            String sql = tx == TransactionStatus.AUTO_COMMIT ? "SET IMPLICIT_TRANSACTIONS ON; " : "";
-            sql += "BEGIN TRANSACTION";
+            String sql = "SET IMPLICIT_TRANSACTIONS ON;";
 
-            logger.debug("Beginning transaction from status [{}]", tx);
+            logger.debug(this.context.getMessage("Beginning transaction from status [{}]"), tx);
 
             return exchange(sql);
         });
@@ -94,11 +97,11 @@ public final class MssqlConnection implements Connection {
         return useTransactionStatus(tx -> {
 
             if (tx != TransactionStatus.STARTED) {
-                logger.debug("Skipping commit transaction because status is [{}]", tx);
+                logger.debug(this.context.getMessage("Skipping commit transaction because status is [{}]"), tx);
                 return Mono.empty();
             }
 
-            logger.debug("Committing transaction with status [{}]", tx);
+            logger.debug(this.context.getMessage("Committing transaction with status [{}]"), tx);
 
             return exchange("IF @@TRANCOUNT > 0 COMMIT TRANSACTION");
         });
@@ -117,10 +120,10 @@ public final class MssqlConnection implements Connection {
 
         return useTransactionStatus(tx -> {
 
-            logger.debug("Creating savepoint for transaction with status [{}]", tx);
+            logger.debug(this.context.getMessage("Creating savepoint for transaction with status [{}]"), tx);
 
             if (this.autoCommit) {
-                logger.debug("Setting auto-commit mode to [false]");
+                logger.debug(this.context.getMessage("Setting auto-commit mode to [false]"));
             }
 
             return exchange(String.format("SET IMPLICIT_TRANSACTIONS ON; IF @@TRANCOUNT = 0 BEGIN BEGIN TRAN IF @@TRANCOUNT = 2 COMMIT TRAN END SAVE TRAN %s;", name)).doOnSuccess(ignore -> {
@@ -133,7 +136,7 @@ public final class MssqlConnection implements Connection {
     public MssqlStatement createStatement(String sql) {
 
         Assert.requireNonNull(sql, "SQL must not be null");
-        logger.debug("Creating statement for SQL: [{}]", sql);
+        logger.debug(this.context.getMessage("Creating statement for SQL: [{}]"), sql);
 
         if (ParametrizedMssqlStatement.supports(sql)) {
             return new ParametrizedMssqlStatement(this.client, this.connectionOptions, sql);
@@ -153,11 +156,11 @@ public final class MssqlConnection implements Connection {
         return useTransactionStatus(tx -> {
 
             if (tx != TransactionStatus.STARTED && tx != TransactionStatus.EXPLICIT) {
-                logger.debug("Skipping rollback transaction because status is [{}]", tx);
+                logger.debug(this.context.getMessage("Skipping rollback transaction because status is [{}]"), tx);
                 return Mono.empty();
             }
 
-            logger.debug("Rolling back transaction with status [{}]", tx);
+            logger.debug(this.context.getMessage("Rolling back transaction with status [{}]"), tx);
 
             return exchange("IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION");
         });
@@ -172,11 +175,11 @@ public final class MssqlConnection implements Connection {
         return useTransactionStatus(tx -> {
 
             if (tx != TransactionStatus.STARTED) {
-                logger.debug("Skipping rollback transaction to savepoint [{}] because status is [{}]", name, tx);
+                logger.debug(this.context.getMessage("Skipping rollback transaction to savepoint [{}] because status is [{}]"), name, tx);
                 return Mono.empty();
             }
 
-            logger.debug("Rolling back transaction to savepoint [{}] with status [{}]", name, tx);
+            logger.debug(this.context.getMessage("Rolling back transaction to savepoint [{}] with status [{}]"), name, tx);
 
             return exchange(String.format("ROLLBACK TRANSACTION %s", name));
         });
@@ -192,11 +195,11 @@ public final class MssqlConnection implements Connection {
 
             StringBuilder builder = new StringBuilder();
 
-            logger.debug("Setting auto-commit mode to [{}]", autoCommit);
+            logger.debug(this.context.getMessage("Setting auto-commit mode to [{}]"), autoCommit);
 
             if (this.autoCommit != autoCommit) {
 
-                logger.debug("Committing pending transactions");
+                logger.debug(this.context.getMessage("Committing pending transactions"));
                 builder.append("IF @@TRANCOUNT > 0 COMMIT TRAN;");
             }
 

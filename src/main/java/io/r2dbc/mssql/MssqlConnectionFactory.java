@@ -46,7 +46,7 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         this(Mono.defer(() -> {
             Assert.requireNonNull(configuration, "configuration must not be null");
 
-            return ReactorNettyClient.connect(configuration.toClientConfiguration()).cast(Client.class);
+            return ReactorNettyClient.connect(configuration.toClientConfiguration(), configuration.getApplicationName(), configuration.getConnectionId()).cast(Client.class);
         }), configuration);
     }
 

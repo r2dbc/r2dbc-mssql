@@ -17,6 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
+import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.client.TestClient;
 import io.r2dbc.mssql.client.TransactionStatus;
 import io.r2dbc.mssql.message.TransactionDescriptor;
@@ -51,7 +52,7 @@ class MssqlConnectionUnitTests {
     void shouldBeginTransactionFromInitialState() {
 
         TestClient client =
-            TestClient.builder().expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "SET IMPLICIT_TRANSACTIONS ON; BEGIN TRANSACTION")).thenRespond(DoneToken.create(0)).build();
+            TestClient.builder().expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "SET IMPLICIT_TRANSACTIONS ON;")).thenRespond(DoneToken.create(0)).build();
 
         MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
 
@@ -64,7 +65,7 @@ class MssqlConnectionUnitTests {
     void shouldBeginTransactionFromExplicitState() {
 
         TestClient client =
-            TestClient.builder().withTransactionStatus(TransactionStatus.EXPLICIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "BEGIN TRANSACTION")).thenRespond(DoneToken.create(0)).build();
+            TestClient.builder().withTransactionStatus(TransactionStatus.EXPLICIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "SET IMPLICIT_TRANSACTIONS ON;")).thenRespond(DoneToken.create(0)).build();
 
         MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
 
@@ -77,6 +78,7 @@ class MssqlConnectionUnitTests {
     void shouldNotBeginTransactionFromStartedState() {
 
         Client clientMock = mock(Client.class);
+        when(clientMock.getContext()).thenReturn(new ConnectionContext());
         when(clientMock.getTransactionStatus()).thenReturn(TransactionStatus.STARTED);
 
         MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
@@ -86,6 +88,7 @@ class MssqlConnectionUnitTests {
             .verifyComplete();
 
         verify(clientMock, times(2)).getTransactionStatus();
+        verify(clientMock).getContext();
         verifyNoMoreInteractions(clientMock);
     }
 
@@ -106,6 +109,7 @@ class MssqlConnectionUnitTests {
     void shouldNotCommitInAutoCommitState() {
 
         Client clientMock = mock(Client.class);
+        when(clientMock.getContext()).thenReturn(new ConnectionContext());
         when(clientMock.getTransactionStatus()).thenReturn(TransactionStatus.AUTO_COMMIT);
 
         MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
@@ -115,6 +119,7 @@ class MssqlConnectionUnitTests {
             .verifyComplete();
 
         verify(clientMock, times(2)).getTransactionStatus();
+        verify(clientMock).getContext();
         verifyNoMoreInteractions(clientMock);
     }
 
@@ -135,6 +140,7 @@ class MssqlConnectionUnitTests {
     void shouldNotRollbackInAutoCommitState() {
 
         Client clientMock = mock(Client.class);
+        when(clientMock.getContext()).thenReturn(new ConnectionContext());
         when(clientMock.getTransactionStatus()).thenReturn(TransactionStatus.AUTO_COMMIT);
 
         MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
@@ -144,6 +150,7 @@ class MssqlConnectionUnitTests {
             .verifyComplete();
 
         verify(clientMock, times(2)).getTransactionStatus();
+        verify(clientMock).getContext();
         verifyNoMoreInteractions(clientMock);
     }
 
@@ -151,6 +158,7 @@ class MssqlConnectionUnitTests {
     void shouldNotSupportSavePointRelease() {
 
         Client clientMock = mock(Client.class);
+        when(clientMock.getContext()).thenReturn(new ConnectionContext());
         MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
 
         connection.releaseSavepoint("foo").as(StepVerifier::create).verifyComplete();
@@ -161,6 +169,7 @@ class MssqlConnectionUnitTests {
     void shouldAllowSavepointNames(String name) {
 
         Client clientMock = mock(Client.class);
+        when(clientMock.getContext()).thenReturn(new ConnectionContext());
         MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
 
         assertThat(connection.createSavepoint(name)).isNotNull();
@@ -171,6 +180,7 @@ class MssqlConnectionUnitTests {
     void shouldRejectSavepointNames(String name) {
 
         Client clientMock = mock(Client.class);
+        when(clientMock.getContext()).thenReturn(new ConnectionContext());
         MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
 
         assertThatThrownBy(() -> connection.createSavepoint(name)).isInstanceOf(IllegalArgumentException.class);
@@ -193,6 +203,7 @@ class MssqlConnectionUnitTests {
     void shouldNotRollbackTransactionToSavepointInAutoCommitState() {
 
         Client clientMock = mock(Client.class);
+        when(clientMock.getContext()).thenReturn(new ConnectionContext());
         when(clientMock.getTransactionStatus()).thenReturn(TransactionStatus.AUTO_COMMIT);
 
         MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
@@ -202,6 +213,7 @@ class MssqlConnectionUnitTests {
             .verifyComplete();
 
         verify(clientMock, times(2)).getTransactionStatus();
+        verify(clientMock).getContext();
         verifyNoMoreInteractions(clientMock);
     }
 

@@ -17,6 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
+import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.client.TestClient;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
@@ -228,6 +229,7 @@ class SimpleMssqlStatementUnitTests {
         when(client.getTransactionDescriptor()).thenReturn(TransactionDescriptor.empty());
         when(client.exchange(any(ClientMessage.class))).thenReturn(Flux.empty());
         when(client.exchange(any(Publisher.class))).thenReturn(Flux.empty());
+        when(client.getContext()).thenReturn(new ConnectionContext());
 
         return client;
     }
