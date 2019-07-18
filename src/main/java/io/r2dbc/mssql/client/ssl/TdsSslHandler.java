@@ -18,6 +18,7 @@ package io.r2dbc.mssql.client.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -99,6 +100,14 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
         this.packetIdProvider = packetIdProvider;
         this.sslConfiguration = sslConfiguration;
         this.connectionContext = context;
+    }
+
+    void setSslHandler(SslHandler sslHandler) {
+        this.sslHandler = sslHandler;
+    }
+
+    void setState(SslState state) {
+        this.state = state;
     }
 
     /**
@@ -205,7 +214,8 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
         Chunk chunk = this.chunk;
         if (chunk != null) {
-            chunk.buffer.release();
+            chunk.fullMessage.release();
+            chunk.aggregator.release();
             this.chunk = null;
         }
     }
@@ -349,21 +359,26 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
                     // sub-chunk read
                     if (!Chunk.isCompletePacketAvailable(header, buffer)) {
-                        this.chunk = new Chunk(header, buffer);
+
+                        ByteBuf defragmented = buffer.alloc().buffer(header.getLength());
+                        defragmented.writeBytes(buffer);
+                        buffer.release();
+
+                        this.chunk = new Chunk(header, defragmented, buffer.alloc().compositeBuffer());
                         ctx.read();
                         return;
                     }
                 } else {
 
-                    chunk.buffer.writeBytes(buffer);
-                    buffer.release();
+                    chunk.defragment(buffer);
 
-                    if (!chunk.isCompletePacketAvailable()) {
+                    if (!chunk.isCompleteHandshakeAvailable()) {
                         return;
                     }
 
-                    buffer = chunk.buffer;
+                    buffer = chunk.fullMessage;
                     header = chunk.header;
+                    this.chunk.aggregator.release();
                     this.chunk = null;
                 }
 
@@ -399,17 +414,68 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
      */
     static class Chunk {
 
-        final Header header;
+        Header header;
 
-        final ByteBuf buffer;
+        final ByteBuf fullMessage;
 
-        Chunk(Header header, ByteBuf buffer) {
+        final CompositeByteBuf aggregator;
+
+        int decoded = 0;
+
+        Chunk(Header header, ByteBuf fullMessage, CompositeByteBuf aggregator) {
             this.header = header;
-            this.buffer = buffer;
+            this.fullMessage = fullMessage;
+            this.aggregator = aggregator;
         }
 
-        boolean isCompletePacketAvailable() {
-            return isCompletePacketAvailable(this.header, this.buffer);
+        /**
+         * Gradually defragment chunks into a complete message. Retain {@code chunk} across defragmenation attempts.
+         *
+         * @param chunk
+         */
+        void defragment(ByteBuf chunk) {
+
+            this.aggregator.addComponent(true, chunk);
+
+            while (this.aggregator.isReadable()) {
+
+                int remainder = getRemainingLength();
+
+                if (this.aggregator.readableBytes() >= remainder) {
+                    this.fullMessage.writeBytes(this.aggregator, remainder);
+                } else {
+                    break;
+                }
+
+                if (Header.canDecode(this.aggregator)) {
+                    updateHeader(Header.decode(this.aggregator));
+                } else {
+                    break;
+                }
+
+                if (isCompleteHandshakeAvailable()) {
+                    break;
+                }
+            }
+        }
+
+        void updateHeader(Header header) {
+
+            this.decoded = this.decoded + (this.header.getLength() - Header.LENGTH);
+            this.header = header;
+        }
+
+        /**
+         * Check if the full handshake arrived.
+         *
+         * @return
+         */
+        boolean isCompleteHandshakeAvailable() {
+            return this.header.is(Status.StatusBit.EOM) && getRemainingLength() <= 0;
+        }
+
+        int getRemainingLength() {
+            return this.header.getLength() - ((this.fullMessage.readableBytes() - this.decoded) + Header.LENGTH);
         }
 
         /**
