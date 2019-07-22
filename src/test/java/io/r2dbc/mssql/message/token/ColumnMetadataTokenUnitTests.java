@@ -66,11 +66,11 @@ class ColumnMetadataTokenUnitTests {
 
         assertThat(metadata.getColumns()).hasSize(2);
 
-        Column id = metadata.getColumns().get(0);
+        Column id = metadata.getColumns()[0];
         assertThat(id.getName()).isEqualTo("id");
         assertThat(id.getType().getLengthStrategy()).isEqualTo(LengthStrategy.BYTELENTYPE);
 
-        Column content = metadata.getColumns().get(1);
+        Column content = metadata.getColumns()[1];
         assertThat(content.getName()).isEqualTo("content");
         assertThat(content.getType().getLengthStrategy()).isEqualTo(LengthStrategy.PARTLENTYPE);
     }
@@ -91,16 +91,16 @@ class ColumnMetadataTokenUnitTests {
 
         assertThat(metadata.getColumns()).hasSize(3);
 
-        Column id = metadata.getColumns().get(0);
+        Column id = metadata.getColumns()[0];
         assertThat(id.getName()).isEqualTo("id");
         assertThat(id.getType().getLengthStrategy()).isEqualTo(LengthStrategy.FIXEDLENTYPE);
 
-        Column binfix = metadata.getColumns().get(1);
+        Column binfix = metadata.getColumns()[1];
         assertThat(binfix.getName()).isEqualTo("binfix");
         assertThat(binfix.getType().getLengthStrategy()).isEqualTo(LengthStrategy.USHORTLENTYPE);
         assertThat(binfix.getType().getServerType()).isEqualTo(SqlServerType.BINARY);
 
-        Column binvar = metadata.getColumns().get(2);
+        Column binvar = metadata.getColumns()[2];
         assertThat(binvar.getName()).isEqualTo("binvar");
         assertThat(binvar.getType().getLengthStrategy()).isEqualTo(LengthStrategy.USHORTLENTYPE);
         assertThat(binvar.getType().getServerType()).isEqualTo(SqlServerType.VARBINARY);

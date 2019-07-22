@@ -27,6 +27,15 @@ import io.r2dbc.mssql.util.Assert;
  */
 public class ReturnStatus extends AbstractDataToken {
 
+    private static final ReturnStatus[] CACHED = new ReturnStatus[128];
+
+    static {
+
+        for (int i = 0; i < CACHED.length; i++) {
+            CACHED[i] = new ReturnStatus(i);
+        }
+    }
+
     public static final byte TYPE = (byte) 0x79;
 
     private final int status;
@@ -44,6 +53,11 @@ public class ReturnStatus extends AbstractDataToken {
      * @return the {@link ReturnStatus}.
      */
     public static ReturnStatus create(int status) {
+
+        if (status >= 0 && status < CACHED.length) {
+            return CACHED[status];
+        }
+
         return new ReturnStatus(status);
     }
 
@@ -57,7 +71,7 @@ public class ReturnStatus extends AbstractDataToken {
 
         Assert.requireNonNull(buffer, "Data buffer must not be null");
 
-        return new ReturnStatus(Decode.asLong(buffer));
+        return ReturnStatus.create(Decode.asLong(buffer));
     }
 
     /**

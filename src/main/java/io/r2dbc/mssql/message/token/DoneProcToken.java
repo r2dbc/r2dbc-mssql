@@ -28,6 +28,29 @@ public final class DoneProcToken extends AbstractDoneToken {
 
     public static final byte TYPE = (byte) 0xFE;
 
+    private static final DoneProcToken[] INTERMEDIATE = new DoneProcToken[CACHE_SIZE];
+
+    private static final DoneProcToken[] MORE_WITH_COUNT_CACHE = new DoneProcToken[CACHE_SIZE];
+
+    private static final DoneProcToken[] DONE_WITH_COUNT_CACHE = new DoneProcToken[CACHE_SIZE];
+
+    private static final DoneProcToken[] MORE_CACHE = new DoneProcToken[CACHE_SIZE];
+
+    private static final int DONE_WITH_COUNT = DONE_FINAL | DONE_COUNT;
+
+    private static final int MORE_WITH_COUNT = DONE_MORE | DONE_COUNT;
+
+    private static final int MORE = DONE_MORE;
+
+    static {
+        for (int i = 0; i < INTERMEDIATE.length; i++) {
+            INTERMEDIATE[i] = new DoneProcToken(0, 0, i);
+            DONE_WITH_COUNT_CACHE[i] = new DoneProcToken(DONE_WITH_COUNT, 0, i);
+            MORE_WITH_COUNT_CACHE[i] = new DoneProcToken(MORE_WITH_COUNT, 0, i);
+            MORE_CACHE[i] = new DoneProcToken(MORE, 0, i);
+        }
+    }
+
     /**
      * Creates a new {@link DoneProcToken}.
      *
@@ -60,6 +83,20 @@ public final class DoneProcToken extends AbstractDoneToken {
         int status = Decode.uShort(buffer);
         int currentCommand = Decode.uShort(buffer);
         long rowCount = Decode.uLongLong(buffer);
+
+        if (rowCount >= 0 && rowCount < CACHE_SIZE) {
+
+            switch (status) {
+                case 0:
+                    return INTERMEDIATE[(int) rowCount];
+                case DONE_WITH_COUNT:
+                    return DONE_WITH_COUNT_CACHE[(int) rowCount];
+                case MORE_WITH_COUNT:
+                    return MORE_WITH_COUNT_CACHE[(int) rowCount];
+                case MORE:
+                    return MORE_CACHE[(int) rowCount];
+            }
+        }
 
         return new DoneProcToken(status, currentCommand, rowCount);
     }

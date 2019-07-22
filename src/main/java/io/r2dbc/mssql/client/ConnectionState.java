@@ -16,10 +16,12 @@
 
 package io.r2dbc.mssql.client;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.handler.ssl.SslHandler;
 import io.r2dbc.mssql.client.ssl.SslState;
 import io.r2dbc.mssql.message.Message;
+import io.r2dbc.mssql.message.header.Header;
 import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
@@ -28,9 +30,11 @@ import io.r2dbc.mssql.message.token.Login7;
 import io.r2dbc.mssql.message.token.Prelogin;
 import io.r2dbc.mssql.message.token.Tabular;
 import io.r2dbc.mssql.util.Assert;
+import reactor.core.publisher.SynchronousSink;
 import reactor.netty.Connection;
 
 import java.util.Collections;
+import java.util.List;
 
 import static io.r2dbc.mssql.message.header.Status.StatusBit;
 
@@ -187,11 +191,20 @@ public enum ConnectionState {
 
             Tabular.TabularDecoder decoder = Tabular.createDecoder(client.isColumnEncryptionSupported());
 
-            return (header, byteBuf) -> {
+            return new MessageDecoder() {
 
-                Assert.isTrue(header.getType() == Type.TABULAR_RESULT, () -> "Expected tabular message, header type is: " + header.getType());
+                @Override
+                public List<? extends Message> apply(Header header, ByteBuf byteBuf) {
 
-                return decoder.decode(byteBuf);
+                    Assert.isTrue(header.getType() == Type.TABULAR_RESULT, () -> "Expected tabular message, header type is: " + header.getType());
+
+                    return decoder.decode(byteBuf);
+                }
+
+                @Override
+                public boolean decode(Header header, ByteBuf buffer, SynchronousSink<Message> sink) {
+                    return decoder.decode(buffer, sink);
+                }
             };
         }
     },

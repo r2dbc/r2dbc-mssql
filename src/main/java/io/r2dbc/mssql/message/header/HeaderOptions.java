@@ -25,6 +25,42 @@ import io.r2dbc.mssql.util.Assert;
 public interface HeaderOptions {
 
     /**
+     * Create a {@link HeaderOptions} object with {@link Status.StatusBit} set.
+     *
+     * @param bit status bit to set.
+     * @return the {@link HeaderOptions}.
+     */
+    default HeaderOptions and(Status.StatusBit bit) {
+
+        Status status = getStatus();
+        Status newStatus = status.and(bit);
+
+        if (status == newStatus) {
+            return this;
+        }
+
+        return DefaultHeaderOptions.get(getType(), newStatus);
+    }
+
+    /**
+     * Create a {@link HeaderOptions} object with {@link Status.StatusBit} removed.
+     *
+     * @param bit status bit to remove.
+     * @return the {@link HeaderOptions}.
+     */
+    default HeaderOptions not(Status.StatusBit bit) {
+
+        Status status = getStatus();
+        Status newStatus = status.not(bit);
+
+        if (status == newStatus) {
+            return this;
+        }
+
+        return DefaultHeaderOptions.get(getType(), newStatus);
+    }
+
+    /**
      * Defines the type of message. 1-byte.
      *
      * @return the message type.

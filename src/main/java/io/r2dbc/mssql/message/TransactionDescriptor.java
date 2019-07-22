@@ -40,7 +40,7 @@ public final class TransactionDescriptor {
         Assert.requireNonNull(descriptor, "Descriptor bytes must not be null");
         Assert.isTrue(descriptor.length == LENGTH, "Descriptor must be 8 bytes long");
 
-        this.descriptor = Arrays.copyOf(descriptor, descriptor.length);
+        this.descriptor = descriptor;
     }
 
     /**
@@ -66,7 +66,7 @@ public final class TransactionDescriptor {
      * @return the binary representation of this {@link TransactionDescriptor}.
      */
     public byte[] toBytes() {
-        return Arrays.copyOf(this.descriptor, this.descriptor.length);
+        return this.descriptor;
     }
 
     @Override

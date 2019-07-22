@@ -46,9 +46,9 @@ class MssqlRowUnitTests {
 
     ByteBuf data = Unpooled.wrappedBuffer(new byte[]{(byte) 0x4, 0x42, 0, 0, 0});
 
-    RowToken rowToken = RowToken.decode(data, Collections.singletonList(column));
+    RowToken rowToken = RowToken.decode(data, new Column[]{column});
 
-    MssqlRowMetadata rowMetadata = new MssqlRowMetadata(codecs, Collections.singletonList(column), Collections.singletonMap("foo", column));
+    MssqlRowMetadata rowMetadata = new MssqlRowMetadata(codecs, new Column[]{column}, Collections.singletonMap("foo", column));
 
     MssqlRow row = new MssqlRow(codecs, rowToken, rowMetadata);
 

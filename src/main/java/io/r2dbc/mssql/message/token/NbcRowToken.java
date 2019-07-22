@@ -21,9 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.util.Assert;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * NBC Row (Null-bitmap compressed row). Expresses nullability through a bitmap.
@@ -43,7 +41,7 @@ public final class NbcRowToken extends RowToken {
      * @param data       the row data.
      * @param nullMarker {@code null} bitmap.
      */
-    private NbcRowToken(List<ByteBuf> data, boolean[] nullMarker) {
+    private NbcRowToken(ByteBuf[] data, boolean[] nullMarker) {
         super(data);
         this.nullMarker = nullMarker;
     }
@@ -55,7 +53,7 @@ public final class NbcRowToken extends RowToken {
      * @param columns column descriptors.
      * @return the {@link RowToken}.
      */
-    public static NbcRowToken decode(ByteBuf buffer, List<Column> columns) {
+    public static NbcRowToken decode(ByteBuf buffer, Column[] columns) {
 
         Assert.requireNonNull(buffer, "Data buffer must not be null");
         Assert.requireNonNull(columns, "List of Columns must not be null");
@@ -70,7 +68,7 @@ public final class NbcRowToken extends RowToken {
      * @param columns column descriptors.
      * @return {@code true} if the buffer contains sufficient data to entirely decode a row.
      */
-    public static boolean canDecode(ByteBuf buffer, List<Column> columns) {
+    public static boolean canDecode(ByteBuf buffer, Column[] columns) {
 
         Assert.requireNonNull(buffer, "Data buffer must not be null");
         Assert.requireNonNull(columns, "List of Columns must not be null");
@@ -85,9 +83,9 @@ public final class NbcRowToken extends RowToken {
 
             boolean[] nullBitmap = getNullBitmap(buffer, columns);
 
-            for (int i = 0; i < columns.size(); i++) {
+            for (int i = 0; i < columns.length; i++) {
 
-                Column column = columns.get(i);
+                Column column = columns[i];
 
                 if (nullBitmap[i]) {
                     continue;
@@ -109,31 +107,31 @@ public final class NbcRowToken extends RowToken {
         return this.nullMarker[index] ? null : super.getColumnData(index);
     }
 
-    private static NbcRowToken doDecode(ByteBuf buffer, List<Column> columns) {
+    private static NbcRowToken doDecode(ByteBuf buffer, Column[] columns) {
 
-        List<ByteBuf> data = new ArrayList<>(columns.size());
+        ByteBuf[] data = new ByteBuf[columns.length];
 
         boolean[] nullMarkers = getNullBitmap(buffer, columns);
 
-        for (int i = 0; i < columns.size(); i++) {
+        for (int i = 0; i < columns.length; i++) {
 
-            Column column = columns.get(i);
+            Column column = columns[i];
 
             if (nullMarkers[i]) {
-                data.add(Unpooled.EMPTY_BUFFER);
+                data[i] = Unpooled.EMPTY_BUFFER;
             } else {
-                data.add(decodeColumnData(buffer, column));
+                data[i] = decodeColumnData(buffer, column);
             }
         }
 
         return new NbcRowToken(data, nullMarkers);
     }
 
-    private static boolean[] getNullBitmap(ByteBuf buffer, List<Column> columns) {
+    private static boolean[] getNullBitmap(ByteBuf buffer, Column[] columns) {
 
         int nullBitmapSize = getNullBitmapSize(columns);
 
-        boolean[] nullMarkers = new boolean[columns.size()];
+        boolean[] nullMarkers = new boolean[columns.length];
         int column = 0;
 
         for (int byteNo = 0; byteNo < nullBitmapSize; byteNo++) {
@@ -147,7 +145,7 @@ public final class NbcRowToken extends RowToken {
                 continue;
             }
 
-            for (int bitNo = 0; bitNo < 8 && column < columns.size(); bitNo++) {
+            for (int bitNo = 0; bitNo < 8 && column < columns.length; bitNo++) {
                 if ((byteValue & (1 << bitNo)) != 0) {
                     nullMarkers[column] = true;
                 }
@@ -157,8 +155,8 @@ public final class NbcRowToken extends RowToken {
         return nullMarkers;
     }
 
-    private static int getNullBitmapSize(List<Column> columns) {
-        return ((columns.size() - 1) >> 3) + 1;
+    private static int getNullBitmapSize(Column[] columns) {
+        return ((columns.length - 1) >> 3) + 1;
     }
 
     @Override

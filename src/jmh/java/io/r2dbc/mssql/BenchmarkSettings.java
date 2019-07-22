@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Mark Paluch
  */
-@Warmup(iterations = 5, time = 1000, timeUnit = TimeUnit.MILLISECONDS)
+@Warmup(iterations = 5, time = 2000, timeUnit = TimeUnit.MILLISECONDS)
 @Measurement(iterations = 5, time = 1000, timeUnit = TimeUnit.MILLISECONDS)
 @Fork(value = 1, warmups = 0)
 @BenchmarkMode(Mode.AverageTime)

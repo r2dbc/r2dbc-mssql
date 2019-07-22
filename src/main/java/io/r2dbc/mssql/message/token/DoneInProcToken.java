@@ -29,10 +29,33 @@ public final class DoneInProcToken extends AbstractDoneToken {
 
     public static final byte TYPE = (byte) 0xFF;
 
+    private static final DoneInProcToken[] INTERMEDIATE = new DoneInProcToken[CACHE_SIZE];
+
+    private static final DoneInProcToken[] MORE_WITH_COUNT_CACHE = new DoneInProcToken[CACHE_SIZE];
+
+    private static final DoneInProcToken[] DONE_WITH_COUNT_CACHE = new DoneInProcToken[CACHE_SIZE];
+
+    private static final DoneInProcToken[] MORE_CACHE = new DoneInProcToken[CACHE_SIZE];
+
+    private static final int DONE_WITH_COUNT = DONE_FINAL | DONE_COUNT;
+
+    private static final int MORE_WITH_COUNT = DONE_MORE | DONE_COUNT;
+
+    private static final int MORE = DONE_MORE;
+
+    static {
+        for (int i = 0; i < INTERMEDIATE.length; i++) {
+            INTERMEDIATE[i] = new DoneInProcToken(0, 0, i);
+            DONE_WITH_COUNT_CACHE[i] = new DoneInProcToken(DONE_WITH_COUNT, 0, i);
+            MORE_WITH_COUNT_CACHE[i] = new DoneInProcToken(MORE_WITH_COUNT, 0, i);
+            MORE_CACHE[i] = new DoneInProcToken(MORE, 0, i);
+        }
+    }
+
     /**
      * Creates a new {@link DoneInProcToken}.
      *
-     * @param status         status flags, see {@link AbstractDoneToken} constants.
+     * @param status         status flags, see {@link AbstractDoneInProcToken} constants.
      * @param currentCommand the current command counter.
      * @param rowCount       number of columns if {@link #hasCount()} is set.
      */
@@ -47,7 +70,7 @@ public final class DoneInProcToken extends AbstractDoneToken {
      * @return the {@link DoneInProcToken}.
      */
     public static DoneInProcToken create(long rowCount) {
-        return new DoneInProcToken(DONE_FINAL | DONE_COUNT, 0, rowCount);
+        return new DoneInProcToken(DONE_WITH_COUNT, 0, rowCount);
     }
 
     /**
@@ -59,7 +82,7 @@ public final class DoneInProcToken extends AbstractDoneToken {
     public static boolean isDone(Message message) {
 
         if (message instanceof DoneInProcToken) {
-            return ((AbstractDoneToken) message).isDone();
+            return ((DoneInProcToken) message).isDone();
         }
 
         return false;
@@ -76,6 +99,20 @@ public final class DoneInProcToken extends AbstractDoneToken {
         int status = Decode.uShort(buffer);
         int currentCommand = Decode.uShort(buffer);
         long rowCount = Decode.uLongLong(buffer);
+
+        if (rowCount >= 0 && rowCount < CACHE_SIZE) {
+
+            switch (status) {
+                case 0:
+                    return INTERMEDIATE[(int) rowCount];
+                case DONE_WITH_COUNT:
+                    return DONE_WITH_COUNT_CACHE[(int) rowCount];
+                case MORE_WITH_COUNT:
+                    return MORE_WITH_COUNT_CACHE[(int) rowCount];
+                case MORE:
+                    return MORE_CACHE[(int) rowCount];
+            }
+        }
 
         return new DoneInProcToken(status, currentCommand, rowCount);
     }

@@ -25,8 +25,6 @@ import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Row;
 import reactor.util.annotation.Nullable;
 
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-
 /**
  * Microsoft SQL Server-specific {@link Row} implementation.
  * A {@link Row} is stateful regarding its data state. It holds a {@link RowToken} along with row data that needs to be deallocated after processing the row. This row is no longer usable once it
@@ -37,8 +35,6 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  * @see ReferenceCounted
  */
 final class MssqlRow implements Row {
-
-    private static final AtomicIntegerFieldUpdater<MssqlRow> STATE_ACCESSOR = AtomicIntegerFieldUpdater.newUpdater(MssqlRow.class, "state");
 
     private static final int STATE_ACTIVE = 0;
 
@@ -96,7 +92,6 @@ final class MssqlRow implements Row {
         requireNotReleased();
 
         Column column = this.metadata.getColumn(identifier);
-
         ByteBuf columnData = this.rowToken.getColumnData(column.getIndex());
 
         if (columnData == null) {
@@ -117,13 +112,12 @@ final class MssqlRow implements Row {
      */
     public void release() {
         requireNotReleased();
-        if (STATE_ACCESSOR.compareAndSet(this, STATE_ACTIVE, STATE_RELEASED)) {
-            this.rowToken.release();
-        }
+        this.state = STATE_RELEASED;
+        this.rowToken.release();
     }
 
     private void requireNotReleased() {
-        if (STATE_ACCESSOR.get(this) == STATE_RELEASED) {
+        if (this.state == STATE_RELEASED) {
             throw new IllegalStateException("Value cannot be retrieved after row has been released");
         }
     }

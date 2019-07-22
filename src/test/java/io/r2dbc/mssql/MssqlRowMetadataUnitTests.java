@@ -28,7 +28,6 @@ import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.spi.Nullability;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -52,9 +51,9 @@ class MssqlRowMetadataUnitTests {
 
     ByteBuf data = Unpooled.wrappedBuffer(new byte[]{(byte) 0x42, 0, 0, 0});
 
-    RowToken rowToken = RowToken.decode(this.data, Collections.singletonList(this.column));
+    RowToken rowToken = RowToken.decode(this.data, new Column[]{this.column});
 
-    MssqlRowMetadata rowMetadata = new MssqlRowMetadata(this.codecs, Collections.singletonList(this.column), Collections.singletonMap("foo", this.column));
+    MssqlRowMetadata rowMetadata = new MssqlRowMetadata(this.codecs, new Column[]{this.column}, Collections.singletonMap("foo", this.column));
 
     @Test
     void shouldLookupMetadataByName() {
@@ -96,7 +95,7 @@ class MssqlRowMetadataUnitTests {
         nameKeyedColumns.put(c2.getName(), c2);
         nameKeyedColumns.put(c3.getName(), c3);
 
-        MssqlRowMetadata rowMetadata = new MssqlRowMetadata(this.codecs, Arrays.asList(c1, c2, c3), nameKeyedColumns);
+        MssqlRowMetadata rowMetadata = new MssqlRowMetadata(this.codecs, new Column[]{c1, c2, c3}, nameKeyedColumns);
 
         assertThat(rowMetadata.getColumnNames()).hasSize(3).contains("one").doesNotContain("four");
         assertThat(rowMetadata.getColumnNames().contains("one")).isTrue();
@@ -118,7 +117,7 @@ class MssqlRowMetadataUnitTests {
         nameKeyedColumns.put(c2.getName(), c2);
         nameKeyedColumns.put(c3.getName(), c3);
 
-        MssqlRowMetadata rowMetadata = new MssqlRowMetadata(this.codecs, Arrays.asList(c1, c2, c3), nameKeyedColumns);
+        MssqlRowMetadata rowMetadata = new MssqlRowMetadata(this.codecs, new Column[]{c1, c2, c3}, nameKeyedColumns);
 
         assertThat(rowMetadata.getColumnNames()).hasSize(3).isNotEmpty();
         assertThat(rowMetadata.getColumnNames().contains("one")).isTrue();

@@ -17,10 +17,7 @@
 package io.r2dbc.mssql.message.header;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.util.Assert;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Mono;
 
 import java.util.Objects;
 
@@ -147,30 +144,9 @@ public class Header implements HeaderOptions {
 
     /**
      * Encode a header into a {@link ByteBuf}.
-     *
-     * @param allocator the byteBufAllocator to use to get a {@link ByteBuf} to write into
-     * @return a {@link Publisher} that produces the {@link ByteBuf} containing the encoded message
-     * @throws IllegalArgumentException when {@link ByteBufAllocator} is {@code null}.
-     */
-    Publisher<ByteBuf> encode(ByteBufAllocator allocator) {
-
-        Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
-
-        return Mono.fromSupplier(() -> {
-
-            ByteBuf buffer = allocator.buffer(8);
-
-            encode(buffer);
-
-            return buffer;
-        });
-    }
-
-    /**
-     * Encode a header into a {@link ByteBuf}.
      */
     public void encode(ByteBuf buffer) {
-        encode(buffer, PacketIdProvider.just(this.packetId));
+        encode(buffer, this.type, this.status, this.length, this.spid, this.packetId, this.window);
     }
 
     /**
@@ -181,18 +157,38 @@ public class Header implements HeaderOptions {
      * @throws IllegalArgumentException when {@link HeaderOptions} or {@link PacketIdProvider} is {@code null}.
      */
     public void encode(ByteBuf buffer, PacketIdProvider packetIdProvider) {
+        encode(buffer, this.type, this.status, this.length, this.spid, packetIdProvider.nextPacketId(), this.window);
+    }
 
-        Assert.requireNonNull(buffer, "ByteBuf must not be null");
-        Assert.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
+    /**
+     * Encode a header into a {@link ByteBuf}.
+     *
+     * @param buffer           the target {@link ByteBuf}.
+     * @param packetIdProvider must not be {@code null}.
+     * @throws IllegalArgumentException when {@link HeaderOptions} or {@link PacketIdProvider} is {@code null}.
+     */
+    public static void encode(ByteBuf buffer, HeaderOptions options, int length, PacketIdProvider packetIdProvider) {
+        encode(buffer, options.getType(), options.getStatus(), length, (short) 0, packetIdProvider.nextPacketId(), (byte) 0);
+    }
+
+    /**
+     * Encode the {@link Header}.
+     *
+     * @param buffer  the target {@link ByteBuf}.
+     * @param options
+     * @param length
+     * @param @param  packetIdProvider must not be {@code null}.
+     */
+    public static void encode(ByteBuf buffer, Type type, Status status, int length, short spid, byte packetId, byte window) {
 
         buffer.ensureWritable(8);
 
-        buffer.writeByte(this.type.getValue());
-        buffer.writeByte(this.status.getValue());
-        buffer.writeShort(this.length);
-        buffer.writeShort(this.spid);
-        buffer.writeByte(packetIdProvider.nextPacketId());
-        buffer.writeByte(this.window);
+        buffer.writeByte(type.getValue());
+        buffer.writeByte(status.getValue());
+        buffer.writeShort(length);
+        buffer.writeShort(spid);
+        buffer.writeByte(packetId);
+        buffer.writeByte(window);
     }
 
     /**

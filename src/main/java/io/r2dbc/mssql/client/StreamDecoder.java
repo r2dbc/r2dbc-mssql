@@ -17,7 +17,6 @@
 package io.r2dbc.mssql.client;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.header.Header;
 import io.r2dbc.mssql.message.header.Status;
@@ -25,10 +24,10 @@ import io.r2dbc.mssql.util.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.SynchronousSink;
 import reactor.util.annotation.Nullable;
+import reactor.util.context.Context;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 
 /**
  * A TDS decoder that reads {@link ByteBuf}s and returns a {@link Flux} of decoded {@link Message}s.
@@ -45,7 +44,7 @@ import java.util.function.Function;
  */
 final class StreamDecoder {
 
-    private final AtomicReference<DecoderState> state = new AtomicReference<>();
+    private DecoderState state;
 
     /**
      * Decode a {@link ByteBuf} into a {@link Flux} of {@link Message}s. If the {@link ByteBuf} does not end on a
@@ -55,79 +54,120 @@ final class StreamDecoder {
      * @param in the {@link ByteBuf} to decode
      * @return a {@link Flux} of {@link Message}s
      */
-    @SuppressWarnings("unchecked")
-    public Flux<Message> decode(ByteBuf in, MessageDecoder messageDecoder) {
+    public List<Message> decode(ByteBuf in, MessageDecoder messageDecoder) {
 
         Assert.requireNonNull(in, "in must not be null");
         Assert.requireNonNull(messageDecoder, "MessageDecoder must not be null");
 
-        return Flux.<List<Message>, DecoderState>generate(() -> {
-            DecoderState decoderState = this.state.getAndSet(null);
+        List<Message> result = new ArrayList<>();
 
-            return decoderState == null ? DecoderState.initial(in) : decoderState.andChunk(in);
-        }, (state, sink) -> {
+        decode(in, messageDecoder, new SynchronousSink<Message>() {
 
-            if (state.header == null) {
-
-                if (!Header.canDecode(state.remainder)) {
-                    return retain(state, sink);
-                }
-
-                state = state.readHeader();
+            @Override
+            public void complete() {
+                throw new UnsupportedOperationException();
             }
 
-            try {
-
-                Header header = state.getRequiredHeader();
-
-                if (!state.canReadChunk()) {
-                    return retain(state, sink);
-                }
-
-                state = state.readChunk();
-
-                int readerIndex = state.aggregatedBodyReaderIndex();
-
-                List<Message> messages = (List) messageDecoder.apply(header, state.aggregatedBody);
-
-                if (!messages.isEmpty()) {
-                    sink.next(messages);
-
-                    if (state.hasRawRemainder()) {
-                        return state;
-                    }
-
-                    if (state.hasAggregatedBodyRemainder()) {
-                        return retain(state, sink);
-                    }
-                } else {
-                    state.aggregatedBodyReaderIndex(readerIndex);
-                    return retain(state, sink);
-                }
-
-                sink.complete();
-                return state;
-            } catch (Exception e) {
-                sink.error(e);
+            @Override
+            public Context currentContext() {
+                throw new UnsupportedOperationException();
             }
 
-            return state;
-        }, state -> {
-            if (state != null) {
-                state.release();
+            @Override
+            public void error(Throwable e) {
+                throw new RuntimeException(e);
             }
-        }).flatMapIterable(Function.identity());
+
+            @Override
+            public void next(Message message) {
+                result.add(message);
+            }
+        });
+
+        return result;
     }
 
-    DecoderState retain(DecoderState state, SynchronousSink<?> sink) {
-        this.state.set(state.retain());
-        sink.complete();
+    /**
+     * Decode a {@link ByteBuf} into a stream of {@link Message}s notifying {@link SynchronousSink}. If the {@link ByteBuf} does not end on a
+     * {@link Message} boundary, the {@link ByteBuf} will be retained until the concatenated contents of all retained
+     * {@link ByteBuf}s is a {@link Message} boundary.
+     *
+     * @param in the {@link ByteBuf} to decode
+     * @return a {@link Flux} of {@link Message}s
+     */
+    public void decode(ByteBuf in, MessageDecoder messageDecoder, SynchronousSink<Message> sink) {
+
+        Assert.requireNonNull(in, "in must not be null");
+        Assert.requireNonNull(messageDecoder, "MessageDecoder must not be null");
+
+        DecoderState decoderState = this.state;
+        this.state = null;
+
+        DecoderState state = decoderState == null ? DecoderState.initial(in) : decoderState.andChunk(in);
+
+        do {
+            state = withState(messageDecoder, sink, state);
+        } while (state != null);
+    }
+
+    @Nullable
+    private DecoderState withState(MessageDecoder messageDecoder, SynchronousSink<Message> sink, DecoderState state) {
+
+        if (state.header == null) {
+
+            if (!Header.canDecode(state.remainder)) {
+                return retain(state);
+            }
+
+            state = state.readHeader();
+        }
+
+        try {
+
+            Header header = state.getRequiredHeader();
+
+            if (!state.canReadChunk()) {
+                return retain(state);
+            }
+
+            state = state.readChunk();
+
+            int readerIndex = state.aggregatedBodyReaderIndex();
+
+            boolean hasMessages = messageDecoder.decode(header, state.aggregatedBody, sink);
+
+            if (hasMessages) {
+
+                if (state.hasRawRemainder()) {
+                    return state;
+                }
+
+                if (state.hasAggregatedBodyRemainder()) {
+                    return retain(state);
+                }
+            } else {
+                state.aggregatedBodyReaderIndex(readerIndex);
+                return retain(state);
+            }
+
+            state.release();
+            return null;
+        } catch (Exception e) {
+            sink.error(e);
+        }
+
         return state;
     }
 
     @Nullable
+    private DecoderState retain(DecoderState state) {
+        this.state = state;
+        return null;
+    }
+
+    @Nullable
     DecoderState getDecoderState() {
-        return this.state.get();
+        return this.state;
     }
 
     /**
@@ -135,14 +175,14 @@ final class StreamDecoder {
      */
     static class DecoderState {
 
-        CompositeByteBuf remainder;
+        ByteBuf remainder;
 
-        CompositeByteBuf aggregatedBody;
+        ByteBuf aggregatedBody;
 
         @Nullable
         Header header;
 
-        private DecoderState(CompositeByteBuf remainder, CompositeByteBuf aggregatedBody, @Nullable Header header) {
+        private DecoderState(ByteBuf remainder, ByteBuf aggregatedBody, @Nullable Header header) {
 
             this.remainder = remainder;
             this.header = header;
@@ -157,10 +197,10 @@ final class StreamDecoder {
          */
         static DecoderState initial(ByteBuf initialBuffer) {
 
-            CompositeByteBuf composite = initialBuffer.alloc().compositeBuffer();
-            composite.addComponent(true, initialBuffer.retain());
+            ByteBuf composite = initialBuffer.alloc().buffer();
+            composite.writeBytes(initialBuffer);
 
-            CompositeByteBuf aggregatedBody = initialBuffer.alloc().compositeBuffer();
+            ByteBuf aggregatedBody = initialBuffer.alloc().buffer();
 
             return new DecoderState(composite, aggregatedBody, null);
         }
@@ -172,11 +212,13 @@ final class StreamDecoder {
          * @return
          */
         DecoderState andChunk(ByteBuf in) {
-            this.remainder.addComponent(true, in.retain());
+
+            this.remainder.writeBytes(in);
+            //this.remainder.addComponent(true, in.retain());
             return newState(this.remainder, this.aggregatedBody, this.header);
         }
 
-        DecoderState newState(CompositeByteBuf remainder, CompositeByteBuf aggregatedBody, @Nullable Header header) {
+        DecoderState newState(ByteBuf remainder, ByteBuf aggregatedBody, @Nullable Header header) {
 
             this.remainder = remainder;
             this.aggregatedBody = aggregatedBody;
@@ -261,7 +303,7 @@ final class StreamDecoder {
 
             do {
                 hasNewHeader = false;
-                this.aggregatedBody.addComponent(true, this.remainder.readRetainedSlice(getChunkLength()));
+                this.aggregatedBody.writeBytes(this.remainder, getChunkLength());
 
                 if (Header.canDecode(this.remainder)) {
                     hasNewHeader = true;
@@ -285,10 +327,10 @@ final class StreamDecoder {
          */
         DecoderState retain() {
 
-            this.remainder.consolidate();
+            //this.remainder.consolidate();
             this.remainder.retain();
 
-            this.aggregatedBody.consolidate();
+            //this.aggregatedBody.consolidate();
             this.aggregatedBody.retain();
 
             return this;

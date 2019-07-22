@@ -53,6 +53,22 @@ public final class RowTokenFactory {
 
         bufferWriter.accept(buffer);
 
+        return RowToken.decode(buffer, columns.toArray(new Column[0]));
+    }
+
+    /**
+     * Creates a {@link RowToken} using {@link Column}s and an encoded data buffer.
+     *
+     * @param columns
+     * @param bufferWriter
+     * @return
+     */
+    public static RowToken create(Column[] columns, Consumer<ByteBuf> bufferWriter) {
+
+        ByteBuf buffer = TestByteBufAllocator.TEST.buffer();
+
+        bufferWriter.accept(buffer);
+
         return RowToken.decode(buffer, columns);
     }
 

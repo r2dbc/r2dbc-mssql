@@ -29,7 +29,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -103,17 +102,11 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
     @Override
     public Flux<MssqlResult> execute() {
 
-        Iterator<Binding> iterator = new ArrayList<>(this.bindings.bindings).iterator();
-
-        if (!iterator.hasNext()) {
+        if (this.bindings.bindings.isEmpty()) {
             throw new IllegalStateException(String.format("No parameters bound for query '%s'", this.parsedQuery.sql));
         }
 
         this.bindings.validate(this.parsedQuery.getParameters());
-
-        if (!this.bindings.getCurrent().isEmpty()) {
-            assertNotExecuted();
-        }
 
         int effectiveFetchSize = getEffectiveFetchSize();
         return Flux.defer(() -> {
@@ -125,43 +118,55 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
             boolean useGeneratedKeysClause = GeneratedValues.shouldExpectGeneratedKeys(this.getGeneratedColumns());
             String sql = useGeneratedKeysClause ? GeneratedValues.augmentQuery(this.parsedQuery.sql, getGeneratedColumns()) : this.parsedQuery.sql;
 
-            EmitterProcessor<Binding> bindingEmitter = EmitterProcessor.create(true);
-            FluxSink<Binding> boundRequests = bindingEmitter.sink();
+            if (this.bindings.bindings.size() == 1) {
 
+                Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, this.bindings.bindings.get(0));
+
+                return exchange.windowUntil(DoneInProcToken.class::isInstance) //
+                    .map(it -> MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it));
+            }
+
+            Iterator<Binding> iterator = this.bindings.bindings.iterator();
+            EmitterProcessor<Binding> bindingEmitter = EmitterProcessor.create(true);
             return bindingEmitter.startWith(iterator.next())
                 .flatMap(it -> {
 
-
-                    Flux<Message> exchange;
-
-                    if (effectiveFetchSize > 0) {
-
-                        if (DEBUG_ENABLED) {
-                            LOGGER.debug(this.context.getMessage("Start cursored exchange for {} with fetch size {}"), sql, effectiveFetchSize);
-                        }
-
-                        exchange = RpcQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, sql, it, effectiveFetchSize);
-                    } else {
-
-                        if (DEBUG_ENABLED) {
-                            LOGGER.debug(this.context.getMessage("Start direct exchange for {}"), sql);
-                        }
-
-                        exchange = RpcQueryMessageFlow.exchange(this.client, sql, it);
-                    }
-
-                    if (useGeneratedKeysClause) {
-                        exchange = exchange.transform(GeneratedValues::reduceToSingleCountDoneToken);
-                    }
+                    Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, it);
 
                     return exchange.doOnComplete(() -> {
-                        tryNextBinding(iterator, boundRequests);
+                        tryNextBinding(iterator, bindingEmitter);
                     });
 
                 }).windowUntil(DoneInProcToken.class::isInstance) //
-                .map(it -> MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it));
-        }).doOnCancel(() -> clearBindings(iterator))
-            .doOnError(e -> clearBindings(iterator));
+                .map(it -> MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it))
+                .doOnCancel(() -> clearBindings(iterator))
+                .doOnError(e -> clearBindings(iterator));
+        });
+    }
+
+    private Flux<Message> exchange(int effectiveFetchSize, boolean useGeneratedKeysClause, String sql, Binding it) {
+        Flux<Message> exchange;
+
+        if (effectiveFetchSize > 0) {
+
+            if (DEBUG_ENABLED) {
+                LOGGER.debug(this.context.getMessage("Start cursored exchange for {} with fetch size {}"), sql, effectiveFetchSize);
+            }
+
+            exchange = RpcQueryMessageFlow.exchange(this.statementCache, this.client, this.codecs, sql, it, effectiveFetchSize);
+        } else {
+
+            if (DEBUG_ENABLED) {
+                LOGGER.debug(this.context.getMessage("Start direct exchange for {}"), sql);
+            }
+
+            exchange = RpcQueryMessageFlow.exchange(this.client, sql, it);
+        }
+
+        if (useGeneratedKeysClause) {
+            exchange = exchange.transform(GeneratedValues::reduceToSingleCountDoneToken);
+        }
+        return exchange;
     }
 
     private void clearBindings(Iterator<Binding> iterator) {
@@ -187,7 +192,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         return this;
     }
 
-    private static void tryNextBinding(Iterator<Binding> iterator, FluxSink<Binding> boundRequests) {
+    private static void tryNextBinding(Iterator<Binding> iterator, EmitterProcessor<Binding> boundRequests) {
 
         if (boundRequests.isCancelled()) {
             return;
@@ -195,12 +200,12 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
         try {
             if (iterator.hasNext()) {
-                boundRequests.next(iterator.next());
+                boundRequests.onNext(iterator.next());
             } else {
-                boundRequests.complete();
+                boundRequests.onComplete();
             }
         } catch (Exception e) {
-            boundRequests.error(e);
+            boundRequests.onError(e);
         }
     }
 
@@ -290,7 +295,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
     public static boolean supports(String sql) {
 
         Assert.requireNonNull(sql, "SQL must not be null");
-        return sql.lastIndexOf('@') != -1 && PARAMETER_MATCHER.matcher(sql).find();
+        return sql.lastIndexOf('@') != -1;
     }
 
     /**

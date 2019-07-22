@@ -34,13 +34,13 @@ import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.message.token.RpcRequest;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
+import org.reactivestreams.Processor;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.SynchronousSink;
 
 import javax.annotation.processing.Completion;
@@ -56,6 +56,13 @@ import static io.r2dbc.mssql.util.PredicateUtils.or;
  * @see RpcRequest
  */
 final class RpcQueryMessageFlow {
+
+    private static final Predicate<Message> WINDOW_PREDICATE = or(RowToken.class::isInstance,
+        ColumnMetadataToken.class::isInstance,
+        DoneInProcToken.class::isInstance,
+        IntermediateCount.class::isInstance,
+        AbstractInfoToken.class::isInstance,
+        Completion.class::isInstance);
 
     private static final Logger logger = LoggerFactory.getLogger(RpcQueryMessageFlow.class);
 
@@ -102,40 +109,39 @@ final class RpcQueryMessageFlow {
         Assert.requireNonNull(client, "Client must not be null");
         Assert.requireNonNull(query, "Query must not be null");
 
-        EmitterProcessor<ClientMessage> outbound = EmitterProcessor.create(false);
-        FluxSink<ClientMessage> requests = outbound.sink();
-
         EmitterProcessor<Message> inbound = EmitterProcessor.create(false);
-        Flux<Message> firstMessages = inbound.cache(10);
 
         CursorState state = new CursorState();
         state.directMode = true;
 
-        Flux<Message> exchange = client.exchange(outbound.startWith(spExecuteSql(query, binding, client.getRequiredCollation(), client.getTransactionDescriptor())));
-
-        ExceptionFactory factory = ExceptionFactory.withSql(query);
+        Flux<Message> exchange = client.exchange(spExecuteSql(query, binding, client.getRequiredCollation(), client.getTransactionDescriptor()));
         OnCursorComplete cursorComplete = new OnCursorComplete(inbound);
 
-        Flux<Message> messages = firstMessages //
-            .doOnSubscribe(ignore -> QueryLogger.logQuery(client.getContext(), query))
-            .doOnNext(it -> {
+        Flux<Message> messages = inbound //
+            .<Message>handle((message, sink) -> {
 
-                if (it instanceof ReturnValue) {
+                if (message.getClass() == ReturnValue.class) {
 
-                    ReturnValue returnValue = (ReturnValue) it;
+                    ReturnValue returnValue = (ReturnValue) message;
                     returnValue.release();
                 }
 
-                state.update(it);
+                state.update(message);
+
+                if (message.getClass() == ErrorToken.class) {
+                    sink.error(ExceptionFactory.withSql(query).createException((ErrorToken) message));
+                    return;
+                }
+
+                handleMessage(client, 0, null, state, message, sink, cursorComplete);
             })
-            .handle(factory::handleErrorResponse)
-            .<Message>handle((message, sink) -> {
-                handleMessage(client, 0, requests, state, message, sink, cursorComplete);
-            })
-            .filter(filterForWindow())
+            .filter(WINDOW_PREDICATE)
             .doOnCancel(cursorComplete);
 
-        return messages.doOnSubscribe(ignore -> exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound));
+        return messages.doOnSubscribe(ignore -> {
+            QueryLogger.logQuery(client.getContext(), query);
+            exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound);
+        });
     }
 
     /**
@@ -153,10 +159,8 @@ final class RpcQueryMessageFlow {
         Assert.requireNonNull(query, "Query must not be null");
 
         EmitterProcessor<ClientMessage> outbound = EmitterProcessor.create(false);
-        FluxSink<ClientMessage> requests = outbound.sink();
 
         EmitterProcessor<Message> inbound = EmitterProcessor.create(false);
-        Flux<Message> firstMessages = inbound.cache(10);
 
         CursorState state = new CursorState();
 
@@ -165,13 +169,12 @@ final class RpcQueryMessageFlow {
         ExceptionFactory factory = ExceptionFactory.withSql(query);
         OnCursorComplete cursorComplete = new OnCursorComplete(inbound);
 
-        Flux<Message> messages = firstMessages //
-            .doOnSubscribe(ignore -> QueryLogger.logQuery(client.getContext(), query))
-            .doOnNext(it -> {
+        Flux<Message> messages = inbound //
+            .<Message>handle((message, sink) -> {
 
-                if (it instanceof ReturnValue) {
+                if (message.getClass() == ReturnValue.class) {
 
-                    ReturnValue returnValue = (ReturnValue) it;
+                    ReturnValue returnValue = (ReturnValue) message;
 
                     // cursor Id
                     if (returnValue.getOrdinal() == 0) {
@@ -181,16 +184,22 @@ final class RpcQueryMessageFlow {
                     returnValue.release();
                 }
 
-                state.update(it);
+                state.update(message);
+
+                if (message.getClass() == ErrorToken.class) {
+                    sink.error(ExceptionFactory.withSql(query).createException((ErrorToken) message));
+                    return;
+                }
+
+                handleMessage(client, fetchSize, outbound, state, message, sink, cursorComplete);
             })
-            .handle(factory::handleErrorResponse)
-            .<Message>handle((message, sink) -> {
-                handleMessage(client, fetchSize, requests, state, message, sink, cursorComplete);
-            })
-            .filter(filterForWindow())
+            .filter(WINDOW_PREDICATE)
             .doOnCancel(cursorComplete);
 
-        return messages.doOnSubscribe(ignore -> exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound));
+        return messages.doOnSubscribe(ignore -> {
+            QueryLogger.logQuery(client.getContext(), query);
+            exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound);
+        });
     }
 
     /**
@@ -211,11 +220,7 @@ final class RpcQueryMessageFlow {
         Assert.requireNonNull(query, "Query must not be null");
 
         EmitterProcessor<ClientMessage> outbound = EmitterProcessor.create(false);
-        FluxSink<ClientMessage> requests = outbound.sink();
-
         EmitterProcessor<Message> inbound = EmitterProcessor.create(false);
-        Flux<Message> firstMessages = inbound.cache(10);
-
         CursorState state = new CursorState();
 
         int handle = statementCache.getHandle(query, binding);
@@ -231,17 +236,14 @@ final class RpcQueryMessageFlow {
         }
 
         Flux<Message> exchange = client.exchange(outbound.startWith(rpcRequest));
-
-        ExceptionFactory factory = ExceptionFactory.withSql(query);
         OnCursorComplete cursorComplete = new OnCursorComplete(inbound);
 
-        Flux<Message> messages = firstMessages //
-            .doOnSubscribe(ignore -> QueryLogger.logQuery(client.getContext(), query))
-            .doOnNext(it -> {
+        Flux<Message> messages = inbound //
+            .<Message>handle((message, sink) -> {
 
-                if (it instanceof ReturnValue) {
+                if (message.getClass() == ReturnValue.class) {
 
-                    ReturnValue returnValue = (ReturnValue) it;
+                    ReturnValue returnValue = (ReturnValue) message;
 
                     if (needsPrepare) {
 
@@ -262,16 +264,22 @@ final class RpcQueryMessageFlow {
                     returnValue.release();
                 }
 
-                state.update(it);
+                state.update(message);
+
+                if (message.getClass() == ErrorToken.class) {
+                    sink.error(ExceptionFactory.withSql(query).createException((ErrorToken) message));
+                    return;
+                }
+
+                handleMessage(client, fetchSize, outbound, state, message, sink, cursorComplete);
             })
-            .handle(factory::handleErrorResponse)
-            .<Message>handle((message, sink) -> {
-                handleMessage(client, fetchSize, requests, state, message, sink, cursorComplete);
-            })
-            .filter(filterForWindow())
+            .filter(WINDOW_PREDICATE)
             .doOnCancel(cursorComplete);
 
-        return messages.doOnSubscribe(ignore -> exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound));
+        return messages.doOnSubscribe(ignore -> {
+            QueryLogger.logQuery(client.getContext(), query);
+            exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound);
+        });
     }
 
     private static int parseCursorId(Codecs codecs, CursorState state, ReturnValue returnValue) {
@@ -281,20 +289,10 @@ final class RpcQueryMessageFlow {
         return cursorId;
     }
 
-    private static Predicate<Message> filterForWindow() {
-
-        return or(RowToken.class::isInstance,
-            ColumnMetadataToken.class::isInstance,
-            DoneInProcToken.class::isInstance,
-            IntermediateCount.class::isInstance,
-            AbstractInfoToken.class::isInstance,
-            Completion.class::isInstance);
-    }
-
-    private static void handleMessage(Client client, int fetchSize, FluxSink<ClientMessage> requests, CursorState state, Message message, SynchronousSink<Message> sink,
+    private static void handleMessage(Client client, int fetchSize, EmitterProcessor<ClientMessage> requests, CursorState state, Message message, SynchronousSink<Message> sink,
                                       Runnable onCursorComplete) {
 
-        if (message instanceof ColumnMetadataToken && ((ColumnMetadataToken) message).getColumns().isEmpty()) {
+        if (message instanceof ColumnMetadataToken && !((ColumnMetadataToken) message).hasColumns()) {
             return;
         }
 
@@ -338,7 +336,7 @@ final class RpcQueryMessageFlow {
         }
     }
 
-    static void onDone(Client client, int fetchSize, FluxSink<ClientMessage> requests, CursorState state, Runnable completion) {
+    static void onDone(Client client, int fetchSize, Processor<ClientMessage, ClientMessage> requests, CursorState state, Runnable completion) {
 
         Phase phase = state.phase;
 
@@ -355,11 +353,11 @@ final class RpcQueryMessageFlow {
                 if (phase == Phase.NONE) {
                     state.phase = Phase.FETCHING;
                 }
-                requests.next(spCursorFetch(state.cursorId, FETCH_NEXT, fetchSize, client.getTransactionDescriptor()));
+                requests.onNext(spCursorFetch(state.cursorId, FETCH_NEXT, fetchSize, client.getTransactionDescriptor()));
             } else {
                 state.phase = Phase.CLOSING;
                 // TODO: spCursorClose should happen also if a subscriber cancels its subscription.
-                requests.next(spCursorClose(state.cursorId, client.getTransactionDescriptor()));
+                requests.onNext(spCursorClose(state.cursorId, client.getTransactionDescriptor()));
             }
 
             state.hasSeenRows = false;

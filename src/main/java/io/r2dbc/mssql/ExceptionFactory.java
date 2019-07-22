@@ -165,6 +165,15 @@ final class ExceptionFactory {
         }
     }
 
+    /**
+     * Create a {@link R2dbcException} for a {@link ErrorToken}.
+     *
+     * @param message the message.
+     */
+    Exception createException(ErrorToken message) {
+        return createException(message, this.sql);
+    }
+
     private static ErrorDetails createExceptionDetails(AbstractInfoToken token) {
         return new ErrorDetails(token.getMessage(), token.getNumber(), token.getState(), token.getInfoClass(), token.getServerName(), token.getProcName(), token.getLineNumber());
     }

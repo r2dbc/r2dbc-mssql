@@ -34,7 +34,7 @@ import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.FluxSink;
+import org.reactivestreams.Processor;
 import reactor.core.publisher.SynchronousSink;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,7 +53,7 @@ class RpcQueryMessageFlowUnitTests {
 
     Client client = mock(Client.class);
 
-    FluxSink<ClientMessage> requests = mock(FluxSink.class);
+    Processor<ClientMessage, ClientMessage> requests = mock(Processor.class);
 
     SynchronousSink<Message> sink = mock(SynchronousSink.class);
 
@@ -226,7 +226,7 @@ class RpcQueryMessageFlowUnitTests {
         RpcQueryMessageFlow.onDone(client, 128, requests, state, completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.FETCHING);
-        verify(requests).next(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
+        verify(requests).onNext(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
         verifyZeroInteractions(completion);
     }
 
@@ -241,7 +241,7 @@ class RpcQueryMessageFlowUnitTests {
         RpcQueryMessageFlow.onDone(client, 128, requests, state, completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.FETCHING);
-        verify(requests).next(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
+        verify(requests).onNext(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
         verifyZeroInteractions(completion);
     }
 
@@ -255,7 +255,7 @@ class RpcQueryMessageFlowUnitTests {
         RpcQueryMessageFlow.onDone(client, 128, requests, state, completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSING);
-        verify(requests).next(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
+        verify(requests).onNext(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
         verifyZeroInteractions(sink);
     }
 
@@ -268,7 +268,7 @@ class RpcQueryMessageFlowUnitTests {
         RpcQueryMessageFlow.onDone(client, 128, requests, state, completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSING);
-        verify(requests).next(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
+        verify(requests).onNext(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
         verifyZeroInteractions(completion);
     }
 

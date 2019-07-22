@@ -25,21 +25,24 @@ import reactor.util.annotation.Nullable;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The default {@link Codec} implementation.  Delegates to type-specific codec implementations.
  */
 public final class DefaultCodecs implements Codecs {
 
-    private final List<Codec<?>> codecs;
+    private final Codec<?>[] codecs;
 
     private final Map<SqlServerType, Codec<?>> codecPreferences = new HashMap<>();
+
+    private final Map<Class<?>, Codec<?>> codecNullCache = new ConcurrentHashMap<>();
 
     /**
      * Creates a new instance of {@link DefaultCodecs}.
      */
+    @SuppressWarnings("rawtypes")
     public DefaultCodecs() {
 
         this.codecs = Arrays.asList(
@@ -66,7 +69,7 @@ public final class DefaultCodecs implements Codecs {
             ZonedDateTimeCodec.INSTANCE,
             BlobCodec.INSTANCE,
             ClobCodec.INSTANCE
-        );
+        ).toArray(new Codec[0]);
 
         this.codecPreferences.put(SqlServerType.BIT, BooleanCodec.INSTANCE);
         this.codecPreferences.put(SqlServerType.TINYINT, ByteCodec.INSTANCE);
@@ -109,15 +112,20 @@ public final class DefaultCodecs implements Codecs {
         Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
         Assert.requireNonNull(type, "Type must not be null");
 
-        for (Codec<?> codec : this.codecs) {
-            if (codec.canEncodeNull(type)) {
-                return codec.encodeNull(allocator);
+        Codec<?> codecToUse = this.codecNullCache.computeIfAbsent(type, key -> {
+
+            for (Codec<?> codec : this.codecs) {
+                if (codec.canEncodeNull(key)) {
+                    return codec;
+                }
             }
-        }
 
-        throw new IllegalArgumentException(String.format("Cannot encode [null] parameter of type [%s]", type.getName()));
+            throw new IllegalArgumentException(String.format("Cannot encode [null] parameter of type [%s]", type.getName()));
+
+        });
+
+        return codecToUse.encodeNull(allocator);
     }
-
 
     @Override
     public <T> T decode(@Nullable ByteBuf buffer, Decodable decodable, Class<? extends T> type) {
@@ -142,7 +150,6 @@ public final class DefaultCodecs implements Codecs {
     public Class<?> getJavaType(TypeInformation type) {
 
         Assert.requireNonNull(type, "Type must not be null");
-
         Codec<Object> decodingCodec = getDecodingCodec(new TypeInformationWrapper(type), Object.class);
         return decodingCodec.getType();
     }

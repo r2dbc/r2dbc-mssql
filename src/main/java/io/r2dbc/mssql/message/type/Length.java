@@ -159,7 +159,6 @@ public final class Length {
                     buffer.skipBytes(24);
                     int valueLength = Decode.asLong(buffer);
 
-
                     return Length.of(valueLength, false);
                 }
 

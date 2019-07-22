@@ -76,6 +76,8 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
      */
     static final int DONE_SRVERROR = 0x100;
 
+    static final int CACHE_SIZE = 48;
+
     private final int status;
 
     /**

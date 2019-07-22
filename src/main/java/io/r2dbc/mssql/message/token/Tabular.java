@@ -22,6 +22,7 @@ import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.util.Assert;
+import reactor.core.publisher.SynchronousSink;
 import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
@@ -119,7 +120,7 @@ public final class Tabular implements Message {
                 // TODO: Chunking support.
                 ColumnMetadataToken colMetadataToken = ColumnMetadataToken.decode(buffer, encryptionSupported);
 
-                if (columns.get() == null || !colMetadataToken.getColumns().isEmpty()) {
+                if (columns.get() == null || colMetadataToken.hasColumns()) {
                     columns.set(colMetadataToken);
                 }
 
@@ -384,6 +385,45 @@ public final class Tabular implements Message {
             }
 
             return tokens;
+        }
+
+        /**
+         * Decode the {@link Tabular} response from a {@link ByteBuf}.
+         *
+         * @param buffer must not be null.
+         * @return the decoded {@link Tabular} response {@link Message}.
+         */
+        public boolean decode(ByteBuf buffer, SynchronousSink<Message> messageConsumer) {
+
+            Assert.requireNonNull(buffer, "Buffer must not be null");
+
+            boolean hasMessages = false;
+            while (true) {
+
+                if (buffer.readableBytes() == 0) {
+                    break;
+                }
+
+                int readerIndex = buffer.readerIndex();
+                byte type = Decode.asByte(buffer);
+
+                DataToken message = this.decodeFunction.tryDecode(type, buffer);
+
+                if (message == DecodeFinished.UNABLE_TO_DECODE) {
+                    buffer.readerIndex(readerIndex);
+                    break;
+                }
+
+                if (message == DecodeFinished.FINISHED) {
+                    break;
+                }
+
+                messageConsumer.next(message);
+                hasMessages = true;
+
+            }
+
+            return hasMessages;
         }
     }
 

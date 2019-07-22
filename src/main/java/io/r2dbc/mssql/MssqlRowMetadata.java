@@ -21,26 +21,26 @@ import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.token.ColumnMetadataToken;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.RowMetadata;
+import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * Microsoft SQL Server-specific {@link RowMetadata}.
  *
  * @author Mark Paluch
  */
-final class MssqlRowMetadata extends ColumnSource implements RowMetadata {
+final class MssqlRowMetadata extends ColumnSource implements RowMetadata, Collection<String> {
 
     private final Codecs codecs;
 
-    private final Map<Column, MssqlColumnMetadata> metadataCache = new HashMap<>();
-
-    private final CollatedCollection columnset;
+    @Nullable
+    private Map<Column, MssqlColumnMetadata> metadataCache;
 
     /**
      * Creates a new {@link MssqlColumnMetadata}.
@@ -49,24 +49,9 @@ final class MssqlRowMetadata extends ColumnSource implements RowMetadata {
      * @param columns          collection of {@link Column}s.
      * @param nameKeyedColumns name-keyed {@link Map} of {@link Column}s.
      */
-    MssqlRowMetadata(Codecs codecs, List<Column> columns, Map<String, Column> nameKeyedColumns) {
-        super(columns, getNameKeyedColumns(nameKeyedColumns));
+    MssqlRowMetadata(Codecs codecs, Column[] columns, Map<String, Column> nameKeyedColumns) {
+        super(columns, nameKeyedColumns);
         this.codecs = Assert.requireNonNull(codecs, "Codecs must not be null");
-
-        List<String> orderedColumns = new ArrayList<>(columns.size());
-        for (Column column : columns) {
-            orderedColumns.add(column.getName());
-        }
-
-        this.columnset = new CollatedCollection(orderedColumns);
-    }
-
-    private static Map<String, Column> getNameKeyedColumns(Map<String, Column> nameKeyedColumns) {
-
-        Map<String, Column> columns = new TreeMap<>(EscapeAwareComparator.INSTANCE);
-        columns.putAll(nameKeyedColumns);
-
-        return columns;
     }
 
     /**
@@ -84,17 +69,24 @@ final class MssqlRowMetadata extends ColumnSource implements RowMetadata {
 
     @Override
     public MssqlColumnMetadata getColumnMetadata(Object identifier) {
-        return this.metadataCache.computeIfAbsent(this.getColumn(identifier), column -> new MssqlColumnMetadata(column, codecs));
+        if (this.metadataCache == null) {
+            this.metadataCache = new HashMap<>();
+        }
+        return this.metadataCache.computeIfAbsent(this.getColumn(identifier), column -> new MssqlColumnMetadata(column, this.codecs));
     }
 
     @Override
     public List<MssqlColumnMetadata> getColumnMetadatas() {
 
+        if (this.metadataCache == null) {
+            this.metadataCache = new HashMap<>();
+        }
+
         List<MssqlColumnMetadata> metadatas = new ArrayList<>(this.getColumnCount());
 
         for (int i = 0; i < this.getColumnCount(); i++) {
 
-            MssqlColumnMetadata columnMetadata = this.metadataCache.computeIfAbsent(this.getColumn(i), column -> new MssqlColumnMetadata(column, codecs));
+            MssqlColumnMetadata columnMetadata = this.metadataCache.computeIfAbsent(this.getColumn(i), column -> new MssqlColumnMetadata(column, this.codecs));
             metadatas.add(columnMetadata);
         }
 
@@ -103,6 +95,108 @@ final class MssqlRowMetadata extends ColumnSource implements RowMetadata {
 
     @Override
     public Collection<String> getColumnNames() {
-        return this.columnset;
+        return this;
+    }
+
+    @Override
+    public int size() {
+        return this.getColumnCount();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return size() == 0;
+    }
+
+    @Override
+    public boolean contains(Object o) {
+
+        if (o instanceof String) {
+            return this.findColumn((String) o) != null;
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean containsAll(Collection<?> c) {
+
+        for (Object o : c) {
+            if (!contains(o)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public Iterator<String> iterator() {
+
+        Column[] columns = this.getColumns();
+
+        return new Iterator<String>() {
+
+            int index = 0;
+
+            @Override
+            public boolean hasNext() {
+                return columns.length > this.index;
+            }
+
+            @Override
+            public String next() {
+                Column column = columns[this.index++];
+                return column.getName();
+            }
+        };
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T[] toArray(T[] a) {
+        return (T[]) toArray();
+    }
+
+    @Override
+    public Object[] toArray() {
+
+        Object[] result = new Object[size()];
+
+        for (int i = 0; i < size(); i++) {
+            result[i] = this.getColumn(i).getName();
+        }
+
+        return result;
+    }
+
+    @Override
+    public boolean add(String s) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean remove(Object o) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean addAll(Collection<? extends String> c) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean removeAll(Collection<?> c) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean retainAll(Collection<?> c) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void clear() {
+        throw new UnsupportedOperationException();
     }
 }

@@ -46,6 +46,20 @@ class ColInfoTokenUnitTests {
         assertThat(column.getColumn()).isEqualTo((byte) 1);
         assertThat(column.getStatus()).isEqualTo((byte) 0);
         assertThat(column.getName()).isNull();
+        assertThat(buffer.readableBytes()).isZero();
+    }
+
+    @Test
+    void shouldSkipToken() {
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("a50900010100020100030014");
+
+        assertThat(buffer.readByte()).isEqualTo(ColInfoToken.TYPE);
+
+        ColInfoToken token = ColInfoToken.skip(buffer);
+
+        assertThat(token.getColumns()).isEmpty();
+        assertThat(buffer.readableBytes()).isZero();
     }
 
     @Test

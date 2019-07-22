@@ -29,8 +29,6 @@ import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-import reactor.test.StepVerifier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,11 +57,9 @@ class StreamDecoderUnitTests {
         header.encode(buffer);
         token.encode(buffer);
 
-        Flux<Message> messageStream = decoder.decode(buffer, ConnectionState.POST_LOGIN.decoder(CLIENT));
+        List<Message> messageStream = decoder.decode(buffer, ConnectionState.POST_LOGIN.decoder(CLIENT));
 
-        messageStream.as(StepVerifier::create)
-            .expectNext(token)
-            .verifyComplete();
+        assertThat(messageStream).containsOnly(token);
 
         assertThat(decoder.getDecoderState()).isNull();
         assertThat(buffer.refCnt()).isEqualTo(1);
@@ -80,28 +76,23 @@ class StreamDecoderUnitTests {
         // Just the header type.
         ByteBuf partial = Unpooled.wrappedBuffer(new byte[]{4});
 
-        Flux<Message> noMessage = decoder.decode(partial, ConnectionState.POST_LOGIN.decoder(CLIENT));
-
-        noMessage.as(StepVerifier::create)
-            .verifyComplete();
+        List<Message> noMessage = decoder.decode(partial, ConnectionState.POST_LOGIN.decoder(CLIENT));
+        assertThat(noMessage).isEmpty();
 
         StreamDecoder.DecoderState state = decoder.getDecoderState();
         assertThat(state).isNotNull();
         assertThat(state.header).isNull();
         assertThat(state.remainder.readableBytes()).isEqualTo(1);
         assertThat(state.aggregatedBody.readableBytes()).isEqualTo(0);
-        assertThat(partial.refCnt()).isEqualTo(2);
+        assertThat(partial.refCnt()).isEqualTo(1);
 
         ByteBuf nextPacket = TestByteBufAllocator.TEST.buffer();
         nextPacket.writeBytes(new byte[]{1, 0, 0x15, 0, 0, 0, 0});
         token.encode(nextPacket);
 
-        Flux<Message> completeMessage = decoder.decode(nextPacket, ConnectionState.POST_LOGIN.decoder(CLIENT));
+        List<Message> completeMessage = decoder.decode(nextPacket, ConnectionState.POST_LOGIN.decoder(CLIENT));
 
-        completeMessage.as(StepVerifier::create)
-            .expectNext(token)
-            .verifyComplete();
-
+        assertThat(completeMessage).containsOnly(token);
         assertThat(decoder.getDecoderState()).isNull();
         assertThat(partial.refCnt()).isEqualTo(1);
         assertThat(nextPacket.refCnt()).isEqualTo(1);
@@ -124,11 +115,9 @@ class StreamDecoderUnitTests {
         token.encode(buffer);
         buffer.writeByte(4);
 
-        Flux<Message> completeMessage = decoder.decode(buffer, ConnectionState.POST_LOGIN.decoder(CLIENT));
+        List<Message> completeMessage = decoder.decode(buffer, ConnectionState.POST_LOGIN.decoder(CLIENT));
 
-        completeMessage.as(StepVerifier::create)
-            .expectNext(token)
-            .verifyComplete();
+        assertThat(completeMessage).containsOnly(token);
 
         StreamDecoder.DecoderState state = decoder.getDecoderState();
         assertThat(state).isNotNull();
@@ -158,11 +147,9 @@ class StreamDecoderUnitTests {
         header2.encode(buffer);
         buffer.writeBytes(new byte[]{4, 2, 1});
 
-        Flux<Message> completeMessage = decoder.decode(buffer, ConnectionState.POST_LOGIN.decoder(CLIENT));
+        List<Message> completeMessage = decoder.decode(buffer, ConnectionState.POST_LOGIN.decoder(CLIENT));
 
-        completeMessage.as(StepVerifier::create)
-            .expectNext(token)
-            .verifyComplete();
+        assertThat(completeMessage).containsOnly(token);
 
         StreamDecoder.DecoderState state = decoder.getDecoderState();
         assertThat(state).isNotNull();
@@ -192,24 +179,19 @@ class StreamDecoderUnitTests {
         header2.encode(buffer);
         buffer.writeBytes(new byte[]{nextBuffer.readByte(), nextBuffer.readByte(), nextBuffer.readByte()});
 
-        Flux<Message> firstMessage = decoder.decode(buffer, ConnectionState.POST_LOGIN.decoder(CLIENT));
+        List<Message> firstMessage = decoder.decode(buffer, ConnectionState.POST_LOGIN.decoder(CLIENT));
 
-        firstMessage.as(StepVerifier::create)
-            .expectNext(token)
-            .verifyComplete();
+        assertThat(firstMessage).containsOnly(token);
 
         StreamDecoder.DecoderState state = decoder.getDecoderState();
         assertThat(state).isNotNull();
         assertThat(state.header).isNotNull().isEqualTo(header2);
         assertThat(state.remainder.readableBytes()).isEqualTo(3);
         assertThat(state.aggregatedBody.readableBytes()).isEqualTo(0);
-        assertThat(buffer.refCnt()).isEqualTo(2);
+        assertThat(buffer.refCnt()).isEqualTo(1);
 
-        Flux<Message> secondMessage = decoder.decode(nextBuffer, ConnectionState.POST_LOGIN.decoder(CLIENT));
-
-        secondMessage.as(StepVerifier::create)
-            .expectNext(token)
-            .verifyComplete();
+        List<Message> secondMessage = decoder.decode(nextBuffer, ConnectionState.POST_LOGIN.decoder(CLIENT));
+        assertThat(secondMessage).containsOnly(token);
 
         assertThat(decoder.getDecoderState()).isNull();
 
@@ -241,23 +223,19 @@ class StreamDecoderUnitTests {
         lastHeader.encode(lastChunk);
         lastChunk.writeBytes(fullData);
 
-        Flux<Message> firstAttempt = decoder.decode(firstChunk, ConnectionState.POST_LOGIN.decoder(CLIENT));
+        List<Message> firstAttempt = decoder.decode(firstChunk, ConnectionState.POST_LOGIN.decoder(CLIENT));
+        assertThat(firstAttempt).isEmpty();
 
-        firstAttempt.as(StepVerifier::create)
-            .verifyComplete();
 
         StreamDecoder.DecoderState state = decoder.getDecoderState();
         assertThat(state).isNotNull();
         assertThat(state.header).isNull(); // header completed
         assertThat(state.remainder.readableBytes()).isEqualTo(0);
         assertThat(state.aggregatedBody.readableBytes()).isEqualTo(3);
-        assertThat(firstChunk.refCnt()).isEqualTo(2);
+        assertThat(firstChunk.refCnt()).isEqualTo(1);
 
-        Flux<Message> nextAttempt = decoder.decode(lastChunk, ConnectionState.POST_LOGIN.decoder(CLIENT));
-
-        nextAttempt.as(StepVerifier::create)
-            .expectNext(token)
-            .verifyComplete();
+        List<Message> nextAttempt = decoder.decode(lastChunk, ConnectionState.POST_LOGIN.decoder(CLIENT));
+        assertThat(nextAttempt).containsOnly(token);
 
         assertThat(decoder.getDecoderState()).isNull();
 
@@ -280,15 +258,11 @@ class StreamDecoderUnitTests {
 
         // expect incomplete chunks to be empty
         for (int i = 0; i < chunks.size() - 1; i++) {
-
-            decoder.decode(chunks.get(i), messageDecoder).as(StepVerifier::create)
-                .verifyComplete();
+            assertThat(decoder.decode(chunks.get(i), messageDecoder)).isEmpty();
         }
 
         // Last chunk emits the data
-        decoder.decode(chunks.get(chunks.size() - 1), messageDecoder).as(StepVerifier::create)
-            .expectNextCount(1)
-            .verifyComplete();
+        assertThat(decoder.decode(chunks.get(chunks.size() - 1), messageDecoder)).hasSize(1);
 
         StreamDecoder.DecoderState state = decoder.getDecoderState();
         assertThat(state).isNull();
@@ -348,8 +322,6 @@ class StreamDecoderUnitTests {
         colHeader.encode(initialize);
         initialize.writeBytes(colmetadata);
 
-        decoder.decode(initialize, messageDecoder).as(StepVerifier::create)
-            .assertNext(actual -> assertThat(actual).isInstanceOf(ColumnMetadataToken.class))
-            .verifyComplete();
+        assertThat(decoder.decode(initialize, messageDecoder).get(0)).isInstanceOf(ColumnMetadataToken.class);
     }
 }

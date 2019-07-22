@@ -18,8 +18,9 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.util.Assert;
+import reactor.util.annotation.Nullable;
 
-import java.util.List;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -30,15 +31,11 @@ import java.util.stream.Collectors;
  */
 abstract class ColumnSource {
 
-    private final List<Column> columns;
+    private final Column[] columns;
 
     private final Map<String, Column> nameKeyedColumns;
 
-    ColumnSource(List<Column> columns, Map<String, Column> nameKeyedColumns) {
-
-        Assert.requireNonNull(columns, "Columns must not be null");
-        Assert.requireNonNull(nameKeyedColumns, "Name-keyed columns must not be null");
-        Assert.isTrue(columns.size() >= nameKeyedColumns.size(), "The size of columns must be greater or equal to nameKeyedColumns");
+    ColumnSource(Column[] columns, Map<String, Column> nameKeyedColumns) {
 
         this.columns = columns;
         this.nameKeyedColumns = nameKeyedColumns;
@@ -75,11 +72,11 @@ abstract class ColumnSource {
      */
     Column getColumn(int index) {
 
-        if (this.columns.size() > index && index >= 0) {
-            return this.columns.get(index);
+        if (this.columns.length > index && index >= 0) {
+            return this.columns[index];
         }
 
-        throw new IllegalArgumentException(String.format("Column index [%d] is larger than the number of columns [%d]", index, this.columns.size()));
+        throw new IllegalArgumentException(String.format("Column index [%d] is larger than the number of columns [%d]", index, this.columns.length));
     }
 
     /**
@@ -90,10 +87,31 @@ abstract class ColumnSource {
      */
     Column getColumn(String name) {
 
-        Column column = this.nameKeyedColumns.get(name);
+        Column column = findColumn(name);
 
         if (column == null) {
             throw new IllegalArgumentException(String.format("Column name [%s] does not exist in column names [%s]", name, this.nameKeyedColumns.keySet()));
+        }
+
+        return column;
+    }
+
+    /**
+     * Lookup {@link Column} by its {@code name}.
+     *
+     * @param name the column name.
+     * @return the {@link Column}.
+     */
+    @Nullable
+    Column findColumn(String name) {
+
+        Column column = this.nameKeyedColumns.get(name);
+
+        if (column == null) {
+            name = CollatedCollection.getColumnName(name, this.nameKeyedColumns.keySet());
+            if (name != null) {
+                column = this.nameKeyedColumns.get(name);
+            }
         }
 
         return column;
@@ -105,14 +123,18 @@ abstract class ColumnSource {
      * @return the number of {@link Column}s.
      */
     int getColumnCount() {
-        return this.columns.size();
+        return this.columns.length;
+    }
+
+    Column[] getColumns() {
+        return this.columns;
     }
 
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [").append(this.columns.stream().map(Column::getName).collect(Collectors.joining(", "))).append("]");
+        sb.append(" [").append(Arrays.stream(this.columns).map(Column::getName).collect(Collectors.joining(", "))).append("]");
         return sb.toString();
     }
 }

@@ -29,7 +29,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -104,7 +103,7 @@ class RowTokenUnitTests {
 
         Column id = new Column(0, "id", integerType);
         Column content = new Column(1, "content", plpType);
-        ColumnMetadataToken columns = ColumnMetadataToken.create(Arrays.asList(id, content));
+        ColumnMetadataToken columns = ColumnMetadataToken.create(new Column[]{id, content});
 
         ByteBuf rowData = loadRowData("int-varcharmax-data.txt");
 
@@ -122,7 +121,7 @@ class RowTokenUnitTests {
 
         Column id = new Column(0, "id", integerType);
         Column content = new Column(1, "content", plpType);
-        ColumnMetadataToken columns = ColumnMetadataToken.create(Arrays.asList(id, content));
+        ColumnMetadataToken columns = ColumnMetadataToken.create(new Column[]{id, content});
 
         ByteBuf rowData = HexUtils.decodeToByteBuf("04 01 00 00 00 FF FF FF FF FF FF FF FF");
 
@@ -140,7 +139,7 @@ class RowTokenUnitTests {
 
         Column id = new Column(0, "id", integerType);
         Column content = new Column(1, "content", plpType);
-        ColumnMetadataToken columns = ColumnMetadataToken.create(Arrays.asList(id, content));
+        ColumnMetadataToken columns = ColumnMetadataToken.create(new Column[]{id, content});
 
         ByteBuf rowData = loadRowData("int-varcharmax-data.txt");
         CanDecodeTestSupport.testCanDecode(rowData, buffer -> RowToken.canDecode(buffer, columns.getColumns()));
@@ -154,7 +153,7 @@ class RowTokenUnitTests {
 
         Column id = new Column(0, "id", integerType);
         Column content = new Column(1, "content", plpType);
-        ColumnMetadataToken columns = ColumnMetadataToken.create(Arrays.asList(id, content));
+        ColumnMetadataToken columns = ColumnMetadataToken.create(new Column[]{id, content});
 
         ByteBuf rowData = loadRowData("int-varcharmax-data.txt");
 

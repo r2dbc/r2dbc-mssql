@@ -23,6 +23,9 @@ import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.Assert;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.SynchronousSink;
+
+import java.util.function.BiConsumer;
 
 /**
  * Simple (direct) query message flow using {@link SqlBatch}.
@@ -30,7 +33,6 @@ import reactor.core.publisher.Flux;
  * @author Mark Paluch
  */
 final class QueryMessageFlow {
-
 
     /**
      * Execute a simple query using {@link SqlBatch}. Query execution terminates with a {@link DoneToken}.
@@ -46,13 +48,20 @@ final class QueryMessageFlow {
 
         return client.exchange(SqlBatch.create(1, client.getTransactionDescriptor(), query))
             .doOnSubscribe(ignore -> QueryLogger.logQuery(client.getContext(), query))
-            .handle((message, sink) -> {
+            .handle(DoneHandler.INSTANCE);
+    }
 
-                sink.next(message);
+    enum DoneHandler implements BiConsumer<Message, SynchronousSink<Message>> {
 
-                if (AbstractDoneToken.isDone(message)) {
-                    sink.complete();
-                }
-            });
+        INSTANCE;
+
+        @Override
+        public void accept(Message message, SynchronousSink<Message> sink) {
+            sink.next(message);
+
+            if (AbstractDoneToken.isDone(message)) {
+                sink.complete();
+            }
+        }
     }
 }

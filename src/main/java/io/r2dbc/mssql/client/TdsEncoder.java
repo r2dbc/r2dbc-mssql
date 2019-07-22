@@ -201,11 +201,11 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
     }
 
     private static HeaderOptions getLastHeader(HeaderOptions headerOptions) {
-        return HeaderOptions.create(headerOptions.getType(), headerOptions.getStatus().and(Status.StatusBit.EOM));
+        return headerOptions.and(Status.StatusBit.EOM);
     }
 
     private static HeaderOptions getChunkedHeaderOptions(HeaderOptions headerOptions) {
-        return HeaderOptions.create(headerOptions.getType(), headerOptions.getStatus().not(Status.StatusBit.EOM));
+        return headerOptions.not(Status.StatusBit.EOM);
     }
 
     private void doWriteFragment(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf body,
@@ -228,9 +228,7 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
 
             int messageLength = getBytesToWrite(body.readableBytes());
             ByteBuf buffer = ctx.alloc().buffer(messageLength);
-            Header header = Header.create(optionsToUse, messageLength, this.packetIdProvider);
-
-            header.encode(buffer);
+            Header.encode(buffer, optionsToUse, messageLength, this.packetIdProvider);
 
             if (this.lastChunkRemainder != null) {
 
@@ -267,9 +265,7 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
 
                 int combinedSize = this.lastChunkRemainder.readableBytes() + body.readableBytes();
                 HeaderOptions optionsToUse = isLastTransportPacket(combinedSize, lastLogicalPacket) ? getLastHeader(headerOptions) : getChunkedHeaderOptions(headerOptions);
-
-                Header header = Header.create(optionsToUse, this.packetSize, this.packetIdProvider);
-                header.encode(chunked);
+                Header.encode(chunked, optionsToUse, this.packetSize, this.packetIdProvider);
 
                 int actualBodyReadableBytes = this.packetSize - Header.LENGTH - this.lastChunkRemainder.readableBytes();
                 chunked.writeBytes(this.lastChunkRemainder);
@@ -292,8 +288,7 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
 
                 chunk = body.readSlice(getEffectiveChunkSizeWithoutHeader(body.readableBytes()));
 
-                Header header = Header.create(optionsToUse, Header.LENGTH + chunk.readableBytes(), this.packetIdProvider);
-                header.encode(chunked);
+                Header.encode(chunked, optionsToUse, Header.LENGTH + chunk.readableBytes(), this.packetIdProvider);
                 chunked.writeBytes(chunk);
             }
         }

@@ -20,16 +20,11 @@ import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
-import io.r2dbc.mssql.util.Assert;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Column metadata token.
@@ -40,11 +35,13 @@ public final class ColumnMetadataToken extends AbstractDataToken {
 
     public static final byte TYPE = (byte) 0x81;
 
-    private static final byte TYPE_SQLDATACLASSIFICATION = (byte) 0xa3;
-
     public static final int NO_COLUMNS = 0xFFFF;
 
-    private final List<Column> columns;
+    private static final byte TYPE_SQLDATACLASSIFICATION = (byte) 0xa3;
+
+    private static final ColumnMetadataToken EMPTY = new ColumnMetadataToken(new Column[0]);
+
+    private final Column[] columns;
 
     private final Map<String, Column> namedColumns;
 
@@ -53,21 +50,27 @@ public final class ColumnMetadataToken extends AbstractDataToken {
      *
      * @param columns the columns.
      */
-    private ColumnMetadataToken(List<Column> columns) {
+    private ColumnMetadataToken(Column[] columns) {
 
         super(TYPE);
-        this.columns = Assert.requireNonNull(columns, "Columns must not be null");
 
-        Map<String, Column> byName = new LinkedHashMap<>(this.columns.size());
+        this.columns = columns;
 
-        Set<String> names = new HashSet<>();
-        for (Column column : columns) {
-            if (names.add(column.getName().toLowerCase(Locale.ENGLISH))) {
-                byName.put(column.getName(), column);
+        if (columns.length == 1) {
+            this.namedColumns = Collections.singletonMap(columns[0].getName(), columns[0]);
+        } else {
+
+            Map<String, Column> byName = new HashMap<>(this.columns.length, 1);
+
+            for (Column column : columns) {
+                Column old = byName.put(column.getName(), column);
+                if (old != null) {
+                    byName.put(column.getName(), old);
+                }
             }
-        }
 
-        this.namedColumns = byName;
+            this.namedColumns = byName;
+        }
     }
 
     /**
@@ -76,7 +79,7 @@ public final class ColumnMetadataToken extends AbstractDataToken {
      * @param columns the columns.
      * @return
      */
-    public static ColumnMetadataToken create(List<Column> columns) {
+    public static ColumnMetadataToken create(Column[] columns) {
         return new ColumnMetadataToken(columns);
     }
 
@@ -93,7 +96,7 @@ public final class ColumnMetadataToken extends AbstractDataToken {
 
         // Handle the magic NoMetaData value
         if (0xFFFF == columnCount) {
-            return new ColumnMetadataToken(Collections.emptyList());
+            return EMPTY;
         }
 
         if (encryptionSupported) {
@@ -105,13 +108,11 @@ public final class ColumnMetadataToken extends AbstractDataToken {
             }
         }
 
-        List<Column> columns = new ArrayList<>(columnCount);
+        Column[] columns = new Column[columnCount];
 
         for (int i = 0; i < columnCount; i++) {
 
-            Column column = decodeColumn(buffer, encryptionSupported, i);
-
-            columns.add(column);
+            columns[i] = decodeColumn(buffer, encryptionSupported, i);
 
             if (buffer.readableBytes() > 1) {
 
@@ -148,8 +149,12 @@ public final class ColumnMetadataToken extends AbstractDataToken {
         return new Column(columnIndex, name, typeInfo, tableName);
     }
 
-    public List<Column> getColumns() {
+    public Column[] getColumns() {
         return this.columns;
+    }
+
+    public boolean hasColumns() {
+        return this.columns.length != 0;
     }
 
     @Override

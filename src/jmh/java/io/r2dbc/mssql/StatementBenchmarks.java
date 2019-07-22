@@ -157,7 +157,8 @@ public class StatementBenchmarks extends BenchmarkSettings {
     }
 
     @Benchmark
-    public void parametrizedDirectR2dbc(ConnectionHolder connectionHolder, Blackhole voodoo) throws SQLException {
+    @Testable
+    public void parametrizedDirectR2dbc(ConnectionHolder connectionHolder, Blackhole voodoo) {
 
         io.r2dbc.spi.Statement statement = connectionHolder.r2dbc.createStatement("SELECT * FROM simple_test WHERE name = @P0").bind("P0", "foo");
 

@@ -16,6 +16,8 @@
 
 package io.r2dbc.mssql;
 
+import reactor.util.annotation.Nullable;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -134,6 +136,18 @@ final class CollatedCollection implements Collection<String> {
     @Override
     public int hashCode() {
         return this.columns.hashCode();
+    }
+
+    @Nullable
+    public static String getColumnName(String name, Collection<String> names) {
+
+        for (String s : names) {
+            if (EscapeAwareComparator.INSTANCE.compare(name, s) == 0) {
+                return s;
+            }
+        }
+
+        return null;
     }
 
 }

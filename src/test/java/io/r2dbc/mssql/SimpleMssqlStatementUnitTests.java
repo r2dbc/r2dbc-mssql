@@ -52,7 +52,6 @@ import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static io.r2dbc.mssql.message.type.TypeInformation.Builder;
@@ -69,12 +68,12 @@ import static org.mockito.Mockito.when;
  */
 class SimpleMssqlStatementUnitTests {
 
-    static final List<Column> COLUMNS = Arrays.asList(createColumn(0, "employee_id", SqlServerType.TINYINT, 1, LengthStrategy.FIXEDLENTYPE, null),
+    static final Column[] COLUMNS = Arrays.asList(createColumn(0, "employee_id", SqlServerType.TINYINT, 1, LengthStrategy.FIXEDLENTYPE, null),
         createColumn(1, "last_name", SqlServerType.NVARCHAR, 100, LengthStrategy.USHORTLENTYPE, ServerCharset.UNICODE.charset()),
 
         createColumn(2, "first_name", SqlServerType.VARCHAR, 50, LengthStrategy.USHORTLENTYPE, ServerCharset.CP1252.charset()),
 
-        createColumn(3, "salary", SqlServerType.MONEY, 8, LengthStrategy.BYTELENTYPE, null));
+        createColumn(3, "salary", SqlServerType.MONEY, 8, LengthStrategy.BYTELENTYPE, null)).toArray(new Column[0]);
 
     static final ConnectionOptions OPTIONS = new ConnectionOptions();
 

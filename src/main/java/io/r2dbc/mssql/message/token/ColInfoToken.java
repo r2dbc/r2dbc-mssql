@@ -21,6 +21,7 @@ import io.r2dbc.mssql.message.tds.Decode;
 import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -40,12 +41,28 @@ public class ColInfoToken extends AbstractDataToken {
 
     public static final int STATUS_DIFFERENT_NAME = 0x20;
 
+    private static final ColInfoToken EMPTY = new ColInfoToken(Collections.emptyList());
+
     private final List<ColInfo> columns;
 
     private ColInfoToken(List<ColInfo> columns) {
         super(TYPE);
 
         this.columns = columns;
+    }
+
+    /**
+     * Decode a {@link ColInfoToken}.
+     *
+     * @param buffer the data buffer.
+     * @return the {@link ColInfoToken}.
+     */
+    public static ColInfoToken skip(ByteBuf buffer) {
+
+        int length = Decode.uShort(buffer);
+        buffer.skipBytes(length);
+
+        return EMPTY;
     }
 
     /**

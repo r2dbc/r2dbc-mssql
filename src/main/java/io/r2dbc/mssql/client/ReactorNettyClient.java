@@ -40,8 +40,10 @@ import io.r2dbc.mssql.message.token.FeatureExtAckToken;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.CoreSubscriber;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
@@ -50,11 +52,10 @@ import reactor.core.publisher.SynchronousSink;
 import reactor.netty.Connection;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
+import reactor.util.context.Context;
 
 import javax.annotation.Nullable;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -79,10 +80,6 @@ public final class ReactorNettyClient implements Client {
     private final Connection connection;
 
     private final TdsEncoder tdsEncoder;
-
-    private final List<EnvironmentChangeListener> envChangeListeners = new ArrayList<>();
-
-    private final Consumer<AbstractInfoToken> infoTokenConsumer;
 
     private final Consumer<EnvChangeToken> handleEnvChange;
 
@@ -116,6 +113,10 @@ public final class ReactorNettyClient implements Client {
 
     private volatile Optional<Collation> databaseCollation = Optional.empty();
 
+    private TransactionListener transactionListener = new TransactionListener();
+
+    private CollationListener collationListener = new CollationListener();
+
     /**
      * Creates a new frame processor connected to a given TCP connection.
      *
@@ -129,37 +130,22 @@ public final class ReactorNettyClient implements Client {
 
         StreamDecoder decoder = new StreamDecoder();
 
-        this.infoTokenConsumer = (token) -> {
-
-            if (token.getClassification() == AbstractInfoToken.Classification.INFORMATIONAL) {
-                logger.debug(this.context.getMessage("Info: Code [{}] Severity [{}]: {}"), token.getNumber(), token.getClassification(),
-                    token.getMessage());
-            } else {
-                logger.debug(this.context.getMessage("Warning: Code [{}] Severity [{}]: {}"), token.getNumber(), token.getClassification(),
-                    token.getMessage());
-            }
-        };
-
         this.handleEnvChange = (token) -> {
 
             EnvironmentChangeEvent event = new EnvironmentChangeEvent(token);
 
-            for (EnvironmentChangeListener listener : this.envChangeListeners) {
-                try {
-                    listener.onEnvironmentChange(event);
-                } catch (Exception e) {
-                    logger.warn(this.context.getMessage("Failed onEnvironmentChange() in {}"), listener, e);
-                }
+            try {
+                tdsEncoder.onEnvironmentChange(event);
+                transactionListener.onEnvironmentChange(event);
+                collationListener.onEnvironmentChange(event);
+            } catch (Exception e) {
+                logger.warn(this.context.getMessage("Failed onEnvironmentChange() in {}"), "", e);
             }
         };
 
         this.byteBufAllocator = connection.outbound().alloc();
         this.connection = connection;
         this.tdsEncoder = tdsEncoder;
-
-        this.envChangeListeners.add(tdsEncoder);
-        this.envChangeListeners.add(new TransactionListener());
-        this.envChangeListeners.add(new CollationListener());
 
         connection.addHandlerFirst(new ChannelInboundHandlerAdapter() {
 
@@ -176,8 +162,8 @@ public final class ReactorNettyClient implements Client {
             }
         });
 
-        BiConsumer<Message, SynchronousSink<Message>> handleStateChange =
-            (message, sink) -> {
+        Consumer<Message> handleStateChange =
+            (message) -> {
 
                 ConnectionState connectionState = this.state;
 
@@ -190,50 +176,94 @@ public final class ReactorNettyClient implements Client {
                 }
             };
 
+        SynchronousSink<Message> sink = new SynchronousSink<Message>() {
+
+            @Override
+            public void complete() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Context currentContext() {
+                return requestProcessor.currentContext();
+            }
+
+            @Override
+            public void error(Throwable e) {
+                responseProcessor.onError(e);
+            }
+
+            @Override
+            public void next(Message message) {
+
+                if (DEBUG_ENABLED) {
+                    onInfoToken(message);
+                }
+
+                handleStateChange.accept(message);
+
+                if (message.getClass() == EnvChangeToken.class) {
+                    handleEnvChange.accept((EnvChangeToken) message);
+                }
+
+                if (message.getClass() == FeatureExtAckToken.class) {
+                    featureAckChange.accept((FeatureExtAckToken) message);
+                }
+
+                responseProcessor.onNext(message);
+            }
+        };
 
         connection.inbound().receiveObject() //
-            .concatMap(it -> {
+            .doOnNext(it -> {
 
                 if (it instanceof ByteBuf) {
 
                     ByteBuf buffer = (ByteBuf) it;
-                    return decoder.decode(buffer, this.decodeFunction);
+                    decoder.decode(buffer, this.decodeFunction, sink);
+                    return;
                 }
 
                 if (it instanceof Message) {
-                    return Mono.just((Message) it);
+                    sink.next((Message) it);
+                    return;
                 }
 
-                return Mono.error(ProtocolException.unsupported(String.format("Unexpected protocol message: [%s]", it)));
-            }).<Message>handle((message, sink) -> {
-
-            if (DEBUG_ENABLED) {
-                logger.debug(this.context.getMessage("Response: {}"), message);
-
-                if (message instanceof AbstractInfoToken) {
-                    this.infoTokenConsumer.accept((AbstractInfoToken) message);
-                }
-            }
-
-            handleStateChange.accept(message, sink);
-
-            if (message.getClass() == EnvChangeToken.class) {
-                this.handleEnvChange.accept((EnvChangeToken) message);
-            }
-
-            if (message.getClass() == FeatureExtAckToken.class) {
-                this.featureAckChange.accept((FeatureExtAckToken) message);
-            }
-
-            sink.next(message);
-        }).doOnError(e -> {
+                throw ProtocolException.unsupported(String.format("Unexpected protocol message: [%s]", it));
+            }).doOnError(e -> {
 
             logger.warn(this.context.getMessage("Error: {}"), e.getMessage(), e);
             if (e instanceof ProtocolException) {
                 this.isClosed.set(true);
                 connection.channel().close();
             }
-        }).subscribe(this.responseProcessor);
+        }).subscribe(new CoreSubscriber<Object>() {
+
+            @Override
+            public Context currentContext() {
+                return responseProcessor.currentContext();
+            }
+
+            @Override
+            public void onSubscribe(Subscription s) {
+                responseProcessor.onSubscribe(s);
+            }
+
+            @Override
+            public void onNext(Object message) {
+
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                responseProcessor.onError(t);
+            }
+
+            @Override
+            public void onComplete() {
+                responseProcessor.onComplete();
+            }
+        });
 
         this.requestProcessor
             .concatMap(
@@ -257,6 +287,21 @@ public final class ReactorNettyClient implements Client {
                 connection.channel().close();
             })
             .subscribe();
+    }
+
+    private void onInfoToken(Message message) {
+        logger.debug(context.getMessage("Response: {}"), message);
+
+        if (message instanceof AbstractInfoToken) {
+            AbstractInfoToken token = (AbstractInfoToken) message;
+            if (token.getClassification() == AbstractInfoToken.Classification.INFORMATIONAL) {
+                logger.debug(context.getMessage("Info: Code [{}] Severity [{}]: {}"), token.getNumber(), token.getClassification(),
+                    token.getMessage());
+            } else {
+                logger.debug(context.getMessage("Warning: Code [{}] Severity [{}]: {}"), token.getNumber(), token.getClassification(),
+                    token.getMessage());
+            }
+        }
     }
 
     /**
@@ -396,9 +441,9 @@ public final class ReactorNettyClient implements Client {
             logger.debug(String.format(this.context.getMessage("exchange(%s)"), request));
         }
 
-        if (this.isClosed.get()) {
+        /*if (this.isClosed.get()) {
             return Flux.error(new IllegalStateException("Cannot exchange messages because the connection is closed"));
-        }
+        } */
 
         return this.responseProcessor
             .doOnSubscribe(s -> this.requests.next(request));

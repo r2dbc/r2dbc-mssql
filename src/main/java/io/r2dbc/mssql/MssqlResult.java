@@ -91,10 +91,16 @@ public final class MssqlResult implements Result {
     @Override
     public Mono<Integer> getRowsUpdated() {
 
-        return messages()
+        return messages
             .<Long>handle((message, sink) -> {
 
-                ReferenceCountUtil.release(message);
+                if (AbstractDoneToken.isDone(message)) {
+                    Throwable exception = this.throwable;
+                    if (exception != null) {
+                        sink.error(exception);
+                        return;
+                    }
+                }
 
                 if (message instanceof AbstractDoneToken) {
 
@@ -108,6 +114,22 @@ public final class MssqlResult implements Result {
                         sink.next(doneToken.getRowCount());
                     }
                 }
+
+                if (message instanceof ErrorToken) {
+
+                    R2dbcException mssqlException = ExceptionFactory.createException((ErrorToken) message, this.sql);
+
+                    Throwable exception = this.throwable;
+                    if (exception != null) {
+                        exception.addSuppressed(mssqlException);
+                    } else {
+                        this.throwable = mssqlException;
+                    }
+
+                    return;
+                }
+
+                ReferenceCountUtil.release(message);
             }).reduce(Long::sum).map(Long::intValue);
     }
 
@@ -116,15 +138,15 @@ public final class MssqlResult implements Result {
 
         Assert.requireNonNull(f, "Mapping function must not be null");
 
-
-        Flux<MssqlRow> rows = messages()
+        return messages
             .handle((message, sink) -> {
+
 
                 if (message.getClass() == ColumnMetadataToken.class) {
 
                     ColumnMetadataToken token = (ColumnMetadataToken) message;
 
-                    if (token.getColumns().isEmpty()) {
+                    if (!token.hasColumns()) {
                         return;
                     }
 
@@ -145,50 +167,41 @@ public final class MssqlResult implements Result {
                         sink.error(new IllegalStateException("No MssqlRowMetadata available"));
                         return;
                     }
-                    sink.next(MssqlRow.toRow(this.codecs, (RowToken) message, rowMetadata));
+
+                    MssqlRow row = MssqlRow.toRow(this.codecs, (RowToken) message, rowMetadata);
+                    try {
+                        sink.next(f.apply(row, row.getMetadata()));
+                    } finally {
+                        row.release();
+                    }
+
+                    return;
+                }
+
+                if (AbstractDoneToken.isDone(message)) {
+                    Throwable exception = this.throwable;
+                    if (exception != null) {
+                        sink.error(exception);
+                        return;
+                    }
+                }
+
+                if (message instanceof ErrorToken) {
+
+                    R2dbcException mssqlException = ExceptionFactory.createException((ErrorToken) message, this.sql);
+
+                    Throwable exception = this.throwable;
+                    if (exception != null) {
+                        exception.addSuppressed(mssqlException);
+                    } else {
+                        this.throwable = mssqlException;
+                    }
+
                     return;
                 }
 
                 ReferenceCountUtil.release(message);
             });
-
-        return rows
-            .map((row) -> {
-                try {
-                    return f.apply(row, row.getMetadata());
-                } finally {
-                    row.release();
-                }
-            });
     }
 
-    private Flux<Message> messages() {
-
-        return this.messages.handle((message, sink) -> {
-
-            Throwable exception = this.throwable;
-
-            if (AbstractDoneToken.isDone(message)) {
-                if (exception != null) {
-                    sink.error(exception);
-                    return;
-                }
-            }
-
-            if (message instanceof ErrorToken) {
-
-                R2dbcException mssqlException = ExceptionFactory.createException((ErrorToken) message, this.sql);
-
-                if (exception != null) {
-                    exception.addSuppressed(mssqlException);
-                } else {
-                    this.throwable = mssqlException;
-                }
-
-                return;
-            }
-
-            sink.next(message);
-        });
-    }
 }

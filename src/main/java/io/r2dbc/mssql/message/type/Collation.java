@@ -17,6 +17,8 @@
 package io.r2dbc.mssql.message.type;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.collection.LongObjectHashMap;
+import io.netty.util.collection.LongObjectMap;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ProtocolException;
@@ -42,6 +44,8 @@ import java.util.Objects;
  */
 @SuppressWarnings("unused")
 public final class Collation {
+
+    private static final LongObjectMap<Collation> COLLATIONS = new LongObjectHashMap<>();
 
     public static final Collation RAW = Collation.from(0, 0);
 
@@ -101,10 +105,25 @@ public final class Collation {
      * @return the {@link Collation}.
      */
     public static Collation from(int lcid, int sortId) {
-        try {
-            return new Collation(lcid, sortId);
-        } catch (UnsupportedEncodingException e) {
-            throw ProtocolException.unsupported(e);
+
+        Collation collation;
+        long cacheKey = lcid | (sortId << 4);
+
+        synchronized (COLLATIONS) {
+
+            collation = COLLATIONS.get(cacheKey);
+            if (collation == null) {
+
+                try {
+                    collation = new Collation(lcid, sortId);
+                } catch (UnsupportedEncodingException e) {
+                    throw ProtocolException.unsupported(e);
+                }
+
+                COLLATIONS.put(cacheKey, collation);
+            }
+
+            return collation;
         }
     }
 
@@ -121,13 +140,8 @@ public final class Collation {
         int info = Decode.asInt(buffer); // 4 bytes, contains: LCID ColFlags Version
         int sortId = Decode.uByte(buffer); // 1 byte, contains: SortId
 
-        try {
-            return new Collation(info, sortId);
-        } catch (UnsupportedEncodingException e) {
-            throw ProtocolException.unsupported(e);
-        }
+        return Collation.from(info, sortId);
     }
-
 
     static int getLength() {
         return 5;

@@ -23,6 +23,7 @@ import reactor.util.annotation.Nullable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
 /**
@@ -83,15 +84,17 @@ class Binding {
         }
 
         StringBuilder builder = new StringBuilder(this.parameters.size() * 16);
-        this.parameters.forEach((name, encoded) -> {
+        Set<Map.Entry<String, Encoded>> entries = this.parameters.entrySet();
+
+        for (Map.Entry<String, Encoded> entry : entries) {
 
             if (builder.length() != 0) {
                 builder.append(',');
             }
 
-            builder.append('@').append(name).append(' ').append(encoded.getFormalType());
+            builder.append('@').append(entry.getKey()).append(' ').append(entry.getValue().getFormalType());
+        }
 
-        });
 
         formalRepresentation = builder.toString();
         this.formalRepresentation = formalRepresentation;

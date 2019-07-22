@@ -27,8 +27,6 @@ import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
 import java.nio.Buffer;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Row token message containing row bytes.
@@ -42,15 +40,15 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
 
     public static final byte TYPE = (byte) 0xD1;
 
-    private final List<ByteBuf> data;
+    private final ByteBuf[] data;
 
     /**
      * Creates a {@link RowToken}.
      *
      * @param data the row data.
      */
-    RowToken(List<ByteBuf> data) {
-        this.data = Assert.requireNonNull(data, "Row data must not be null");
+    RowToken(ByteBuf[] data) {
+        this.data = data;
     }
 
     /**
@@ -60,7 +58,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      * @param columns column descriptors.
      * @return the {@link RowToken}.
      */
-    public static RowToken decode(ByteBuf buffer, List<Column> columns) {
+    public static RowToken decode(ByteBuf buffer, Column[] columns) {
 
         Assert.requireNonNull(buffer, "Data buffer must not be null");
         Assert.requireNonNull(columns, "List of Columns must not be null");
@@ -75,7 +73,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      * @param columns column descriptors.
      * @return {@code true} if the buffer contains sufficient data to entirely decode a row.
      */
-    public static boolean canDecode(ByteBuf buffer, List<Column> columns) {
+    public static boolean canDecode(ByteBuf buffer, Column[] columns) {
 
         Assert.requireNonNull(buffer, "Data buffer must not be null");
         Assert.requireNonNull(columns, "List of Columns must not be null");
@@ -115,24 +113,20 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      */
     private static boolean doCanDecode(ByteBuf buffer, Column column) {
 
-        buffer.markReaderIndex();
-
-        int startRead = buffer.readerIndex();
-
         if (!Length.canDecode(buffer, column.getType())) {
             return false;
         }
 
+        int startRead = buffer.readerIndex();
         Length length = Length.decode(buffer, column.getType());
-
         int endRead = buffer.readerIndex();
-        buffer.resetReaderIndex();
 
         int descriptorLength = endRead - startRead;
         int dataLength = descriptorLength + length.getLength();
+        int adjusted = dataLength - descriptorLength;
 
-        if (buffer.readableBytes() >= dataLength) {
-            buffer.skipBytes(dataLength);
+        if (buffer.readableBytes() >= adjusted) {
+            buffer.skipBytes(adjusted);
             return true;
         }
 
@@ -179,12 +173,12 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
         }
     }
 
-    private static RowToken doDecode(ByteBuf buffer, List<Column> columns) {
+    private static RowToken doDecode(ByteBuf buffer, Column[] columns) {
 
-        List<ByteBuf> data = new ArrayList<>(columns.size());
+        ByteBuf[] data = new ByteBuf[columns.length];
 
-        for (Column column : columns) {
-            data.add(decodeColumnData(buffer, column));
+        for (int i = 0; i < columns.length; i++) {
+            data[i] = decodeColumnData(buffer, columns[i]);
         }
 
         return new RowToken(data);
@@ -200,8 +194,8 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
     @Nullable
     static ByteBuf decodeColumnData(ByteBuf buffer, Column column) {
 
-        buffer.markReaderIndex();
         if (column.getType().getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
+            buffer.markReaderIndex();
             return doDecodePlp(buffer, column);
         } else {
             return doDecode(buffer, column);
@@ -228,7 +222,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
         int endRead = buffer.readerIndex();
         int descriptorLength = endRead - startRead;
 
-        buffer.resetReaderIndex();
+        buffer.readerIndex(startRead);
         return buffer.readRetainedSlice(descriptorLength + length.getLength());
     }
 
@@ -280,7 +274,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      */
     @Nullable
     public ByteBuf getColumnData(int index) {
-        return this.data.get(index);
+        return this.data[index];
     }
 
     @Override
@@ -300,6 +294,9 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
 
     @Override
     protected void deallocate() {
-        this.data.forEach(ReferenceCountUtil::release);
+
+        for (ByteBuf datum : this.data) {
+            ReferenceCountUtil.release(datum);
+        }
     }
 }

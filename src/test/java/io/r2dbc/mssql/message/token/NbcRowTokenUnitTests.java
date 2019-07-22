@@ -26,7 +26,6 @@ import io.r2dbc.mssql.util.Types;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -41,13 +40,13 @@ class NbcRowTokenUnitTests {
 
     TypeInformation stringType = Types.varchar(255);
 
-    List<Column> columns = Arrays.asList(new Column(0, "id", integerType),
+    Column[] columns = Arrays.asList(new Column(0, "id", integerType),
         new Column(1, "first_name", stringType),
         new Column(2, "last_name", stringType),
         new Column(3, "other", stringType),
         new Column(4, "other2", stringType),
         new Column(5, "other3", stringType),
-        new Column(6, "rowstat", integerType));
+        new Column(6, "rowstat", integerType)).toArray(new Column[0]);
 
     @Test
     void shouldDecodeNbcRow() {
@@ -83,7 +82,7 @@ class NbcRowTokenUnitTests {
 
         Column id = new Column(0, "id", integerType);
         Column content = new Column(1, "content", plpType);
-        ColumnMetadataToken columns = ColumnMetadataToken.create(Arrays.asList(id, content));
+        ColumnMetadataToken columns = ColumnMetadataToken.create(new Column[]{id, content});
 
         ByteBuf rowData = HexUtils.decodeToByteBuf("02 04 01 00 00 00");
 

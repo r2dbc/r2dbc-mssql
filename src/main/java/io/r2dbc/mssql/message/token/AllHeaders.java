@@ -22,8 +22,6 @@ import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.util.Assert;
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -33,21 +31,20 @@ import java.util.Objects;
  */
 public final class AllHeaders {
 
-    private final List<NestedHeader> headers;
+    private final byte[] transactionDescriptor;
+
+    private final int outstandingRequestCount;
 
     private final int length;
 
-    private AllHeaders(List<NestedHeader> headers) {
+    private AllHeaders(byte[] transactionDescriptor, int outstandingRequestCount) {
 
-        Assert.requireNonNull(headers, "Headers must not be null");
-
-        this.headers = headers;
+        this.transactionDescriptor = transactionDescriptor;
+        this.outstandingRequestCount = outstandingRequestCount;
 
         int totalLength = 4; // DWORD
 
-        for (NestedHeader header : headers) {
-            totalLength += header.getTotalLength();
-        }
+        totalLength += transactionDescriptor.length + /* outstanding request count */ 4 + 4 /* Length field DWORD */ + 2 /* type */;
 
         this.length = totalLength;
     }
@@ -79,10 +76,7 @@ public final class AllHeaders {
 
         Assert.requireNonNull(transactionDescriptor, "Transaction descriptor must not be null");
 
-        TransactionDescriptorHeader txDescriptor = new TransactionDescriptorHeader(transactionDescriptor, outstandingRequests
-        );
-
-        return new AllHeaders(Collections.singletonList(txDescriptor));
+        return new AllHeaders(transactionDescriptor, outstandingRequests);
     }
 
     /**
@@ -93,10 +87,10 @@ public final class AllHeaders {
     public void encode(ByteBuf buffer) {
 
         Encode.dword(buffer, this.length);
-
-        for (NestedHeader header : this.headers) {
-            header.encode(buffer);
-        }
+        Encode.dword(buffer, this.transactionDescriptor.length + /* outstanding request count */ 4 + 6);
+        Encode.uShort(buffer, 0x02);
+        buffer.writeBytes(this.transactionDescriptor);
+        Encode.dword(buffer, this.outstandingRequestCount);
     }
 
     public int getLength() {
@@ -112,115 +106,15 @@ public final class AllHeaders {
             return false;
         }
         AllHeaders that = (AllHeaders) o;
-        return this.length == that.length &&
-            Objects.equals(this.headers, that.headers);
+        return this.outstandingRequestCount == that.outstandingRequestCount &&
+            this.length == that.length &&
+            Arrays.equals(this.transactionDescriptor, that.transactionDescriptor);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.headers, this.length);
-    }
-
-    /**
-     * Base class for nested headers.
-     */
-    abstract static class NestedHeader {
-
-        private final int dataLength;
-
-        private final int type;
-
-        NestedHeader(int type, int dataLength) {
-            this.dataLength = dataLength;
-            this.type = type;
-        }
-
-        /**
-         * @return the length of the header data.
-         */
-        int getDataLength() {
-            return this.dataLength;
-        }
-
-        /**
-         * @return the total length of the header including itself, data length and the data.
-         */
-        int getTotalLength() {
-            return getDataLength() + 4 /* Length field DWORD */ + 2 /* type */;
-        }
-
-        /**
-         * Encode this header.
-         *
-         * @param buffer the data buffer.
-         * @throws IllegalArgumentException when {@link ByteBuf} is {@code null}.
-         */
-        public void encode(ByteBuf buffer) {
-
-            Assert.requireNonNull(buffer, "Buffer must not be null");
-
-            Encode.dword(buffer, getTotalLength());
-            Encode.uShort(buffer, this.type);
-            encodeData(buffer);
-        }
-
-        /**
-         * Encode this header's data.
-         *
-         * @param buffer the data buffer.
-         */
-        protected abstract void encodeData(ByteBuf buffer);
-    }
-
-    /**
-     * Transaction descriptor (0x2). Sometimes also referred to as MARS header.
-     */
-    static final class TransactionDescriptorHeader extends NestedHeader {
-
-        private final int outstandingRequestCount;
-
-        private final byte[] transactionDescriptor;
-
-        public TransactionDescriptorHeader(byte[] transactionDescriptor, int outstandingRequestCount) {
-
-            super(0x2, Assert.requireNonNull(transactionDescriptor, "Transaction Descriptor must not be null").length + /* outstanding request count */ 4);
-
-            Assert.isTrue(transactionDescriptor.length == 8, "Transaction Descriptor must be exactly 8 bytes long");
-
-            this.outstandingRequestCount = outstandingRequestCount;
-            this.transactionDescriptor = transactionDescriptor;
-        }
-
-        @Override
-        protected void encodeData(ByteBuf buffer) {
-
-            buffer.writeBytes(this.transactionDescriptor);
-            Encode.dword(buffer, this.outstandingRequestCount);
-        }
-
-        @Override
-        int getDataLength() {
-            return super.getDataLength();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (!(o instanceof TransactionDescriptorHeader)) {
-                return false;
-            }
-            TransactionDescriptorHeader that = (TransactionDescriptorHeader) o;
-            return this.outstandingRequestCount == that.outstandingRequestCount &&
-                Arrays.equals(this.transactionDescriptor, that.transactionDescriptor);
-        }
-
-        @Override
-        public int hashCode() {
-            int result = Objects.hash(this.outstandingRequestCount);
-            result = 31 * result + Arrays.hashCode(this.transactionDescriptor);
-            return result;
-        }
+        int result = Objects.hash(this.outstandingRequestCount, this.length);
+        result = 31 * result + Arrays.hashCode(this.transactionDescriptor);
+        return result;
     }
 }

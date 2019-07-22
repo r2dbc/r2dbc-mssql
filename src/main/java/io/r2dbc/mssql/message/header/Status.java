@@ -34,14 +34,17 @@ import java.util.Set;
  */
 public class Status {
 
-    private static final Status EMPTY = new Status(EnumSet.noneOf(StatusBit.class));
+    private static final Status[] STATUS_CACHE = new Status[(-Byte.MIN_VALUE) + Byte.MAX_VALUE];
 
-    private final Set<StatusBit> statusBits;
+    static {
+        for (byte b = Byte.MIN_VALUE; b < Byte.MAX_VALUE; b++) {
+            STATUS_CACHE[b - Byte.MIN_VALUE] = fromBitmask0(b);
+        }
+    }
 
     private final byte value;
 
     private Status(Set<StatusBit> statusBits) {
-        this.statusBits = statusBits;
         this.value = getStatusValue(statusBits);
     }
 
@@ -51,7 +54,7 @@ public class Status {
      * @return the empty {@link Status}.
      */
     public static Status empty() {
-        return EMPTY;
+        return fromBitmask((byte) 0);
     }
 
     /**
@@ -61,6 +64,10 @@ public class Status {
      * @return
      */
     public static Status fromBitmask(byte bitmask) {
+        return STATUS_CACHE[bitmask - Byte.MIN_VALUE];
+    }
+
+    private static Status fromBitmask0(byte bitmask) {
 
         EnumSet<StatusBit> result = EnumSet.noneOf(StatusBit.class);
 
@@ -82,8 +89,7 @@ public class Status {
     public static Status of(StatusBit bit) {
 
         Assert.requireNonNull(bit, "StatusBit must not be null");
-
-        return new Status(EnumSet.of(bit));
+        return fromBitmask(bit.bits);
     }
 
     /**
@@ -98,7 +104,13 @@ public class Status {
         Assert.requireNonNull(bit, "StatusBit must not be null");
         Assert.requireNonNull(other, "StatusBits must not be null");
 
-        return new Status(EnumSet.of(bit, other));
+        byte result = bit.bits;
+
+        for (Status.StatusBit s : other) {
+            result |= s.bits;
+        }
+
+        return fromBitmask(result);
     }
 
     /**
@@ -109,17 +121,13 @@ public class Status {
      */
     public Status and(StatusBit bit) {
 
-        Assert.requireNonNull(bit, "StatusBit must not be null");
-
         // If bit set, then we can optimize.
-        if (this.statusBits.contains(bit)) {
+        if (is(bit)) {
             return this;
         }
 
-        EnumSet<StatusBit> statusBits = EnumSet.copyOf(this.statusBits);
-        statusBits.add(bit);
-
-        return new Status(statusBits);
+        byte mask = (byte) (this.getValue() | bit.bits);
+        return fromBitmask(mask);
     }
 
     /**
@@ -130,17 +138,15 @@ public class Status {
      */
     public Status not(StatusBit bit) {
 
-        Assert.requireNonNull(bit, "StatusBit must not be null");
-
         // If bit not set, then we can optimize.
-        if (!this.statusBits.contains(bit)) {
+        if (!is(bit)) {
             return this;
         }
 
-        EnumSet<StatusBit> statusBits = EnumSet.copyOf(this.statusBits);
-        statusBits.remove(bit);
+        byte mask = this.getValue();
+        mask &= ~bit.bits;
 
-        return new Status(statusBits);
+        return fromBitmask(mask);
     }
 
     /**
@@ -150,10 +156,7 @@ public class Status {
      * @return {@code true} of the bit is set; {@code false} otherwise.
      */
     public boolean is(Status.StatusBit bit) {
-
-        Assert.requireNonNull(bit, "StatusBit must not be null");
-
-        return this.statusBits.contains(bit);
+        return (this.value & bit.bits) != 0;
     }
 
     /**
@@ -172,13 +175,12 @@ public class Status {
             return false;
         }
         Status status = (Status) o;
-        return this.value == status.value &&
-            Objects.equals(this.statusBits, status.statusBits);
+        return this.value == status.value;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.statusBits, this.value);
+        return Objects.hash(this.value);
     }
 
     private static byte getStatusValue(Collection<StatusBit> statusBits) {

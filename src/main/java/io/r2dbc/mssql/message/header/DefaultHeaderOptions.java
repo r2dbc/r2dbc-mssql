@@ -23,6 +23,22 @@ package io.r2dbc.mssql.message.header;
  */
 class DefaultHeaderOptions implements HeaderOptions {
 
+    private static HeaderOptions[][] HEADER_CACHE = new HeaderOptions[Type.values().length][(-Byte.MIN_VALUE) + Byte.MAX_VALUE];
+
+    static {
+        for (Type value : Type.values()) {
+            for (byte b = Byte.MIN_VALUE; b < Byte.MAX_VALUE; b++) {
+                int index = b - Byte.MIN_VALUE;
+                HEADER_CACHE[value.ordinal()][index] = new DefaultHeaderOptions(value, Status.fromBitmask(b));
+            }
+        }
+    }
+
+    static HeaderOptions get(Type value, Status status) {
+        int index = status.getValue() - Byte.MIN_VALUE;
+        return HEADER_CACHE[value.ordinal()][index];
+    }
+
     private final Type type;
 
     private final Status status;

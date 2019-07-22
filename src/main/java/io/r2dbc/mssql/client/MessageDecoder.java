@@ -19,6 +19,7 @@ package io.r2dbc.mssql.client;
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.header.Header;
+import reactor.core.publisher.SynchronousSink;
 
 import java.util.List;
 import java.util.function.BiFunction;
@@ -31,4 +32,23 @@ import java.util.function.BiFunction;
  */
 interface MessageDecoder extends BiFunction<Header, ByteBuf, List<? extends Message>> {
 
+    /**
+     * Apply the decoder function {@link #decode(Header, ByteBuf, SynchronousSink)} and notify {@link SynchronousSink} about every decoded {@link Message}.
+     *
+     * @param header
+     * @param buffer
+     * @param sink
+     * @return
+     */
+    default boolean decode(Header header, ByteBuf buffer, SynchronousSink<Message> sink) {
+
+        List<? extends Message> messages = apply(header, buffer);
+
+        if (messages.isEmpty()) {
+            return false;
+        }
+
+        messages.forEach(sink::next);
+        return true;
+    }
 }
