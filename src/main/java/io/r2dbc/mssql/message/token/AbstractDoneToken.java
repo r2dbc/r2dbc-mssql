@@ -180,6 +180,13 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
     }
 
     /**
+     * @return {@code true} if this token indicates the response is done with a preceding error.
+     */
+    public boolean isError() {
+        return (getStatus() & DONE_ERROR) != 0;
+    }
+
+    /**
      * @return {@code true} if this token indicates the response is not done yet and the stream contains more data.
      */
     public boolean hasMore() {

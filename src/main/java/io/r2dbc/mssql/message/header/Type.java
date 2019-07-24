@@ -28,15 +28,6 @@ public enum Type {
         8), TX_MGR(14), TDS7_LOGIN(16), SSPI(17), PRE_LOGIN(18);
 
 
-    private static Type[] TYPES = new Type[20];
-
-    static {
-        for (Type value : values()) {
-            TYPES[value.value] = value;
-        }
-    }
-
-
     Type(int value) {
         this.value = Integer.valueOf(value).byteValue();
     }
@@ -51,13 +42,29 @@ public enum Type {
      */
     public static Type valueOf(byte value) {
 
-
-        if (value >= 0 && value < TYPES.length) {
-            Type type = Type.TYPES[value];
-
-            if (type != null) {
-                return type;
-            }
+        switch (value) {
+            case 1:
+                return SQL_BATCH;
+            case 2:
+                return PRE_TDS7_LOGIN;
+            case 3:
+                return RPC;
+            case 4:
+                return TABULAR_RESULT;
+            case 6:
+                return ATTENTION;
+            case 7:
+                return BULK_LOAD_DATA;
+            case 8:
+                return FED_AUTH_TOKEN;
+            case 14:
+                return TX_MGR;
+            case 16:
+                return TDS7_LOGIN;
+            case 17:
+                return SSPI;
+            case 18:
+                return PRE_LOGIN;
         }
 
         throw new IllegalArgumentException(String.format("Invalid header type: 0x%01X", value));

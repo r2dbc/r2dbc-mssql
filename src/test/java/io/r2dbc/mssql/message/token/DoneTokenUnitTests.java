@@ -38,6 +38,22 @@ class DoneTokenUnitTests {
 
         DoneToken token = DoneToken.decode(buffer);
         assertThat(token.isDone()).isTrue();
+        assertThat(token.isError()).isFalse();
+        assertThat(token.hasMore()).isFalse();
+        assertThat(token.hasCount()).isTrue();
+        assertThat(token.getRowCount()).isEqualTo(1);
+    }
+
+    @Test
+    void shouldErrorDecodeToken() {
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("FD1200C1000100000000000000");
+
+        assertThat(buffer.readByte()).isEqualTo(DoneToken.TYPE);
+
+        DoneToken token = DoneToken.decode(buffer);
+        assertThat(token.isDone()).isTrue();
+        assertThat(token.isError()).isTrue();
         assertThat(token.hasMore()).isFalse();
         assertThat(token.hasCount()).isTrue();
         assertThat(token.getRowCount()).isEqualTo(1);
