@@ -18,7 +18,6 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.message.Message;
-import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.Assert;
@@ -59,7 +58,7 @@ final class QueryMessageFlow {
         public void accept(Message message, SynchronousSink<Message> sink) {
             sink.next(message);
 
-            if (AbstractDoneToken.isDone(message)) {
+            if (DoneToken.isDone(message)) {
                 sink.complete();
             }
         }
