@@ -55,7 +55,7 @@ public final class DoneInProcToken extends AbstractDoneToken {
     /**
      * Creates a new {@link DoneInProcToken}.
      *
-     * @param status         status flags, see {@link AbstractDoneInProcToken} constants.
+     * @param status         status flags, see {@link AbstractDoneToken} constants.
      * @param currentCommand the current command counter.
      * @param rowCount       number of columns if {@link #hasCount()} is set.
      */
@@ -64,13 +64,13 @@ public final class DoneInProcToken extends AbstractDoneToken {
     }
 
     /**
-     * Creates a new {@link DoneInProcToken}
+     * Creates a new {@link DoneInProcToken} indicating a final packet and {@code rowCount}.
      *
      * @param rowCount the row count.
      * @return the {@link DoneInProcToken}.
      */
     public static DoneInProcToken create(long rowCount) {
-        return new DoneInProcToken(DONE_WITH_COUNT, 0, rowCount);
+        return create0(DONE_WITH_COUNT, 0, rowCount);
     }
 
     /**
@@ -99,6 +99,11 @@ public final class DoneInProcToken extends AbstractDoneToken {
         int status = Decode.uShort(buffer);
         int currentCommand = Decode.uShort(buffer);
         long rowCount = Decode.uLongLong(buffer);
+
+        return create0(status, currentCommand, rowCount);
+    }
+
+    private static DoneInProcToken create0(int status, int currentCommand, long rowCount) {
 
         if (rowCount >= 0 && rowCount < CACHE_SIZE) {
 

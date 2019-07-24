@@ -16,10 +16,10 @@
 
 package io.r2dbc.mssql.message;
 
+import io.netty.buffer.ByteBufUtil;
 import io.r2dbc.mssql.util.Assert;
 
 import java.util.Arrays;
-import java.util.Base64;
 
 /**
  * Descriptor for the transaction state.
@@ -90,7 +90,7 @@ public final class TransactionDescriptor {
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [").append(Base64.getEncoder().encodeToString(this.descriptor));
+        sb.append(" [").append(ByteBufUtil.hexDump(this.descriptor));
         sb.append(']');
         return sb.toString();
     }

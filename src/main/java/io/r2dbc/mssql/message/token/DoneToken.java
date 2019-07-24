@@ -73,7 +73,7 @@ public final class DoneToken extends AbstractDoneToken {
      * @see #hasCount()
      */
     public static DoneToken create(long rowCount) {
-        return new DoneToken(DONE_WITH_COUNT, 0, rowCount);
+        return create0(DONE_WITH_COUNT, 0, rowCount);
     }
 
     /**
@@ -85,7 +85,19 @@ public final class DoneToken extends AbstractDoneToken {
      * @see #hasCount()
      */
     public static DoneToken count(long rowCount) {
-        return new DoneToken(DONE_COUNT, 0, rowCount);
+        return create0(DONE_COUNT, 0, rowCount);
+    }
+
+    /**
+     * Creates a new {@link DoneToken} with just a {@code rowCount}.
+     *
+     * @param rowCount the row count.
+     * @return the {@link DoneToken}.
+     * @see #getRowCount()
+     * @see #hasCount()
+     */
+    public static DoneToken more(long rowCount) {
+        return create0(DONE_MORE | DONE_COUNT, 0, rowCount);
     }
 
     /**
@@ -114,6 +126,11 @@ public final class DoneToken extends AbstractDoneToken {
         int status = Decode.uShort(buffer);
         int currentCommand = Decode.uShort(buffer);
         long rowCount = Decode.uLongLong(buffer);
+
+        return create0(status, currentCommand, rowCount);
+    }
+
+    private static DoneToken create0(int status, int currentCommand, long rowCount) {
 
         if (rowCount >= 0 && rowCount < CACHE_SIZE) {
 

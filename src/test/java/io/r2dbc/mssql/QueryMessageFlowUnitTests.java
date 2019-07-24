@@ -50,11 +50,11 @@ class QueryMessageFlowUnitTests {
     @Test
     void shouldAwaitDoneProcTokenShouldNotCompleteFlow() {
 
-        when(client.exchange(any(ClientMessage.class))).thenReturn(Flux.just(DoneProcToken.create(0), DoneInProcToken.create(0)));
+        when(client.exchange(any(ClientMessage.class))).thenReturn(Flux.just(DoneToken.more(20), DoneProcToken.create(0), DoneInProcToken.create(0)));
 
         QueryMessageFlow.exchange(client, "foo")
             .as(StepVerifier::create)
-            .expectNext(DoneInProcToken.create(0))
+            .expectNext(DoneToken.more(20), DoneProcToken.create(0), DoneInProcToken.create(0))
             .thenCancel()
             .verify();
     }

@@ -63,13 +63,13 @@ public final class DoneProcToken extends AbstractDoneToken {
     }
 
     /**
-     * Creates a new {@link DoneProcToken}
+     * Creates a new {@link DoneProcToken} indicating a final packet and {@code rowCount}.
      *
      * @param rowCount the row count.
      * @return the {@link DoneProcToken}.
      */
     public static DoneProcToken create(long rowCount) {
-        return new DoneProcToken(DONE_FINAL | DONE_COUNT, 0, rowCount);
+        return create0(DONE_FINAL | DONE_COUNT, 0, rowCount);
     }
 
     /**
@@ -83,6 +83,11 @@ public final class DoneProcToken extends AbstractDoneToken {
         int status = Decode.uShort(buffer);
         int currentCommand = Decode.uShort(buffer);
         long rowCount = Decode.uLongLong(buffer);
+
+        return create0(status, currentCommand, rowCount);
+    }
+
+    private static DoneProcToken create0(int status, int currentCommand, long rowCount) {
 
         if (rowCount >= 0 && rowCount < CACHE_SIZE) {
 
