@@ -27,6 +27,8 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.net.ConnectException;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -73,6 +75,19 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
             .as(StepVerifier::create)
             .expectError(R2dbcPermissionDeniedException.class)
             .verify();
+    }
+
+    @Test
+    void shouldReportMetadata() throws Exception {
+
+        try (Connection connection = SERVER.getDataSource().getConnection()) {
+
+            DatabaseMetaData jdbcMetadata = connection.getMetaData();
+            MssqlConnectionMetadata metadata = IntegrationTestSupport.connection.getMetadata();
+
+            assertThat(metadata.getDatabaseProductName()).isEqualTo(jdbcMetadata.getDatabaseProductName());
+            assertThat(metadata.getDatabaseVersion()).isEqualTo(jdbcMetadata.getDatabaseProductVersion());
+        }
     }
 
     @Test

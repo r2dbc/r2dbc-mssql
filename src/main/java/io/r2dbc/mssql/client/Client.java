@@ -95,6 +95,13 @@ public interface Client {
     Optional<Collation> getDatabaseCollation();
 
     /**
+     * Returns the database version.
+     *
+     * @return the database version.
+     */
+    Optional<String> getDatabaseVersion();
+
+    /**
      * @return the required {@link Collation} for the current database.
      * @throws IllegalStateException if no {@link Collation} is available.
      */

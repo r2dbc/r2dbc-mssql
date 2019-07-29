@@ -131,6 +131,11 @@ public final class TestClient implements Client {
     }
 
     @Override
+    public Optional<String> getDatabaseVersion() {
+        return Optional.of("1.2.3");
+    }
+
+    @Override
     public boolean isColumnEncryptionSupported() {
         return true;
     }

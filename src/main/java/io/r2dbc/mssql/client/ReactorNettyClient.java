@@ -37,6 +37,7 @@ import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.token.AbstractInfoToken;
 import io.r2dbc.mssql.message.token.EnvChangeToken;
 import io.r2dbc.mssql.message.token.FeatureExtAckToken;
+import io.r2dbc.mssql.message.token.LoginAckToken;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
 import org.reactivestreams.Publisher;
@@ -113,6 +114,8 @@ public final class ReactorNettyClient implements Client {
 
     private volatile Optional<Collation> databaseCollation = Optional.empty();
 
+    private volatile Optional<String> databaseVersion = Optional.empty();
+
     private TransactionListener transactionListener = new TransactionListener();
 
     private CollationListener collationListener = new CollationListener();
@@ -164,6 +167,11 @@ public final class ReactorNettyClient implements Client {
 
         Consumer<Message> handleStateChange =
             (message) -> {
+
+                if (message.getClass() == LoginAckToken.class) {
+                    LoginAckToken loginAckToken = (LoginAckToken) message;
+                    this.databaseVersion = Optional.of(loginAckToken.getVersion().toString());
+                }
 
                 ConnectionState connectionState = this.state;
 
@@ -494,6 +502,11 @@ public final class ReactorNettyClient implements Client {
     @Override
     public Optional<Collation> getDatabaseCollation() {
         return this.databaseCollation;
+    }
+
+    @Override
+    public Optional<String> getDatabaseVersion() {
+        return this.databaseVersion;
     }
 
     @Override

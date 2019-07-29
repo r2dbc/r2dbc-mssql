@@ -49,6 +49,8 @@ public final class MssqlConnection implements Connection {
 
     private final Client client;
 
+    private final MssqlConnectionMetadata metadata;
+
     private final ConnectionContext context;
 
     private final ConnectionOptions connectionOptions;
@@ -60,6 +62,7 @@ public final class MssqlConnection implements Connection {
     MssqlConnection(Client client, ConnectionOptions connectionOptions) {
 
         this.client = Assert.requireNonNull(client, "Client must not be null");
+        this.metadata = new MssqlConnectionMetadata(client.getDatabaseVersion().orElse("unknown"));
         this.context = client.getContext();
         this.connectionOptions = Assert.requireNonNull(connectionOptions, "ConnectionOptions must not be null");
 
@@ -207,6 +210,10 @@ public final class MssqlConnection implements Connection {
 
             return exchange(builder.toString()).doOnSuccess(ignore -> this.autoCommit = autoCommit);
         });
+    }
+
+    public MssqlConnectionMetadata getMetadata() {
+        return this.metadata;
     }
 
     public IsolationLevel getTransactionIsolationLevel() {

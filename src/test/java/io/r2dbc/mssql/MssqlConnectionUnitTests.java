@@ -89,6 +89,7 @@ class MssqlConnectionUnitTests {
 
         verify(clientMock, times(2)).getTransactionStatus();
         verify(clientMock).getContext();
+        verify(clientMock).getDatabaseVersion();
         verifyNoMoreInteractions(clientMock);
     }
 
@@ -120,6 +121,7 @@ class MssqlConnectionUnitTests {
 
         verify(clientMock, times(2)).getTransactionStatus();
         verify(clientMock).getContext();
+        verify(clientMock).getDatabaseVersion();
         verifyNoMoreInteractions(clientMock);
     }
 
@@ -151,6 +153,7 @@ class MssqlConnectionUnitTests {
 
         verify(clientMock, times(2)).getTransactionStatus();
         verify(clientMock).getContext();
+        verify(clientMock).getDatabaseVersion();
         verifyNoMoreInteractions(clientMock);
     }
 
@@ -214,6 +217,7 @@ class MssqlConnectionUnitTests {
 
         verify(clientMock, times(2)).getTransactionStatus();
         verify(clientMock).getContext();
+        verify(clientMock).getDatabaseVersion();
         verifyNoMoreInteractions(clientMock);
     }
 

@@ -218,8 +218,7 @@ public class Version implements Comparable<Version> {
     public String toString() {
 
         StringBuilder builder = new StringBuilder();
-        builder.append(this.major).append(".").append(this.minor);
-        builder.append(this.minor);
+        builder.append(this.major).append(".").append(((this.minor <= 9) ? "0" : "")).append(this.minor);
 
         if (this.build != 0 || this.bugfix != 0) {
             builder.append('.').append(this.bugfix);
