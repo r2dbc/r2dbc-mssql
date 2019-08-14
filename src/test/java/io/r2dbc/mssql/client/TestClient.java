@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * Test {@link Client} implementation.
@@ -91,8 +92,8 @@ public final class TestClient implements Client {
         return this.expectClose ? Mono.empty() : Mono.error(new AssertionError("close called unexpectedly"));
     }
 
-    @Override
-    public Flux<Message> exchange(Publisher<? extends ClientMessage> requests) {
+    public Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Predicate<Message> isLastResponseFrame) {
+
         Assert.requireNonNull(requests, "requests must not be null");
 
         return this.responseProcessor

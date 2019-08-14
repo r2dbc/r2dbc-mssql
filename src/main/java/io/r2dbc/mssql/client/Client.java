@@ -22,10 +22,12 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.type.Collation;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
  * An abstraction that wraps the networking part of exchanging {@link Message}s.
@@ -42,22 +44,14 @@ public interface Client {
     Mono<Void> close();
 
     /**
-     * Perform an exchange of messages.
+     * Perform an exchange of messages. Calling this method while a previous exchange is active will return a deferred handle and queue the request until the previous exchange terminates.
      *
-     * @param request the {@link ClientMessage} to be sent.
+     * @param requests            the publisher of outbound messages
+     * @param isLastResponseFrame {@link Predicate} determining the last response frame to {@link Subscriber#onComplete() complete} the stream and prevent multiple subscribers from consuming
+     *                            previous, active response streams.
      * @return a {@link Flux} of incoming messages that ends with the end of the frame.
      */
-    default Flux<Message> exchange(ClientMessage request) {
-        return exchange(Mono.just(request));
-    }
-
-    /**
-     * Perform an exchange of messages.
-     *
-     * @param requests the publisher of outbound messages
-     * @return a {@link Flux} of incoming messages that ends with the end of the frame.
-     */
-    Flux<Message> exchange(Publisher<? extends ClientMessage> requests);
+    Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Predicate<Message> isLastResponseFrame);
 
     /**
      * Returns the {@link ByteBufAllocator}.

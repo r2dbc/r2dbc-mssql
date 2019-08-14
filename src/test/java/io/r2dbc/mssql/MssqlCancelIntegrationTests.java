@@ -29,12 +29,10 @@ import reactor.test.StepVerifier;
  * Integration tests for {@link Subscription subscription cancellation} {@link MssqlConnection} and {@link MssqlStatement}.
  *
  * @author Mark Paluch
- * TODO: Cancellation drops Connection but the connection needs to close a cursor and drain the results before a connection can be used again.
- * We need some mechanism to indicate the connection is busy with a conversation and then to release the connection again so subsequent conversations may start.
  */
 class MssqlCancelIntegrationTests extends IntegrationTestSupport {
 
-    static boolean initialized = true;
+    static boolean initialized = false;
 
     @BeforeEach
     void setUp() {
@@ -65,8 +63,6 @@ class MssqlCancelIntegrationTests extends IntegrationTestSupport {
             .thenCancel()
             .verify();
 
-        waitSometime();
-
         connection.createStatement("SELECT * FROM r2dbc_empty")
             .execute()
             .flatMap(it -> it.map((row, metadata) -> row.get("id")))
@@ -86,8 +82,6 @@ class MssqlCancelIntegrationTests extends IntegrationTestSupport {
             .expectNextCount(1)
             .thenCancel()
             .verify();
-
-        waitSometime();
 
         connection.createStatement("SELECT * FROM r2dbc_empty")
             .execute()
@@ -110,8 +104,6 @@ class MssqlCancelIntegrationTests extends IntegrationTestSupport {
             .thenCancel()
             .verify();
 
-        waitSometime();
-
         connection.createStatement("SELECT * FROM r2dbc_empty")
             .execute()
             .flatMap(it -> it.map((row, metadata) -> row.get("id")))
@@ -132,8 +124,6 @@ class MssqlCancelIntegrationTests extends IntegrationTestSupport {
             .expectNextCount(1)
             .thenCancel()
             .verify();
-
-        waitSometime();
 
         connection.createStatement("SELECT * FROM r2dbc_empty")
             .execute()
@@ -167,14 +157,5 @@ class MssqlCancelIntegrationTests extends IntegrationTestSupport {
             .as(StepVerifier::create)
             .expectNext(1)
             .verifyComplete();
-    }
-
-    // Await some time so the Client gets a chance to release its cursor.
-    private void waitSometime() {
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
     }
 }
