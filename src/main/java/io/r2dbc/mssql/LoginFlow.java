@@ -71,7 +71,7 @@ final class LoginFlow {
 
         Prelogin request = builder.build();
 
-        return client.exchange(requestProcessor.startWith(request)) //
+        return client.exchange(requestProcessor.startWith(request), DoneToken::isDone) //
             .filter(or(Prelogin.class::isInstance, SslState.class::isInstance, DoneToken.class::isInstance, ErrorToken.class::isInstance)) //
             .handle((message, sink) -> {
 

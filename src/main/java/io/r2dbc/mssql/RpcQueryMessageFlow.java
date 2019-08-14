@@ -42,6 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.publisher.SynchronousSink;
 
 import javax.annotation.processing.Completion;
@@ -52,6 +53,9 @@ import static io.r2dbc.mssql.util.PredicateUtils.or;
 
 /**
  * Query message flow using cursors. The cursored query message flow uses {@link RpcRequest RPC} calls to open, fetch and close cursors.
+ * <p>
+ * Commands require deferred creation because {@link Client} can be used concurrently and we must fetch the latest state (e.g. {@link TransactionDescriptor}) to issue a command with the appropriate
+ * state.
  *
  * @author Mark Paluch
  * @see RpcRequest
@@ -114,8 +118,8 @@ final class RpcQueryMessageFlow {
         CursorState state = new CursorState();
         state.directMode = true;
 
-        Flux<Message> exchange = client.exchange(spExecuteSql(query, binding, client.getRequiredCollation(), client.getTransactionDescriptor()));
-        OnCursorComplete cursorComplete = new OnCursorComplete(inbound);
+        Flux<Message> exchange = client.exchange(Mono.fromSupplier(() -> spExecuteSql(query, binding, client.getRequiredCollation(), client.getTransactionDescriptor())), DoneProcToken::isDone);
+        OnCursorComplete cursorComplete = new OnCursorComplete(inbound, state);
 
         Flux<Message> messages = inbound //
             .<Message>handle((message, sink) -> {
@@ -128,8 +132,9 @@ final class RpcQueryMessageFlow {
 
                 state.update(message);
 
+
                 if (message.getClass() == ErrorToken.class) {
-                    sink.error(ExceptionFactory.withSql(query).createException((ErrorToken) message));
+                    state.fail(ExceptionFactory.withSql(query).createException((ErrorToken) message));
                     return;
                 }
 
@@ -165,10 +170,9 @@ final class RpcQueryMessageFlow {
 
         CursorState state = new CursorState();
 
-        Flux<Message> exchange = client.exchange(outbound.startWith(spCursorOpen(query, client.getRequiredCollation(), client.getTransactionDescriptor())));
+        Flux<Message> exchange = client.exchange(Flux.defer(() -> outbound.startWith(spCursorOpen(query, client.getRequiredCollation(), client.getTransactionDescriptor()))), isFinalToken(state));
 
-        ExceptionFactory factory = ExceptionFactory.withSql(query);
-        OnCursorComplete cursorComplete = new OnCursorComplete(inbound);
+        OnCursorComplete cursorComplete = new OnCursorComplete(inbound, state);
 
         Flux<Message> messages = inbound //
             .<Message>handle((message, sink) -> {
@@ -225,19 +229,21 @@ final class RpcQueryMessageFlow {
         CursorState state = new CursorState();
 
         int handle = statementCache.getHandle(query, binding);
+
         boolean needsPrepare;
-        RpcRequest rpcRequest;
+        Flux<ClientMessage> messageProducer;
 
         if (handle == PreparedStatementCache.UNPREPARED) {
-            rpcRequest = spCursorPrepExec(PreparedStatementCache.UNPREPARED, query, binding, client.getRequiredCollation(), client.getTransactionDescriptor());
+            messageProducer = Flux.defer(() -> outbound.startWith(spCursorPrepExec(PreparedStatementCache.UNPREPARED, query, binding, client.getRequiredCollation(),
+                client.getTransactionDescriptor())));
             needsPrepare = true;
         } else {
-            rpcRequest = spCursorExec(handle, binding, client.getTransactionDescriptor());
+            messageProducer = Flux.defer(() -> outbound.startWith(spCursorExec(handle, binding, client.getTransactionDescriptor())));
             needsPrepare = false;
         }
 
-        Flux<Message> exchange = client.exchange(outbound.startWith(rpcRequest));
-        OnCursorComplete cursorComplete = new OnCursorComplete(inbound);
+        Flux<Message> exchange = client.exchange(messageProducer, isFinalToken(state));
+        OnCursorComplete cursorComplete = new OnCursorComplete(inbound, state);
 
         Flux<Message> messages = inbound //
             .<Message>handle((message, sink) -> {
@@ -341,14 +347,15 @@ final class RpcQueryMessageFlow {
 
         Phase phase = state.phase;
 
+        if (isFinalState(state)) {
+
+            completion.run();
+
+            state.phase = Phase.CLOSED;
+            return;
+        }
+
         if (phase == Phase.NONE || phase == Phase.FETCHING) {
-
-            if (state.cursorId == 0) {
-
-                completion.run();
-                state.phase = Phase.CLOSED;
-                return;
-            }
 
             if (((state.hasMore && phase == Phase.NONE) || state.hasSeenRows) && state.wantsMore()) {
                 if (phase == Phase.NONE) {
@@ -362,14 +369,37 @@ final class RpcQueryMessageFlow {
             }
 
             state.hasSeenRows = false;
-            return;
+        }
+    }
+
+    private static Predicate<Message> isFinalToken(CursorState state) {
+
+        return message -> {
+
+            if (!DoneProcToken.isDone(message)) {
+                return false;
+            }
+
+            return isFinalState(state);
+        };
+    }
+
+    private static boolean isFinalState(CursorState state) {
+
+        Phase phase = state.phase;
+
+        if (phase == Phase.NONE || phase == Phase.FETCHING) {
+
+            if (state.cursorId == 0) {
+                return true;
+            }
         }
 
-        if (phase == Phase.ERROR || phase == Phase.CLOSING) {
-
-            completion.run();
-            state.phase = Phase.CLOSED;
+        if (phase == Phase.ERROR || phase == Phase.CLOSING || phase == Phase.CLOSED) {
+            return true;
         }
+
+        return false;
     }
 
     /**
@@ -567,7 +597,19 @@ final class RpcQueryMessageFlow {
 
         volatile boolean cancelRequested;
 
+        volatile Exception exception;
+
         Phase phase = Phase.NONE;
+
+        public void fail(Exception exception) {
+
+            this.hasSeenError = true;
+            if (this.exception == null) {
+                this.exception = exception;
+            } else {
+                this.exception.addSuppressed(exception);
+            }
+        }
 
         boolean wantsMore() {
             return !cancelRequested;
@@ -606,10 +648,13 @@ final class RpcQueryMessageFlow {
 
     static class OnCursorComplete extends AtomicReference<Subscription> implements Runnable {
 
-        private final Subscriber<?> upstream;
+        private final Subscriber<?> downstream;
 
-        OnCursorComplete(Subscriber<?> upstream) {
-            this.upstream = upstream;
+        private final CursorState state;
+
+        OnCursorComplete(Subscriber<?> downstream, CursorState state) {
+            this.downstream = downstream;
+            this.state = state;
         }
 
         @Override
@@ -621,7 +666,11 @@ final class RpcQueryMessageFlow {
                 subscription.cancel();
             }
 
-            this.upstream.onComplete();
+            if (this.state.hasSeenError && this.state.exception != null) {
+                this.downstream.onError(this.state.exception);
+            } else {
+                this.downstream.onComplete();
+            }
         }
     }
 }

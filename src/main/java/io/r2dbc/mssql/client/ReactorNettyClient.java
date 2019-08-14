@@ -50,19 +50,24 @@ import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.SynchronousSink;
 import reactor.netty.Connection;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
+import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
 import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiConsumer;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * An implementation of a TDS client based on the Reactor Netty project.
@@ -103,23 +108,29 @@ public final class ReactorNettyClient implements Client {
 
     private final EmitterProcessor<Message> responseProcessor = EmitterProcessor.create(false);
 
+    private final TransactionListener transactionListener = new TransactionListener();
+
+    private final CollationListener collationListener = new CollationListener();
+
+    private final RequestQueue requestQueue;
+
+    // May change during initialization. Values remain the same after connection initialization.
+
     private ConnectionState state = ConnectionState.PRELOGIN;
 
     private MessageDecoder decodeFunction = ConnectionState.PRELOGIN.decoder(this);
 
     private boolean encryptionSupported = false;
 
+    private Optional<String> databaseVersion = Optional.empty();
+
+    // May change during driver interaction, may be read on other threads.
+
     private volatile TransactionDescriptor transactionDescriptor = TransactionDescriptor.empty();
 
     private volatile TransactionStatus transactionStatus = TransactionStatus.AUTO_COMMIT;
 
     private volatile Optional<Collation> databaseCollation = Optional.empty();
-
-    private volatile Optional<String> databaseVersion = Optional.empty();
-
-    private TransactionListener transactionListener = new TransactionListener();
-
-    private CollationListener collationListener = new CollationListener();
 
     /**
      * Creates a new frame processor connected to a given TCP connection.
@@ -140,8 +151,8 @@ public final class ReactorNettyClient implements Client {
 
             try {
                 tdsEncoder.onEnvironmentChange(event);
-                transactionListener.onEnvironmentChange(event);
-                collationListener.onEnvironmentChange(event);
+                this.transactionListener.onEnvironmentChange(event);
+                this.collationListener.onEnvironmentChange(event);
             } catch (Exception e) {
                 logger.warn(this.context.getMessage("Failed onEnvironmentChange() in {}"), "", e);
             }
@@ -150,6 +161,7 @@ public final class ReactorNettyClient implements Client {
         this.byteBufAllocator = connection.outbound().alloc();
         this.connection = connection;
         this.tdsEncoder = tdsEncoder;
+        this.requestQueue = new RequestQueue(this.context);
 
         connection.addHandlerFirst(new ChannelInboundHandlerAdapter() {
 
@@ -194,12 +206,12 @@ public final class ReactorNettyClient implements Client {
 
             @Override
             public Context currentContext() {
-                return requestProcessor.currentContext();
+                return ReactorNettyClient.this.requestProcessor.currentContext();
             }
 
             @Override
             public void error(Throwable e) {
-                responseProcessor.onError(e);
+                ReactorNettyClient.this.responseProcessor.onError(e);
             }
 
             @Override
@@ -212,14 +224,14 @@ public final class ReactorNettyClient implements Client {
                 handleStateChange.accept(message);
 
                 if (message.getClass() == EnvChangeToken.class) {
-                    handleEnvChange.accept((EnvChangeToken) message);
+                    ReactorNettyClient.this.handleEnvChange.accept((EnvChangeToken) message);
                 }
 
                 if (message.getClass() == FeatureExtAckToken.class) {
-                    featureAckChange.accept((FeatureExtAckToken) message);
+                    ReactorNettyClient.this.featureAckChange.accept((FeatureExtAckToken) message);
                 }
 
-                responseProcessor.onNext(message);
+                ReactorNettyClient.this.responseProcessor.onNext(message);
             }
         };
 
@@ -250,12 +262,12 @@ public final class ReactorNettyClient implements Client {
 
             @Override
             public Context currentContext() {
-                return responseProcessor.currentContext();
+                return ReactorNettyClient.this.responseProcessor.currentContext();
             }
 
             @Override
             public void onSubscribe(Subscription s) {
-                responseProcessor.onSubscribe(s);
+                ReactorNettyClient.this.responseProcessor.onSubscribe(s);
             }
 
             @Override
@@ -265,12 +277,12 @@ public final class ReactorNettyClient implements Client {
 
             @Override
             public void onError(Throwable t) {
-                responseProcessor.onError(t);
+                ReactorNettyClient.this.responseProcessor.onError(t);
             }
 
             @Override
             public void onComplete() {
-                responseProcessor.onComplete();
+                ReactorNettyClient.this.responseProcessor.onComplete();
             }
         });
 
@@ -299,15 +311,15 @@ public final class ReactorNettyClient implements Client {
     }
 
     private void onInfoToken(Message message) {
-        logger.debug(context.getMessage("Response: {}"), message);
+        logger.debug(this.context.getMessage("Response: {}"), message);
 
         if (message instanceof AbstractInfoToken) {
             AbstractInfoToken token = (AbstractInfoToken) message;
             if (token.getClassification() == AbstractInfoToken.Classification.INFORMATIONAL) {
-                logger.debug(context.getMessage("Info: Code [{}] Severity [{}]: {}"), token.getNumber(), token.getClassification(),
+                logger.debug(this.context.getMessage("Info: Code [{}] Severity [{}]: {}"), token.getNumber(), token.getClassification(),
                     token.getMessage());
             } else {
-                logger.debug(context.getMessage("Warning: Code [{}] Severity [{}]: {}"), token.getNumber(), token.getClassification(),
+                logger.debug(this.context.getMessage("Warning: Code [{}] Severity [{}]: {}"), token.getNumber(), token.getClassification(),
                     token.getMessage());
             }
         }
@@ -442,45 +454,6 @@ public final class ReactorNettyClient implements Client {
     }
 
     @Override
-    public Flux<Message> exchange(ClientMessage request) {
-
-        Assert.requireNonNull(request, "Requests must not be null");
-
-        if (DEBUG_ENABLED) {
-            logger.debug(String.format(this.context.getMessage("exchange(%s)"), request));
-        }
-
-        /*if (this.isClosed.get()) {
-            return Flux.error(new IllegalStateException("Cannot exchange messages because the connection is closed"));
-        } */
-
-        return this.responseProcessor
-            .doOnSubscribe(s -> this.requests.next(request));
-    }
-
-    @Override
-    public Flux<Message> exchange(Publisher<? extends ClientMessage> requests) {
-
-        Assert.requireNonNull(requests, "Requests must not be null");
-
-        if (DEBUG_ENABLED) {
-            logger.debug(this.context.getMessage("exchange()"));
-        }
-
-        return Flux.defer(() -> {
-
-            logger.debug(this.context.getMessage("exchange(subscribed)"));
-
-            if (this.isClosed.get()) {
-                return Flux.error(new IllegalStateException("Cannot exchange messages because the connection is closed"));
-            }
-
-            return this.responseProcessor
-                .doOnSubscribe(s -> Flux.from(requests).subscribe(this.requests::next, this.requests::error));
-        });
-    }
-
-    @Override
     public ByteBufAllocator getByteBufAllocator() {
         return this.byteBufAllocator;
     }
@@ -526,25 +499,166 @@ public final class ReactorNettyClient implements Client {
         return channel.isOpen();
     }
 
-    @SuppressWarnings("unchecked")
-    private static <T extends Message> BiConsumer<Message, SynchronousSink<Message>> handleMessage(Class<T> type,
-                                                                                                   BiConsumer<T, SynchronousSink<Message>> consumer) {
-        return (message, sink) -> {
-            if (type.isInstance(message)) {
-                consumer.accept((T) message, sink);
-            } else {
-                sink.next(message);
+    @Override
+    public Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Predicate<Message> isLastResponseFrame) {
+
+        Assert.requireNonNull(requests, "Requests must not be null");
+
+        if (DEBUG_ENABLED) {
+            logger.debug(this.context.getMessage("exchange()"));
+        }
+
+        ExchangeRequest exchangeRequest = new ExchangeRequest();
+
+        Flux<Message> handle = Mono.<Flux<Message>>create(sink -> {
+
+            if (DEBUG_ENABLED) {
+                logger.debug(this.context.getMessage("exchange(subscribed)"));
             }
-        };
+
+            if (this.isClosed.get()) {
+                sink.error(new IllegalStateException("Cannot exchange messages because the connection is closed"));
+                return;
+            }
+
+            Flux<Message> requestMessages = this.responseProcessor
+                .doOnSubscribe(s -> Flux.from(requests).subscribe(this.requests::next, this.requests::error));
+
+            try {
+                exchangeRequest.submit(this.requestQueue, sink, requestMessages);
+            } catch (Exception e) {
+                sink.error(e);
+            }
+
+        }).flatMapMany(Function.identity()).handle((message, sink) -> {
+
+            sink.next(message);
+
+            if (isLastResponseFrame.test(message)) {
+                exchangeRequest.complete();
+                sink.complete();
+            }
+        });
+
+        return handle.doAfterTerminate(this.requestQueue).doOnCancel(() -> {
+
+            if (!exchangeRequest.isComplete()) {
+                logger.error("Exchange cancelled while exchange is active. This is likely a bug leading to unpredictable outcome.");
+            }
+        });
     }
 
-    @SuppressWarnings("unchecked")
-    private static <T extends Message> Consumer<Message> handleExact(Class<T> type, Consumer<T> consumer) {
-        return (message) -> {
-            if (type == message.getClass()) {
-                consumer.accept((T) message);
+    /**
+     * Request queue to collect incoming exchange requests.
+     * <p>Submission conditionally queues requests if an ongoing exchange was active by the time of subscription.
+     * Drains queued commands on exchange completion if there are queued commands or disable active flag.
+     */
+    static class RequestQueue implements Runnable {
+
+        private final Queue<Runnable> requestQueue = Queues.<Runnable>small().get();
+
+        private final AtomicBoolean active = new AtomicBoolean();
+
+        private final ConnectionContext context;
+
+        RequestQueue(ConnectionContext context) {
+            this.context = context;
+        }
+
+        @Override
+        public void run() {
+
+            Runnable nextCommand = this.requestQueue.poll();
+
+            if (nextCommand != null) {
+
+                if (DEBUG_ENABLED) {
+                    logger.debug(this.context.getMessage("Initiating queued exchange"));
+                }
+
+                nextCommand.run();
+                return;
             }
-        };
+
+            if (DEBUG_ENABLED) {
+                logger.debug(this.context.getMessage("Conversation complete"));
+            }
+
+            this.active.compareAndSet(true, false);
+        }
+
+        /**
+         * Submit a {@code exchangeRequest}. Requests are either executed directly (without an active exchange) or queued (if another exchange is currently active).
+         *
+         * @param exchangeRequest
+         */
+        void submit(Runnable exchangeRequest) {
+
+            if (this.active.compareAndSet(false, true)) {
+
+                if (DEBUG_ENABLED) {
+                    logger.debug(this.context.getMessage("Initiating exchange"));
+                }
+
+                exchangeRequest.run();
+            } else {
+
+                if (DEBUG_ENABLED) {
+                    logger.debug(this.context.getMessage("Queueing exchange"));
+                }
+
+                if (!this.requestQueue.offer(exchangeRequest)) {
+                    throw new IllegalStateException("Request queue is full");
+                }
+
+                drainRequestQueue();
+            }
+        }
+
+        void drainRequestQueue() {
+
+            if (this.active.compareAndSet(false, true)) {
+
+                Runnable runnable = this.requestQueue.poll();
+
+                if (runnable != null) {
+                    runnable.run();
+                } else {
+                    this.active.compareAndSet(true, false);
+                }
+            }
+        }
+    }
+
+    /**
+     * Ensure a command request is submitted and subscribed to only once.
+     */
+    static class ExchangeRequest {
+
+        private static final AtomicIntegerFieldUpdater<ExchangeRequest> COMPLETED = AtomicIntegerFieldUpdater.newUpdater(ExchangeRequest.class, "completed");
+
+        private static final AtomicIntegerFieldUpdater<ExchangeRequest> SUBMITTED = AtomicIntegerFieldUpdater.newUpdater(ExchangeRequest.class, "submitted");
+
+        private volatile int completed = 0;
+
+        private volatile int submitted = 0;
+
+        public void complete() {
+            COMPLETED.set(this, 1);
+        }
+
+        public boolean isComplete() {
+            return COMPLETED.get(this) == 1;
+        }
+
+        void submit(RequestQueue queue, MonoSink<Flux<Message>> sink, Flux<Message> requestMessages) {
+
+            if (!SUBMITTED.compareAndSet(this, 0, 1)) {
+                throw new IllegalStateException("Client exchange can be subscribed only once");
+            }
+
+            queue.submit(() -> sink.success(requestMessages));
+        }
     }
 
     class TransactionListener implements EnvironmentChangeListener {
@@ -581,7 +695,7 @@ public final class ReactorNettyClient implements Client {
             if (token.getChangeType() == EnvChangeToken.EnvChangeType.CommitTx) {
 
                 if (DEBUG_ENABLED) {
-                    logger.debug(context.getMessage("Transaction committed"));
+                    logger.debug(ReactorNettyClient.this.context.getMessage("Transaction committed"));
                 }
 
                 updateStatus(TransactionStatus.EXPLICIT, TransactionDescriptor.empty());
@@ -590,7 +704,7 @@ public final class ReactorNettyClient implements Client {
             if (token.getChangeType() == EnvChangeToken.EnvChangeType.RollbackTx) {
 
                 if (DEBUG_ENABLED) {
-                    logger.debug(context.getMessage("Transaction rolled back"));
+                    logger.debug(ReactorNettyClient.this.context.getMessage("Transaction rolled back"));
                 }
 
                 updateStatus(TransactionStatus.EXPLICIT, TransactionDescriptor.empty());

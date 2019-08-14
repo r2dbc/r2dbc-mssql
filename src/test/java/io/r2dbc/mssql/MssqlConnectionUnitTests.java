@@ -36,6 +36,7 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -90,7 +91,7 @@ class MssqlConnectionUnitTests {
             .verifyComplete();
 
         verify(clientMock, times(2)).getTransactionStatus();
-        verify(clientMock).getContext();
+        verify(clientMock, atLeast(1)).getContext();
         verify(clientMock).getDatabaseVersion();
         verifyNoMoreInteractions(clientMock);
     }
@@ -122,7 +123,7 @@ class MssqlConnectionUnitTests {
             .verifyComplete();
 
         verify(clientMock, times(2)).getTransactionStatus();
-        verify(clientMock).getContext();
+        verify(clientMock, atLeast(1)).getContext();
         verify(clientMock).getDatabaseVersion();
         verifyNoMoreInteractions(clientMock);
     }
@@ -154,7 +155,7 @@ class MssqlConnectionUnitTests {
             .verifyComplete();
 
         verify(clientMock, times(2)).getTransactionStatus();
-        verify(clientMock).getContext();
+        verify(clientMock, atLeast(1)).getContext();
         verify(clientMock).getDatabaseVersion();
         verifyNoMoreInteractions(clientMock);
     }
@@ -218,7 +219,7 @@ class MssqlConnectionUnitTests {
             .verifyComplete();
 
         verify(clientMock, times(2)).getTransactionStatus();
-        verify(clientMock).getContext();
+        verify(clientMock, atLeast(1)).getContext();
         verify(clientMock).getDatabaseVersion();
         verifyNoMoreInteractions(clientMock);
     }

@@ -22,12 +22,16 @@ import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.Assert;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.publisher.SynchronousSink;
 
 import java.util.function.BiConsumer;
 
 /**
  * Simple (direct) query message flow using {@link SqlBatch}.
+ * <p>
+ * Commands require deferred creation because {@link Client} can be used concurrently and we must fetch the latest state (e.g. {@link TransactionDescriptor}) to issue a command with the appropriate
+ * state.
  *
  * @author Mark Paluch
  */
@@ -45,7 +49,7 @@ final class QueryMessageFlow {
         Assert.requireNonNull(client, "Client must not be null");
         Assert.requireNonNull(query, "Query must not be null");
 
-        return client.exchange(SqlBatch.create(1, client.getTransactionDescriptor(), query))
+        return client.exchange(Mono.fromSupplier(() -> SqlBatch.create(1, client.getTransactionDescriptor(), query)), DoneToken::isDone)
             .doOnSubscribe(ignore -> QueryLogger.logQuery(client.getContext(), query))
             .handle(DoneHandler.INSTANCE);
     }
