@@ -19,6 +19,7 @@ package io.r2dbc.mssql.client;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -514,6 +515,16 @@ public final class ReactorNettyClient implements Client {
         return this.encryptionSupported;
     }
 
+    @Override
+    public boolean isConnected() {
+
+        if (this.isClosed.get()) {
+            return false;
+        }
+
+        Channel channel = this.connection.channel();
+        return channel.isOpen();
+    }
 
     @SuppressWarnings("unchecked")
     private static <T extends Message> BiConsumer<Message, SynchronousSink<Message>> handleMessage(Class<T> type,

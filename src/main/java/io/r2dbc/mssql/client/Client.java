@@ -115,4 +115,11 @@ public interface Client {
      * @return {@code true} if the server supports column encryption.
      */
     boolean isColumnEncryptionSupported();
+
+    /**
+     * Returns whether the client is connected to a server.
+     *
+     * @return {@literal true} if the client is connected to a server.
+     */
+    boolean isConnected();
 }

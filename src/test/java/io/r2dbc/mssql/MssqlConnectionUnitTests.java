@@ -22,8 +22,10 @@ import io.r2dbc.mssql.client.TestClient;
 import io.r2dbc.mssql.client.TransactionStatus;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.token.DoneToken;
+import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.spi.IsolationLevel;
+import io.r2dbc.spi.ValidationDepth;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -236,7 +238,7 @@ class MssqlConnectionUnitTests {
     }
 
     @Test
-    void createSavepoShouldBeginTransaction() {
+    void createSavepointShouldBeginTransaction() {
 
         TestClient client =
             TestClient.builder().withTransactionStatus(TransactionStatus.AUTO_COMMIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "SET IMPLICIT_TRANSACTIONS ON; IF @@TRANCOUNT =" +
@@ -262,6 +264,61 @@ class MssqlConnectionUnitTests {
         connection.setTransactionIsolationLevel(isolationLevel)
             .as(StepVerifier::create)
             .verifyComplete();
+    }
+
+    @Test
+    void localValidationShouldValidateAgainstConnectionState() {
+
+        TestClient connected =
+            TestClient.builder().withConnected(true).build();
+
+        MssqlConnection connection = new MssqlConnection(connected, new ConnectionOptions());
+
+        connection.validate(ValidationDepth.LOCAL)
+            .as(StepVerifier::create)
+            .expectNext(true)
+            .verifyComplete();
+
+        TestClient disconnected =
+            TestClient.builder().withConnected(false).build();
+
+        connection = new MssqlConnection(disconnected, new ConnectionOptions());
+
+        connection.validate(ValidationDepth.LOCAL)
+            .as(StepVerifier::create)
+            .expectNext(false)
+            .verifyComplete();
+    }
+
+    @Test
+    void remoteValidationShouldIssueQuery() {
+
+        TestClient client =
+            TestClient.builder().withConnected(true).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(),
+                "SELECT 1")).thenRespond(DoneToken.create(0)).build();
+
+        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
+
+        connection.validate(ValidationDepth.REMOTE)
+            .as(StepVerifier::create)
+            .expectNext(true)
+            .verifyComplete();
+    }
+
+    @Test
+    void remoteValidationShouldFail() {
+
+        TestClient client =
+            TestClient.builder().withConnected(true).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(),
+                "SELECT 1")).thenRespond(new ErrorToken(1, 1, (byte) 1, (byte) 1, "failed", "", "", 0), DoneToken.create(0)).build();
+
+        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
+
+        connection.validate(ValidationDepth.REMOTE)
+            .as(StepVerifier::create)
+            .expectNext(false)
+            .verifyComplete();
+
     }
 
     private static Stream<IsolationLevel> isolationLevels() {

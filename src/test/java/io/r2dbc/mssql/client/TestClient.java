@@ -43,9 +43,11 @@ import java.util.function.Function;
 @SuppressWarnings({"unchecked", "rawtypes"})
 public final class TestClient implements Client {
 
-    public static final TestClient NO_OP = new TestClient(false, Flux.empty(), TransactionStatus.AUTO_COMMIT);
+    public static final TestClient NO_OP = new TestClient(false, true, Flux.empty(), TransactionStatus.AUTO_COMMIT);
 
     private final boolean expectClose;
+
+    private final boolean connected;
 
     private final EmitterProcessor<Message> requestProcessor = EmitterProcessor.create(false);
 
@@ -55,9 +57,10 @@ public final class TestClient implements Client {
 
     private final TransactionStatus transactionStatus;
 
-    private TestClient(boolean expectClose, Flux<Window> windows, TransactionStatus transactionStatus) {
+    private TestClient(boolean expectClose, boolean connected, Flux<Window> windows, TransactionStatus transactionStatus) {
 
         this.expectClose = expectClose;
+        this.connected = connected;
         this.transactionStatus = transactionStatus;
 
         FluxSink<Flux<Message>> responses = this.responseProcessor.sink();
@@ -140,11 +143,18 @@ public final class TestClient implements Client {
         return true;
     }
 
+    @Override
+    public boolean isConnected() {
+        return this.connected;
+    }
+
     public static final class Builder {
 
         private final List<Window.Builder<?>> windows = new ArrayList<>();
 
         private boolean expectClose = false;
+
+        private boolean connected = true;
 
         private TransactionStatus transactionStatus = TransactionStatus.AUTO_COMMIT;
 
@@ -152,11 +162,16 @@ public final class TestClient implements Client {
         }
 
         public TestClient build() {
-            return new TestClient(this.expectClose, Flux.fromIterable(this.windows).map(Window.Builder::build), transactionStatus);
+            return new TestClient(this.expectClose, this.connected, Flux.fromIterable(this.windows).map(Window.Builder::build), transactionStatus);
         }
 
         public Builder expectClose() {
             this.expectClose = true;
+            return this;
+        }
+
+        public Builder withConnected(boolean connected) {
+            this.connected = connected;
             return this;
         }
 

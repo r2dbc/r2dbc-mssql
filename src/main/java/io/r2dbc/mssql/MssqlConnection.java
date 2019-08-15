@@ -23,9 +23,12 @@ import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Batch;
 import io.r2dbc.spi.Connection;
 import io.r2dbc.spi.IsolationLevel;
+import io.r2dbc.spi.ValidationDepth;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -55,6 +58,8 @@ public final class MssqlConnection implements Connection {
 
     private final ConnectionOptions connectionOptions;
 
+    private final Flux<Integer> validationQuery;
+
     private volatile boolean autoCommit;
 
     private volatile IsolationLevel isolationLevel;
@@ -69,6 +74,7 @@ public final class MssqlConnection implements Connection {
         TransactionStatus transactionStatus = client.getTransactionStatus();
         this.autoCommit = transactionStatus == TransactionStatus.AUTO_COMMIT;
         this.isolationLevel = IsolationLevel.READ_COMMITTED;
+        this.validationQuery = new SimpleMssqlStatement(this.client, connectionOptions, "SELECT 1").fetchSize(0).execute().flatMap(MssqlResult::getRowsUpdated);
     }
 
     @Override
@@ -227,14 +233,51 @@ public final class MssqlConnection implements Connection {
         return exchange("SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql()).doOnSuccess(ignore -> this.isolationLevel = isolationLevel);
     }
 
+    @Override
+    public Mono<Boolean> validate(ValidationDepth depth) {
+
+        if (depth == ValidationDepth.LOCAL) {
+            return Mono.fromSupplier(this.client::isConnected);
+        }
+
+        return Mono.create(sink -> {
+
+            if (!this.client.isConnected()) {
+                sink.success(false);
+                return;
+            }
+
+            this.validationQuery.subscribe(new CoreSubscriber<Integer>() {
+
+                @Override
+                public void onSubscribe(Subscription s) {
+                    s.request(Integer.MAX_VALUE);
+                }
+
+                @Override
+                public void onNext(Integer integer) {
+
+                }
+
+                @Override
+                public void onError(Throwable t) {
+
+                    logger.debug("Validation failed", t);
+                    sink.success(false);
+                }
+
+                @Override
+                public void onComplete() {
+                    sink.success(true);
+                }
+            });
+        });
+    }
+
     private Mono<Void> exchange(String sql) {
 
         ExceptionFactory factory = ExceptionFactory.withSql(sql);
         return QueryMessageFlow.exchange(this.client, sql).handle(factory::handleErrorResponse).then();
-    }
-
-    Client getClient() {
-        return this.client;
     }
 
     private Mono<Void> useTransactionStatus(Function<TransactionStatus, Publisher<?>> function) {
