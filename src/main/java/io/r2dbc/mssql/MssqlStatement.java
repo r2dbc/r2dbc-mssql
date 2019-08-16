@@ -34,33 +34,49 @@ public interface MssqlStatement extends Statement {
 
     /**
      * {@inheritDoc}
-     *
-     * @throws IllegalArgumentException if {@code identifier} is not a {@link String} like {@code @foo}, {@code @bar},
-     *                                  etc.
+     */
+    @Override
+    MssqlStatement add();
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    MssqlStatement bind(int index, Object value);
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    MssqlStatement bindNull(int index, Class<?> type);
+
+    /**
+     * {@inheritDoc}
      */
     @Override
     MssqlStatement bind(Object identifier, Object value);
 
     /**
      * {@inheritDoc}
-     *
-     * @throws IllegalArgumentException if {@code identifier} is not a {@link String} like {@code @foo}, {@code @bar},
-     *                                  etc.
      */
     @Override
     MssqlStatement bindNull(Object identifier, Class<?> type);
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     Flux<MssqlResult> execute();
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    MssqlStatement returnGeneratedValues(String... strings);
+    MssqlStatement returnGeneratedValues(String... columns);
 
     /**
-     * Configure the desired fetch size. A non-zero fetch size switches to cursored execution overriding cursored/direct execution preference. Configuring fetch size to zero uses direct execution.
-     *
-     * @param fetchSize the fetch size. Must not be negative.
-     * @return {@code this} {@link MssqlStatement}.
+     * {@inheritDoc}
      */
+    @Override
     MssqlStatement fetchSize(int fetchSize);
 }
