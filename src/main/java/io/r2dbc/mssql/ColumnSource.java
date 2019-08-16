@@ -108,7 +108,7 @@ abstract class ColumnSource {
         Column column = this.nameKeyedColumns.get(name);
 
         if (column == null) {
-            name = CollatedCollection.getColumnName(name, this.nameKeyedColumns.keySet());
+            name = EscapeAwareColumnMatcher.findColumn(name, this.nameKeyedColumns.keySet());
             if (name != null) {
                 column = this.nameKeyedColumns.get(name);
             }

@@ -16,39 +16,31 @@
 
 package io.r2dbc.mssql;
 
-import java.text.Collator;
-import java.util.Comparator;
-import java.util.Locale;
+import reactor.util.annotation.Nullable;
+
+import java.util.Collection;
 
 /**
- * {@link Comparator} for column name  ({@code sysname}) comparison. Uses {@link Collator#SECONDARY lenient} comparison by default.
- * Supports name escaping with square brackets ({@code [sysname]}) to enforce exact comparison rules.
+ * Matcher utility for column name  ({@code sysname}) comparison. Uses case-insensitive comparison by default.
+ * Supports name escaping with square brackets ({@code [sysname]}) to enforce case-sensitive comparison rules.
  *
  * @author Mark Paluch
  */
-enum EscapeAwareComparator implements Comparator<String> {
+final class EscapeAwareColumnMatcher {
 
-    /**
-     * Singleton instance.
-     */
-    INSTANCE;
+    @Nullable
+    public static String findColumn(String name, Collection<String> names) {
 
-    static final Collator LENIENT;
+        for (String s : names) {
+            if (matches(name, s)) {
+                return s;
+            }
+        }
 
-    static final Collator EXACT;
-
-    static {
-        Collator lenient = Collator.getInstance(Locale.US);
-        lenient.setStrength(Collator.SECONDARY);
-        LENIENT = lenient;
-
-        Collator exact = Collator.getInstance(Locale.US);
-        exact.setStrength(Collator.IDENTICAL);
-        EXACT = exact;
+        return null;
     }
 
-    @Override
-    public int compare(String o1, String o2) {
+    private static boolean matches(String o1, String o2) {
 
         boolean exactMatch = false;
 
@@ -62,6 +54,6 @@ enum EscapeAwareComparator implements Comparator<String> {
             o2 = o2.substring(1, o2.length() - 1);
         }
 
-        return exactMatch ? EXACT.compare(o1, o2) : LENIENT.compare(o1, o2);
+        return exactMatch ? o1.equals(o2) : o1.equalsIgnoreCase(o2);
     }
 }
