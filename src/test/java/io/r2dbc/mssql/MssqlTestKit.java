@@ -20,7 +20,7 @@ import io.r2dbc.mssql.util.IntegrationTestSupport;
 import io.r2dbc.spi.ConnectionFactories;
 import io.r2dbc.spi.ConnectionFactory;
 import io.r2dbc.spi.ConnectionFactoryOptions;
-import io.r2dbc.spi.test.Example;
+import io.r2dbc.spi.test.TestKit;
 import org.springframework.jdbc.core.JdbcOperations;
 
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.MSSQL_DRIVER;
@@ -30,7 +30,10 @@ import static io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD;
 import static io.r2dbc.spi.ConnectionFactoryOptions.PORT;
 import static io.r2dbc.spi.ConnectionFactoryOptions.USER;
 
-final class MssqlExample extends IntegrationTestSupport implements Example<String> {
+/**
+ * TCK Test Kit for SQL Server driver.
+ */
+final class MssqlTestKit extends IntegrationTestSupport implements TestKit<String> {
 
     private final ConnectionFactory connectionFactory = ConnectionFactories.get(ConnectionFactoryOptions.builder()
         .option(DRIVER, MSSQL_DRIVER)
