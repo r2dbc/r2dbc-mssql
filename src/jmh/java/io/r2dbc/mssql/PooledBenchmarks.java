@@ -98,7 +98,7 @@ public class PooledBenchmarks extends BenchmarkSettings {
                 statement.fetchSize(0);
                 return Flux.from(statement.execute()).flatMap(it -> it.map((row, rowMetadata) -> row.get("optname", String.class))).last();
 
-            }, io.r2dbc.spi.Connection::close, io.r2dbc.spi.Connection::close
+            }, io.r2dbc.spi.Connection::close, (conn, err) -> conn.close(), io.r2dbc.spi.Connection::close
         ).block();
 
         voodoo.consume(optname);

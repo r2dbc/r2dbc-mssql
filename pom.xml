@@ -44,7 +44,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <r2dbc-spi.version>${project.version}</r2dbc-spi.version>
         <r2dbc-pool.version>${project.version}</r2dbc-pool.version>
-        <reactor.version>Dysprosium-M1</reactor.version>
+        <reactor.version>Dysprosium-RC1</reactor.version>
         <slf4j.version>1.7.26</slf4j.version>
         <testcontainers.version>1.11.2</testcontainers.version>
     </properties>
