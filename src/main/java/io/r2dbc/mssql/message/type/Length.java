@@ -163,7 +163,7 @@ public final class Length {
                 }
 
                 if (serverType == SqlServerType.SQL_VARIANT) {
-                    int valueLength = Decode.intBigEndian(buffer);
+                    int valueLength = Decode.asInt(buffer);
                     return Length.of(valueLength, valueLength == 0);
                 }
 

@@ -90,7 +90,7 @@ abstract class ColumnSource {
         Column column = findColumn(name);
 
         if (column == null) {
-            throw new IllegalArgumentException(String.format("Column name [%s] does not exist in column names [%s]", name, this.nameKeyedColumns.keySet()));
+            throw new IllegalArgumentException(String.format("Column name [%s] does not exist in column names %s", name, this.nameKeyedColumns.keySet()));
         }
 
         return column;
