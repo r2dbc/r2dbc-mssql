@@ -21,6 +21,9 @@ import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.mssql.client.ReactorNettyClient;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.ConnectionFactory;
+import io.r2dbc.spi.R2dbcNonTransientResourceException;
+import io.r2dbc.spi.Row;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -29,6 +32,10 @@ import reactor.core.publisher.Mono;
  * @author Mark Paluch
  */
 public final class MssqlConnectionFactory implements ConnectionFactory {
+
+    private final String METADATA_QUERY = " SELECT " +
+        "CAST(SERVERPROPERTY('Edition') AS VARCHAR(255)) AS Edition, " +
+        "CAST(@@VERSION AS VARCHAR(255)) as VersionString";
 
     private final Mono<? extends Client> clientFactory;
 
@@ -65,7 +72,23 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
             return LoginFlow.exchange(client, loginConfiguration)
                 .doOnError(e -> client.close().subscribe());
         })
-            .map(it -> new MssqlConnection(it, this.connectionOptions));
+            .flatMap(it -> {
+
+                Flux<MssqlConnection> connectionFlux =
+                    new SimpleMssqlStatement(it, this.connectionOptions, METADATA_QUERY).execute()
+                        .flatMap(result -> result.map((row, rowMetadata) -> toConnectionMetadata(it.getDatabaseVersion().orElse("unknown"), row))).map(metadata -> {
+                        return new MssqlConnection(it, metadata, this.connectionOptions);
+                    });
+
+                return connectionFlux.last().onErrorResume(throwable -> {
+                    return it.close().then(Mono.error(new R2dbcNonTransientResourceException("Cannot connect to " + this.configuration.getHost() + ":" + this.configuration.getPort(), throwable)));
+                });
+            });
+
+    }
+
+    private static MssqlConnectionMetadata toConnectionMetadata(String version, Row row) {
+        return MssqlConnectionMetadata.from(row.get("Edition", String.class), version, row.get("VersionString", String.class));
     }
 
     ClientConfiguration getClientConfiguration() {
@@ -89,4 +112,5 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         sb.append(']');
         return sb.toString();
     }
+
 }

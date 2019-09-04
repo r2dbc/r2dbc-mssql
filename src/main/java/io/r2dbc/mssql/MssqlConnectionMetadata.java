@@ -25,8 +25,41 @@ public final class MssqlConnectionMetadata {
 
     private final String databaseVersion;
 
-    public MssqlConnectionMetadata(String databaseVersion) {
+    private final String databaseProductName;
+
+    public MssqlConnectionMetadata(String databaseProductName, String databaseVersion) {
         this.databaseVersion = databaseVersion;
+        this.databaseProductName = databaseProductName;
+    }
+
+    /**
+     * Construct {@link MssqlConnectionMetadata} from a metadata query.
+     *
+     * @param edition
+     * @param version
+     * @param spVersionOutput
+     * @return
+     */
+    public static MssqlConnectionMetadata from(String edition, String version, String spVersionOutput) {
+
+        String databaseProductName = spVersionOutput;
+
+        int separator = spVersionOutput.indexOf(" - ");
+
+        if (separator > -1) {
+            databaseProductName = spVersionOutput.substring(0, separator) + " - " + edition;
+        }
+
+        return new MssqlConnectionMetadata(databaseProductName, version);
+    }
+
+    /**
+     * Retrieves the name of this database product.
+     *
+     * @return database product name
+     */
+    public String getDatabaseProductName() {
+        return this.databaseProductName;
     }
 
     /**
@@ -36,14 +69,5 @@ public final class MssqlConnectionMetadata {
      */
     public String getDatabaseVersion() {
         return this.databaseVersion;
-    }
-
-    /**
-     * Retrieves the name of this database product.
-     *
-     * @return database product name
-     */
-    public String getDatabaseProductName() {
-        return MssqlConnectionFactoryMetadata.NAME;
     }
 }

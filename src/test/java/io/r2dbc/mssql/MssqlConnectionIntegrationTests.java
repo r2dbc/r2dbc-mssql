@@ -85,7 +85,8 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
             DatabaseMetaData jdbcMetadata = connection.getMetaData();
             MssqlConnectionMetadata metadata = IntegrationTestSupport.connection.getMetadata();
 
-            assertThat(metadata.getDatabaseProductName()).isEqualTo(jdbcMetadata.getDatabaseProductName());
+            assertThat(metadata.getDatabaseProductName()).contains(jdbcMetadata.getDatabaseProductName());
+            assertThat(metadata.getDatabaseProductName()).doesNotContain("Copyright");
             assertThat(metadata.getDatabaseVersion()).isEqualTo(jdbcMetadata.getDatabaseProductVersion());
         }
     }

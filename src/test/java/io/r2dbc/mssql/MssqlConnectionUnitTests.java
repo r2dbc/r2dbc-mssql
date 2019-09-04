@@ -51,13 +51,17 @@ import static org.mockito.Mockito.when;
  */
 class MssqlConnectionUnitTests {
 
+    static MssqlConnectionMetadata metadata = new MssqlConnectionMetadata("SQL Server", "1.0");
+
+    static ConnectionOptions conectionOptions = new ConnectionOptions();
+
     @Test
     void shouldBeginTransactionFromInitialState() {
 
         TestClient client =
             TestClient.builder().expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "SET IMPLICIT_TRANSACTIONS ON;")).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
 
         connection.beginTransaction()
             .as(StepVerifier::create)
@@ -70,7 +74,7 @@ class MssqlConnectionUnitTests {
         TestClient client =
             TestClient.builder().withTransactionStatus(TransactionStatus.EXPLICIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "SET IMPLICIT_TRANSACTIONS ON;")).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
 
         connection.beginTransaction()
             .as(StepVerifier::create)
@@ -84,7 +88,7 @@ class MssqlConnectionUnitTests {
         when(clientMock.getContext()).thenReturn(new ConnectionContext());
         when(clientMock.getTransactionStatus()).thenReturn(TransactionStatus.STARTED);
 
-        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(clientMock, metadata, conectionOptions);
 
         connection.beginTransaction()
             .as(StepVerifier::create)
@@ -92,7 +96,6 @@ class MssqlConnectionUnitTests {
 
         verify(clientMock, times(2)).getTransactionStatus();
         verify(clientMock, atLeast(1)).getContext();
-        verify(clientMock).getDatabaseVersion();
         verifyNoMoreInteractions(clientMock);
     }
 
@@ -102,7 +105,7 @@ class MssqlConnectionUnitTests {
         TestClient client =
             TestClient.builder().withTransactionStatus(TransactionStatus.STARTED).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "IF @@TRANCOUNT > 0 COMMIT TRANSACTION")).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
 
         connection.commitTransaction()
             .as(StepVerifier::create)
@@ -116,7 +119,7 @@ class MssqlConnectionUnitTests {
         when(clientMock.getContext()).thenReturn(new ConnectionContext());
         when(clientMock.getTransactionStatus()).thenReturn(TransactionStatus.AUTO_COMMIT);
 
-        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(clientMock, metadata, conectionOptions);
 
         connection.commitTransaction()
             .as(StepVerifier::create)
@@ -124,7 +127,6 @@ class MssqlConnectionUnitTests {
 
         verify(clientMock, times(2)).getTransactionStatus();
         verify(clientMock, atLeast(1)).getContext();
-        verify(clientMock).getDatabaseVersion();
         verifyNoMoreInteractions(clientMock);
     }
 
@@ -134,7 +136,7 @@ class MssqlConnectionUnitTests {
         TestClient client =
             TestClient.builder().withTransactionStatus(TransactionStatus.STARTED).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION")).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
 
         connection.rollbackTransaction()
             .as(StepVerifier::create)
@@ -148,7 +150,7 @@ class MssqlConnectionUnitTests {
         when(clientMock.getContext()).thenReturn(new ConnectionContext());
         when(clientMock.getTransactionStatus()).thenReturn(TransactionStatus.AUTO_COMMIT);
 
-        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(clientMock, metadata, conectionOptions);
 
         connection.rollbackTransaction()
             .as(StepVerifier::create)
@@ -156,7 +158,6 @@ class MssqlConnectionUnitTests {
 
         verify(clientMock, times(2)).getTransactionStatus();
         verify(clientMock, atLeast(1)).getContext();
-        verify(clientMock).getDatabaseVersion();
         verifyNoMoreInteractions(clientMock);
     }
 
@@ -165,7 +166,7 @@ class MssqlConnectionUnitTests {
 
         Client clientMock = mock(Client.class);
         when(clientMock.getContext()).thenReturn(new ConnectionContext());
-        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(clientMock, metadata, conectionOptions);
 
         connection.releaseSavepoint("foo").as(StepVerifier::create).verifyComplete();
     }
@@ -176,7 +177,7 @@ class MssqlConnectionUnitTests {
 
         Client clientMock = mock(Client.class);
         when(clientMock.getContext()).thenReturn(new ConnectionContext());
-        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(clientMock, metadata, conectionOptions);
 
         assertThat(connection.createSavepoint(name)).isNotNull();
     }
@@ -187,7 +188,7 @@ class MssqlConnectionUnitTests {
 
         Client clientMock = mock(Client.class);
         when(clientMock.getContext()).thenReturn(new ConnectionContext());
-        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(clientMock, metadata, conectionOptions);
 
         assertThatThrownBy(() -> connection.createSavepoint(name)).isInstanceOf(IllegalArgumentException.class);
     }
@@ -198,7 +199,7 @@ class MssqlConnectionUnitTests {
         TestClient client =
             TestClient.builder().withTransactionStatus(TransactionStatus.STARTED).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "ROLLBACK TRANSACTION foo")).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
 
         connection.rollbackTransactionToSavepoint("foo")
             .as(StepVerifier::create)
@@ -212,7 +213,7 @@ class MssqlConnectionUnitTests {
         when(clientMock.getContext()).thenReturn(new ConnectionContext());
         when(clientMock.getTransactionStatus()).thenReturn(TransactionStatus.AUTO_COMMIT);
 
-        MssqlConnection connection = new MssqlConnection(clientMock, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(clientMock, metadata, conectionOptions);
 
         connection.rollbackTransactionToSavepoint("foo")
             .as(StepVerifier::create)
@@ -220,7 +221,6 @@ class MssqlConnectionUnitTests {
 
         verify(clientMock, times(2)).getTransactionStatus();
         verify(clientMock, atLeast(1)).getContext();
-        verify(clientMock).getDatabaseVersion();
         verifyNoMoreInteractions(clientMock);
     }
 
@@ -231,7 +231,7 @@ class MssqlConnectionUnitTests {
             TestClient.builder().withTransactionStatus(TransactionStatus.STARTED).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "SET IMPLICIT_TRANSACTIONS ON; IF @@TRANCOUNT = 0 " +
                 "BEGIN BEGIN TRAN IF @@TRANCOUNT = 2 COMMIT TRAN END SAVE TRAN foo;")).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
 
         connection.createSavepoint("foo")
             .as(StepVerifier::create)
@@ -245,7 +245,7 @@ class MssqlConnectionUnitTests {
             TestClient.builder().withTransactionStatus(TransactionStatus.AUTO_COMMIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "SET IMPLICIT_TRANSACTIONS ON; IF @@TRANCOUNT =" +
                 " 0 BEGIN BEGIN TRAN IF @@TRANCOUNT = 2 COMMIT TRAN END SAVE TRAN foo;")).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
 
         connection.createSavepoint("foo")
             .as(StepVerifier::create)
@@ -260,7 +260,7 @@ class MssqlConnectionUnitTests {
             TestClient.builder().withTransactionStatus(TransactionStatus.EXPLICIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(),
                 "SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql().toUpperCase())).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
 
         connection.setTransactionIsolationLevel(isolationLevel)
             .as(StepVerifier::create)
@@ -273,7 +273,7 @@ class MssqlConnectionUnitTests {
         TestClient connected =
             TestClient.builder().withConnected(true).build();
 
-        MssqlConnection connection = new MssqlConnection(connected, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(connected, metadata, conectionOptions);
 
         connection.validate(ValidationDepth.LOCAL)
             .as(StepVerifier::create)
@@ -283,7 +283,7 @@ class MssqlConnectionUnitTests {
         TestClient disconnected =
             TestClient.builder().withConnected(false).build();
 
-        connection = new MssqlConnection(disconnected, new ConnectionOptions());
+        connection = new MssqlConnection(disconnected, metadata, conectionOptions);
 
         connection.validate(ValidationDepth.LOCAL)
             .as(StepVerifier::create)
@@ -298,7 +298,7 @@ class MssqlConnectionUnitTests {
             TestClient.builder().withConnected(true).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(),
                 "SELECT 1")).thenRespond(DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
 
         connection.validate(ValidationDepth.REMOTE)
             .as(StepVerifier::create)
@@ -313,7 +313,7 @@ class MssqlConnectionUnitTests {
             TestClient.builder().withConnected(true).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(),
                 "SELECT 1")).thenRespond(new ErrorToken(1, 1, (byte) 1, (byte) 1, "failed", "", "", 0), DoneToken.create(0)).build();
 
-        MssqlConnection connection = new MssqlConnection(client, new ConnectionOptions());
+        MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
 
         connection.validate(ValidationDepth.REMOTE)
             .as(StepVerifier::create)

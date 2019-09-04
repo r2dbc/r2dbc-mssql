@@ -65,10 +65,10 @@ public final class MssqlConnection implements Connection {
 
     private volatile IsolationLevel isolationLevel;
 
-    MssqlConnection(Client client, ConnectionOptions connectionOptions) {
+    MssqlConnection(Client client, MssqlConnectionMetadata connectionMetadata, ConnectionOptions connectionOptions) {
 
         this.client = Assert.requireNonNull(client, "Client must not be null");
-        this.metadata = new MssqlConnectionMetadata(client.getDatabaseVersion().orElse("unknown"));
+        this.metadata = connectionMetadata;
         this.context = client.getContext();
         this.connectionOptions = Assert.requireNonNull(connectionOptions, "ConnectionOptions must not be null");
 
