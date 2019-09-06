@@ -91,7 +91,7 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
         int ordinal = Decode.uShort(buffer);
         String name = Decode.unicodeBString(buffer);
         byte status = Decode.asByte(buffer);
-        TypeInformation type = TypeInformation.decode(buffer, encryptionSupported);
+        TypeInformation type = TypeInformation.decode(buffer, true);
 
         // Preserve length for Codecs
         int beforeLengthDescriptor = buffer.readerIndex();
@@ -132,11 +132,11 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
 
                 buffer.skipBytes(nameLength + 1);
 
-                if (!TypeInformation.canDecode(buffer, encryptionSupported)) {
+                if (!TypeInformation.canDecode(buffer, true)) {
                     return false;
                 }
 
-                TypeInformation type = TypeInformation.decode(buffer, encryptionSupported);
+                TypeInformation type = TypeInformation.decode(buffer, true);
 
                 if (!Length.canDecode(buffer, type)) {
                     return false;

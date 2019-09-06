@@ -35,10 +35,10 @@ public final class MssqlConnectionMetadata {
     /**
      * Construct {@link MssqlConnectionMetadata} from a metadata query.
      *
-     * @param edition
-     * @param version
-     * @param spVersionOutput
-     * @return
+     * @param edition         SQL Server edition.
+     * @param version         SQL Server version number.
+     * @param spVersionOutput output of {@code @@VERSION()} function.
+     * @return the {@link MssqlConnectionMetadata}.
      */
     public static MssqlConnectionMetadata from(String edition, String version, String spVersionOutput) {
 

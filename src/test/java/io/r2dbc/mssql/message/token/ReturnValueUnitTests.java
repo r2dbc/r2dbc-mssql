@@ -40,7 +40,7 @@ class ReturnValueUnitTests {
 
         assertThat(buffer.readByte()).isEqualTo(ReturnValue.TYPE);
 
-        ReturnValue returnValue = ReturnValue.decode(buffer, true);
+        ReturnValue returnValue = ReturnValue.decode(buffer, false);
 
         assertThat(returnValue.getOrdinal()).isEqualTo(0);
         assertThat(returnValue.getParameterName()).isEqualTo("");
