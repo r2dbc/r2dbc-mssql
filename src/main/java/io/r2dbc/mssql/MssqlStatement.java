@@ -54,13 +54,13 @@ public interface MssqlStatement extends Statement {
      * {@inheritDoc}
      */
     @Override
-    MssqlStatement bind(Object identifier, Object value);
+    MssqlStatement bind(String identifier, Object value);
 
     /**
      * {@inheritDoc}
      */
     @Override
-    MssqlStatement bindNull(Object identifier, Class<?> type);
+    MssqlStatement bindNull(String identifier, Class<?> type);
 
     /**
      * {@inheritDoc}

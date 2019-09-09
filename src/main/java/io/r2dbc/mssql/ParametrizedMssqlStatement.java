@@ -210,15 +210,14 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
     }
 
     @Override
-    public ParametrizedMssqlStatement bind(Object identifier, Object value) {
+    public ParametrizedMssqlStatement bind(String identifier, Object value) {
 
         Assert.requireNonNull(identifier, "identifier must not be null");
         Assert.isInstanceOf(String.class, identifier, "identifier must be a String");
 
         Encoded encoded = this.codecs.encode(this.client.getByteBufAllocator(), RpcParameterContext.in(this.client.getRequiredCollation()), value);
 
-        String parameterName = (String) identifier;
-        addBinding(getParameterName(parameterName), encoded);
+        addBinding(getParameterName(identifier), encoded);
 
         return this;
     }
@@ -232,7 +231,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
     }
 
     @Override
-    public ParametrizedMssqlStatement bindNull(Object identifier, Class<?> type) {
+    public ParametrizedMssqlStatement bindNull(String identifier, Class<?> type) {
 
         Assert.requireNonNull(identifier, "Identifier must not be null");
         Assert.isInstanceOf(String.class, identifier, "Identifier must be a String");
@@ -242,7 +241,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
             throw new IllegalStateException("Statement was already executed");
         }
 
-        addBinding(getParameterName((String) identifier), this.codecs.encodeNull(this.client.getByteBufAllocator(), type));
+        addBinding(getParameterName(identifier), this.codecs.encodeNull(this.client.getByteBufAllocator(), type));
         return this;
     }
 

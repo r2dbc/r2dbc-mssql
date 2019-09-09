@@ -83,15 +83,31 @@ final class MssqlRow implements Row {
         return this.metadata;
     }
 
-    @Override
-    @Nullable
-    public <T> T get(Object identifier, Class<T> type) {
 
-        Assert.requireNonNull(identifier, "Identifier must not be null");
+    @Override
+    public <T> T get(int index, Class<T> type) {
+
         Assert.requireNonNull(type, "Type must not be null");
         requireNotReleased();
 
-        Column column = this.metadata.getColumn(identifier);
+        Column column = this.metadata.getColumn(index);
+        return doGet(column, type);
+    }
+
+    @Override
+    public <T> T get(String name, Class<T> type) {
+
+        Assert.requireNonNull(name, "Name must not be null");
+        Assert.requireNonNull(type, "Type must not be null");
+        requireNotReleased();
+
+        Column column = this.metadata.getColumn(name);
+        return doGet(column, type);
+    }
+
+    @Nullable
+    private <T> T doGet(Column column, Class<T> type) {
+
         ByteBuf columnData = this.rowToken.getColumnData(column.getIndex());
 
         if (columnData == null) {
