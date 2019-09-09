@@ -68,7 +68,15 @@ final class MssqlRowMetadata extends ColumnSource implements RowMetadata, Collec
     }
 
     @Override
-    public MssqlColumnMetadata getColumnMetadata(Object identifier) {
+    public MssqlColumnMetadata getColumnMetadata(int index) {
+        if (this.metadataCache == null) {
+            this.metadataCache = new HashMap<>();
+        }
+        return this.metadataCache.computeIfAbsent(this.getColumn(index), column -> new MssqlColumnMetadata(column, this.codecs));
+    }
+
+    @Override
+    public MssqlColumnMetadata getColumnMetadata(String identifier) {
         if (this.metadataCache == null) {
             this.metadataCache = new HashMap<>();
         }
