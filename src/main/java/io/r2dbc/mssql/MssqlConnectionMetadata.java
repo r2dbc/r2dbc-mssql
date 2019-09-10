@@ -16,18 +16,20 @@
 
 package io.r2dbc.mssql;
 
+import io.r2dbc.spi.ConnectionMetadata;
+
 /**
- * Connection metadata for a Microsoft SQL Server database.
+ * Connection metadata for a connection connected to Microsoft SQL Server database.
  *
  * @author Mark Paluch
  */
-public final class MssqlConnectionMetadata {
+public final class MssqlConnectionMetadata implements ConnectionMetadata {
 
     private final String databaseVersion;
 
     private final String databaseProductName;
 
-    public MssqlConnectionMetadata(String databaseProductName, String databaseVersion) {
+    MssqlConnectionMetadata(String databaseProductName, String databaseVersion) {
         this.databaseVersion = databaseVersion;
         this.databaseProductName = databaseProductName;
     }
@@ -63,7 +65,7 @@ public final class MssqlConnectionMetadata {
     }
 
     /**
-     * Retrieves the name of this database product.
+     * Retrieves the version of this database product.
      *
      * @return database product name
      */

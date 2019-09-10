@@ -219,6 +219,7 @@ public final class MssqlConnection implements Connection {
         });
     }
 
+    @Override
     public MssqlConnectionMetadata getMetadata() {
         return this.metadata;
     }
