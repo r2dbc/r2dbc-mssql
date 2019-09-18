@@ -31,22 +31,22 @@
     <url>https://github.com/r2dbc/r2dbc-mssql</url>
 
     <properties>
-        <assertj.version>3.12.2</assertj.version>
+        <assertj.version>3.13.2</assertj.version>
         <java.version>1.8</java.version>
         <jsr305.version>3.0.2</jsr305.version>
-        <junit.version>5.4.2</junit.version>
+        <junit.version>5.5.2</junit.version>
         <jmh.version>1.21</jmh.version>
-        <mbr.version>0.1.0.RELEASE</mbr.version>
+        <mbr.version>0.2.0.RELEASE</mbr.version>
         <logback.version>1.2.3</logback.version>
-        <mockito.version>2.27.0</mockito.version>
-        <mssql-jdbc.version>7.2.2.jre8</mssql-jdbc.version>
+        <mockito.version>3.0.0</mockito.version>
+        <mssql-jdbc.version>7.4.0.jre8</mssql-jdbc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <r2dbc-spi.version>${project.version}</r2dbc-spi.version>
         <r2dbc-pool.version>${project.version}</r2dbc-pool.version>
         <reactor.version>Dysprosium-RC1</reactor.version>
         <slf4j.version>1.7.26</slf4j.version>
-        <testcontainers.version>1.11.2</testcontainers.version>
+        <testcontainers.version>1.12.1</testcontainers.version>
     </properties>
 
     <dependencyManagement>
@@ -166,7 +166,8 @@
         <dependency>
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
-            <version>3.3.1</version>
+            <version>3.4.0</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
