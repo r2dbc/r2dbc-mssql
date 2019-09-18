@@ -109,7 +109,7 @@ abstract class AbstractCodec<T> implements Codec<T> {
     /**
      * @param allocator the allocator to allocate encoding buffers.
      * @param context   parameter context.
-     * @param value     the {@code null} {@code value}.
+     * @param value     the  {@code value}.
      * @return the encoded value.
      */
     abstract Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, T value);

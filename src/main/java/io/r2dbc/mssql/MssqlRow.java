@@ -46,8 +46,6 @@ final class MssqlRow implements Row {
 
     private final RowToken rowToken;
 
-    // see STATE_UPDATER
-    @SuppressWarnings("unused")
     private volatile int state = STATE_ACTIVE;
 
     MssqlRow(Codecs codecs, RowToken rowToken, MssqlRowMetadata metadata) {

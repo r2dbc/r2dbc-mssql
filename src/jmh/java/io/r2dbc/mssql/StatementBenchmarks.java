@@ -66,7 +66,6 @@ public class StatementBenchmarks extends BenchmarkSettings {
 
                 jdbc = extension.getDataSource().getConnection();
 
-
                 Statement statement = jdbc.createStatement();
 
                 try {
