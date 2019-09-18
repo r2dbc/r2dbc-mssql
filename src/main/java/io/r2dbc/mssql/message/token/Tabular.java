@@ -117,7 +117,10 @@ public final class Tabular implements Message {
 
             if (type == ColumnMetadataToken.TYPE) {
 
-                // TODO: Chunking support.
+                if (!ColumnMetadataToken.canDecode(buffer, encryptionSupported)) {
+                    return DecodeFinished.UNABLE_TO_DECODE;
+                }
+
                 ColumnMetadataToken colMetadataToken = ColumnMetadataToken.decode(buffer, encryptionSupported);
 
                 if (columns.get() == null || colMetadataToken.hasColumns()) {

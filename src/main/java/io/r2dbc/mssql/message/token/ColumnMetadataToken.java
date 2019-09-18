@@ -95,7 +95,7 @@ public final class ColumnMetadataToken extends AbstractDataToken {
         int columnCount = Decode.uShort(buffer);
 
         // Handle the magic NoMetaData value
-        if (0xFFFF == columnCount) {
+        if (columnCount == NO_COLUMNS) {
             return EMPTY;
         }
 
@@ -113,20 +113,105 @@ public final class ColumnMetadataToken extends AbstractDataToken {
         for (int i = 0; i < columnCount; i++) {
 
             columns[i] = decodeColumn(buffer, encryptionSupported, i);
-
-            if (buffer.readableBytes() > 1) {
-
-                buffer.markReaderIndex();
-                byte nextToken = Decode.asByte(buffer);
-                buffer.resetReaderIndex();
-
-                if (nextToken == TYPE_SQLDATACLASSIFICATION) {
-                    throw new UnsupportedOperationException("Driver does not support SQL Data Classification");
-                }
-            }
+            decodeDataClassification(buffer);
         }
 
         return new ColumnMetadataToken(columns);
+    }
+
+    /**
+     * Check whether the {@link ByteBuf} can be decoded into an entire {@link ColumnMetadataToken}.
+     *
+     * @param buffer              the data buffer.
+     * @param encryptionSupported whether encryption is supported.
+     * @return {@code true} if the buffer contains sufficient data to entirely decode a {@link ColumnMetadataToken}.
+     */
+    public static boolean canDecode(ByteBuf buffer, boolean encryptionSupported) {
+
+        if (buffer.readableBytes() < 2) {
+            return false;
+        }
+
+        int readerIndex = buffer.readerIndex();
+
+        try {
+            int columnCount = Decode.uShort(buffer);
+
+            // Handle the magic NoMetaData value
+            if (columnCount == NO_COLUMNS) {
+                return true;
+            }
+
+            if (encryptionSupported) {
+
+                if (buffer.readableBytes() < 2) {
+                    return false;
+                }
+                buffer.skipBytes(2);
+            }
+
+
+            for (int i = 0; i < columnCount; i++) {
+
+                if (!TypeInformation.canDecode(buffer, true)) {
+                    return false;
+                }
+
+                if (!canDecodeColumn(buffer, encryptionSupported)) {
+                    return false;
+                }
+            }
+        } finally {
+            buffer.readerIndex(readerIndex);
+        }
+
+        return true;
+    }
+
+    private static boolean canDecodeColumn(ByteBuf buffer, boolean encryptionSupported) {
+
+        TypeInformation typeInfo = TypeInformation.decode(buffer, true);
+
+        if (typeInfo.getServerType() == SqlServerType.TEXT || typeInfo.getServerType() == SqlServerType.NTEXT
+            || typeInfo.getServerType() == SqlServerType.IMAGE) {
+            // Yukon and later, table names are returned as multi-part SQL identifiers.
+            if (!Identifier.canDecodeAndSkipBytes(buffer)) {
+                return false;
+            }
+        }
+
+        if (encryptionSupported && typeInfo.isEncrypted()) {
+            throw new UnsupportedOperationException("Driver does not support encryption");
+        }
+
+        if (!buffer.isReadable()) {
+            return false;
+        }
+
+        int length = buffer.readByte() * 2;
+
+        if (length > buffer.readableBytes()) {
+            return false;
+        }
+
+        buffer.skipBytes(length);
+        decodeDataClassification(buffer);
+
+        return true;
+    }
+
+    private static void decodeDataClassification(ByteBuf buffer) {
+
+        if (buffer.readableBytes() > 1) {
+
+            buffer.markReaderIndex();
+            byte nextToken = Decode.asByte(buffer);
+            buffer.resetReaderIndex();
+
+            if (nextToken == TYPE_SQLDATACLASSIFICATION) {
+                throw new UnsupportedOperationException("Driver does not support SQL Data Classification");
+            }
+        }
     }
 
     private static Column decodeColumn(ByteBuf buffer, boolean encryptionSupported, int columnIndex) {

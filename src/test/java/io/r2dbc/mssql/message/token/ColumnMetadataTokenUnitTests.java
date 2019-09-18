@@ -42,7 +42,7 @@ class ColumnMetadataTokenUnitTests {
             "0900A732000904D000340A6600690072" +
             "00730074005F006E0061006D00650000" +
             "00000009006E0806730061006C006100" +
-            "72007900D1010000000600";
+            "72007900";
 
         ByteBuf buffer = HexUtils.decodeToByteBuf(encoded);
 
@@ -104,5 +104,21 @@ class ColumnMetadataTokenUnitTests {
         assertThat(binvar.getName()).isEqualTo("binvar");
         assertThat(binvar.getType().getLengthStrategy()).isEqualTo(LengthStrategy.USHORTLENTYPE);
         assertThat(binvar.getType().getServerType()).isEqualTo(SqlServerType.VARBINARY);
+    }
+
+    @Test
+    void canDecodeShouldReportDecodability() {
+
+        String data = "04000000000000" +
+            "000800380B65006D0070006C006F0079" +
+            "00650065005F00690064000000000008" +
+            "00A732000904D00034096C0061007300" +
+            "74005F006E0061006D00650000000000" +
+            "0900A732000904D000340A6600690072" +
+            "00730074005F006E0061006D00650000" +
+            "00000009006E0806730061006C006100" +
+            "72007900";
+        ColumnMetadataToken metadata = ColumnMetadataToken.decode(HexUtils.decodeToByteBuf(data), true);
+        CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), buffer -> ColumnMetadataToken.canDecode(buffer, true));
     }
 }

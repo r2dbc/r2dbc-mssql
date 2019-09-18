@@ -114,6 +114,43 @@ public final class Identifier {
         return new Identifier(serverName, databaseName, schemaName, objectName);
     }
 
+    /**
+     * Check whether the {@link ByteBuf} can be decoded into an entire {@link ColumnMetadataToken}. Advances the {@link ByteBuf#readerIndex()}.
+     *
+     * @param buffer the data buffer.
+     * @return {@literal true} if the {@link Identifier} can be decoded.
+     * @throws IllegalArgumentException when {@link ByteBuf} is {@code null}.
+     */
+    static boolean canDecodeAndSkipBytes(ByteBuf buffer) {
+
+        Assert.requireNonNull(buffer, "Buffer must not be null");
+
+        if (!buffer.isReadable()) {
+            return false;
+        }
+
+        // Multi-part names should have between 1 and 4 parts
+        int parts = Decode.uByte(buffer);
+
+        // Each part is a length-prefixed Unicode string
+        String[] nameParts = new String[parts];
+        for (int i = 0; i < parts; i++) {
+
+            if (1 > buffer.readableBytes()) {
+                return false;
+            }
+            int length = buffer.readUnsignedShortLE() * 2;
+
+            if (length > buffer.readableBytes()) {
+
+                return false;
+            }
+            buffer.skipBytes(length);
+        }
+
+        return true;
+    }
+
     @Nullable
     public String getServerName() {
         return this.serverName;
