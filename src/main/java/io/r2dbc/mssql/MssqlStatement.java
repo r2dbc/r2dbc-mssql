@@ -26,7 +26,7 @@ import reactor.core.publisher.Flux;
  * <pre class="code">
  * INSERT INTO person (id, first_name, last_name) VALUES(@id, @firstname, @lastname)
  * </pre>
- * Use {@link #bind(Object, Object)} and {@link #bindNull(Object, Class)} over positional ({@link #bind(int, Object)}) binding.
+ * Use {@link #bind(String, Object)} and {@link #bindNull(String, Class)} over positional ({@link #bind(int, Object)}) binding.
  *
  * @author Mark Paluch
  */
