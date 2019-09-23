@@ -59,6 +59,26 @@ Publisher<? extends Connection> connectionPublisher = connectionFactory.create()
 Mono<Connection> connectionMono = Mono.from(connectionFactory.create());
 ```
 
+**Supported ConnectionFactory Discovery Options**
+
+Core options:
+
+* `driver`: Must be `sqlserver`.
+* `host`: Server hostname to connect to.
+* `port`: Server port to connect to. Defaults to `1433`.
+* `username`: Login username.
+* `password`: Login password.
+
+Additional options:
+
+* `applicationName`: Name of the application. Defaults to driver name and version.
+* `connectionId`: Connection Id for tracing purposes. Defaults to a random Id.
+* `connectTimeout`: Connection Id for tracing purposes. Defaults to 30 seconds.
+* `database`: Initial database to select. Defaults to SQL Server user profile settings.
+* `ssl`: Whether to use transport-level encryption for the entire SQL server traffic, defaults to `false`.
+* `hostNameInCertificate`: Expected hostname in SSL certificate. Supports wildcards (e.g. `*.database.windows.net`)
+* `preferCursoredExecution`: Whether to prefer cursors  or direct execution for queries. Uses by default direct. Cursors require more round-trips but are more backpressure-friendly. Defaults to direct execution. Can be `boolean` or a `Predicate<String>` accepting the SQL query.
+
 **Programmatic Configuration**
 
 ```java
@@ -92,26 +112,6 @@ connection.createStatement("INSERT INTO person (id, first_name, last_name) VALUE
 ``` 
 
 Binding also allows positional index (zero-based) references. The parameter index is derived from the parameter discovery order when parsing the query.
-
-**Supported ConnectionFactory Discovery Options**
-
-Core options:
-
-* `driver`: Must be `sqlserver`.
-* `host`: Server hostname to connect to.
-* `port`: Server port to connect to. Defaults to `1433`.
-* `username`: Login username.
-* `password`: Login password.
-
-Additional options:
-
-* `applicationName`: Name of the application. Defaults to driver name and version.
-* `connectionId`: Connection Id for tracing purposes. Defaults to a random Id.
-* `connectTimeout`: Connection Id for tracing purposes. Defaults to 30 seconds.
-* `database`: Initial database to select. Defaults to SQL Server user profile settings.
-* `ssl`: Whether to use transport-level encryption for the entire SQL server traffic, defaults to `false`.
-* `hostNameInCertificate`: Expected hostname in SSL certificate. Supports wildcards (e.g. `*.database.windows.net`)
-* `preferCursoredExecution`: Whether to prefer cursors  or direct execution for queries. Uses by default direct. Cursors require more round-trips but are more backpressure-friendly. Defaults to direct execution. Can be `boolean` or a `Predicate<String>` accepting the SQL query.
 
 ### Maven configuration
 
