@@ -123,7 +123,7 @@ class BinaryCodec implements Codec<Object> {
     @SuppressWarnings("unchecked")
     @Override
     public Class<Object> getType() {
-        return (Class) byte[].class;
+        return (Class) ByteBuffer.class;
     }
 
     @Override
@@ -185,11 +185,12 @@ class BinaryCodec implements Codec<Object> {
             buffer.readBytes(bytes);
         }
 
-        if (valueType.isAssignableFrom(byte[].class)) {
-            return bytes;
+        // accept Object.class and ByteBuffer subclasses
+        if (valueType.isAssignableFrom(ByteBuffer.class) || ByteBuffer.class.isAssignableFrom(valueType)) {
+            return ByteBuffer.wrap(bytes);
         }
 
-        return ByteBuffer.wrap(bytes);
+        return bytes;
     }
 
     static class VarbinaryEncoded extends RpcEncoding.HintedEncoded {

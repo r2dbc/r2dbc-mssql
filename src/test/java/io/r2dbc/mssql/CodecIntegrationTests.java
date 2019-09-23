@@ -179,13 +179,13 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     }
 
     @Test
-    void shouldEncodeByteArrayAsBinary() {
-        testType(connection, "BINARY(9)", "foobarbaz".getBytes());
+    void shouldEncodeByteBufferAsBinary() {
+        testType(connection, "BINARY(9)", ByteBuffer.wrap("foobarbaz".getBytes()));
     }
 
     @Test
-    void shouldEncodeByteArrayAsVarBinary() {
-        testType(connection, "VARBINARY(9)", "foobarbaz".getBytes());
+    void shouldEncodeByteBufferAsVarBinary() {
+        testType(connection, "VARBINARY(9)", ByteBuffer.wrap("foobarbaz".getBytes()));
     }
 
     @Test
@@ -199,13 +199,13 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     }
 
     @Test
-    void shouldEncodeByteBufferAsBinary() {
-        testType(connection, "BINARY(9)", ByteBuffer.wrap("foobarbaz".getBytes()), ByteBuffer.class, "foobarbaz".getBytes());
+    void shouldEncodeByteArrayAsBinary() {
+        testType(connection, "BINARY(9)", "foobarbaz".getBytes(), byte[].class, ByteBuffer.wrap("foobarbaz".getBytes()));
     }
 
     @Test
-    void shouldEncodeByteBufferAsVarBinary() {
-        testType(connection, "VARBINARY(9)", ByteBuffer.wrap("foobarbaz".getBytes()), ByteBuffer.class, "foobarbaz".getBytes());
+    void shouldEncodeByteArrayAsVarBinary() {
+        testType(connection, "VARBINARY(9)", "foobarbaz".getBytes(), byte[].class, ByteBuffer.wrap("foobarbaz".getBytes()));
     }
 
     @Test

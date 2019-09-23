@@ -181,10 +181,10 @@ This reference table shows the type mapping between [Microsoft SQL Server][m] an
 | [`nvarcharmax`][sql-n(var)char-ref]       | [`String`][java-string-ref], `Clob`
 | [`text`][sql-(n)text-ref]                 | [`String`][java-string-ref], `Clob`
 | [`ntext`][sql-(n)text-ref]                | [`String`][java-string-ref], `Clob`
-| [`image`][sql-(n)text-ref]                | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref], `Blob`
-| [`binary`][sql-binary-ref]                | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref], `Blob`
-| [`varbinary`][sql-binary-ref]             | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref], `Blob`
-| [`varbinarymax`][sql-binary-ref]          | [**`byte[]`**][java-byte-ref], [`ByteBuffer`][java-ByteBuffer-ref], `Blob`
+| [`image`][sql-(n)text-ref]                | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], `Blob`
+| [`binary`][sql-binary-ref]                | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], `Blob`
+| [`varbinary`][sql-binary-ref]             | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], `Blob`
+| [`varbinarymax`][sql-binary-ref]          | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], `Blob`
 | [`sql_variant`][sql-sql-variant-ref]      | Not yet supported.
 | [`xml`][sql-xml-ref]                      | Not yet supported.
 | [`udt`][sql-udt-ref]                      | Not yet supported.
