@@ -31,6 +31,7 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -97,11 +98,11 @@ class LobIntegrationTests extends IntegrationTestSupport {
     @Test
     void testBigBlob() {
 
-        int i = 1500; // ~ 382kb
+        int count = 1500; // ~ 382kb
         createTable(connection, "VARBINARY(MAX)");
 
         Flux.from(connection.createStatement("INSERT INTO lob_test values(@P0)")
-            .bind("P0", Blob.from(Flux.range(0, i).map(it -> ByteBuffer.wrap(ALL_BYTES))))
+            .bind("P0", Blob.from(Flux.range(0, count).map(it -> ByteBuffer.wrap(ALL_BYTES))))
             .execute())
             .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
@@ -115,7 +116,45 @@ class LobIntegrationTests extends IntegrationTestSupport {
             .map(Buffer::remaining)
             .collect(Collectors.summingInt(value -> value))
             .as(StepVerifier::create)
-            .expectNext(i * ALL_BYTES.length)
+            .expectNext(count * ALL_BYTES.length)
+            .verifyComplete();
+    }
+
+    @Test
+    void testByteArrayBlob() {
+
+        int count = 1500; // ~ 382kb
+        createTable(connection, "VARBINARY(MAX)");
+
+        byte[] bytes = new byte[count * ALL_BYTES.length];
+
+        for (int i = 0; i < count; i++) {
+            System.arraycopy(ALL_BYTES, 0, bytes, i * ALL_BYTES.length, ALL_BYTES.length);
+        }
+
+        Flux.from(connection.createStatement("INSERT INTO lob_test values(@P0)")
+            .bind("P0", bytes)
+            .execute())
+            .flatMap(Result::getRowsUpdated)
+            .as(StepVerifier::create)
+            .expectNext(1)
+            .verifyComplete();
+
+        connection.createStatement("SELECT my_col FROM lob_test")
+            .execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> row.get("my_col", Blob.class)))
+            .flatMap(Blob::stream)
+            .map(Buffer::remaining)
+            .collect(Collectors.summingInt(value -> value))
+            .as(StepVerifier::create)
+            .expectNext(count * ALL_BYTES.length)
+            .verifyComplete();
+
+        connection.createStatement("SELECT my_col FROM lob_test")
+            .execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> row.get("my_col", byte[].class)))
+            .as(StepVerifier::create)
+            .consumeNextWith(actual -> assertThat(actual).isEqualTo(bytes))
             .verifyComplete();
     }
 

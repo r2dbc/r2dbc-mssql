@@ -28,6 +28,8 @@ import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeUtils;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.spi.Blob;
+import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.nio.ByteBuffer;
@@ -87,11 +89,21 @@ class BinaryCodec implements Codec<Object> {
         if (value instanceof byte[]) {
 
             byte[] bytes = (byte[]) value;
+
+            if (bytes.length >= Encode.U_SHORT_MAX_VALUE) {
+                return BlobCodec.INSTANCE.encode(allocator, context, Blob.from(Mono.just(ByteBuffer.wrap(bytes))));
+            }
+
             buffer = RpcEncoding.prepareBuffer(allocator, TdsDataType.BIGVARBINARY.getLengthStrategy(), SqlServerType.VARBINARY.getMaxLength(), bytes.length);
             buffer.writeBytes(bytes);
         } else {
 
             ByteBuffer bytes = (ByteBuffer) value;
+
+            if (bytes.remaining() >= Encode.U_SHORT_MAX_VALUE) {
+                return BlobCodec.INSTANCE.encode(allocator, context, Blob.from(Mono.just(bytes)));
+            }
+
             buffer = RpcEncoding.prepareBuffer(allocator, TdsDataType.BIGVARBINARY.getLengthStrategy(), SqlServerType.VARBINARY.getMaxLength(), bytes.remaining());
             buffer.writeBytes(bytes);
         }

@@ -30,7 +30,7 @@ import java.nio.charset.Charset;
  */
 public final class Encode {
 
-    private static final int U_SHORT_MAX_VALUE = Math.abs(Short.MIN_VALUE) + Short.MAX_VALUE;
+    public static final int U_SHORT_MAX_VALUE = Math.abs(Short.MIN_VALUE) + Short.MAX_VALUE;
 
     private Encode() {
     }
