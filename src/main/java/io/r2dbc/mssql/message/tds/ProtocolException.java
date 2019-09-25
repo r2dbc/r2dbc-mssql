@@ -69,7 +69,7 @@ public final class ProtocolException extends R2dbcNonTransientResourceException 
      * Creates a new exception.
      *
      * @param reason the reason for the error. Set as the exception's message and retrieved with {@link #getMessage()}.
-     * @param cause  the cause
+     * @param cause  the cause.
      */
     public ProtocolException(@Nullable String reason, @Nullable Throwable cause) {
         super(reason, null, DRIVER_ERROR_NONE, cause);
@@ -79,19 +79,18 @@ public final class ProtocolException extends R2dbcNonTransientResourceException 
      * Creates a new exception.
      *
      * @param reason          the reason for the error. Set as the exception's message and retrieved with {@link #getMessage()}.
-     * @param cause           the cause
+     * @param cause           the cause.
      * @param driverErrorCode the driver error code.
      */
     public ProtocolException(@Nullable String reason, @Nullable Throwable cause, int driverErrorCode) {
         super(reason, null, driverErrorCode, cause);
     }
 
-
     /**
      * Create a new {@link ProtocolException} for invalid TDS.
      *
      * @param reason the reason for the error. Set as the exception's message and retrieved with {@link #getMessage()}.
-     * @return the {@link ProtocolException}
+     * @return the {@link ProtocolException}.
      */
     public static ProtocolException invalidTds(String reason) {
         return new ProtocolException(reason, DRIVER_ERROR_INVALID_TDS);
@@ -101,7 +100,7 @@ public final class ProtocolException extends R2dbcNonTransientResourceException 
      * Create a new {@link ProtocolException} for an unsupported configuration.
      *
      * @param reason the reason for the error. Set as the exception's message and retrieved with {@link #getMessage()}.
-     * @return the {@link ProtocolException}
+     * @return the {@link ProtocolException}.
      */
     public static ProtocolException unsupported(String reason) {
         return new ProtocolException(reason, DRIVER_ERROR_UNSUPPORTED_CONFIG);
@@ -110,7 +109,8 @@ public final class ProtocolException extends R2dbcNonTransientResourceException 
     /**
      * Create a new {@link ProtocolException} for an unsupported configuration.
      *
-     * @return the {@link ProtocolException}
+     * @param cause the cause.
+     * @return the {@link ProtocolException}.
      */
     public static ProtocolException unsupported(Throwable cause) {
         return new ProtocolException(null, cause, DRIVER_ERROR_UNSUPPORTED_CONFIG);

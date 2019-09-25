@@ -34,10 +34,17 @@ import java.util.Objects;
 /**
  * A collation represents encoding and collation used for character data types. Collation is in the following BNF format
  * (see TDS spec for full details):
- * <p/>
- * LCID := 20 BIT; fIgnoreCase := BIT; fIgnoreAccent := BIT; fIgnoreWidth := BIT; fIgnoreKana := BIT; fBinary := BIT;
- * ColFlags := fIgnoreCase, fIgnoreAccent, fIgnoreWidth, fIgnoreKana, fBinary, FRESERVEDBIT, FRESERVEDBIT, FRESERVEDBIT;
- * Version := 4 BIT; SortId := BYTE;
+ * <ul>
+ *     <li>LCID := 20 BIT</li>
+ *     <li>fIgnoreCase := BIT</li>
+ *     <li>fIgnoreAccent := BIT</li>
+ *     <li>fIgnoreWidth := BIT</li>
+ *     <li>fIgnoreKana := BIT</li>
+ *     <li>fBinary := BIT</li>
+ *     <li>ColFlags := fIgnoreCase, fIgnoreAccent, fIgnoreWidth, fIgnoreKana, fBinary, FRESERVEDBIT, FRESERVEDBIT, FRESERVEDBIT</li>
+ *     <li>Version := 4 BIT</li>
+ *     <li>SortId := BYTE</li>
+ * </ul>
  *
  * @author Mark Paluch
  * @see ServerCharset

@@ -79,6 +79,7 @@ public final class Length {
     /**
      * Creates a {@link Length} with a given {@code length}.
      *
+     * @param length value length.
      * @return a {@link Length} for a non-{@code null} value of the given {@code length}.
      */
     public static Length of(int length) {

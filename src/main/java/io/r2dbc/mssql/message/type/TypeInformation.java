@@ -99,7 +99,7 @@ public interface TypeInformation {
     /**
      * Returns the user type.
      *
-     * @returnthe user type.
+     * @return the user type.
      */
     int getUserType();
 
@@ -175,7 +175,7 @@ public interface TypeInformation {
     /**
      * Creates a {@link Builder} for {@link TypeInformation}.
      *
-     * @return
+     * @return a new {@link Builder} to build {@link TypeInformation}.
      */
     static Builder builder() {
         return new Builder();
@@ -247,7 +247,7 @@ public interface TypeInformation {
         /**
          * Configure flags.
          *
-         * @param flags
+         * @param flags type flags.
          * @return {@code this} {@link Builder}.
          */
         public Builder withFlags(int flags) {
@@ -269,7 +269,7 @@ public interface TypeInformation {
         /**
          * Configure the maximal maxLength.
          *
-         * @param flags
+         * @param maxLength max length.
          * @return {@code this} {@link Builder}.
          */
         public Builder withMaxLength(int maxLength) {
@@ -280,7 +280,7 @@ public interface TypeInformation {
         /**
          * Configure the precision.
          *
-         * @param precision
+         * @param precision the precision.
          * @return {@code this} {@link Builder}.
          */
         public Builder withPrecision(int precision) {
@@ -291,7 +291,7 @@ public interface TypeInformation {
         /**
          * Configure the scale.
          *
-         * @param scale
+         * @param scale the scale.
          * @return {@code this} {@link Builder}.
          */
         public Builder withScale(int scale) {

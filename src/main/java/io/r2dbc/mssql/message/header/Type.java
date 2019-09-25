@@ -18,9 +18,8 @@ package io.r2dbc.mssql.message.header;
 
 /**
  * Packet header type as defined in ch {@literal 2.2.3.1.1 Type} of the TDS v20180912 spec.
- * <p/>
- * Type defines the type of message. Type is a 1-byte unsigned char. The following table describes the types that are
- * available.
+ * <p>
+ * Type defines the type of message. Type is a 1-byte unsigned char.
  */
 public enum Type {
 
@@ -37,8 +36,8 @@ public enum Type {
     /**
      * Resolve header {@code value} into {@link Type}.
      *
-     * @param value
-     * @return
+     * @param value packet type identifier.
+     * @return the resolved {@link Type}.
      */
     public static Type valueOf(byte value) {
 

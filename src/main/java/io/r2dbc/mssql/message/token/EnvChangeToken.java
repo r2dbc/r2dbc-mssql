@@ -60,7 +60,7 @@ public final class EnvChangeToken extends AbstractDataToken {
      * Decode a {@link EnvChangeToken}.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@link EnvChangeToken}
      */
     public static EnvChangeToken decode(ByteBuf buffer) {
 
@@ -205,7 +205,8 @@ public final class EnvChangeToken extends AbstractDataToken {
          * Lookup {@link EnvChangeType} by its by {@code value}.
          *
          * @param value the env change type byte value.
-         * @return
+         * @return the resolved {@link EnvChangeType}.
+         * @throws IllegalArgumentException if the {@code value} cannot be resolved to a {@link EnvChangeType}.
          */
         public static EnvChangeType valueOf(int value) {
 

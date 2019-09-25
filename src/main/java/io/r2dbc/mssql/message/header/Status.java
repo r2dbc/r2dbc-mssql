@@ -25,7 +25,7 @@ import java.util.Set;
 
 /**
  * Packet header status as defined in ch {@literal 2.2.3.1.2 Status} of the TDS v20180912 spec.
- * <p/>
+ * <p>
  * Status is a bit field used to indicate the message state. Status is a 1-byte unsigned char. The following Status bit
  * flags are defined.
  *
@@ -58,10 +58,10 @@ public class Status {
     }
 
     /**
-     * Create {@link StatusBit} {@link Set} from the given {@code bitmask}.
+     * Create {@link Status} {@link Set} from the given {@code bitmask}.
      *
-     * @param bitmask
-     * @return
+     * @param bitmask status bitmask.
+     * @return the {@link Status} for {@code bitmask}.
      */
     public static Status fromBitmask(byte bitmask) {
         return STATUS_CACHE[bitmask - Byte.MIN_VALUE];
@@ -201,7 +201,7 @@ public class Status {
 
     /**
      * Packet header status bits as defined in ch {@literal 2.2.3.1.2 Status} of the TDS v20180912 spec.
-     * <p/>
+     * <p>
      * Status is a bit field used to indicate the message state. Status is a 1-byte unsigned char. The following Status
      * bit flags are defined.
      */

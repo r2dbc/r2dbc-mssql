@@ -39,8 +39,8 @@ public final class InfoToken extends AbstractInfoToken {
     /**
      * Decode the {@link InfoToken}.
      *
-     * @param buffer
-     * @return
+     * @param buffer the data buffer.
+     * @return the decoded {@link InfoToken}
      */
     public static InfoToken decode(ByteBuf buffer) {
 

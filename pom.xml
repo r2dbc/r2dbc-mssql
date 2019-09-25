@@ -241,7 +241,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.0.1</version>
+                <version>3.1.1</version>
                 <configuration>
                     <excludePackageNames>
                         io.r2dbc.mssql.authentication,io.r2dbc.mssql.client,io.r2dbc.mssql.codec,io.r2dbc.mssql.message,io.r2dbc.mssql.util

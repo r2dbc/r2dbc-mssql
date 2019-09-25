@@ -103,8 +103,8 @@ public final class DoneToken extends AbstractDoneToken {
     /**
      * Check whether the the {@link Message} represents a finished {@link DoneToken}.
      *
-     * @param message
-     * @return
+     * @param message the message to inspect.
+     * @return {@literal true} if the {@link Message} represents a finished {@link DoneToken}.
      */
     public static boolean isDone(Message message) {
 

@@ -21,6 +21,7 @@ import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -77,7 +78,7 @@ public final class ColumnMetadataToken extends AbstractDataToken {
      * Creates a new {@link ColumnMetadataToken} given {@link List} of {@link Column}s.
      *
      * @param columns the columns.
-     * @return
+     * @return the {@link ColumnMetadataToken}.
      */
     public static ColumnMetadataToken create(Column[] columns) {
         return new ColumnMetadataToken(columns);
@@ -255,7 +256,7 @@ public final class ColumnMetadataToken extends AbstractDataToken {
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [columns=").append(this.columns);
+        sb.append(" [columns=").append(Arrays.toString(this.columns));
         sb.append(']');
         return sb.toString();
     }

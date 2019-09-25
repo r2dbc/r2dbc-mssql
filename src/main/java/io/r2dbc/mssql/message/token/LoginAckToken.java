@@ -75,9 +75,8 @@ public class LoginAckToken extends AbstractDataToken {
     /**
      * Decode the {@link LoginAckToken}.
      *
-     * @param buffer
-     * @param version
-     * @return
+     * @param buffer the data buffer.
+     * @return the decoded {@link LoginAckToken}.
      */
     public static LoginAckToken decode(ByteBuf buffer) {
 

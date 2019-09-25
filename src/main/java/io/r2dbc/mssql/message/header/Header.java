@@ -101,7 +101,7 @@ public class Header implements HeaderOptions {
      * Create a {@link Header} given {@link HeaderOptions}, packet {@code length}, and {@link PacketIdProvider}.
      *
      * @param options          the {@link HeaderOptions}.
-     * @param length
+     * @param length           packet length.
      * @param packetIdProvider the {@link PacketIdProvider}.
      * @return the {@link Header}.
      * @throws IllegalArgumentException when {@link HeaderOptions} or {@link PacketIdProvider} is {@code null}.
@@ -144,6 +144,8 @@ public class Header implements HeaderOptions {
 
     /**
      * Encode a header into a {@link ByteBuf}.
+     *
+     * @param buffer the target {@link ByteBuf}.
      */
     public void encode(ByteBuf buffer) {
         encode(buffer, this.type, this.status, this.length, this.spid, this.packetId, this.window);
@@ -164,6 +166,8 @@ public class Header implements HeaderOptions {
      * Encode a header into a {@link ByteBuf}.
      *
      * @param buffer           the target {@link ByteBuf}.
+     * @param options          header options.
+     * @param length           packet length.
      * @param packetIdProvider must not be {@code null}.
      * @throws IllegalArgumentException when {@link HeaderOptions} or {@link PacketIdProvider} is {@code null}.
      */
@@ -174,10 +178,13 @@ public class Header implements HeaderOptions {
     /**
      * Encode the {@link Header}.
      *
-     * @param buffer  the target {@link ByteBuf}.
-     * @param options
-     * @param length
-     * @param @param  packetIdProvider must not be {@code null}.
+     * @param buffer   the target {@link ByteBuf}.
+     * @param type     packet type.
+     * @param status   fragmentation/message status.
+     * @param length   packet length.
+     * @param spid     the spid (unused).
+     * @param packetId the packet Id.
+     * @param window   the window (unused).
      */
     public static void encode(ByteBuf buffer, Type type, Status status, int length, short spid, byte packetId, byte window) {
 
@@ -192,6 +199,7 @@ public class Header implements HeaderOptions {
     }
 
     /**
+     * @param buffer the data buffer to inspect.
      * @return {@code true} if the header can be decoded.
      */
     public static boolean canDecode(ByteBuf buffer) {
@@ -199,6 +207,7 @@ public class Header implements HeaderOptions {
     }
 
     /**
+     * @param buffer the data buffer.
      * @return the decoded {@link Header}.
      */
     public static Header decode(ByteBuf buffer) {

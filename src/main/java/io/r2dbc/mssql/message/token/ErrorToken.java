@@ -35,8 +35,8 @@ public final class ErrorToken extends AbstractInfoToken {
     /**
      * Decode the {@link ErrorToken}.
      *
-     * @param buffer
-     * @return
+     * @param buffer the data buffer.
+     * @return the decoded {@link ErrorToken}
      */
     public static ErrorToken decode(ByteBuf buffer) {
 

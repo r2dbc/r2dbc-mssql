@@ -49,10 +49,10 @@ import java.security.KeyStore;
 
 /**
  * SSL handling for TDS connections.
- * <p/>
+ * <p>
  * This handler wraps or passes thru read and write data depending on the {@link SslState}. Because TDS requires header
  * wrapping, we're not mounting the {@link SslHandler} directly into the pipeline but delegating read and write events
- * to it.<p/>
+ * to it.<p>
  * This {@link ChannelHandler} supports also full SSL mode and requires to be reordered once the handshake is done therefor it's marked as {@code @Sharable}.
  *
  * @author Mark Paluch
@@ -89,7 +89,8 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
      * Creates a new {@link TdsSslHandler}.
      *
      * @param packetIdProvider the {@link PacketIdProvider} to create {@link Header}s to wrap the SSL handshake.
-     * @param context
+     * @param sslConfiguration SSL config.
+     * @param context          Value object capturing diagnostic connection context.
      */
     public TdsSslHandler(PacketIdProvider packetIdProvider, SslConfiguration sslConfiguration, ConnectionContext context) {
 

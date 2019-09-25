@@ -26,7 +26,7 @@ package io.r2dbc.mssql.client.ssl;
  * <li>Enabled/required</li>
  * </ul>
  * <p>
- * Supported mode uses SSL during login to encrypt login credentials. SSL is disabled after login.<br/>
+ * Supported mode uses SSL during login to encrypt login credentials. SSL is disabled after login.
  * The client supports login-time SSL even when {@link #isSslEnabled()} is {@code false}. This mode does not validate certificates.
  * <p>Enabling {@link #isSslEnabled() SSL} enables also SSL certificate validation using {@link #getHostNameInCertificate()}.
  *

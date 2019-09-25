@@ -76,8 +76,8 @@ public final class DoneInProcToken extends AbstractDoneToken {
     /**
      * Check whether the the {@link Message} represents a finished {@link DoneInProcToken}.
      *
-     * @param message
-     * @return
+     * @param message the message to inspect.
+     * @return {@literal true} if the {@link Message} represents a finished {@link DoneInProcToken}.
      */
     public static boolean isDone(Message message) {
 

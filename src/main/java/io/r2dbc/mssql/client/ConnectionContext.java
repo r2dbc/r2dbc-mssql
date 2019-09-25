@@ -25,8 +25,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Value object capturing diagnostic connection context. Allows for log-message post-processing with {@link #getMessage(String) if the logger category for {@code io.r2dbc.mssql.client
- * .ConnectionContext} is enabled for DEBUG/TRACE logs.
+ * Value object capturing diagnostic connection context. Allows for log-message post-processing with {@link #getMessage(String) if the logger category for
+ * {@code io.r2dbc.mssql.client.ConnectionContext} is enabled for DEBUG/TRACE logs.
  * <p>
  * Captures also the configured {@link MssqlConnectionConfiguration#getApplicationName()}  application name} and {@link MssqlConnectionConfiguration#getConnectionId() connection Id}.
  *

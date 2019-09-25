@@ -108,10 +108,10 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
     }
 
     /**
-     * Check whether the the {@link Message} represents a finished done token.
+     * Check whether the {@link Message} represents a finished done token.
      *
-     * @param message
-     * @return
+     * @param message the message to inspect.
+     * @return {@literal true} if the {@link Message} represents a finished done token.
      */
     public static boolean isDone(Message message) {
 
@@ -125,8 +125,8 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
     /**
      * Check whether the the {@link Message} has a count.
      *
-     * @param message
-     * @return
+     * @param message the message to inspect.
+     * @return {@literal true} if the {@link Message} has a count.
      */
     public static boolean hasCount(Message message) {
 

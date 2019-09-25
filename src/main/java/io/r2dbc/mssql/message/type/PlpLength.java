@@ -66,6 +66,7 @@ public final class PlpLength {
     /**
      * Creates a {@link PlpLength} with a given {@code length}.
      *
+     * @param length value length.
      * @return a {@link PlpLength} for a non-{@code null} value of the given {@code length}.
      */
     public static PlpLength of(long length) {

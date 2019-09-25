@@ -33,7 +33,7 @@ public final class Decode {
      * Decode a byte. SQL server type {@code BYTE}.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@code BYTE}.
      */
     public static byte asByte(ByteBuf buffer) {
         return buffer.readByte();
@@ -43,7 +43,7 @@ public final class Decode {
      * Decode an unsigned byte. SQL server type {@code BYTE}
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded unsigned {@code BYTE}.
      */
     public static int uByte(ByteBuf buffer) {
         return buffer.readUnsignedByte();
@@ -53,7 +53,7 @@ public final class Decode {
      * Decode a double word. SQL server type {@code DWORD}.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@code DWORD}.
      */
     public static long dword(ByteBuf buffer) {
         return buffer.readUnsignedIntLE();
@@ -63,7 +63,7 @@ public final class Decode {
      * Decode byte number. SQL server type {@code BIT}.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@code BIT}.
      */
     public static byte bit(ByteBuf buffer) {
         return asByte(buffer);
@@ -73,7 +73,7 @@ public final class Decode {
      * Decode float number. SQL server type {@code REAL}.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@code REAL}.
      */
     public static float asFloat(ByteBuf buffer) {
         return Float.intBitsToFloat(buffer.readIntLE());
@@ -83,7 +83,7 @@ public final class Decode {
      * Decode double number. SQL server type {@code FLOAT}.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@code FLOAT}.
      */
     public static double asDouble(ByteBuf buffer) {
         return Double.longBitsToDouble(buffer.readLongLE());
@@ -93,7 +93,7 @@ public final class Decode {
      * Decode byte number. SQL server type {@code TINYINT}.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@code TINYINT}.
      */
     public static byte tinyInt(ByteBuf buffer) {
         return asByte(buffer);
@@ -103,7 +103,7 @@ public final class Decode {
      * Decode short number. SQL server type {@code SMALLINT}.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@code SMALLINT}.
      */
     public static short smallInt(ByteBuf buffer) {
         return buffer.readShortLE();
@@ -113,7 +113,7 @@ public final class Decode {
      * Decode integer number. SQL server type {@code INT}.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@code INT}.
      */
     public static int asInt(ByteBuf buffer) {
         return buffer.readIntLE();
@@ -123,7 +123,7 @@ public final class Decode {
      * Decode long number. SQL server type {@code BIGINT}.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@code BIGINT}.
      */
     public static long bigint(ByteBuf buffer) {
         return buffer.readLongLE();
@@ -133,7 +133,7 @@ public final class Decode {
      * Decode long number. SQL server type {@code LONG}.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@code LONG}.
      */
     public static int asLong(ByteBuf buffer) {
         return buffer.readIntLE();
@@ -143,7 +143,7 @@ public final class Decode {
      * Decode unsigned long number. SQL server type {@code LONGLONG}.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@code LONGLONG}.
      */
     public static long uLongLong(ByteBuf buffer) {
         return buffer.readLongLE();
@@ -153,7 +153,7 @@ public final class Decode {
      * Decode a unsigned short. SQL server type {@code USHORT}.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@code USHORT}.
      */
     public static int uShort(ByteBuf buffer) {
         return buffer.readUnsignedShortLE();
@@ -185,7 +185,7 @@ public final class Decode {
      * Read an integer with big endian encoding. Typically used to evaluate bit masks.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded integer as big endian.
      */
     public static int intBigEndian(ByteBuf buffer) {
         return buffer.readInt();
@@ -195,7 +195,7 @@ public final class Decode {
      * Decode a unicode ({@code VARCHAR}) string from {@link ByteBuf} with {@code unsigned short} length.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@link String}.
      */
     public static String unicodeUString(ByteBuf buffer) {
 
@@ -208,7 +208,7 @@ public final class Decode {
      * Decode a unicode ({@code VARCHAR}) string from {@link ByteBuf} with {@code byte} length.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@link String}.
      */
     public static String unicodeBString(ByteBuf buffer) {
 

@@ -36,6 +36,7 @@ import reactor.util.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -132,8 +133,9 @@ public final class Prelogin implements TokenStream, ClientMessage {
     /**
      * Resolve a {@link Token} given its {@link Class type}.
      *
-     * @param tokenType
-     * @return
+     * @param tokenType the type to filter.
+     * @param <T>       token type.
+     * @return {@link Optional} containing the potentially found {@code tokenType}.
      */
     public <T extends Token> Optional<T> getToken(Class<? extends T> tokenType) {
 
@@ -151,15 +153,17 @@ public final class Prelogin implements TokenStream, ClientMessage {
     /**
      * Resolve a {@link Token} given its {@link Class type}.
      *
-     * @param tokenType
-     * @return
+     * @param tokenType the type to filter.
+     * @param <T>       token type.
+     * @return the token of type  {@code tokenType}.
+     * @throws NoSuchElementException if the token could not be found.
      */
     public <T extends Token> T getRequiredToken(Class<? extends T> tokenType) {
 
         Assert.requireNonNull(tokenType, "Token type must not be null");
 
         return getToken(tokenType).orElseThrow(
-            () -> new IllegalArgumentException(String.format("No token of type [%s] available", tokenType.getName())));
+            () -> new NoSuchElementException(String.format("No token of type [%s] available", tokenType.getName())));
     }
 
     @Override
@@ -181,7 +185,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
     /**
      * Encode the {@link Prelogin} request message.
      *
-     * @param buffer
+     * @param buffer the data buffer to write to.
      */
     void encode(ByteBuf buffer) {
 
@@ -269,8 +273,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
         /**
          * Client application activity sequence (for debugging purposes).
          */
-        @Nullable
-        private long activitySequence;
+        private int activitySequence;
 
         private byte encryption = Encryption.ENCRYPT_OFF;
 
@@ -313,7 +316,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
          * @param activitySequence the activity sequence.
          * @return {@code this} {@link Builder}.
          */
-        public Builder withActivitySequence(long activitySequence) {
+        public Builder withActivitySequence(int activitySequence) {
 
             this.activitySequence = activitySequence;
 
@@ -395,7 +398,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
             }
 
             if (this.connectionId != null) {
-                tokens.add(new TraceId(this.connectionId, null, 0));
+                tokens.add(new TraceId(this.connectionId, this.activityId, this.activitySequence));
             }
 
             tokens.add(Terminator.INSTANCE);
@@ -703,6 +706,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
         private static byte[] toBytes(String instanceName) {
 
             Assert.requireNonNull(instanceName, "Instance name must not be null");
+
             byte[] name = instanceName.getBytes(StandardCharsets.UTF_8);
             byte[] result = new byte[name.length + 1];
             System.arraycopy(name, 0, result, 0, name.length);
@@ -755,8 +759,8 @@ public final class Prelogin implements TokenStream, ClientMessage {
         /**
          * Decode the {@link Encryption} token.
          *
-         * @param toDecode
-         * @return
+         * @param toDecode the state to decode.
+         * @return the decoded {@link Encryption}.
          */
         public static Encryption decode(TokenDecodingState toDecode) {
 
@@ -880,15 +884,14 @@ public final class Prelogin implements TokenStream, ClientMessage {
         /**
          * Client application activity sequence (for debugging purposes).
          */
-        @Nullable
         private final int activitySequence;
 
         /**
          * Create a {@link TraceId} to associate trace Ids with the connection.
          *
-         * @param connectionId
-         * @param activityId
-         * @param activitySequence
+         * @param connectionId     can be {@code null}.
+         * @param activityId       can be {@code null}.
+         * @param activitySequence can be {@code null}.
          */
         public TraceId(@Nullable UUID connectionId, @Nullable UUID activityId, int activitySequence) {
 
@@ -945,7 +948,9 @@ public final class Prelogin implements TokenStream, ClientMessage {
         /**
          * Decode the unknown token.
          *
-         * @return
+         * @param type     feature type.
+         * @param toDecode decoding state.
+         * @return the {@link UnknownToken}.
          */
         public static UnknownToken decode(byte type, TokenDecodingState toDecode) {
 
@@ -989,8 +994,8 @@ public final class Prelogin implements TokenStream, ClientMessage {
         /**
          * Validate the token data {@code length}.
          *
-         * @param length
-         * @throws ProtocolException
+         * @param length token length.
+         * @throws ProtocolException if the length is invalid.
          */
         void validate(short length);
 

@@ -20,11 +20,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 
 /**
- * Encode utilities for TDS.
+ * Encode utilities for TDS. Encoding methods typically accept {@link ByteBuffer} and a value and write the encoded value to the given buffer.
  *
  * @author Mark Paluch
  */
@@ -134,6 +135,7 @@ public final class Encode {
      * Encode byte number. SQL server type {@code TINYINT}.
      *
      * @param buffer the data buffer.
+     * @param value  the value to encode.
      */
     public static void tinyInt(ByteBuf buffer, byte value) {
         asByte(buffer, value);
@@ -143,6 +145,7 @@ public final class Encode {
      * Encode short number. SQL server type {@code SMALLINT}.
      *
      * @param buffer the data buffer.
+     * @param value  the value to encode.
      */
     public static void smallInt(ByteBuf buffer, short value) {
         buffer.writeShortLE(value);
@@ -152,6 +155,7 @@ public final class Encode {
      * Encode integer number. SQL server type {@code INT}.
      *
      * @param buffer the data buffer.
+     * @param value  the value to encode.
      */
     public static void asInt(ByteBuf buffer, int value) {
         buffer.writeIntLE(value);
@@ -161,6 +165,7 @@ public final class Encode {
      * Encode long number. SQL server type {@code BIGINT}.
      *
      * @param buffer the data buffer.
+     * @param value  the value to encode.
      */
     public static void bigint(ByteBuf buffer, long value) {
         buffer.writeLongLE(value);
@@ -170,6 +175,7 @@ public final class Encode {
      * Encode unsigned long number. SQL server type {@code LONGLONG}.
      *
      * @param buffer the data buffer.
+     * @param value  the value to encode.
      */
     public static void uLongLong(ByteBuf buffer, long value) {
         buffer.writeLongLE(value);
@@ -228,7 +234,9 @@ public final class Encode {
     /**
      * Encode a string. SQL server type {@code VARCHAR}/{@code NVARCHAR}.
      *
-     * @param buffer the data buffer.
+     * @param buffer  the data buffer.
+     * @param value   the value to encode.
+     * @param charset the charset to use.
      */
     public static void uString(ByteBuf buffer, String value, Charset charset) {
 

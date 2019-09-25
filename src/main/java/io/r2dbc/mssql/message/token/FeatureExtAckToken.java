@@ -46,7 +46,7 @@ public final class FeatureExtAckToken extends AbstractDataToken {
      * Decode the {@link FeatureExtAckToken}.
      *
      * @param buffer the data buffer.
-     * @return
+     * @return the decoded {@link FeatureExtAckToken}.
      */
     public static FeatureExtAckToken decode(ByteBuf buffer) {
 
@@ -186,7 +186,7 @@ public final class FeatureExtAckToken extends AbstractDataToken {
          *
          * @param featureId the passed-through feature Id.
          * @param buffer    the data buffer.
-         * @return
+         * @return the decoded {@link UnknownFeature}.
          */
         public static UnknownFeature decode(byte featureId, ByteBuf buffer) {
 

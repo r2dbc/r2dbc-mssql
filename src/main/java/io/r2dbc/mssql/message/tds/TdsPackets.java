@@ -41,7 +41,7 @@ public interface TdsPackets {
     /**
      * Create a TDS fragment.
      *
-     * @param buffer
+     * @param buffer the TDS message.
      * @return the {@link TdsFragment}.
      */
     static TdsFragment create(ByteBuf buffer) {

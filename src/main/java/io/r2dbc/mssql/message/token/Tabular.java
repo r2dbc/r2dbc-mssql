@@ -393,7 +393,8 @@ public final class Tabular implements Message {
         /**
          * Decode the {@link Tabular} response from a {@link ByteBuf}.
          *
-         * @param buffer must not be null.
+         * @param buffer          must not be null.
+         * @param messageConsumer sink to consume decoded frames.
          * @return the decoded {@link Tabular} response {@link Message}.
          */
         public boolean decode(ByteBuf buffer, SynchronousSink<Message> messageConsumer) {
