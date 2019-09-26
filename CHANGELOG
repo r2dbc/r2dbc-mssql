@@ -1,6 +1,38 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.8.0.RC1
+------------------
+* Fix malformed Javadoc #104
+* Add automatic module name #103
+* Upgrade to Reactor Dysprosium GA #102
+* Upgrade dependencies #100
+* BinaryCodec uses varbinary which limits the byteArray to 65kb #99
+* Use ByteBuffer as default type for binary payloads #98
+* Remove repositories declaration from published pom #97
+* Move jitpack repository declaration to JMH profile #96
+* Adapt to Statement.bind and Row.get by name #95
+* Report ConnectionMetadata from SERVERPROPERTY and @@VERSION #94
+* Upgrade to Reactor Dysprosium RC1 #93
+* Rename MssqlExample to MssqlTestKit #92
+* IllegalArgumentException Invalid TDS type is 0 on SQL Server 2014 #90
+* Connection reset by peer #89
+* Replace RuleBasedCollector with simple string matcher in MssqlRowMetadata #87
+* Add implementation for Connection.validate(…) #86
+* Expose ConnectionMetadata #85
+* QueryMessageFlow terminates without final DONE token #84
+* Improve debugging experience #83
+* Allow control of AutoCommit and retrieval of the IsolationLevel #82
+* Optimize operator allocation #81
+* Introduce literals for NULL values #80
+* Buffer refCnt = 0 reported when encoding large lob #79
+* Add support for expected hostname configuration #78
+* NotSslRecordException thrown when connecting to Azure SQL Server #77
+* Exclude not-required netty dependencies #75
+* Add benchmark suites #68
+* Consider large chunks in StreamDecoder #63
+* Add FluxDiscardOnCancel operator #6
+
 0.8.0.M8
 ------------------
 * Upgrade to AssertJ 3.12.0 #72
