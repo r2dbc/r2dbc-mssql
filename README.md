@@ -121,7 +121,7 @@ Add the Maven dependency and use our Maven milestone repository:
 <dependency>
   <groupId>io.r2dbc</groupId>
   <artifactId>r2dbc-mssql</artifactId>
-  <version>0.8.0.M8</version>
+  <version>0.8.0.RC1</version>
 </dependency>
 
 <repository>
