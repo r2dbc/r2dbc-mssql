@@ -61,8 +61,6 @@ class FluxDiscardOnCancel<T> extends FluxOperator<T, T> {
 
         Subscription s;
 
-        volatile boolean cancelled;
-
         FluxDiscardOnCancelSubscriber(CoreSubscriber<T> actual, Runnable cancelConsumer) {
 
             this.actual = actual;
@@ -82,7 +80,7 @@ class FluxDiscardOnCancel<T> extends FluxOperator<T, T> {
         @Override
         public void onNext(T t) {
 
-            if (this.cancelled) {
+            if (this.get()) {
                 Operators.onDiscard(t, this.ctx);
                 return;
             }
@@ -92,12 +90,18 @@ class FluxDiscardOnCancel<T> extends FluxOperator<T, T> {
 
         @Override
         public void onError(Throwable t) {
-            this.actual.onError(t);
+            if (this.get()) {
+                Operators.onErrorDropped(t, this.ctx);
+            } else {
+                this.actual.onError(t);
+            }
         }
 
         @Override
         public void onComplete() {
-            this.actual.onComplete();
+            if (!this.get()) {
+                this.actual.onComplete();
+            }
         }
 
         @Override
@@ -117,7 +121,6 @@ class FluxDiscardOnCancel<T> extends FluxOperator<T, T> {
                 } catch (Exception e) {
                     Operators.onErrorDropped(e, this.ctx);
                 }
-                this.cancelled = true;
                 this.s.request(Long.MAX_VALUE);
             }
         }

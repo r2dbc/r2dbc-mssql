@@ -16,6 +16,8 @@
 
 package io.r2dbc.mssql;
 
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.codec.Codecs;
@@ -130,7 +132,7 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
                     logger.debug(this.context.getMessage("Start direct exchange for {}"), sql);
                 }
 
-                exchange = QueryMessageFlow.exchange(this.client, sql).transform(Operators::discardOnCancel);
+                exchange = QueryMessageFlow.exchange(this.client, sql).transform(Operators::discardOnCancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release);
 
                 return createResultStream(useGeneratedKeysClause, exchange, AbstractDoneToken.class::isInstance);
             }

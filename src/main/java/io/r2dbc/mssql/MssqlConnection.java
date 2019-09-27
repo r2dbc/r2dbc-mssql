@@ -16,6 +16,8 @@
 
 package io.r2dbc.mssql;
 
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.client.TransactionStatus;
@@ -282,6 +284,7 @@ public final class MssqlConnection implements Connection {
         return QueryMessageFlow.exchange(this.client, sql)
             .handle(factory::handleErrorResponse)
             .transform(Operators::discardOnCancel)
+            .doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release)
             .then();
     }
 

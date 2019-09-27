@@ -16,6 +16,8 @@
 
 package io.r2dbc.mssql;
 
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.RpcQueryMessageFlow.CursorState.Phase;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.Codecs;
@@ -147,7 +149,7 @@ final class RpcQueryMessageFlow {
             QueryLogger.logQuery(client.getContext(), query);
             exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound);
         })
-            .transform(it -> Operators.discardOnCancel(it, state::cancel));
+            .transform(it -> Operators.discardOnCancel(it, state::cancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release));
     }
 
     /**
@@ -204,7 +206,7 @@ final class RpcQueryMessageFlow {
             QueryLogger.logQuery(client.getContext(), query);
             exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound);
         })
-            .transform(it -> Operators.discardOnCancel(it, state::cancel));
+            .transform(it -> Operators.discardOnCancel(it, state::cancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release));
     }
 
     /**
@@ -286,7 +288,7 @@ final class RpcQueryMessageFlow {
             QueryLogger.logQuery(client.getContext(), query);
             exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound);
         })
-            .transform(it -> Operators.discardOnCancel(it, state::cancel));
+            .transform(it -> Operators.discardOnCancel(it, state::cancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release));
     }
 
     private static int parseCursorId(Codecs codecs, CursorState state, ReturnValue returnValue) {
