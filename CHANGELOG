@@ -1,6 +1,10 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.8.0.RC2
+------------------
+* Revert reactor netty exclusions #107
+
 0.8.0.RC1
 ------------------
 * Fix malformed Javadoc #104
