@@ -20,9 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LogLevel;
@@ -41,6 +38,8 @@ import io.r2dbc.mssql.message.token.FeatureExtAckToken;
 import io.r2dbc.mssql.message.token.LoginAckToken;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.spi.R2dbcException;
+import io.r2dbc.spi.R2dbcNonTransientResourceException;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -68,6 +67,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * An implementation of a TDS client based on the Reactor Netty project.
@@ -79,6 +79,12 @@ public final class ReactorNettyClient implements Client {
     private static final Logger logger = LoggerFactory.getLogger(ReactorNettyClient.class);
 
     private static final boolean DEBUG_ENABLED = logger.isDebugEnabled();
+
+    private static final Supplier<MssqlConnectionClosedException> UNEXPECTED = () -> new MssqlConnectionClosedException("Connection unexpectedly closed");
+
+    private static final Supplier<MssqlConnectionClosedException> EXPECTED = () -> new MssqlConnectionClosedException("Connection closed");
+
+    private static final Supplier<MssqlConnectionClosedException> CLOSED = () -> new MssqlConnectionClosedException("Cannot exchange messages because the connection is closed");
 
     private final ConnectionContext context;
 
@@ -136,7 +142,7 @@ public final class ReactorNettyClient implements Client {
      * Creates a new frame processor connected to a given TCP connection.
      *
      * @param connection        the TCP connection
-     * @param connectionContext
+     * @param connectionContext the connection context
      */
     private ReactorNettyClient(Connection connection, TdsEncoder tdsEncoder, ConnectionContext connectionContext) {
         Assert.requireNonNull(connection, "Connection must not be null");
@@ -162,21 +168,6 @@ public final class ReactorNettyClient implements Client {
         this.connection = connection;
         this.tdsEncoder = tdsEncoder;
         this.requestQueue = new RequestQueue(this.context);
-
-        connection.addHandlerFirst(new ChannelInboundHandlerAdapter() {
-
-            @Override
-            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-
-                // Server has closed the connection without us wanting to close it
-                // Typically happens if we send data asynchronously (i.e. previous command didn't complete).
-                if (ReactorNettyClient.this.isClosed.compareAndSet(false, true)) {
-                    logger.warn(ReactorNettyClient.this.context.getMessage("Connection has been closed by peer"));
-                }
-
-                super.channelInactive(ctx);
-            }
-        });
 
         Consumer<Message> handleStateChange =
             (message) -> {
@@ -211,7 +202,13 @@ public final class ReactorNettyClient implements Client {
 
             @Override
             public void error(Throwable e) {
-                ReactorNettyClient.this.responseProcessor.onError(e);
+
+                Throwable errorToUse = e;
+                if (!(errorToUse instanceof R2dbcException)) {
+                    errorToUse = new MssqlConnectionException(errorToUse);
+                }
+
+                ReactorNettyClient.this.responseProcessor.onError(errorToUse);
             }
 
             @Override
@@ -251,40 +248,34 @@ public final class ReactorNettyClient implements Client {
                 }
 
                 throw ProtocolException.unsupported(String.format("Unexpected protocol message: [%s]", it));
-            }).doOnError(e -> {
+            })
+            .onErrorResume(this::resumeError)
+            .subscribe(new CoreSubscriber<Object>() {
 
-            logger.warn(this.context.getMessage("Error: {}"), e.getMessage(), e);
-            if (e instanceof ProtocolException) {
-                this.isClosed.set(true);
-                connection.channel().close();
-            }
-        }).subscribe(new CoreSubscriber<Object>() {
+                @Override
+                public Context currentContext() {
+                    return ReactorNettyClient.this.responseProcessor.currentContext();
+                }
 
-            @Override
-            public Context currentContext() {
-                return ReactorNettyClient.this.responseProcessor.currentContext();
-            }
+                @Override
+                public void onSubscribe(Subscription s) {
+                    ReactorNettyClient.this.responseProcessor.onSubscribe(s);
+                }
 
-            @Override
-            public void onSubscribe(Subscription s) {
-                ReactorNettyClient.this.responseProcessor.onSubscribe(s);
-            }
+                @Override
+                public void onNext(Object message) {
+                }
 
-            @Override
-            public void onNext(Object message) {
+                @Override
+                public void onError(Throwable t) {
+                    sink.error(t);
+                }
 
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                ReactorNettyClient.this.responseProcessor.onError(t);
-            }
-
-            @Override
-            public void onComplete() {
-                ReactorNettyClient.this.responseProcessor.onComplete();
-            }
-        });
+                @Override
+                public void onComplete() {
+                    handleClose();
+                }
+            });
 
         this.requestProcessor
             .concatMap(
@@ -302,12 +293,20 @@ public final class ReactorNettyClient implements Client {
 
                     return connection.outbound().sendObject(encoded);
                 })
-            .doOnError(throwable -> {
-                logger.warn(this.context.getMessage("Error: {}"), throwable.getMessage(), throwable);
-                this.isClosed.set(true);
-                connection.channel().close();
-            })
+            .onErrorResume(this::resumeError)
+            .doAfterTerminate(this::handleClose)
             .subscribe();
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> Mono<T> resumeError(Throwable throwable) {
+
+        handleConnectionError(throwable);
+        this.requestProcessor.onComplete();
+
+        logger.error(this.context.getMessage("Error: {}"), throwable.getMessage(), throwable);
+
+        return (Mono<T>) close();
     }
 
     private void onInfoToken(Message message) {
@@ -434,22 +433,12 @@ public final class ReactorNettyClient implements Client {
 
             logger.debug(this.context.getMessage("close(subscribed)"));
 
-            return Mono.create(it -> {
+            if (this.isClosed.compareAndSet(false, true)) {
+                this.connection.dispose();
+                return this.connection.onDispose();
+            }
 
-                if (this.isClosed.compareAndSet(false, true)) {
-
-                    this.connection.channel().disconnect().addListener((ChannelFutureListener) future ->
-                    {
-                        if (future.isSuccess()) {
-                            it.success();
-                        } else {
-                            it.error(future.cause());
-                        }
-                    });
-                } else {
-                    it.success();
-                }
-            });
+            return Mono.empty();
         });
     }
 
@@ -495,6 +484,10 @@ public final class ReactorNettyClient implements Client {
             return false;
         }
 
+        if (this.requestProcessor.isDisposed()) {
+            return false;
+        }
+
         Channel channel = this.connection.channel();
         return channel.isOpen();
     }
@@ -516,13 +509,27 @@ public final class ReactorNettyClient implements Client {
                 logger.debug(this.context.getMessage("exchange(subscribed)"));
             }
 
-            if (this.isClosed.get()) {
-                sink.error(new IllegalStateException("Cannot exchange messages because the connection is closed"));
-                return;
+            if (!isConnected()) {
+                sink.error(CLOSED.get());
             }
 
             Flux<Message> requestMessages = this.responseProcessor
-                .doOnSubscribe(s -> Flux.from(requests).subscribe(this.requests::next, this.requests::error));
+                .doOnSubscribe(s -> {
+                    Flux.from(requests).subscribe(t -> {
+
+                        if (!isConnected()) {
+                            sink.error(CLOSED.get());
+                            return;
+                        }
+
+                        this.requests.next(t);
+                    }, this.requests::error, () -> {
+
+                        if (!isConnected()) {
+                            sink.error(CLOSED.get());
+                        }
+                    });
+                });
 
             try {
                 exchangeRequest.submit(this.requestQueue, sink, requestMessages);
@@ -548,6 +555,29 @@ public final class ReactorNettyClient implements Client {
         });
     }
 
+    private void handleClose() {
+        if (this.isClosed.compareAndSet(false, true)) {
+            logger.warn(ReactorNettyClient.this.context.getMessage("Connection has been closed by peer"));
+            drainError(UNEXPECTED);
+        } else {
+            drainError(EXPECTED);
+        }
+    }
+
+    private void handleConnectionError(Throwable error) {
+        drainError(() -> new MssqlConnectionException(error));
+    }
+
+    private void drainError(Supplier<? extends Throwable> supplier) {
+
+        Sinkable receiver;
+        while ((receiver = this.requestQueue.poll()) != null) {
+            receiver.onError(supplier.get());
+        }
+
+        this.responseProcessor.onError(supplier.get());
+    }
+
     /**
      * Request queue to collect incoming exchange requests.
      * <p>Submission conditionally queues requests if an ongoing exchange was active by the time of subscription.
@@ -555,7 +585,7 @@ public final class ReactorNettyClient implements Client {
      */
     static class RequestQueue implements Runnable {
 
-        private final Queue<Runnable> requestQueue = Queues.<Runnable>small().get();
+        private final Queue<Sinkable> requestQueue = Queues.<Sinkable>small().get();
 
         private final AtomicBoolean active = new AtomicBoolean();
 
@@ -565,10 +595,15 @@ public final class ReactorNettyClient implements Client {
             this.context = context;
         }
 
+        @Nullable
+        public Sinkable poll() {
+            return this.requestQueue.poll();
+        }
+
         @Override
         public void run() {
 
-            Runnable nextCommand = this.requestQueue.poll();
+            Sinkable nextCommand = this.requestQueue.poll();
 
             if (nextCommand != null) {
 
@@ -576,7 +611,7 @@ public final class ReactorNettyClient implements Client {
                     logger.debug(this.context.getMessage("Initiating queued exchange"));
                 }
 
-                nextCommand.run();
+                nextCommand.onSuccess();
                 return;
             }
 
@@ -592,7 +627,7 @@ public final class ReactorNettyClient implements Client {
          *
          * @param exchangeRequest
          */
-        void submit(Runnable exchangeRequest) {
+        void submit(Sinkable exchangeRequest) {
 
             if (this.active.compareAndSet(false, true)) {
 
@@ -600,7 +635,7 @@ public final class ReactorNettyClient implements Client {
                     logger.debug(this.context.getMessage("Initiating exchange"));
                 }
 
-                exchangeRequest.run();
+                exchangeRequest.onSuccess();
             } else {
 
                 if (DEBUG_ENABLED) {
@@ -619,10 +654,10 @@ public final class ReactorNettyClient implements Client {
 
             if (this.active.compareAndSet(false, true)) {
 
-                Runnable runnable = this.requestQueue.poll();
+                Sinkable runnable = this.requestQueue.poll();
 
                 if (runnable != null) {
-                    runnable.run();
+                    runnable.onSuccess();
                 } else {
                     this.active.compareAndSet(true, false);
                 }
@@ -643,6 +678,8 @@ public final class ReactorNettyClient implements Client {
 
         private volatile int submitted = 0;
 
+        private volatile Sinkable sinkable;
+
         public void complete() {
             COMPLETED.set(this, 1);
         }
@@ -657,7 +694,18 @@ public final class ReactorNettyClient implements Client {
                 throw new IllegalStateException("Client exchange can be subscribed only once");
             }
 
-            queue.submit(() -> sink.success(requestMessages));
+            queue.submit(new Sinkable() {
+
+                @Override
+                public void onSuccess() {
+                    sink.success(requestMessages);
+                }
+
+                @Override
+                public void onError(Throwable throwable) {
+                    sink.error(throwable);
+                }
+            });
         }
     }
 
@@ -727,6 +775,28 @@ public final class ReactorNettyClient implements Client {
                 Collation collation = Collation.decode(Unpooled.wrappedBuffer(event.getToken().getNewValue()));
                 ReactorNettyClient.this.databaseCollation = Optional.of(collation);
             }
+        }
+    }
+
+    interface Sinkable {
+
+        void onSuccess();
+
+        void onError(Throwable throwable);
+
+    }
+
+    static class MssqlConnectionClosedException extends R2dbcNonTransientResourceException {
+
+        public MssqlConnectionClosedException(String reason) {
+            super(reason);
+        }
+    }
+
+    static class MssqlConnectionException extends R2dbcNonTransientResourceException {
+
+        public MssqlConnectionException(Throwable cause) {
+            super(cause);
         }
     }
 }
