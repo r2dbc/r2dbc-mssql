@@ -95,7 +95,17 @@ final class RpcQueryMessageFlow {
 
     static final int FETCH_PREV_NOADJUST = 512;
 
-    static final int SCROLLOPT_FAST_FORWARD = 16;
+    // Scroll options and concurrency options lifted out
+    // of the the Yukon cursors spec for sp_cursoropen.
+    final static int SCROLLOPT_KEYSET = 1;
+
+    final static int SCROLLOPT_DYNAMIC = 2;
+
+    final static int SCROLLOPT_FORWARD_ONLY = 4;
+
+    final static int SCROLLOPT_STATIC = 8;
+
+    final static int SCROLLOPT_FAST_FORWARD = 16;
 
     static final int SCROLLOPT_PARAMETERIZED_STMT = 4096;
 
@@ -448,7 +458,7 @@ final class RpcQueryMessageFlow {
         Assert.requireNonNull(collation, "Collation must not be null");
         Assert.requireNonNull(transactionDescriptor, "TransactionDescriptor must not be null");
 
-        int resultSetScrollOpt = SCROLLOPT_FAST_FORWARD;
+        int resultSetScrollOpt = SCROLLOPT_FORWARD_ONLY;
         int resultSetCCOpt = CCOPT_READ_ONLY | CCOPT_ALLOW_DIRECT;
 
         return RpcRequest.builder() //
@@ -520,7 +530,7 @@ final class RpcQueryMessageFlow {
      */
     static RpcRequest spCursorPrepExec(int preparedStatementHandle, String query, Binding binding, Collation collation, TransactionDescriptor transactionDescriptor) {
 
-        int resultSetScrollOpt = SCROLLOPT_FAST_FORWARD | (binding.isEmpty() ? 0 : SCROLLOPT_PARAMETERIZED_STMT);
+        int resultSetScrollOpt = SCROLLOPT_FORWARD_ONLY | (binding.isEmpty() ? 0 : SCROLLOPT_PARAMETERIZED_STMT);
         int resultSetCCOpt = CCOPT_READ_ONLY | CCOPT_ALLOW_DIRECT;
 
         RpcRequest.Builder builder = RpcRequest.builder() //
@@ -557,7 +567,7 @@ final class RpcQueryMessageFlow {
 
         Assert.isTrue(preparedStatementHandle != PreparedStatementCache.UNPREPARED, "Invalid PreparedStatement handle");
 
-        int resultSetScrollOpt = SCROLLOPT_FAST_FORWARD;
+        int resultSetScrollOpt = SCROLLOPT_FORWARD_ONLY;
         int resultSetCCOpt = CCOPT_READ_ONLY | CCOPT_ALLOW_DIRECT;
 
         RpcRequest.Builder builder = RpcRequest.builder() //
@@ -614,7 +624,7 @@ final class RpcQueryMessageFlow {
         }
 
         boolean wantsMore() {
-            return !cancelRequested;
+            return !this.cancelRequested;
         }
 
         void cancel() {

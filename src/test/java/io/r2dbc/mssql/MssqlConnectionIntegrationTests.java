@@ -272,6 +272,27 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
     }
 
     @Test
+    void shouldConsumeSequence() {
+
+        createSequence(connection);
+
+        connection.createStatement("SELECT CAST(NEXT VALUE FOR integration_test AS BIGINT)")
+            .execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> row.get(0)))
+            .as(StepVerifier::create)
+            .expectNext(1L)
+            .verifyComplete();
+
+
+        connection.createStatement("SELECT CAST(NEXT VALUE FOR integration_test AS BIGINT)")
+            .execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> row.get(0)))
+            .as(StepVerifier::create)
+            .expectNext(2L)
+            .verifyComplete();
+    }
+
+    @Test
     void shouldReusePreparedStatements() {
 
         createTable(connection);
@@ -308,6 +329,17 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
                 "id int PRIMARY KEY, " +
                 "first_name varchar(255), " +
                 "last_name varchar(255))")
+                .execute().flatMap(MssqlResult::getRowsUpdated).then())
+            .as(StepVerifier::create)
+            .verifyComplete();
+    }
+
+    private void createSequence(MssqlConnection connection) {
+
+        connection.createStatement("DROP SEQUENCE integration_test").execute()
+            .flatMap(MssqlResult::getRowsUpdated)
+            .onErrorResume(e -> Mono.empty())
+            .thenMany(connection.createStatement("CREATE SEQUENCE integration_test START WITH 1 INCREMENT BY 1")
                 .execute().flatMap(MssqlResult::getRowsUpdated).then())
             .as(StepVerifier::create)
             .verifyComplete();
