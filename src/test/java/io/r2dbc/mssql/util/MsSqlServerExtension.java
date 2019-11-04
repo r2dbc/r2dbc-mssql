@@ -50,6 +50,7 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
                 this.addExposedPort(MS_SQL_SERVER_PORT);
                 this.addEnv("ACCEPT_EULA", "Y");
                 this.addEnv("SA_PASSWORD", getPassword());
+                this.withReuse(true);
             }
         };
     };
@@ -86,10 +87,6 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
 
     @Override
     public void afterAll(ExtensionContext context) {
-
-        if (this.useTestContainer) {
-            this.container.get().stop();
-        }
     }
 
     public MssqlConnectionConfiguration.Builder configBuilder() {

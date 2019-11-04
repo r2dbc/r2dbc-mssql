@@ -48,7 +48,7 @@
         <reactor.version>Dysprosium-RELEASE</reactor.version>
         <slf4j.version>1.7.26</slf4j.version>
         <spring-framework.version>5.1.9.RELEASE</spring-framework.version>
-        <testcontainers.version>1.12.1</testcontainers.version>
+        <testcontainers.version>1.12.3</testcontainers.version>
     </properties>
 
     <dependencyManagement>
