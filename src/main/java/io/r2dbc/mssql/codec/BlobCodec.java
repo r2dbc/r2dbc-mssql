@@ -136,6 +136,7 @@ public class BlobCodec extends AbstractCodec<Blob> {
 
         ScalarBlob(List<ByteBuf> buffers) {
             this.buffers = buffers;
+            this.buffers.forEach(byteBuf -> byteBuf.touch("ScalarBlob"));
         }
 
         @Override

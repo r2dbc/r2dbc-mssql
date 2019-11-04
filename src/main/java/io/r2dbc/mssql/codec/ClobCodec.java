@@ -149,7 +149,7 @@ public class ClobCodec extends AbstractCodec<Clob> {
         ScalarClob(TypeInformation type, Length valueLength, ByteBuf buffer) {
             this.type = type;
             this.valueLength = valueLength;
-            this.buffer = buffer;
+            this.buffer = buffer.touch("ScalarClob");
         }
 
         @Override

@@ -204,6 +204,8 @@ public class PlpEncoded extends Encoded {
         @Override
         public void onNext(ByteBuf byteBuf) {
 
+            byteBuf.touch("PlpEncoded.onNext(…)");
+
             if (STATUS.get(this) == STATUS_DONE) {
 
                 byteBuf.release();

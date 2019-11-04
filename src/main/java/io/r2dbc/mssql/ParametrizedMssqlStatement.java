@@ -216,6 +216,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         Assert.isInstanceOf(String.class, identifier, "identifier must be a String");
 
         Encoded encoded = this.codecs.encode(this.client.getByteBufAllocator(), RpcParameterContext.in(this.client.getRequiredCollation()), value);
+        encoded.touch("ParametrizedMssqlStatement.bind(…)");
 
         addBinding(getParameterName(identifier), encoded);
 
@@ -241,7 +242,9 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
             throw new IllegalStateException("Statement was already executed");
         }
 
-        addBinding(getParameterName(identifier), this.codecs.encodeNull(this.client.getByteBufAllocator(), type));
+        Encoded encoded = this.codecs.encodeNull(this.client.getByteBufAllocator(), type);
+        encoded.touch("ParametrizedMssqlStatement.bindNull(…)");
+        addBinding(getParameterName(identifier), encoded);
         return this;
     }
 
@@ -250,8 +253,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
         Assert.requireNonNull(type, "Type must not be null");
 
-        addBinding(getParameterName(index), this.codecs.encodeNull(this.client.getByteBufAllocator(), type));
-        return this;
+        return bindNull(getParameterName(index), type);
     }
 
     private void addBinding(String name, Encoded parameter) {
