@@ -79,14 +79,6 @@ public final class DefaultCodecs implements Codecs {
         this.codecPreferences.put(SqlServerType.REAL, FloatCodec.INSTANCE);
         this.codecPreferences.put(SqlServerType.FLOAT, DoubleCodec.INSTANCE);
         this.codecPreferences.put(SqlServerType.GUID, UuidCodec.INSTANCE);
-
-        this.codecPreferences.put(SqlServerType.VARBINARYMAX, BlobCodec.INSTANCE);
-        this.codecPreferences.put(SqlServerType.IMAGE, BlobCodec.INSTANCE);
-
-        this.codecPreferences.put(SqlServerType.VARCHARMAX, ClobCodec.INSTANCE);
-        this.codecPreferences.put(SqlServerType.NVARCHARMAX, ClobCodec.INSTANCE);
-        this.codecPreferences.put(SqlServerType.TEXT, ClobCodec.INSTANCE);
-        this.codecPreferences.put(SqlServerType.NTEXT, ClobCodec.INSTANCE);
     }
 
     @SuppressWarnings({"unchecked", "rawtpes"})

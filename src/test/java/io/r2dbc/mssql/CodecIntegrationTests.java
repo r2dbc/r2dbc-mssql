@@ -148,34 +148,32 @@ class CodecIntegrationTests extends IntegrationTestSupport {
 
     @Test
     void shouldEncodeStringAsVarcharMax() {
-        testType(connection, "VARCHAR(MAX)", "Hello, World!", String.class, actual -> {
-            assertThat(actual).isInstanceOf(Clob.class);
-            Mono.from(((Clob) actual).discard()).subscribe();
-        });
+        testType(connection, "VARCHAR(MAX)", "Hello, World!");
     }
 
     @Test
     void shouldEncodeStringAsNVarcharMax() {
-        testType(connection, "NVARCHAR(MAX)", "Hello, World! äöü", String.class, actual -> {
+        testType(connection, "NVARCHAR(MAX)", "Hello, World! äöü");
+    }
+
+    @Test
+    void shouldEncodeClobAsNVarcharMax() {
+        testType(connection, "NVARCHAR(MAX)", Clob.from(Mono.just("Hello, World! äöü")), Clob.class, actual -> {
             assertThat(actual).isInstanceOf(Clob.class);
-            Mono.from(((Clob) actual).discard()).subscribe();
+            Flux.from(((Clob) actual).stream()).as(StepVerifier::create).expectNext("Hello, World! äöü").verifyComplete();
+        }, actual -> {
+            assertThat(actual).isEqualTo("Hello, World! äöü");
         });
     }
 
     @Test
     void shouldEncodeStringAsText() {
-        testType(connection, "TEXT", "Hello, World!", String.class, actual -> {
-            assertThat(actual).isInstanceOf(Clob.class);
-            Mono.from(((Clob) actual).discard()).subscribe();
-        });
+        testType(connection, "TEXT", "Hello, World!");
     }
 
     @Test
     void shouldEncodeStringAsNText() {
-        testType(connection, "NTEXT", "Hello, World! äöü", String.class, actual -> {
-            assertThat(actual).isInstanceOf(Clob.class);
-            Mono.from(((Clob) actual).discard()).subscribe();
-        });
+        testType(connection, "NTEXT", "Hello, World! äöü");
     }
 
     @Test
@@ -190,12 +188,22 @@ class CodecIntegrationTests extends IntegrationTestSupport {
 
     @Test
     void shouldEncodeByteArrayAsVarBinaryMax() {
-        testType(connection, "VARBINARY(MAX)", "foobarbaz".getBytes(), byte[].class, actual -> assertThat(actual).isInstanceOf(Blob.class));
+        testType(connection, "VARBINARY(MAX)", "foobarbaz".getBytes(), byte[].class, actual -> assertThat(actual).isEqualTo(ByteBuffer.wrap("foobarbaz".getBytes())));
+    }
+
+    @Test
+    void shouldEncodeBlobAsVarBinaryMax() {
+        testType(connection, "VARBINARY(MAX)", Blob.from(Mono.just(ByteBuffer.wrap("foobarbaz".getBytes()))), Blob.class, actual -> {
+
+            assertThat(actual).isInstanceOf(Blob.class);
+            Mono.from(((Blob) actual).discard()).subscribe();
+
+        }, actual -> assertThat(actual).isEqualTo(ByteBuffer.wrap("foobarbaz".getBytes())));
     }
 
     @Test
     void shouldEncodeByteArrayAsImage() {
-        testType(connection, "IMAGE", "foobarbaz".getBytes(), byte[].class, actual -> assertThat(actual).isInstanceOf(Blob.class));
+        testType(connection, "IMAGE", "foobarbaz".getBytes(), byte[].class, actual -> assertThat(actual).isEqualTo(ByteBuffer.wrap("foobarbaz".getBytes())));
     }
 
     @Test
@@ -211,16 +219,14 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     @Test
     void shouldEncodeByteBufferAsVarBinaryMax() {
         testType(connection, "VARBINARY(MAX)", ByteBuffer.wrap("foobarbaz".getBytes()), ByteBuffer.class, actual -> {
-            assertThat(actual).isInstanceOf(Blob.class);
-            Mono.from(((Blob) actual).discard()).subscribe();
+            assertThat(actual).isInstanceOf(ByteBuffer.class).isEqualTo(ByteBuffer.wrap("foobarbaz".getBytes()));
         });
     }
 
     @Test
     void shouldEncodeByteBufferAsImage() {
         testType(connection, "IMAGE", ByteBuffer.wrap("foobarbaz".getBytes()), ByteBuffer.class, actual -> {
-            assertThat(actual).isInstanceOf(Blob.class);
-            Mono.from(((Blob) actual).discard()).subscribe();
+            assertThat(actual).isInstanceOf(ByteBuffer.class).isEqualTo(ByteBuffer.wrap("foobarbaz".getBytes()));
         });
     }
 
@@ -229,10 +235,14 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     }
 
     private void testType(MssqlConnection connection, String columnType, Object value, Class<?> valueClass, Object expectedGetObjectValue) {
-        testType(connection, columnType, value, valueClass, actual -> assertThat(actual).isEqualTo(expectedGetObjectValue));
+        testType(connection, columnType, value, valueClass, actual -> assertThat(actual).isEqualTo(value), actual -> assertThat(actual).isEqualTo(expectedGetObjectValue));
     }
 
     private void testType(MssqlConnection connection, String columnType, Object value, Class<?> valueClass, Consumer<Object> nativeValueConsumer) {
+        testType(connection, columnType, value, valueClass, actual -> assertThat(actual).isEqualTo(value), nativeValueConsumer);
+    }
+
+    private void testType(MssqlConnection connection, String columnType, Object value, Class<?> valueClass, Consumer<Object> expectedValueConsumer, Consumer<Object> nativeValueConsumer) {
 
         createTable(connection, columnType);
 
@@ -252,7 +262,7 @@ class CodecIntegrationTests extends IntegrationTestSupport {
             .execute()
             .flatMap(it -> it.map((row, rowMetadata) -> (Object) row.get("my_col", valueClass)))
             .as(StepVerifier::create)
-            .consumeNextWith(actual -> assertThat(actual).isEqualTo(value))
+            .consumeNextWith(expectedValueConsumer)
             .verifyComplete();
 
         connection.createStatement("SELECT my_col FROM codec_test")
