@@ -68,13 +68,14 @@ public final class MssqlConnectionConfiguration {
 
     private final int port;
 
+    private final boolean sendStringParametersAsUnicode;
+
     private final boolean ssl;
 
     private final String username;
 
     private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, Duration connectTimeout, @Nullable String database, String host, String hostNameInCertificate
-        , CharSequence password,
-                                         Predicate<String> preferCursoredExecution, int port, boolean ssl, String username) {
+        , CharSequence password, Predicate<String> preferCursoredExecution, int port, boolean sendStringParametersAsUnicode, boolean ssl, String username) {
 
         this.applicationName = applicationName;
         this.connectionId = connectionId;
@@ -85,6 +86,7 @@ public final class MssqlConnectionConfiguration {
         this.password = Assert.requireNonNull(password, "password must not be null");
         this.preferCursoredExecution = Assert.requireNonNull(preferCursoredExecution, "preferCursoredExecution must not be null");
         this.port = port;
+        this.sendStringParametersAsUnicode = sendStringParametersAsUnicode;
         this.ssl = ssl;
         this.username = Assert.requireNonNull(username, "username must not be null");
     }
@@ -103,7 +105,7 @@ public final class MssqlConnectionConfiguration {
     }
 
     ConnectionOptions toConnectionOptions() {
-        return new ConnectionOptions(this.preferCursoredExecution, new DefaultCodecs(), new IndefinitePreparedStatementCache());
+        return new ConnectionOptions(this.preferCursoredExecution, new DefaultCodecs(), new IndefinitePreparedStatementCache(), sendStringParametersAsUnicode);
     }
 
     @Override
@@ -119,6 +121,7 @@ public final class MssqlConnectionConfiguration {
         sb.append(", password=\"").append(repeat(this.password.length(), "*")).append('\"');
         sb.append(", preferCursoredExecution=\"").append(this.preferCursoredExecution).append('\"');
         sb.append(", port=").append(this.port);
+        sb.append(", sendStringParametersAsUnicode=").append(this.sendStringParametersAsUnicode);
         sb.append(", ssl=").append(this.ssl);
         sb.append(", username=\"").append(this.username).append('\"');
         sb.append(']');
@@ -161,6 +164,10 @@ public final class MssqlConnectionConfiguration {
 
     int getPort() {
         return this.port;
+    }
+
+    boolean isSendStringParametersAsUnicode() {
+        return this.sendStringParametersAsUnicode;
     }
 
     boolean useSsl() {
@@ -239,6 +246,8 @@ public final class MssqlConnectionConfiguration {
         private CharSequence password;
 
         private int port = DEFAULT_PORT;
+
+        private boolean sendStringParametersAsUnicode = true;
 
         private boolean ssl;
 
@@ -379,6 +388,17 @@ public final class MssqlConnectionConfiguration {
         }
 
         /**
+         * Configure whether to send character data as unicode (NVARCHAR, NCHAR, NTEXT) or whether to use the database encoding. Enabled by default.
+         *
+         * @param sendStringParametersAsUnicode {@literal true} to send character data as unicode (NVARCHAR, NCHAR, NTEXT) or whether to use the database encoding. Enabled by default.
+         * @return this {@link Builder}
+         */
+        public Builder sendStringParametersAsUnicode(boolean sendStringParametersAsUnicode) {
+            this.sendStringParametersAsUnicode = sendStringParametersAsUnicode;
+            return this;
+        }
+
+        /**
          * Configure the username.
          *
          * @param username the username
@@ -403,7 +423,7 @@ public final class MssqlConnectionConfiguration {
 
             return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, this.host, this.hostNameInCertificate, this.password,
                 this.preferCursoredExecution, this.port,
-                this.ssl, this.username);
+                this.sendStringParametersAsUnicode, this.ssl, this.username);
         }
     }
 

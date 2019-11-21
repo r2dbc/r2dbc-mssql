@@ -42,7 +42,7 @@ class ParametrizedMssqlStatementUnitTests {
 
     PreparedStatementCache statementCache = new IndefinitePreparedStatementCache();
 
-    ConnectionOptions connectionOptions = new ConnectionOptions(sql -> true, new DefaultCodecs(), statementCache);
+    ConnectionOptions connectionOptions = new ConnectionOptions(sql -> true, new DefaultCodecs(), statementCache, true);
 
     @Test
     void shouldSupportSql() {

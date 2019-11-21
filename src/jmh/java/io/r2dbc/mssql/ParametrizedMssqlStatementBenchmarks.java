@@ -32,7 +32,7 @@ import java.util.function.Function;
 @Testable
 public class ParametrizedMssqlStatementBenchmarks extends BenchmarkSettings {
 
-    private static final ConnectionOptions cached = new ConnectionOptions(s -> false, new DefaultCodecs(), new IndefinitePreparedStatementCache());
+    private static final ConnectionOptions cached = new ConnectionOptions(s -> false, new DefaultCodecs(), new IndefinitePreparedStatementCache(), true);
 
     private static final ConnectionOptions uncached = new ConnectionOptions(s -> false, new DefaultCodecs(), new PreparedStatementCache() {
 
@@ -54,7 +54,7 @@ public class ParametrizedMssqlStatementBenchmarks extends BenchmarkSettings {
         public int size() {
             return 0;
         }
-    });
+    }, true);
 
     private static final Client client = Mockito.mock(Client.class);
 

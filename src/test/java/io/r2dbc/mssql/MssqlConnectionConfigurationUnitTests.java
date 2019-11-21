@@ -73,6 +73,7 @@ final class MssqlConnectionConfigurationUnitTests {
             .preferCursoredExecution(TRUE)
             .port(100)
             .username("test-username")
+            .sendStringParametersAsUnicode(false)
             .build();
 
         assertThat(configuration)
@@ -82,7 +83,8 @@ final class MssqlConnectionConfigurationUnitTests {
             .hasFieldOrPropertyWithValue("password", "test-password")
             .hasFieldOrPropertyWithValue("preferCursoredExecution", TRUE)
             .hasFieldOrPropertyWithValue("port", 100)
-            .hasFieldOrPropertyWithValue("username", "test-username");
+            .hasFieldOrPropertyWithValue("username", "test-username")
+            .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", false);
     }
 
     @Test
@@ -101,7 +103,8 @@ final class MssqlConnectionConfigurationUnitTests {
             .hasFieldOrPropertyWithValue("host", "test-host")
             .hasFieldOrPropertyWithValue("password", "test-password")
             .hasFieldOrPropertyWithValue("port", 1433)
-            .hasFieldOrPropertyWithValue("username", "test-username");
+            .hasFieldOrPropertyWithValue("username", "test-username")
+            .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true);
     }
 
     @Test

@@ -73,6 +73,8 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
     private final Bindings bindings = new Bindings();
 
+    private final boolean sendStringParametersAsUnicode;
+
     private volatile boolean executed = false;
 
     ParametrizedMssqlStatement(Client client, ConnectionOptions connectionOptions, String sql) {
@@ -88,6 +90,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         this.context = client.getContext();
         this.codecs = connectionOptions.getCodecs();
         this.parsedQuery = this.statementCache.getParsedSql(sql, ParsedQuery::parse);
+        this.sendStringParametersAsUnicode = connectionOptions.isSendStringParametersAsUnicode();
     }
 
     @Override

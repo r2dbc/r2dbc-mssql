@@ -32,35 +32,43 @@ class ConnectionOptions {
 
     private final PreparedStatementCache preparedStatementCache;
 
+    private final boolean sendStringParametersAsUnicode;
+
     ConnectionOptions() {
-        this(sql -> false, new DefaultCodecs(), new IndefinitePreparedStatementCache());
+        this(sql -> false, new DefaultCodecs(), new IndefinitePreparedStatementCache(), true);
     }
 
-    ConnectionOptions(Predicate<String> preferCursoredExecution, Codecs codecs, PreparedStatementCache preparedStatementCache) {
+    ConnectionOptions(Predicate<String> preferCursoredExecution, Codecs codecs, PreparedStatementCache preparedStatementCache, boolean sendStringParametersAsUnicode) {
         this.preferCursoredExecution = preferCursoredExecution;
         this.codecs = codecs;
         this.preparedStatementCache = preparedStatementCache;
+        this.sendStringParametersAsUnicode = sendStringParametersAsUnicode;
     }
 
     public Codecs getCodecs() {
-        return codecs;
+        return this.codecs;
     }
 
     public PreparedStatementCache getPreparedStatementCache() {
-        return preparedStatementCache;
+        return this.preparedStatementCache;
     }
 
     public boolean prefersCursors(String sql) {
         return this.preferCursoredExecution.test(sql);
     }
 
+    public boolean isSendStringParametersAsUnicode() {
+        return this.sendStringParametersAsUnicode;
+    }
+
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
-        sb.append(" [preferCursoredExecution=").append(preferCursoredExecution);
-        sb.append(", codecs=").append(codecs);
-        sb.append(", preparedStatementCache=").append(preparedStatementCache);
+        sb.append(" [preferCursoredExecution=").append(this.preferCursoredExecution);
+        sb.append(", codecs=").append(this.codecs);
+        sb.append(", preparedStatementCache=").append(this.preparedStatementCache);
+        sb.append(", sendStringParametersAsUnicode=").append(this.sendStringParametersAsUnicode);
         sb.append(']');
         return sb.toString();
     }

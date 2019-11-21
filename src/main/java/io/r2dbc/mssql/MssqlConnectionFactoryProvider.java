@@ -67,6 +67,12 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
      */
     public static final Option<Object> PREFER_CURSORED_EXECUTION = Option.valueOf("preferCursoredExecution");
 
+
+    /**
+     * Configure whether to send character data as unicode (NVARCHAR, NCHAR, NTEXT) or whether to use the database encoding. Enabled by default.
+     */
+    public static final Option<Boolean> SEND_STRING_PARAMETERS_AS_UNICODE = Option.valueOf("sendStringParametersAsUnicode");
+
     /**
      * Driver option value.
      */
@@ -144,6 +150,15 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
                     throw new IllegalArgumentException("Cannot instantiate '" + value + "'", e);
                 }
             }
+        }
+
+        Object sendStringParametersAsUnicode = connectionFactoryOptions.getValue(SEND_STRING_PARAMETERS_AS_UNICODE);
+        if (sendStringParametersAsUnicode instanceof Boolean) {
+            builder.sendStringParametersAsUnicode((boolean) sendStringParametersAsUnicode);
+        }
+
+        if (sendStringParametersAsUnicode instanceof String) {
+            builder.sendStringParametersAsUnicode((Boolean.parseBoolean(sendStringParametersAsUnicode.toString())));
         }
 
         builder.database(connectionFactoryOptions.getValue(DATABASE));

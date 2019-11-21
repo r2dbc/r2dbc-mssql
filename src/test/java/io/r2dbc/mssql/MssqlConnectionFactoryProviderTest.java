@@ -129,6 +129,32 @@ final class MssqlConnectionFactoryProviderTest {
     }
 
     @Test
+    void shouldConfigureWithStringAsUnicode() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(SSL, true)
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(MssqlConnectionFactoryProvider.SEND_STRING_PARAMETERS_AS_UNICODE, false)
+            .build());
+
+        assertThat(factory.getConnectionOptions().isSendStringParametersAsUnicode()).isFalse();
+
+        factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(SSL, true)
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(MssqlConnectionFactoryProvider.SEND_STRING_PARAMETERS_AS_UNICODE, true)
+            .build());
+
+        assertThat(factory.getConnectionOptions().isSendStringParametersAsUnicode()).isFalse();
+    }
+
+    @Test
     void shouldConfigureWithSsl() {
 
         MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
