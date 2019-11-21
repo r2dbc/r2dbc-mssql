@@ -22,6 +22,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.codec.RpcParameterContext.CharacterValueContext;
 import io.r2dbc.mssql.message.tds.Encode;
+import io.r2dbc.mssql.message.tds.ServerCharset;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TdsDataType;
@@ -130,25 +131,29 @@ class CharacterEncoder {
 
     static Encoded encodePlp(ByteBufAllocator allocator, CharacterValueContext valueContext, CharSequence value) {
 
-        // TODO: NTEXT
-
         Flux<ByteBuf> binaryStream = Flux.just(value).map(it -> {
-            return ByteBufUtil.encodeString(allocator, CharBuffer.wrap(it), valueContext.getCollation().getCharset());
+            return encodeCharSequence(allocator, valueContext, it);
         });
 
-        return new PlpEncodedCharacters(SqlServerType.VARCHARMAX, valueContext.getCollation(), allocator, binaryStream, () -> {
+        return new PlpEncodedCharacters(getPlpType(valueContext), valueContext.getCollation(), allocator, binaryStream, () -> {
         });
     }
 
     static Encoded encodePlp(ByteBufAllocator allocator, CharacterValueContext valueContext, Clob value) {
-        // TODO: NTEXT
 
         Flux<ByteBuf> binaryStream = Flux.from(value.stream()).map(it -> {
-
-            return ByteBufUtil.encodeString(allocator, CharBuffer.wrap(it), valueContext.getCollation().getCharset());
+            return encodeCharSequence(allocator, valueContext, it);
         });
 
-        return new PlpEncodedCharacters(SqlServerType.VARCHARMAX, valueContext.getCollation(), allocator, binaryStream, () -> Mono.from(value.discard()).toFuture());
+        return new PlpEncodedCharacters(getPlpType(valueContext), valueContext.getCollation(), allocator, binaryStream, () -> Mono.from(value.discard()).toFuture());
+    }
+
+    private static SqlServerType getPlpType(CharacterValueContext valueContext) {
+        return valueContext.isSendStringParametersAsUnicode() ? SqlServerType.NVARCHARMAX : SqlServerType.VARCHARMAX;
+    }
+
+    private static ByteBuf encodeCharSequence(ByteBufAllocator allocator, CharacterValueContext valueContext, CharSequence it) {
+        return ByteBufUtil.encodeString(allocator, CharBuffer.wrap(it), valueContext.isSendStringParametersAsUnicode() ? ServerCharset.UNICODE.charset() : valueContext.getCollation().getCharset());
     }
 
     private static class NvarcharEncoded extends RpcEncoding.HintedEncoded {

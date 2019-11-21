@@ -47,7 +47,7 @@ public enum SqlServerType {
     TEXT(Category.LONG_CHARACTER,       "text",                 TdsDataType.TEXT),
     NCHAR(Category.NCHARACTER,          "nchar"),
     NVARCHAR(Category.NCHARACTER,       "nvarchar",         4000, TdsDataType.NVARCHAR),
-    NVARCHARMAX(Category.LONG_NCHARACTER, "nvarchar", TdsDataType.BIGVARCHAR),
+    NVARCHARMAX(Category.LONG_NCHARACTER, "nvarchar", TdsDataType.NVARCHAR),
     NTEXT(Category.LONG_NCHARACTER,     "ntext", TdsDataType.NTEXT),
     BINARY(Category.BINARY,             "binary"),
     VARBINARY(Category.BINARY, "varbinary", 8000, TdsDataType.BIGVARBINARY),

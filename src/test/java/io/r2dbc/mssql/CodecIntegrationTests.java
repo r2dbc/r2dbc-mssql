@@ -193,6 +193,33 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     }
 
     @Test
+    void shouldEncodeClobAsVarcharMaxAsNatl() {
+
+        ConnectionFactoryOptions options = builder().option(MssqlConnectionFactoryProvider.SEND_STRING_PARAMETERS_AS_UNICODE, false).build();
+        MssqlConnection natlConnection = Mono.from(ConnectionFactories.get(options).create()).cast(MssqlConnection.class).block();
+
+        testType(natlConnection, "VARCHAR(MAX)", Clob.from(Mono.just("Hello, World!")), Clob.class, actual -> {
+            assertThat(actual).isInstanceOf(Clob.class);
+            Flux.from(((Clob) actual).stream()).as(StepVerifier::create).expectNext("Hello, World!").verifyComplete();
+        }, actual -> {
+            assertThat(actual).isEqualTo("Hello, World!");
+        });
+
+        natlConnection.close().block();
+    }
+
+    @Test
+    void shouldEncodeClobAsVarcharMaxAsUnicode() {
+
+        testType(connection, "VARCHAR(MAX)", Clob.from(Mono.just("Hello, World!")), Clob.class, actual -> {
+            assertThat(actual).isInstanceOf(Clob.class);
+            Flux.from(((Clob) actual).stream()).as(StepVerifier::create).expectNext("Hello, World!").verifyComplete();
+        }, actual -> {
+            assertThat(actual).isEqualTo("Hello, World!");
+        });
+    }
+
+    @Test
     void shouldEncodeStringAsText() {
         testType(connection, "TEXT", "Hello, World!");
     }
