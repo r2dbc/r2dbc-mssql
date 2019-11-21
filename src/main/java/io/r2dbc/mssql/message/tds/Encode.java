@@ -262,7 +262,7 @@ public final class Encode {
     }
 
     /**
-     * Encode a {@link String} as RPC string.
+     * Encode a {@link CharSequence} as RPC string using {@code UNICODE} encoding.
      *
      * @param buffer the data buffer.
      * @param value  the value to encode.
@@ -275,5 +275,16 @@ public final class Encode {
             buffer.writeByte((byte) (ch & 0xFF));
             buffer.writeByte((byte) ((ch >> 8) & 0xFF));
         }
+    }
+
+    /**
+     * Encode a {@link CharSequence} as RPC string using {@link Charset} encoding.
+     *
+     * @param buffer  the data buffer.
+     * @param value   the value to encode.
+     * @param charset the encoding to use.
+     */
+    public static void rpcString(ByteBuf buffer, CharSequence value, Charset charset) {
+        buffer.writeCharSequence(value, charset);
     }
 }

@@ -49,7 +49,7 @@ class ClobCodecUnitTests {
         Encoded encoded = ClobCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
 
         EncodedAssert.assertThat(encoded).isEqualToHex("40 1f 00 00 00 00 00 ff ff");
-        assertThat(encoded.getFormalType()).isEqualTo("nvarchar(4000)");
+        assertThat(encoded.getFormalType()).isEqualTo("varchar(8000)");
     }
 
     @Test

@@ -34,7 +34,6 @@ import static io.r2dbc.spi.ConnectionFactoryOptions.HOST;
 import static io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD;
 import static io.r2dbc.spi.ConnectionFactoryOptions.PORT;
 import static io.r2dbc.spi.ConnectionFactoryOptions.USER;
-import static io.r2dbc.spi.ConnectionFactoryOptions.builder;
 
 /**
  * Support class for integration tests.
@@ -53,19 +52,23 @@ public abstract class IntegrationTestSupport {
     @BeforeAll
     static void beforeAll() {
 
+        ConnectionFactoryOptions options = builder().build();
+
+        connectionFactory = (MssqlConnectionFactory) ConnectionFactories.get(options);
+        connection = connectionFactory.create().block();
+    }
+
+    public static ConnectionFactoryOptions.Builder builder() {
+
         Predicate<String> preferCursoredExecution = sql -> sql.contains("cursored");
 
-        ConnectionFactoryOptions options = builder()
+        return ConnectionFactoryOptions.builder()
             .option(DRIVER, MssqlConnectionFactoryProvider.MSSQL_DRIVER)
             .option(HOST, SERVER.getHost())
             .option(PORT, SERVER.getPort())
             .option(PASSWORD, SERVER.getPassword())
             .option(USER, SERVER.getUsername())
-            .option(MssqlConnectionFactoryProvider.PREFER_CURSORED_EXECUTION, preferCursoredExecution)
-            .build();
-
-        connectionFactory = (MssqlConnectionFactory) ConnectionFactories.get(options);
-        connection = connectionFactory.create().block();
+            .option(MssqlConnectionFactoryProvider.PREFER_CURSORED_EXECUTION, preferCursoredExecution);
     }
 
     @BeforeEach

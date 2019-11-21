@@ -19,6 +19,7 @@ package io.r2dbc.mssql.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
+import io.r2dbc.mssql.codec.RpcParameterContext.CharacterValueContext;
 import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.LengthStrategy;
 import io.r2dbc.mssql.message.type.PlpLength;
@@ -66,12 +67,15 @@ public class ClobCodec extends AbstractCodec<Clob> {
 
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Clob value) {
+        // TODO: NTEXT
+        CharacterValueContext valueContext = context.getRequiredValueContext(CharacterValueContext.class);
 
         Flux<ByteBuf> binaryStream = Flux.from(value.stream()).map(it -> {
-            return ByteBufUtil.encodeString(allocator, CharBuffer.wrap(it), context.getRequiredCollation().getCharset());
+
+            return ByteBufUtil.encodeString(allocator, CharBuffer.wrap(it), valueContext.getCollation().getCharset());
         });
 
-        return new PlpEncodedCharacters(SqlServerType.VARCHARMAX, context.getRequiredCollation(), allocator, binaryStream, () -> Mono.from(value.discard()).toFuture());
+        return new PlpEncodedCharacters(SqlServerType.VARCHARMAX, valueContext.getCollation(), allocator, binaryStream, () -> Mono.from(value.discard()).toFuture());
     }
 
     @Override

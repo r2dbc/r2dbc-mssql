@@ -75,7 +75,7 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
         }
 
         HikariDataSource hikariDataSource = new HikariDataSource();
-        hikariDataSource.setJdbcUrl("jdbc:sqlserver://" + getHost() + ":" + getPort() + ";database=master");
+        hikariDataSource.setJdbcUrl("jdbc:sqlserver://" + getHost() + ":" + getPort() + ";database=master;sendStringParametersAsUnicode=true");
         hikariDataSource.setUsername(getUsername());
         hikariDataSource.setPassword(getPassword());
 

@@ -17,6 +17,7 @@
 package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.codec.RpcParameterContext.ValueContext;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ServerCharset;
 import io.r2dbc.mssql.message.token.Column;
@@ -126,7 +127,7 @@ public class StringCodecBenchmarks extends CodecBenchmarkSupport {
     }
 
     private Encoded doEncode(Collation collation, Object value) {
-        Encoded encoded = codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(collation), value);
+        Encoded encoded = codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(ValueContext.character(collation, true)), value);
         encoded.release();
         return encoded;
     }

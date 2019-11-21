@@ -20,6 +20,8 @@ import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.util.IntegrationTestSupport;
 import io.r2dbc.spi.Blob;
 import io.r2dbc.spi.Clob;
+import io.r2dbc.spi.ConnectionFactories;
+import io.r2dbc.spi.ConnectionFactoryOptions;
 import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -144,6 +146,17 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     @Test
     void shouldEncodeStringAsNVarchar() {
         testType(connection, "NVARCHAR(255)", "Hello, World! äöü");
+    }
+
+    @Test
+    void shouldEncodeStringAsVarcharSendingCharsAsNatl() {
+
+        ConnectionFactoryOptions options = builder().option(MssqlConnectionFactoryProvider.SEND_STRING_PARAMETERS_AS_UNICODE, false).build();
+        MssqlConnection natlConnection = Mono.from(ConnectionFactories.get(options).create()).cast(MssqlConnection.class).block();
+
+        testType(natlConnection, "VARCHAR(255)", "Hello, World!");
+
+        natlConnection.close().block();
     }
 
     @Test

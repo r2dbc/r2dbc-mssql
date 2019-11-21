@@ -79,10 +79,11 @@ final class StringCodec extends AbstractCodec<String> {
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, String value) {
 
-        TdsDataType dataType = getDataType(context.getDirection(), value);
+        RpcParameterContext.CharacterValueContext valueContext = context.getRequiredValueContext(RpcParameterContext.CharacterValueContext.class);
+        TdsDataType dataType = getDataType(context.getDirection(), valueContext.isSendStringParametersAsUnicode(), value);
         ByteBuf buffer = allocator.buffer((value.length() * 2) + 7);
 
-        doEncode(buffer, context.getDirection(), context.getCollation(), value);
+        doEncode(buffer, dataType, context.getDirection(), valueContext.getCollation(), value);
 
         if (dataType == TdsDataType.NVARCHAR || dataType == TdsDataType.NCHAR) {
             return new NvarcharEncoded(dataType, buffer);
@@ -93,7 +94,7 @@ final class StringCodec extends AbstractCodec<String> {
 
     @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return new NvarcharEncoded(TdsDataType.NVARCHAR, Unpooled.wrappedBuffer(NULL));
+        return new VarcharEncoded(TdsDataType.NVARCHAR, Unpooled.wrappedBuffer(NULL));
     }
 
     @Override
@@ -160,7 +161,7 @@ final class StringCodec extends AbstractCodec<String> {
         return valueType.cast(value);
     }
 
-    static TdsDataType getDataType(RpcDirection direction, @Nullable String value) {
+    static TdsDataType getDataType(RpcDirection direction, boolean sendStringParametersAsUnicode, @Nullable String value) {
 
         int valueLength = value == null ? 0 : (value.length() * 2);
         boolean isShortValue = valueLength <= TypeUtils.SHORT_VARTYPE_MAX_BYTES;
@@ -168,17 +169,19 @@ final class StringCodec extends AbstractCodec<String> {
         // Use PLP encoding on Yukon and later with long values and OUT parameters
         boolean usePLP = (!isShortValue || direction == RpcDirection.OUT);
 
-        if (usePLP || isShortValue) {
-            return TdsDataType.NVARCHAR;
+        if (sendStringParametersAsUnicode) {
+            return usePLP ? TdsDataType.NTEXT : TdsDataType.NVARCHAR;
         }
 
-        return TdsDataType.NTEXT;
+        return usePLP ? TdsDataType.TEXT : TdsDataType.BIGVARCHAR;
     }
 
-    static void doEncode(ByteBuf buffer, RpcDirection direction, Collation collation, @Nullable String value) {
+    static void doEncode(ByteBuf buffer, TdsDataType dataType, RpcDirection direction, Collation collation, @Nullable String value) {
 
         boolean isNull = (value == null);
-        int valueLength = isNull ? 0 : (value.length() * 2);
+
+        ByteBuf characterData = isNull ? Unpooled.EMPTY_BUFFER : doEncode(buffer.alloc(), dataType, collation, value);
+        int valueLength = characterData.readableBytes();
         boolean isShortValue = valueLength <= TypeUtils.SHORT_VARTYPE_MAX_BYTES;
 
         // Textual RPC requires a collation. If none is provided, as is the case when
@@ -198,7 +201,8 @@ final class StringCodec extends AbstractCodec<String> {
                 if (valueLength > 0) {
 
                     Encode.asInt(buffer, valueLength);
-                    Encode.rpcString(buffer, value);
+                    buffer.writeBytes(characterData);
+                    characterData.release();
                 }
 
                 // Send the terminator PLP chunk.
@@ -207,12 +211,7 @@ final class StringCodec extends AbstractCodec<String> {
         } else // non-PLP type
         {
             // Write maximum length of data
-            if (isShortValue) {
-                Encode.uShort(buffer, TypeUtils.SHORT_VARTYPE_MAX_BYTES);
-            } else {
-                // encode as TdsDataType.NTEXT;
-                Encode.asInt(buffer, TypeUtils.IMAGE_TEXT_MAX_BYTES);
-            }
+            Encode.uShort(buffer, TypeUtils.SHORT_VARTYPE_MAX_BYTES);
 
             collation.encode(buffer);
 
@@ -221,18 +220,32 @@ final class StringCodec extends AbstractCodec<String> {
                 Encode.uShort(buffer, -1); // actual len
             } else {
                 // Write actual length of data
-                if (isShortValue) {
-                    Encode.uShort(buffer, valueLength);
-                } else {
-                    Encode.asInt(buffer, valueLength);
-                }
+                Encode.uShort(buffer, valueLength);
 
                 // If length is zero, we're done.
                 if (0 != valueLength) {
-                    Encode.rpcString(buffer, value);
+                    buffer.writeBytes(characterData);
+                    characterData.release();
                 }
             }
         }
+    }
+
+    private static ByteBuf doEncode(ByteBufAllocator alloc, TdsDataType dataType, Collation collation, String value) {
+
+        if (value.isEmpty()) {
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        if (dataType == TdsDataType.BIGVARCHAR || dataType == TdsDataType.TEXT) {
+            ByteBuf buffer = alloc.buffer(value.length());
+            Encode.rpcString(buffer, value, collation.getCharset());
+            return buffer;
+        }
+
+        ByteBuf buffer = alloc.buffer(value.length() * 2);
+        Encode.rpcString(buffer, value);
+        return buffer;
     }
 
     /**

@@ -78,6 +78,7 @@ Additional options:
 * `ssl`: Whether to use transport-level encryption for the entire SQL server traffic, defaults to `false`.
 * `hostNameInCertificate`: Expected hostname in SSL certificate. Supports wildcards (e.g. `*.database.windows.net`)
 * `preferCursoredExecution`: Whether to prefer cursors  or direct execution for queries. Uses by default direct. Cursors require more round-trips but are more backpressure-friendly. Defaults to direct execution. Can be `boolean` or a `Predicate<String>` accepting the SQL query.
+* `endStringParametersAsUnicode`. Configure whether to send character data as unicode (NVARCHAR, NCHAR, NTEXT) or whether to use the database encoding, defaults to `true`. If disabled, `CharSequence` data is sent using the database-specific collation such as ASCII/MBCS instead of Unicode.
 
 **Programmatic Configuration**
 

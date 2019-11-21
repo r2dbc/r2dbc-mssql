@@ -105,7 +105,7 @@ public final class MssqlConnectionConfiguration {
     }
 
     ConnectionOptions toConnectionOptions() {
-        return new ConnectionOptions(this.preferCursoredExecution, new DefaultCodecs(), new IndefinitePreparedStatementCache(), sendStringParametersAsUnicode);
+        return new ConnectionOptions(this.preferCursoredExecution, new DefaultCodecs(), new IndefinitePreparedStatementCache(), this.sendStringParametersAsUnicode);
     }
 
     @Override
@@ -388,7 +388,8 @@ public final class MssqlConnectionConfiguration {
         }
 
         /**
-         * Configure whether to send character data as unicode (NVARCHAR, NCHAR, NTEXT) or whether to use the database encoding. Enabled by default.
+         * Configure whether to send character data as unicode (NVARCHAR, NCHAR, NTEXT) or whether to use the database encoding. Enabled by default. If disabled, {@link CharSequence} data is sent
+         * using the database-specific collation such as ASCII/MBCS instead of Unicode.
          *
          * @param sendStringParametersAsUnicode {@literal true} to send character data as unicode (NVARCHAR, NCHAR, NTEXT) or whether to use the database encoding. Enabled by default.
          * @return this {@link Builder}

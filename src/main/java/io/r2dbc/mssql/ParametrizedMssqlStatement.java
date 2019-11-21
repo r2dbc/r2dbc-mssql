@@ -24,6 +24,7 @@ import io.r2dbc.mssql.codec.RpcParameterContext;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.spi.Clob;
 import io.r2dbc.spi.Statement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -218,7 +219,12 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         Assert.requireNonNull(identifier, "identifier must not be null");
         Assert.isInstanceOf(String.class, identifier, "identifier must be a String");
 
-        Encoded encoded = this.codecs.encode(this.client.getByteBufAllocator(), RpcParameterContext.in(this.client.getRequiredCollation()), value);
+        RpcParameterContext parameterContext = RpcParameterContext.in();
+        if (value instanceof CharSequence || value instanceof Clob) {
+            parameterContext = RpcParameterContext.in(new RpcParameterContext.CharacterValueContext(this.client.getRequiredCollation(), this.sendStringParametersAsUnicode));
+        }
+
+        Encoded encoded = this.codecs.encode(this.client.getByteBufAllocator(), parameterContext, value);
         encoded.touch("ParametrizedMssqlStatement.bind(…)");
 
         addBinding(getParameterName(identifier), encoded);

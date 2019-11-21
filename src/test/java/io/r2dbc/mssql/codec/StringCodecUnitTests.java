@@ -17,6 +17,7 @@
 package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.codec.RpcParameterContext.ValueContext;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ServerCharset;
 import io.r2dbc.mssql.message.type.Collation;
@@ -47,7 +48,7 @@ class StringCodecUnitTests {
         Encode.uShort(data, 12);
         data.writeCharSequence("foobar", ServerCharset.UNICODE.charset());
 
-        Encoded encoded = StringCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(collation), "foobar");
+        Encoded encoded = StringCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(new RpcParameterContext.CharacterValueContext(collation, true)), "foobar");
 
         EncodedAssert.assertThat(encoded).isEncodedAs(expected ->
         {
@@ -68,12 +69,37 @@ class StringCodecUnitTests {
     }
 
     @Test
+    void shouldEncodeVarchar() {
+
+        Collation collation = Collation.from(13632521, 52);
+
+        Encoded encoded = StringCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(ValueContext.character(collation, false)), "foobar");
+
+        EncodedAssert.assertThat(encoded).isEncodedAs(expected ->
+        {
+            expected.writeShortLE(8000); // max size
+
+            // collation windows-1252
+            expected.writeByte(0x09);
+            expected.writeByte(0x04);
+            expected.writeByte(0xD0);
+            expected.writeByte(0x00);
+            expected.writeByte(0x34);
+
+            expected.writeShortLE(6); // actual size
+
+            expected.writeCharSequence("foobar", ServerCharset.CP1252.charset());
+        });
+        assertThat(encoded.getFormalType()).isEqualTo("varchar(8000)");
+    }
+
+    @Test
     void shouldEncodeNull() {
 
         Encoded encoded = StringCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
 
         EncodedAssert.assertThat(encoded).isEqualToHex("40 1f 00 00 00 00 00 ff ff");
-        assertThat(encoded.getFormalType()).isEqualTo("nvarchar(4000)");
+        assertThat(encoded.getFormalType()).isEqualTo("varchar(8000)");
     }
 
     @Test
