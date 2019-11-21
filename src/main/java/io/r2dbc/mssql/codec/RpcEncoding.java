@@ -52,10 +52,9 @@ public final class RpcEncoding {
      */
     public static void encodeString(ByteBuf buffer, @Nullable String name, RpcDirection direction, Collation collation, @Nullable String value) {
 
-        TdsDataType dataType = StringCodec.getDataType(direction, true, value);
 
-        encodeHeader(buffer, name, direction, dataType);
-        StringCodec.doEncode(buffer, dataType, direction, collation, value);
+        encodeHeader(buffer, name, direction, TdsDataType.NVARCHAR);
+        CharacterEncoder.encodeBigVarchar(buffer, direction, collation, true, value);
     }
 
     /**

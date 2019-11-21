@@ -18,14 +18,10 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
-import io.r2dbc.mssql.message.tds.Encode;
-import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.LengthStrategy;
 import io.r2dbc.mssql.message.type.PlpLength;
 import io.r2dbc.mssql.message.type.SqlServerType;
-import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.message.type.TypeUtils;
 import io.r2dbc.mssql.util.Assert;
@@ -61,16 +57,6 @@ final class StringCodec extends AbstractCodec<String> {
         SqlServerType.TEXT, SqlServerType.NTEXT,
         SqlServerType.GUID);
 
-    private static final byte[] NULL = ByteArray.fromBuffer(alloc -> {
-
-        ByteBuf buffer = alloc.buffer(8);
-
-        Encode.uShort(buffer, TypeUtils.SHORT_VARTYPE_MAX_BYTES);
-        Collation.RAW.encode(buffer);
-        Encode.uShort(buffer, -1);
-
-        return buffer;
-    });
 
     private StringCodec() {
         super(String.class);
@@ -80,21 +66,17 @@ final class StringCodec extends AbstractCodec<String> {
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, String value) {
 
         RpcParameterContext.CharacterValueContext valueContext = context.getRequiredValueContext(RpcParameterContext.CharacterValueContext.class);
-        TdsDataType dataType = getDataType(context.getDirection(), valueContext.isSendStringParametersAsUnicode(), value);
-        ByteBuf buffer = allocator.buffer((value.length() * 2) + 7);
 
-        doEncode(buffer, dataType, context.getDirection(), valueContext.getCollation(), value);
-
-        if (dataType == TdsDataType.NVARCHAR || dataType == TdsDataType.NCHAR) {
-            return new NvarcharEncoded(dataType, buffer);
+        if (exceedsBigVarchar(context.getDirection(), value)) {
+            return CharacterEncoder.encodePlp(allocator, valueContext, value);
         }
 
-        return new VarcharEncoded(dataType, buffer);
+        return CharacterEncoder.encodeBigVarchar(allocator, context.getDirection(), valueContext.getCollation(), valueContext.isSendStringParametersAsUnicode(), value);
     }
 
     @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return new VarcharEncoded(TdsDataType.NVARCHAR, Unpooled.wrappedBuffer(NULL));
+        return CharacterEncoder.encodeNull();
     }
 
     @Override
@@ -115,7 +97,6 @@ final class StringCodec extends AbstractCodec<String> {
         Length length;
 
         if (decodable.getType().getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
-
             PlpLength plpLength = PlpLength.decode(buffer, decodable.getType());
             length = Length.of(Math.toIntExact(plpLength.getLength()), plpLength.isNull());
         } else {
@@ -161,152 +142,12 @@ final class StringCodec extends AbstractCodec<String> {
         return valueType.cast(value);
     }
 
-    static TdsDataType getDataType(RpcDirection direction, boolean sendStringParametersAsUnicode, @Nullable String value) {
+    static boolean exceedsBigVarchar(RpcDirection direction, String value) {
 
-        int valueLength = value == null ? 0 : (value.length() * 2);
+        int valueLength = (value.length() * 2);
         boolean isShortValue = valueLength <= TypeUtils.SHORT_VARTYPE_MAX_BYTES;
 
         // Use PLP encoding on Yukon and later with long values and OUT parameters
-        boolean usePLP = (!isShortValue || direction == RpcDirection.OUT);
-
-        if (sendStringParametersAsUnicode) {
-            return usePLP ? TdsDataType.NTEXT : TdsDataType.NVARCHAR;
-        }
-
-        return usePLP ? TdsDataType.TEXT : TdsDataType.BIGVARCHAR;
-    }
-
-    static void doEncode(ByteBuf buffer, TdsDataType dataType, RpcDirection direction, Collation collation, @Nullable String value) {
-
-        boolean isNull = (value == null);
-
-        ByteBuf characterData = isNull ? Unpooled.EMPTY_BUFFER : doEncode(buffer.alloc(), dataType, collation, value);
-        int valueLength = characterData.readableBytes();
-        boolean isShortValue = valueLength <= TypeUtils.SHORT_VARTYPE_MAX_BYTES;
-
-        // Textual RPC requires a collation. If none is provided, as is the case when
-        // the SSType is non-textual, then use the database collation by default.
-
-        // Use PLP encoding on Yukon and later with long values and OUT parameters
-        boolean usePLP = (!isShortValue || direction == RpcDirection.OUT);
-        if (usePLP) {
-
-            // Handle Yukon v*max type header here.
-            writeVMaxHeader(valueLength,    // Length
-                isNull,    // Is null?
-                collation, buffer);
-
-            // Send the data.
-            if (!isNull) {
-                if (valueLength > 0) {
-
-                    Encode.asInt(buffer, valueLength);
-                    buffer.writeBytes(characterData);
-                    characterData.release();
-                }
-
-                // Send the terminator PLP chunk.
-                Encode.asInt(buffer, 0);
-            }
-        } else // non-PLP type
-        {
-            // Write maximum length of data
-            Encode.uShort(buffer, TypeUtils.SHORT_VARTYPE_MAX_BYTES);
-
-            collation.encode(buffer);
-
-            // Data and length
-            if (isNull) {
-                Encode.uShort(buffer, -1); // actual len
-            } else {
-                // Write actual length of data
-                Encode.uShort(buffer, valueLength);
-
-                // If length is zero, we're done.
-                if (0 != valueLength) {
-                    buffer.writeBytes(characterData);
-                    characterData.release();
-                }
-            }
-        }
-    }
-
-    private static ByteBuf doEncode(ByteBufAllocator alloc, TdsDataType dataType, Collation collation, String value) {
-
-        if (value.isEmpty()) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-
-        if (dataType == TdsDataType.BIGVARCHAR || dataType == TdsDataType.TEXT) {
-            ByteBuf buffer = alloc.buffer(value.length());
-            Encode.rpcString(buffer, value, collation.getCharset());
-            return buffer;
-        }
-
-        ByteBuf buffer = alloc.buffer(value.length() * 2);
-        Encode.rpcString(buffer, value);
-        return buffer;
-    }
-
-    /**
-     * Appends a standard v*max header for RPC parameter transmission.
-     *
-     * @param headerLength the total length of the PLP data block.
-     * @param isNull       true if the value is NULL.
-     * @param collation    The SQL collation associated with the value that follows the v*max header. Null for non-textual types.
-     */
-    private static void writeVMaxHeader(long headerLength,
-                                        boolean isNull,
-                                        @Nullable Collation collation, ByteBuf buffer) {
-        // Send v*max length indicator 0xFFFF.
-        Encode.uShort(buffer, 0xFFFF);
-
-        if (collation != null) {
-            collation.encode(buffer);
-        }
-
-        // Handle null here and return, we're done here if it's null.
-        if (isNull) {
-            // Null header for v*max types is 0xFFFFFFFFFFFFFFFF.
-            Encode.uLongLong(buffer, 0xFFFFFFFFFFFFFFFFL);
-        } else if (TypeUtils.UNKNOWN_STREAM_LENGTH == headerLength) {
-            // Append v*max length.
-            // UNKNOWN_PLP_LEN is 0xFFFFFFFFFFFFFFFE
-            Encode.uLongLong(buffer, 0xFFFFFFFFFFFFFFFEL);
-
-            // NOTE: Don't send the first chunk length, this will be calculated by caller.
-        } else {
-            // For v*max types with known length, length is <totallength8><chunklength4>
-            // We're sending same total length as chunk length (as we're sending 1 chunk).
-            Encode.uLongLong(buffer, headerLength);
-        }
-    }
-
-    static class NvarcharEncoded extends RpcEncoding.HintedEncoded {
-
-        private static final String FORMAL_TYPE = SqlServerType.NVARCHAR + "(" + (TypeUtils.SHORT_VARTYPE_MAX_BYTES / 2) + ")";
-
-        NvarcharEncoded(TdsDataType dataType, ByteBuf value) {
-            super(dataType, SqlServerType.NVARCHAR, value);
-        }
-
-        @Override
-        public String getFormalType() {
-            return FORMAL_TYPE;
-        }
-    }
-
-    static class VarcharEncoded extends RpcEncoding.HintedEncoded {
-
-        private static final String FORMAL_TYPE = SqlServerType.VARCHAR + "(" + TypeUtils.SHORT_VARTYPE_MAX_BYTES + ")";
-
-        VarcharEncoded(TdsDataType dataType, ByteBuf value) {
-            super(dataType, SqlServerType.NVARCHAR, value);
-        }
-
-        @Override
-        public String getFormalType() {
-            return FORMAL_TYPE;
-        }
+        return (!isShortValue || direction == RpcDirection.OUT);
     }
 }

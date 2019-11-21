@@ -39,6 +39,7 @@ import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -162,6 +163,18 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     @Test
     void shouldEncodeStringAsVarcharMax() {
         testType(connection, "VARCHAR(MAX)", "Hello, World!");
+    }
+
+    @Test
+    void shouldEncodeStringAsVarcharMaxWithBigString() {
+
+        String template = UUID.randomUUID().toString();
+        StringBuilder builder = new StringBuilder();
+        IntStream.range(0, 1900).forEach(ignore -> builder.append(template));
+
+        assertThat(builder).hasSize(68400);
+
+        testType(connection, "VARCHAR(MAX)", builder.toString());
     }
 
     @Test
