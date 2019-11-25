@@ -41,7 +41,7 @@ import reactor.core.publisher.SynchronousSink;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -228,7 +228,7 @@ class RpcQueryMessageFlowUnitTests {
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.FETCHING);
         verify(requests).onNext(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
-        verifyZeroInteractions(completion);
+        verifyNoInteractions(completion);
     }
 
     @Test
@@ -243,7 +243,7 @@ class RpcQueryMessageFlowUnitTests {
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.FETCHING);
         verify(requests).onNext(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
-        verifyZeroInteractions(completion);
+        verifyNoInteractions(completion);
     }
 
     @Test
@@ -257,7 +257,7 @@ class RpcQueryMessageFlowUnitTests {
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSING);
         verify(requests).onNext(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
-        verifyZeroInteractions(sink);
+        verifyNoInteractions(sink);
     }
 
     @Test
@@ -270,7 +270,7 @@ class RpcQueryMessageFlowUnitTests {
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSING);
         verify(requests).onNext(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
-        verifyZeroInteractions(completion);
+        verifyNoInteractions(completion);
     }
 
     @Test
@@ -283,7 +283,7 @@ class RpcQueryMessageFlowUnitTests {
         RpcQueryMessageFlow.onDone(client, 128, requests, state, completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSED);
-        verifyZeroInteractions(requests);
+        verifyNoInteractions(requests);
         verify(completion).run();
     }
 }

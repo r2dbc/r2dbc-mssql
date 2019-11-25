@@ -28,28 +28,53 @@
     <packaging>jar</packaging>
 
     <name>Reactive Relational Database Connectivity - Microsoft SQL Server</name>
+    <description>Reactive Relational Database Connectivity Driver Implementation for Microsoft SQL Server</description>
     <url>https://github.com/r2dbc/r2dbc-mssql</url>
 
     <properties>
-        <assertj.version>3.13.2</assertj.version>
-        <hikari-cp.version>3.4.0</hikari-cp.version>
+        <assertj.version>3.14.0</assertj.version>
+        <hikari-cp.version>3.4.1</hikari-cp.version>
         <java.version>1.8</java.version>
         <jsr305.version>3.0.2</jsr305.version>
         <junit.version>5.5.2</junit.version>
-        <jmh.version>1.21</jmh.version>
+        <jmh.version>1.22</jmh.version>
         <mbr.version>0.2.0.RELEASE</mbr.version>
         <logback.version>1.2.3</logback.version>
-        <mockito.version>3.0.0</mockito.version>
-        <mssql-jdbc.version>7.4.0.jre8</mssql-jdbc.version>
+        <mockito.version>3.1.0</mockito.version>
+        <mssql-jdbc.version>7.4.1.jre8</mssql-jdbc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <r2dbc-spi.version>${project.version}</r2dbc-spi.version>
         <r2dbc-pool.version>${project.version}</r2dbc-pool.version>
-        <reactor.version>Dysprosium-RELEASE</reactor.version>
+        <reactor.version>Dysprosium-SR1</reactor.version>
         <slf4j.version>1.7.26</slf4j.version>
-        <spring-framework.version>5.1.9.RELEASE</spring-framework.version>
+        <spring-framework.version>5.2.1.RELEASE</spring-framework.version>
         <testcontainers.version>1.12.3</testcontainers.version>
     </properties>
+
+    <licenses>
+        <license>
+            <name>Apache License 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:https://github.com/r2dbc/r2dbc-mssql</connection>
+        <url>https://github.com/r2dbc/r2dbc-mssql</url>
+    </scm>
+
+    <developers>
+        <developer>
+            <name>Ben Hale</name>
+            <email>bhale@pivotal.io</email>
+        </developer>
+        <developer>
+            <name>Mark Paluch</name>
+            <email>mpaluch@pivotal.io</email>
+        </developer>
+    </developers>
 
     <dependencyManagement>
         <dependencies>
@@ -79,17 +104,17 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.r2dbc</groupId>
+            <artifactId>r2dbc-spi</artifactId>
+            <version>${r2dbc-spi.version}</version>
+        </dependency>
+        <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId>
         </dependency>
         <dependency>
             <groupId>io.projectreactor.netty</groupId>
             <artifactId>reactor-netty</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.r2dbc</groupId>
-            <artifactId>r2dbc-spi</artifactId>
-            <version>${r2dbc-spi.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -108,12 +133,6 @@
             <groupId>io.r2dbc</groupId>
             <artifactId>r2dbc-pool</artifactId>
             <version>${r2dbc-pool.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>${logback.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -177,6 +196,12 @@
             <version>${spring-framework.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -201,7 +226,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.1.2</version>
+                <version>3.2.0</version>
                 <configuration>
                     <archive>
                         <manifest>
@@ -218,7 +243,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
-                <version>3.0.0-M1</version>
+                <version>2.8.2</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -229,6 +254,7 @@
                         io.r2dbc.mssql.authentication,io.r2dbc.mssql.client,io.r2dbc.mssql.codec,io.r2dbc.mssql.message,io.r2dbc.mssql.util
                     </excludePackageNames>
                     <links>
+                        <link>https://r2dbc.io/spec/${r2dbc-spi.version}/api/</link>
                         <link>https://projectreactor.io/docs/core/release/api/</link>
                         <link>https://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/</link>
                     </links>
@@ -245,7 +271,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.2.0</version>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -258,7 +284,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.22.0</version>
+                <version>2.22.2</version>
                 <configuration>
                     <runOrder>random</runOrder>
                     <excludes>
@@ -273,7 +299,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>2.22.0</version>
+                <version>2.22.2</version>
                 <executions>
                     <execution>
                         <goals>
@@ -306,10 +332,10 @@
                             <updatePomFile>true</updatePomFile>
                             <flattenMode>oss</flattenMode>
                             <pomElements>
-                                <pluginManagement>keep</pluginManagement>
-                                <properties>keep</properties>
+                                <properties>remove</properties>
                                 <parent>expand</parent>
                                 <repositories>remove</repositories>
+                                <profiles>remove</profiles>
                             </pomElements>
                         </configuration>
                     </execution>
@@ -375,6 +401,27 @@
                     </snapshots>
                 </repository>
             </repositories>
+        </profile>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
         <profile>
             <id>jmh</id>
