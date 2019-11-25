@@ -35,8 +35,8 @@ import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.tds.ContextualTdsFragment;
 import io.r2dbc.mssql.message.tds.TdsFragment;
 import io.r2dbc.mssql.util.Assert;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
 import javax.net.ssl.SSLContext;
@@ -62,7 +62,7 @@ import java.security.KeyStore;
 @ChannelHandler.Sharable
 public final class TdsSslHandler extends ChannelDuplexHandler {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TdsSslHandler.class);
+    private static final Logger LOGGER = Loggers.getLogger(TdsSslHandler.class);
 
     public static final boolean DEBUG_ENABLED = LOGGER.isDebugEnabled();
 

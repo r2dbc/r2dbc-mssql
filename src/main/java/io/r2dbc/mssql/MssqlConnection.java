@@ -29,11 +29,11 @@ import io.r2dbc.spi.IsolationLevel;
 import io.r2dbc.spi.ValidationDepth;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -51,7 +51,7 @@ public final class MssqlConnection implements Connection {
 
     private static final Pattern SAVEPOINT_PATTERN = Pattern.compile("[\\d\\w_]{1,32}");
 
-    private static final Logger logger = LoggerFactory.getLogger(MssqlConnection.class);
+    private static final Logger logger = Loggers.getLogger(MssqlConnection.class);
 
     private final Client client;
 

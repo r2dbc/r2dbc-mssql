@@ -40,12 +40,12 @@ import io.r2dbc.mssql.util.Operators;
 import org.reactivestreams.Processor;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SynchronousSink;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import javax.annotation.processing.Completion;
 import java.util.concurrent.atomic.AtomicReference;
@@ -71,7 +71,7 @@ final class RpcQueryMessageFlow {
         AbstractInfoToken.class::isInstance,
         Completion.class::isInstance);
 
-    private static final Logger logger = LoggerFactory.getLogger(RpcQueryMessageFlow.class);
+    private static final Logger logger = Loggers.getLogger(RpcQueryMessageFlow.class);
 
     static final RpcRequest.OptionFlags NO_METADATA = RpcRequest.OptionFlags.empty().disableMetadata();
 

@@ -28,9 +28,9 @@ import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.Operators;
 import org.reactivestreams.Publisher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import java.util.Locale;
 import java.util.function.Predicate;
@@ -42,7 +42,7 @@ import java.util.function.Predicate;
  */
 final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlStatement {
 
-    private static final Logger logger = LoggerFactory.getLogger(SimpleMssqlStatement.class);
+    private static final Logger logger = Loggers.getLogger(SimpleMssqlStatement.class);
 
     private final Client client;
 

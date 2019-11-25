@@ -26,10 +26,10 @@ import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Clob;
 import io.r2dbc.spi.Statement;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -56,7 +56,7 @@ import java.util.regex.Pattern;
  */
 final class ParametrizedMssqlStatement extends MssqlStatementSupport implements MssqlStatement {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ParametrizedMssqlStatement.class);
+    private static final Logger LOGGER = Loggers.getLogger(ParametrizedMssqlStatement.class);
 
     private static final boolean DEBUG_ENABLED = LOGGER.isDebugEnabled();
 

@@ -17,8 +17,8 @@
 package io.r2dbc.mssql.client;
 
 import io.r2dbc.mssql.MssqlConnectionConfiguration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import javax.annotation.Nullable;
 import java.util.UUID;
@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class ConnectionContext {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(ConnectionContext.class.getName() + ".context");
+    private final static Logger LOGGER = Loggers.getLogger(ConnectionContext.class.getName() + ".context");
 
     private final static boolean CONTEXT_ENABLED = LOGGER.isDebugEnabled();
 

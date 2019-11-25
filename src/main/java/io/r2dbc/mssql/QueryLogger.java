@@ -17,8 +17,8 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.ConnectionContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * Query logger to log queries.
@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
  */
 final class QueryLogger {
 
-    private static final Logger QUERY_LOGGER = LoggerFactory.getLogger("io.r2dbc.mssql.QUERY");
+    private static final Logger QUERY_LOGGER = Loggers.getLogger("io.r2dbc.mssql.QUERY");
 
     static void logQuery(ConnectionContext context, String query) {
         QUERY_LOGGER.debug(context.getMessage("Executing query: {}"), query);

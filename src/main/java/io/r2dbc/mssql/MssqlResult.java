@@ -30,10 +30,10 @@ import io.r2dbc.spi.R2dbcException;
 import io.r2dbc.spi.Result;
 import io.r2dbc.spi.Row;
 import io.r2dbc.spi.RowMetadata;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import java.util.function.BiFunction;
 
@@ -44,7 +44,7 @@ import java.util.function.BiFunction;
  */
 public final class MssqlResult implements Result {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MssqlResult.class);
+    private static final Logger LOGGER = Loggers.getLogger(MssqlResult.class);
 
     public static final boolean DEBUG_ENABLED = LOGGER.isDebugEnabled();
 

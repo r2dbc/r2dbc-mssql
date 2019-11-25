@@ -20,8 +20,8 @@ import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.ConnectionFactoryOptions;
 import io.r2dbc.spi.ConnectionFactoryProvider;
 import io.r2dbc.spi.Option;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -43,7 +43,7 @@ import static io.r2dbc.spi.ConnectionFactoryOptions.USER;
  */
 public final class MssqlConnectionFactoryProvider implements ConnectionFactoryProvider {
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = Loggers.getLogger(this.getClass());
 
     /**
      * Application name.

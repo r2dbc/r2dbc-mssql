@@ -18,12 +18,12 @@ package io.r2dbc.mssql.util;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxOperator;
 import reactor.core.publisher.Operators;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 import reactor.util.context.Context;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 class FluxDiscardOnCancel<T> extends FluxOperator<T, T> {
 
-    private static final Logger logger = LoggerFactory.getLogger(FluxDiscardOnCancel.class);
+    private static final Logger logger = Loggers.getLogger(FluxDiscardOnCancel.class);
 
     private final Runnable cancelConsumer;
 

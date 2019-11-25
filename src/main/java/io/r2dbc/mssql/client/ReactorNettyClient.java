@@ -42,8 +42,6 @@ import io.r2dbc.spi.R2dbcException;
 import io.r2dbc.spi.R2dbcNonTransientResourceException;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
@@ -54,6 +52,8 @@ import reactor.core.publisher.SynchronousSink;
 import reactor.netty.Connection;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
@@ -76,7 +76,7 @@ import java.util.function.Supplier;
  */
 public final class ReactorNettyClient implements Client {
 
-    private static final Logger logger = LoggerFactory.getLogger(ReactorNettyClient.class);
+    private static final Logger logger = Loggers.getLogger(ReactorNettyClient.class);
 
     private static final boolean DEBUG_ENABLED = logger.isDebugEnabled();
 

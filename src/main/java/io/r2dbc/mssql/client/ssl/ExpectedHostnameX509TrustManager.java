@@ -16,8 +16,8 @@
 
 package io.r2dbc.mssql.client.ssl;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
 import javax.net.ssl.X509TrustManager;
@@ -33,7 +33,7 @@ import java.util.function.Predicate;
  */
 final class ExpectedHostnameX509TrustManager implements X509TrustManager {
 
-    private static final Logger logger = LoggerFactory.getLogger(TdsSslHandler.class);
+    private static final Logger logger = Loggers.getLogger(TdsSslHandler.class);
 
     private final X509TrustManager defaultTrustManager;
 
