@@ -1,6 +1,17 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.8.0.RELEASE
+------------------
+* Remove SLF4J in favor of Reactor Core Loggers #120
+* Clob codec should support UNICODE #117
+* Default to scalar values for LOB column retrieval according to spec changes  #115
+* Upgrade to Testcontainers 1.12.3 #114
+* SELECT (NEXT VALUE FOR TestSeq) with RPC Flow and fast-forward scroll option skips sequence items #113
+* Add support for sendStringParametersAsUnicode property #112
+* Add hints to ByteBufs #110
+* Statement execution gets stuck when connection gets disconnected #109
+
 0.8.0.RC2
 ------------------
 * Revert reactor netty exclusions #107
