@@ -239,6 +239,18 @@ values are fully materialized in the client before decoding. Make sure to accoun
 [java-uuid-ref]: https://docs.oracle.com/javase/8/docs/api/java/util/UUID.html
 [java-zdt-ref]: https://docs.oracle.com/javase/8/docs/api/java/time/ZonedDateTime.html
 
+## Logging
+
+If SL4J is on the classpath, it will be used. Otherwise, there are two possible fallbacks: Console or `java.util.logging.Logger`). By default, the Console fallback is used. To use the JDK loggers, set the `reactor.logging.fallback` System property to `JDK`.
+
+Logging facilities:
+
+* Driver Logging (`io.r2dbc.mssql`)
+* Query Logging (`io.r2dbc.mssql.QUERY` on `DEBUG` level)
+* Transport Logging (`io.r2dbc.mssql.client`)
+    * `DEBUG` enables `Message` exchange logging
+    * `TRACE` enables traffic logging
+
 ## Getting Help
 
 Having trouble with R2DBC? We'd love to help!
