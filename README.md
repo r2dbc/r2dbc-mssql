@@ -174,18 +174,18 @@ This reference table shows the type mapping between [Microsoft SQL Server][m] an
 | [`timestamp`][sql-timestamp-ref]          | [`byte[]`][java-byte-ref]
 | [`smallmoney`][sql-money-ref]             | [`BigDecimal`][java-bigdecimal-ref]
 | [`money`][sql-money-ref]                  | [`BigDecimal`][java-bigdecimal-ref]
-| [`char`][sql-(var)char-ref]               | [`String`][java-string-ref], `Clob`
-| [`varchar`][sql-(var)char-ref]            | [`String`][java-string-ref], `Clob`
-| [`varcharmax`][sql-(var)char-ref]         | [`String`][java-string-ref], `Clob`
-| [`nchar`][sql-n(var)char-ref]             | [`String`][java-string-ref], `Clob`
-| [`nvarchar`][sql-n(var)char-ref]          | [`String`][java-string-ref], `Clob`
-| [`nvarcharmax`][sql-n(var)char-ref]       | [`String`][java-string-ref], `Clob`
-| [`text`][sql-(n)text-ref]                 | [`String`][java-string-ref], `Clob`
-| [`ntext`][sql-(n)text-ref]                | [`String`][java-string-ref], `Clob`
-| [`image`][sql-(n)text-ref]                | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], `Blob`
-| [`binary`][sql-binary-ref]                | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], `Blob`
-| [`varbinary`][sql-binary-ref]             | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], `Blob`
-| [`varbinarymax`][sql-binary-ref]          | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], `Blob`
+| [`char`][sql-(var)char-ref]               | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
+| [`varchar`][sql-(var)char-ref]            | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
+| [`varcharmax`][sql-(var)char-ref]         | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
+| [`nchar`][sql-n(var)char-ref]             | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
+| [`nvarchar`][sql-n(var)char-ref]          | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
+| [`nvarcharmax`][sql-n(var)char-ref]       | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
+| [`text`][sql-(n)text-ref]                 | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
+| [`ntext`][sql-(n)text-ref]                | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
+| [`image`][sql-(n)text-ref]                | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], [`Blob`][r2dbc-blob-ref]
+| [`binary`][sql-binary-ref]                | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], [`Blob`][r2dbc-blob-ref]
+| [`varbinary`][sql-binary-ref]             | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], [`Blob`][r2dbc-blob-ref]
+| [`varbinarymax`][sql-binary-ref]          | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], [`Blob`][r2dbc-blob-ref]
 | [`sql_variant`][sql-sql-variant-ref]      | Not yet supported.
 | [`xml`][sql-xml-ref]                      | Not yet supported.
 | [`udt`][sql-udt-ref]                      | Not yet supported.
@@ -221,6 +221,8 @@ values are fully materialized in the client before decoding. Make sure to accoun
 [sql-geometry-ref]: https://docs.microsoft.com/en-us/sql/t-sql/spatial-geometry/spatial-types-geometry-transact-sql?view=sql-server-2017
 [sql-geography-ref]: https://docs.microsoft.com/en-us/sql/t-sql/spatial-geography/spatial-types-geography?view=sql-server-2017
 
+[r2dbc-blob-ref]: https://r2dbc.io/spec/0.8.0.RELEASE/api/io/r2dbc/spi/Blob.html
+[r2dbc-clob-ref]: https://r2dbc.io/spec/0.8.0.RELEASE/api/io/r2dbc/spi/Clob.html
 
 [java-bigdecimal-ref]: https://docs.oracle.com/javase/8/docs/api/java/math/BigDecimal.html
 [java-boolean-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Boolean.html
