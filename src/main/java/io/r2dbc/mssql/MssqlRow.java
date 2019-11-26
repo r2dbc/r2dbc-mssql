@@ -21,6 +21,7 @@ import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.token.RowToken;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Row;
 import reactor.util.annotation.Nullable;
@@ -110,6 +111,10 @@ final class MssqlRow implements Row {
 
         if (columnData == null) {
             return null;
+        }
+
+        if (column.getType().getServerType() == SqlServerType.SQL_VARIANT) {
+            throw new UnsupportedOperationException("sql_variant columns not supported. See https://github.com/r2dbc/r2dbc-mssql/issues/67.");
         }
 
         columnData.markReaderIndex();
