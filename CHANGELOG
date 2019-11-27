@@ -3,6 +3,7 @@ R2DBC MSSQL Changelog
 
 0.8.0.RELEASE
 ------------------
+* Upgrade to Reactor Dysprosium SR2 #123
 * Upgrade to R2DBC SPI 0.8.0.RELEASE #121
 * Remove SLF4J in favor of Reactor Core Loggers #120
 * Clob codec should support UNICODE #117
