@@ -1,4 +1,5 @@
-# Reactive Relational Database Connectivity Microsoft SQL Server Implementation [![Concourse CI](https://ci.spring.io/api/v1/teams/r2dbc/pipelines/r2dbc/jobs/r2dbc-mssql/badge)](https://ci.spring.io/teams/r2dbc/pipelines/r2dbc/jobs/r2dbc-mssql/) 
+# Reactive Relational Database Connectivity Microsoft SQL Server Implementation [![Concourse CI](https://ci.spring.io/api/v1/teams/r2dbc/pipelines/r2dbc/jobs/r2dbc-mssql/badge)](https://ci.spring.io/teams/r2dbc/pipelines/r2dbc/jobs/r2dbc-mssql/) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.r2dbc/r2dbc-mssql/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.r2dbc/r2dbc-mssql)
+ 
 
 This project contains the [Microsoft SQL Server][m] implementation of the [R2DBC SPI][r]. This implementation is not intended to be used directly, but rather to be used as the backing implementation for a humane client library to delegate to
 
@@ -116,20 +117,14 @@ Binding also allows positional index (zero-based) references. The parameter inde
 
 ### Maven configuration
 
-Add the Maven dependency and use our Maven milestone repository:
+Artifacts can be found on [Maven Central](https://search.maven.org/search?q=r2dbc-mssql).
 
 ```xml
 <dependency>
   <groupId>io.r2dbc</groupId>
   <artifactId>r2dbc-mssql</artifactId>
-  <version>0.8.0.RC1</version>
+  <version>0.8.0.RELEASE</version>
 </dependency>
-
-<repository>
-    <id>spring-milestones</id>
-    <name>Spring Milestones</name>
-    <url>https://repo.spring.io/milestone</url>
-</repository>
 ```
 
 If you'd rather like the latest snapshots of the upcoming major version, use our Maven snapshot repository and declare the appropriate dependency version.
@@ -257,8 +252,8 @@ Logging facilities:
 
 Having trouble with R2DBC? We'd love to help!
 
-* Check the [spec documentation](https://r2dbc.io/spec/0.8.0.M8/spec/html/), and [Javadocs](https://r2dbc.io/spec/0.8.0.M8/api/).
-* If you are upgrading, check out the [changelog](https://r2dbc.io/spec/0.8.0.M8/CHANGELOG.txt) for "new and noteworthy" features.
+* Check the [spec documentation](https://r2dbc.io/spec/0.8.0.RELEASE/spec/html/), and [Javadoc](https://r2dbc.io/spec/0.8.0.RELEASE/api/).
+* If you are upgrading, check out the [changelog](https://r2dbc.io/spec/0.8.0.RELEASE/CHANGELOG.txt) for "new and noteworthy" features.
 * Ask a question - we monitor [stackoverflow.com](https://stackoverflow.com) for questions
   tagged with [`r2dbc`](https://stackoverflow.com/tags/r2dbc). 
   You can also chat with the community on [Gitter](https://gitter.im/r2dbc/r2dbc).
@@ -276,10 +271,9 @@ If you want to raise an issue, please follow the recommendations below:
 * If possible try to create a test-case or project that replicates the issue. 
 Attach a link to your code or a compressed file containing your code.
 
-
 ## Building from Source
 
-You don't need to build from source to use R2DBC MSSQL (binaries in [repo.spring.io](https://repo.spring.io)), but if you want to try out the latest and greatest, R2DBC MSSQL can be easily built with the
+You don't need to build from source to use R2DBC MSSQL (binaries in Maven Central), but if you want to try out the latest and greatest, R2DBC MSSQL can be easily built with the
 [maven wrapper](https://github.com/takari/maven-wrapper). You also need JDK 1.8 and Docker to run integration tests.
 
 ```bash
