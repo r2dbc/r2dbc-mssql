@@ -176,7 +176,8 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
     private void clearBindings(Iterator<Binding> iterator) {
 
         while (iterator.hasNext()) {
-            // exhaust iterator
+            // exhaust iterator, ignore returned elements
+            iterator.next();
         }
 
         this.bindings.clear();
