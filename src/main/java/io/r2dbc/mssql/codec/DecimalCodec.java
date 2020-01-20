@@ -39,7 +39,7 @@ import java.math.BigInteger;
  *
  * @author Mark Paluch
  */
-final class DecimalCodec extends AbstractCodec<BigDecimal> {
+final class DecimalCodec extends AbstractNumericCodec<BigDecimal> {
 
     static final DecimalCodec INSTANCE = new DecimalCodec();
 
@@ -58,7 +58,7 @@ final class DecimalCodec extends AbstractCodec<BigDecimal> {
     });
 
     private DecimalCodec() {
-        super(BigDecimal.class);
+        super(BigDecimal.class, BigDecimal::valueOf);
     }
 
     @Override
@@ -76,28 +76,19 @@ final class DecimalCodec extends AbstractCodec<BigDecimal> {
     }
 
     @Override
-    boolean doCanDecode(TypeInformation typeInformation) {
-        return typeInformation.getServerType() == SqlServerType.DECIMAL || typeInformation.getServerType() == SqlServerType.NUMERIC;
-    }
-
-    @Override
     BigDecimal doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends BigDecimal> valueType) {
 
         if (length.isNull()) {
             return null;
         }
 
-        byte signByte = buffer.readByte();
-        int sign = (0 == signByte) ? -1 : 1;
-        byte[] magnitude = new byte[length.getLength() - 1];
-
-        // read magnitude LE
-        for (int i = 0; i < magnitude.length; i++) {
-            magnitude[magnitude.length - 1 - i] = buffer.readByte();
+        if (type.getServerType() == SqlServerType.DECIMAL || type.getServerType() == SqlServerType.NUMERIC) {
+            return decodeDecimal(buffer, length.getLength(), type.getScale());
         }
 
-        return new BigDecimal(new BigInteger(sign, magnitude), type.getScale());
+        return super.doDecode(buffer, length, type, valueType);
     }
+
 
     private static void encodeBigDecimal(ByteBuf buffer, BigDecimal value) {
 

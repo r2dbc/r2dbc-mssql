@@ -58,6 +58,7 @@ public final class DefaultCodecs implements Codecs {
             DoubleCodec.INSTANCE,
             IntegerCodec.INSTANCE,
             LongCodec.INSTANCE,
+            BigIntegerCodec.INSTANCE,
             LocalTimeCodec.INSTANCE,
             LocalDateCodec.INSTANCE,
             LocalDateTimeCodec.INSTANCE,
@@ -79,6 +80,8 @@ public final class DefaultCodecs implements Codecs {
         this.codecPreferences.put(SqlServerType.REAL, FloatCodec.INSTANCE);
         this.codecPreferences.put(SqlServerType.FLOAT, DoubleCodec.INSTANCE);
         this.codecPreferences.put(SqlServerType.GUID, UuidCodec.INSTANCE);
+        this.codecPreferences.put(SqlServerType.NUMERIC, DecimalCodec.INSTANCE);
+        this.codecPreferences.put(SqlServerType.DECIMAL, DecimalCodec.INSTANCE);
     }
 
     @SuppressWarnings({"unchecked", "rawtpes"})

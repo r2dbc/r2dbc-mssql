@@ -25,32 +25,34 @@ import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigInteger;
+
 import static io.r2dbc.mssql.message.type.TypeInformation.builder;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for {@link IntegerCodec}.
+ * Unit tests for {@link BigIntegerCodec}.
  *
  * @author Mark Paluch
  */
-class IntegerCodecUnitTests {
+class BigIntegerCodecUnitTests {
 
     @Test
     void shouldEncodeInteger() {
 
-        Encoded encoded = IntegerCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), 16777217);
+        Encoded encoded = BigIntegerCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), new BigInteger("12345"));
 
-        EncodedAssert.assertThat(encoded).isEqualToHex("04 04 01 00 00 01");
-        assertThat(encoded.getFormalType()).isEqualTo("int");
+        EncodedAssert.assertThat(encoded).isEqualToHex("11 26 00 03 01 39 30");
+        assertThat(encoded.getFormalType()).isEqualTo("decimal(38,0)");
     }
 
     @Test
     void shouldEncodeNull() {
 
-        Encoded encoded = IntegerCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
+        Encoded encoded = BigIntegerCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
 
-        EncodedAssert.assertThat(encoded).isEqualToHex("04 00");
-        assertThat(encoded.getFormalType()).isEqualTo("int");
+        EncodedAssert.assertThat(encoded).isEqualToHex("08 00");
+        assertThat(encoded.getFormalType()).isEqualTo("bigint");
     }
 
     @Test
@@ -65,10 +67,10 @@ class IntegerCodecUnitTests {
         TypeInformation numeric =
             builder().withServerType(SqlServerType.NUMERIC).build();
 
-        assertThat(IntegerCodec.INSTANCE.canDecode(ColumnUtil.createColumn(tinyint), Integer.class)).isTrue();
-        assertThat(IntegerCodec.INSTANCE.canDecode(ColumnUtil.createColumn(varchar), Integer.class)).isFalse();
-        assertThat(IntegerCodec.INSTANCE.canDecode(ColumnUtil.createColumn(tinyint), String.class)).isFalse();
-        assertThat(IntegerCodec.INSTANCE.canDecode(ColumnUtil.createColumn(numeric), Integer.class)).isTrue();
+        assertThat(BigIntegerCodec.INSTANCE.canDecode(ColumnUtil.createColumn(tinyint), BigInteger.class)).isTrue();
+        assertThat(BigIntegerCodec.INSTANCE.canDecode(ColumnUtil.createColumn(varchar), BigInteger.class)).isFalse();
+        assertThat(BigIntegerCodec.INSTANCE.canDecode(ColumnUtil.createColumn(tinyint), BigInteger.class)).isTrue();
+        assertThat(BigIntegerCodec.INSTANCE.canDecode(ColumnUtil.createColumn(numeric), BigInteger.class)).isTrue();
     }
 
     @Test
@@ -78,17 +80,7 @@ class IntegerCodecUnitTests {
 
         ByteBuf buffer = HexUtils.decodeToByteBuf("0100000100000000");
 
-        assertThat(IntegerCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), Integer.class)).isEqualTo(16777217);
-    }
-
-    @Test
-    void shouldDecodeFromInteger() {
-
-        TypeInformation type = createType(4, SqlServerType.INTEGER);
-
-        ByteBuf buffer = HexUtils.decodeToByteBuf("01000000");
-
-        assertThat(IntegerCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), Integer.class)).isEqualTo(1);
+        assertThat(BigIntegerCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), BigInteger.class)).isEqualTo(BigInteger.valueOf(16777217));
     }
 
     @Test
@@ -98,27 +90,7 @@ class IntegerCodecUnitTests {
 
         ByteBuf buffer = HexUtils.decodeToByteBuf("05 01 39 30 00 00");
 
-        assertThat(IntegerCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), Integer.class)).isEqualTo(12345);
-    }
-
-    @Test
-    void shouldDecodeFromSmallInt() {
-
-        TypeInformation type = createType(2, SqlServerType.SMALLINT);
-
-        ByteBuf buffer = HexUtils.decodeToByteBuf("0100");
-
-        assertThat(IntegerCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), Integer.class)).isEqualTo(1);
-    }
-
-    @Test
-    void shouldDecodeTinyInt() {
-
-        TypeInformation type = createType(1, SqlServerType.TINYINT);
-
-        ByteBuf buffer = HexUtils.decodeToByteBuf("01");
-
-        assertThat(IntegerCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), Integer.class)).isEqualTo(1);
+        assertThat(BigIntegerCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), BigInteger.class)).isEqualTo(BigInteger.valueOf(12345));
     }
 
     private TypeInformation createType(int length, SqlServerType serverType) {

@@ -23,12 +23,14 @@ import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.function.Function;
 
 /**
- * Abstract codec class that provides a basis for  concrete
+ * Abstract codec class that provides a basis for concrete
  * implementations of a {@link Codec} for integer numeric data types.
  *
  * @author Mark Paluch
@@ -55,7 +57,8 @@ abstract class AbstractNumericCodec<T> extends AbstractCodec<T> {
      */
     static final int SIZE_TINY_INT = 1;
 
-    private static final Set<SqlServerType> SUPPORTED_TYPES = EnumSet.of(SqlServerType.BIT, SqlServerType.TINYINT, SqlServerType.SMALLINT, SqlServerType.INTEGER, SqlServerType.BIGINT);
+    private static final Set<SqlServerType> SUPPORTED_TYPES = EnumSet.of(SqlServerType.BIT, SqlServerType.TINYINT, SqlServerType.SMALLINT, SqlServerType.INTEGER, SqlServerType.BIGINT,
+        SqlServerType.DECIMAL, SqlServerType.NUMERIC);
 
     private final LongToObjectFunction<T> converter;
 
@@ -76,6 +79,11 @@ abstract class AbstractNumericCodec<T> extends AbstractCodec<T> {
             return null;
         }
 
+        // TODO how to deal with precission loss?
+        if (typeInformation.getServerType() == SqlServerType.DECIMAL || typeInformation.getServerType() == SqlServerType.NUMERIC) {
+            return this.converter.apply(decodeDecimal(buffer, length.getLength(), typeInformation.getScale()).longValue());
+        }
+
         switch (length.getLength()) {
             case SIZE_BIGINT:
                 return this.converter.apply(Decode.bigint(buffer));
@@ -88,6 +96,20 @@ abstract class AbstractNumericCodec<T> extends AbstractCodec<T> {
             default:
                 throw ProtocolException.invalidTds(String.format("Unexpected value length: %d", length.getLength()));
         }
+    }
+
+    static BigDecimal decodeDecimal(ByteBuf buffer, int length, int scale) {
+
+        byte signByte = buffer.readByte();
+        int sign = (0 == signByte) ? -1 : 1;
+        byte[] magnitude = new byte[length - 1];
+
+        // read magnitude LE
+        for (int i = 0; i < magnitude.length; i++) {
+            magnitude[magnitude.length - 1 - i] = buffer.readByte();
+        }
+
+        return new BigDecimal(new BigInteger(sign, magnitude), scale);
     }
 
     /**
