@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 
+import static io.r2dbc.mssql.message.type.TypeInformation.builder;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -35,6 +36,19 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Mark Paluch
  */
 class DecimalCodecUnitTests {
+
+    @Test
+    void shouldBeAbleToDecode() {
+
+        TypeInformation tinyint =
+            builder().withServerType(SqlServerType.TINYINT).build();
+
+        TypeInformation numeric =
+            builder().withServerType(SqlServerType.NUMERIC).build();
+
+        assertThat(DecimalCodec.INSTANCE.canDecode(ColumnUtil.createColumn(tinyint), BigDecimal.class)).isTrue();
+        assertThat(DecimalCodec.INSTANCE.canDecode(ColumnUtil.createColumn(numeric), BigDecimal.class)).isTrue();
+    }
 
     @Test
     void shouldEncodeNull() {
@@ -59,10 +73,32 @@ class DecimalCodecUnitTests {
 
         TypeInformation type = TypeInformation.builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withServerType(SqlServerType.NUMERIC).withScale(2).withPrecision(5).build();
 
-        ByteBuf buffer = HexUtils.decodeToByteBuf("0501690E0000");
+        ByteBuf buffer = HexUtils.decodeToByteBuf("05 01 69 0E 00 00");
 
         BigDecimal decoded = DecimalCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), BigDecimal.class);
 
         assertThat(decoded).isEqualTo("36.89");
+    }
+
+    @Test
+    void shouldDecodeNumeric5x0() {
+
+        TypeInformation type = TypeInformation.builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withServerType(SqlServerType.NUMERIC).withScale(0).withPrecision(5).build();
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("05 01 39 30 00 00");
+
+        BigDecimal decoded = DecimalCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), BigDecimal.class);
+
+        assertThat(decoded).isEqualTo("12345");
+    }
+
+    @Test
+    void shouldDecodeInteger() {
+
+        TypeInformation type = builder().withMaxLength(4).withLengthStrategy(LengthStrategy.FIXEDLENTYPE).withPrecision(4).withServerType(SqlServerType.INTEGER).build();
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("01000000");
+
+        assertThat(DecimalCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(type), BigDecimal.class)).isEqualTo(new BigDecimal("1"));
     }
 }

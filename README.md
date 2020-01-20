@@ -155,15 +155,15 @@ This reference table shows the type mapping between [Microsoft SQL Server][m] an
 
 | Microsoft SQL Server Type                 | Java Data Type                                                                                                                           | 
 |:------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------|
-| [`bit`][sql-bit-ref]                      | [**`Boolean`**][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref] |
-| [`tinyint`][sql-all-int-ref]              | [**`Byte`**][java-byte-ref], [`Boolean`][java-boolean-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref] |
-| [`smallint`][sql-all-int-ref]             | [**`Short`**][java-short-ref], [`Boolean`][java-boolean-ref], [`Byte`][java-byte-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref] |
-| [`int`][sql-all-int-ref]                  | [**`Integer`**][java-integer-ref], [`Boolean`][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Long`][java-long-ref] |
-| [`bigint`][sql-all-int-ref]               | [**`Long`**][java-long-ref], [`Boolean`][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref] |
+| [`bit`][sql-bit-ref]                      | [**`Boolean`**][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref], [`BigDecimal`][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] |
+| [`tinyint`][sql-all-int-ref]              | [**`Byte`**][java-byte-ref], [`Boolean`][java-boolean-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref], [`BigDecimal`][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] |
+| [`smallint`][sql-all-int-ref]             | [**`Short`**][java-short-ref], [`Boolean`][java-boolean-ref], [`Byte`][java-byte-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref], [`BigDecimal`][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] |
+| [`int`][sql-all-int-ref]                  | [**`Integer`**][java-integer-ref], [`Boolean`][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Long`][java-long-ref], [`BigDecimal`][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] |
+| [`bigint`][sql-all-int-ref]               | [**`Long`**][java-long-ref], [`Boolean`][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref], [`BigDecimal`][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] |
 | [`real`][sql-float-real-ref]              | [**`Float`**][java-float-ref], [`Double`][java-double-ref]   
 | [`float`][sql-float-real-ref]             | [**`Double`**][java-double-ref], [`Float`][java-float-ref] 
-| [`decimal`][sql-decimal-ref]              | [`BigDecimal`][java-bigdecimal-ref] 
-| [`numeric`][sql-decimal-ref]              | [`BigDecimal`][java-bigdecimal-ref]
+| [`decimal`][sql-decimal-ref]              | [**`BigDecimal`**][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] 
+| [`numeric`][sql-decimal-ref]              | [**`BigDecimal`**][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref]
 | [`uniqueidentifier`][sql-uid-ref]         | [**`UUID`**][java-uuid-ref], [`String`][java-string-ref]   
 | [`smalldatetime`][sql-smalldatetime-ref]  | [`LocalDateTime`][java-ldt-ref] 
 | [`datetime`][sql-datetime-ref]            | [`LocalDateTime`][java-ldt-ref] 
@@ -225,6 +225,7 @@ values are fully materialized in the client before decoding. Make sure to accoun
 [r2dbc-clob-ref]: https://r2dbc.io/spec/0.8.0.RELEASE/api/io/r2dbc/spi/Clob.html
 
 [java-bigdecimal-ref]: https://docs.oracle.com/javase/8/docs/api/java/math/BigDecimal.html
+[java-biginteger-ref]: https://docs.oracle.com/javase/8/docs/api/java/math/BigInteger.html
 [java-boolean-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Boolean.html
 [java-byte-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Byte.html
 [java-ByteBuffer-ref]: https://docs.oracle.com/javase/8/docs/api/java/nio/ByteBuffer.html

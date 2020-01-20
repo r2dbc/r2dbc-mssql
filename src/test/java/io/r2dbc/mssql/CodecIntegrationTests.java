@@ -30,6 +30,7 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -100,8 +101,19 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     }
 
     @Test
+    void shouldEncodeBigIntegerAsNumeric() {
+        testType(connection, "NUMERIC(38,0)", new BigInteger("12345"), BigInteger.class, new BigDecimal("12345"));
+    }
+
+    @Test
     void shouldEncodeDoubleAsDecimal() {
         testType(connection, "DECIMAL(38,5)", new BigDecimal("12345.12345"));
+    }
+
+
+    @Test
+    void shouldEncodeDoubleAsDecimal1() {
+        testType(connection, "DECIMAL(38,0)", new BigDecimal("12345"));
     }
 
     @Test
