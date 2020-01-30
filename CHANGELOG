@@ -1,6 +1,14 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.8.1.RELEASE
+------------------
+* Update dependencies #134
+* Fix infinite loop when clearing bindings #131
+* Support casting of BIGINT to BigDecimal #130
+* Backport Travis support to 0.8.x #128
+* Backport Jenkins to 0.8.x #127
+
 0.8.0.RELEASE
 ------------------
 * Upgrade to Reactor Dysprosium SR2 #123
