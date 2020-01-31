@@ -17,6 +17,8 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.r2dbc.mssql.message.tds.Redirect;
 import io.r2dbc.mssql.util.HexUtils;
 import org.junit.jupiter.api.Test;
 
@@ -63,5 +65,19 @@ final class EnvChangeTokenUnitTests {
         String data = "1B0001066D0061007300740065007200066D0061007300740065007200";
 
         CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), EnvChangeToken::canDecode);
+    }
+
+    @Test
+    void shouldDecodeRoute() {
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("e316001413000039300700740065007300740069006e006700");
+
+        assertThat(buffer.readByte()).isEqualTo(EnvChangeToken.TYPE);
+
+        EnvChangeToken token = EnvChangeToken.decode(buffer);
+        Redirect redirect = Redirect.decode(Unpooled.wrappedBuffer(token.getNewValue()));
+
+        assertThat(redirect.getPort()).isEqualTo(12345);
+        assertThat(redirect.getServerName()).isEqualTo("testing");
     }
 }

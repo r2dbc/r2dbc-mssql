@@ -32,6 +32,7 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.tds.ProtocolException;
+import io.r2dbc.mssql.message.tds.Redirect;
 import io.r2dbc.mssql.message.token.AbstractInfoToken;
 import io.r2dbc.mssql.message.token.EnvChangeToken;
 import io.r2dbc.mssql.message.token.FeatureExtAckToken;
@@ -118,6 +119,8 @@ public final class ReactorNettyClient implements Client {
 
     private final CollationListener collationListener = new CollationListener();
 
+    private final RedirectListener redirectListener = new RedirectListener();
+
     private final RequestQueue requestQueue;
 
     // May change during initialization. Values remain the same after connection initialization.
@@ -137,6 +140,8 @@ public final class ReactorNettyClient implements Client {
     private volatile TransactionStatus transactionStatus = TransactionStatus.AUTO_COMMIT;
 
     private volatile Optional<Collation> databaseCollation = Optional.empty();
+
+    private volatile Optional<Redirect> redirect = Optional.empty();
 
     /**
      * Creates a new frame processor connected to a given TCP connection.
@@ -159,6 +164,7 @@ public final class ReactorNettyClient implements Client {
                 tdsEncoder.onEnvironmentChange(event);
                 this.transactionListener.onEnvironmentChange(event);
                 this.collationListener.onEnvironmentChange(event);
+                this.redirectListener.onEnvironmentChange(event);
             } catch (Exception e) {
                 logger.warn(this.context.getMessage("Failed onEnvironmentChange() in {}"), "", e);
             }
@@ -468,6 +474,11 @@ public final class ReactorNettyClient implements Client {
     }
 
     @Override
+    public Optional<Redirect> getRedirect() {
+        return redirect;
+    }
+
+    @Override
     public Optional<String> getDatabaseVersion() {
         return this.databaseVersion;
     }
@@ -774,6 +785,19 @@ public final class ReactorNettyClient implements Client {
 
                 Collation collation = Collation.decode(Unpooled.wrappedBuffer(event.getToken().getNewValue()));
                 ReactorNettyClient.this.databaseCollation = Optional.of(collation);
+            }
+        }
+    }
+
+    class RedirectListener implements EnvironmentChangeListener {
+
+        @Override
+        public void onEnvironmentChange(EnvironmentChangeEvent event) {
+
+            if (event.getToken().getChangeType() == EnvChangeToken.EnvChangeType.Routing) {
+
+                Redirect redirect = Redirect.decode(Unpooled.wrappedBuffer(event.getToken().getNewValue()));
+                ReactorNettyClient.this.redirect = Optional.of(redirect);
             }
         }
     }

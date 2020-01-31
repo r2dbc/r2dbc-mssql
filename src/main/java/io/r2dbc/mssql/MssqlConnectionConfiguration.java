@@ -18,6 +18,7 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.mssql.codec.DefaultCodecs;
+import io.r2dbc.mssql.message.tds.Redirect;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.StringUtils;
 import reactor.netty.resources.ConnectionProvider;
@@ -98,6 +99,52 @@ public final class MssqlConnectionConfiguration {
      */
     public static Builder builder() {
         return new Builder();
+    }
+
+    /**
+     * Create a new {@link Builder} and configure it with this the values of this configuration instance.
+     *
+     * @return a {@link Builder} with this configuration
+     */
+    private Builder toBuilder() {
+
+        Builder builder = builder().host(this.host)
+            .hostNameInCertificate(this.hostNameInCertificate)
+            .username(this.username)
+            .password(this.password)
+            .database(this.database)
+            .port(this.port)
+            .sendStringParametersAsUnicode(this.sendStringParametersAsUnicode)
+            .preferCursoredExecution(this.preferCursoredExecution)
+            .connectTimeout(this.connectTimeout);
+
+        if (this.connectionId != null) {
+            builder.connectionId(this.connectionId);
+        }
+
+        if (this.applicationName != null) {
+            builder.applicationName(this.applicationName);
+        }
+
+        if (this.useSsl()) {
+            builder.enableSsl();
+        }
+
+        return builder;
+    }
+
+    /**
+     * Create a new configuration instance targeting the redirect.
+     *
+     * @param redirect the redirect
+     * @return a new configuration instance
+     */
+    MssqlConnectionConfiguration withRedirect(Redirect redirect)
+    {
+        return toBuilder()
+            .host(redirect.getServerName())
+            .port(redirect.getPort())
+            .build();
     }
 
     ClientConfiguration toClientConfiguration() {

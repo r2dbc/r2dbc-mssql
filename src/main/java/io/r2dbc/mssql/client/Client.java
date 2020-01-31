@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
+import io.r2dbc.mssql.message.tds.Redirect;
 import io.r2dbc.mssql.message.type.Collation;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -87,6 +88,13 @@ public interface Client {
      * @return the database {@link Collation}.
      */
     Optional<Collation> getDatabaseCollation();
+
+    /**
+     * Returns the server {@link Redirect}.
+     *
+     * @return the server redirect.
+     */
+    Optional<Redirect> getRedirect();
 
     /**
      * Returns the database version.
