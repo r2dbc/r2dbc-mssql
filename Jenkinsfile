@@ -30,7 +30,7 @@ pipeline {
 			when {
 				anyOf {
 					branch '0.8.x'
-					branch 'release-0.8.x'
+					branch 'release-0.x'
 				}
 			}
 			agent {
@@ -90,7 +90,7 @@ pipeline {
 
 		stage('Promote to Bintray') {
 			when {
-				branch 'release-0.8.x'
+				branch 'release-0.x'
 			}
 			agent {
 				docker {
@@ -128,7 +128,7 @@ pipeline {
 
 		stage('Sync to Maven Central') {
 			when {
-				branch 'release-0.8.x'
+				branch 'release-0.x'
 			}
 			agent {
 				docker {
