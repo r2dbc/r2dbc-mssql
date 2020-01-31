@@ -69,13 +69,29 @@ public final class EnvChangeToken extends AbstractDataToken {
 
         EnvChangeType envChangeType = EnvChangeType.valueOf(type);
 
-        int newValueLen = envChangeType.toByteLength(Decode.asByte(buffer));
-        byte[] newValue = new byte[newValueLen];
-        buffer.readBytes(newValue);
+        byte[] newValue;
+        byte[] oldValue;
 
-        int oldValueLen = envChangeType.toByteLength(Decode.asByte(buffer));
-        byte[] oldValue = new byte[oldValueLen];
-        buffer.readBytes(oldValue);
+        // The routing message contains structured data, while the other environment change tokens contain old/new value pairs prefixed with data length.
+
+        if (envChangeType == EnvChangeType.Routing) {
+
+            newValue = new byte[length - 1];
+            buffer.readBytes(newValue);
+
+            oldValue = null;
+
+        } else {
+
+            int newValueLen = envChangeType.toByteLength(Decode.asByte(buffer));
+
+            newValue = new byte[newValueLen];
+            buffer.readBytes(newValue);
+
+            int oldValueLen = envChangeType.toByteLength(Decode.asByte(buffer));
+            oldValue = new byte[oldValueLen];
+            buffer.readBytes(oldValue);
+        }
 
         return new EnvChangeToken(length, envChangeType, newValue, oldValue);
     }
