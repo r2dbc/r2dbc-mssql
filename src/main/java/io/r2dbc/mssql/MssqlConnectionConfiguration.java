@@ -100,6 +100,38 @@ public final class MssqlConnectionConfiguration {
         return new Builder();
     }
 
+    /**
+     * Create a new {@link Builder} and configure it with this the values of this configuration instance.
+     *
+     * @return a {@link Builder} with this configuration
+     */
+    public Builder toBuilder() {
+
+        Builder builder = builder().host(this.host)
+            .hostNameInCertificate(this.hostNameInCertificate)
+            .username(this.username)
+            .password(this.password)
+            .database(this.database)
+            .port(this.port)
+            .sendStringParametersAsUnicode(this.sendStringParametersAsUnicode)
+            .preferCursoredExecution(this.preferCursoredExecution)
+            .connectTimeout(this.connectTimeout);
+
+        if (this.connectionId != null) {
+            builder.connectionId(this.connectionId);
+        }
+
+        if (this.applicationName != null) {
+            builder.applicationName(this.applicationName);
+        }
+
+        if (this.useSsl()) {
+            builder.enableSsl();
+        }
+
+        return builder;
+    }
+
     ClientConfiguration toClientConfiguration() {
         return new DefaultClientConfiguration(this.connectTimeout, this.host, this.hostNameInCertificate, this.port, this.ssl);
     }

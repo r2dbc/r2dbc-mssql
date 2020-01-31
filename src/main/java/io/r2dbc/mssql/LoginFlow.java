@@ -16,21 +16,22 @@
 
 package io.r2dbc.mssql;
 
+import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.client.Client;
+import io.r2dbc.mssql.client.LoginExchangeResult;
 import io.r2dbc.mssql.client.ssl.SslState;
 import io.r2dbc.mssql.message.ClientMessage;
-import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TDSVersion;
+import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.ProtocolException;
-import io.r2dbc.mssql.message.token.DoneToken;
-import io.r2dbc.mssql.message.token.ErrorToken;
-import io.r2dbc.mssql.message.token.Login7;
-import io.r2dbc.mssql.message.token.Prelogin;
+import io.r2dbc.mssql.message.tds.RoutingData;
+import io.r2dbc.mssql.message.token.*;
 import io.r2dbc.mssql.util.Assert;
 import reactor.core.publisher.EmitterProcessor;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
+import reactor.core.publisher.Mono;
 
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.r2dbc.mssql.util.PredicateUtils.or;
@@ -50,7 +51,7 @@ final class LoginFlow {
      * @param login  the login configuration for login negotiation
      * @return the messages received after authentication is complete, in response to this exchange
      */
-    static Flux<Message> exchange(Client client, LoginConfiguration login) {
+    static Mono<LoginExchangeResult> exchange(Client client, LoginConfiguration login) {
 
         Assert.requireNonNull(client, "client must not be null");
         Assert.requireNonNull(login, "Login must not be null");
@@ -68,11 +69,12 @@ final class LoginFlow {
         }
 
         AtomicReference<Prelogin> preloginResponse = new AtomicReference<>();
+        AtomicReference<RoutingData> routingData = new AtomicReference<>();
 
         Prelogin request = builder.build();
 
         return client.exchange(requestProcessor.startWith(request), DoneToken::isDone) //
-            .filter(or(Prelogin.class::isInstance, SslState.class::isInstance, DoneToken.class::isInstance, ErrorToken.class::isInstance)) //
+            .filter(or(Prelogin.class::isInstance, SslState.class::isInstance, DoneToken.class::isInstance, ErrorToken.class::isInstance, EnvChangeToken.class::isInstance)) //
             .handle((message, sink) -> {
 
                 try {
@@ -99,8 +101,27 @@ final class LoginFlow {
                     }
 
                     if (DoneToken.isDone(message)) {
-                        sink.next(message);
+
+                        LoginExchangeResult result = Optional.of(routingData)
+                            .map(AtomicReference::get)
+                            .map(it -> LoginExchangeResult.routed(it.getServerName(),
+                                it.getPort()))
+                            .orElseGet(LoginExchangeResult::connected);
+
+                        sink.next(result);
                         sink.complete();
+
+                        return;
+                    }
+
+                    if (message instanceof EnvChangeToken) {
+
+                        EnvChangeToken envChangeToken = (EnvChangeToken) message;
+
+                        if (envChangeToken.getChangeType() == EnvChangeToken.EnvChangeType.Routing) {
+                            routingData.set(Decode.decodeRoute(Unpooled.wrappedBuffer(envChangeToken.getNewValue())));
+                        }
+
                         return;
                     }
 
@@ -115,7 +136,9 @@ final class LoginFlow {
                     requests.error(e);
                     sink.error(e);
                 }
-            });
+            })
+            .cast(LoginExchangeResult.class)
+            .singleOrEmpty();
     }
 
     private static Login7 createLoginMessage(LoginConfiguration login, Prelogin prelogin) {

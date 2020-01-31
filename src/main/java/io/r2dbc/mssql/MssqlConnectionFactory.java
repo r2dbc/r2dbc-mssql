@@ -26,6 +26,8 @@ import io.r2dbc.spi.Row;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.function.Function;
+
 /**
  * An implementation of {@link ConnectionFactory} for creating connections to a Microsoft SQL Server database.
  *
@@ -37,7 +39,7 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         "CAST(SERVERPROPERTY('Edition') AS VARCHAR(255)) AS Edition, " +
         "CAST(@@VERSION AS VARCHAR(255)) as VersionString";
 
-    private final Mono<? extends Client> clientFactory;
+    private final Function<MssqlConnectionConfiguration, Mono<? extends Client>> clientFactory;
 
     private final MssqlConnectionConfiguration configuration;
 
@@ -50,28 +52,68 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
      * @throws IllegalArgumentException when {@link MssqlConnectionConfiguration} is {@code null}.
      */
     public MssqlConnectionFactory(MssqlConnectionConfiguration configuration) {
-        this(Mono.defer(() -> {
-            Assert.requireNonNull(configuration, "configuration must not be null");
-
-            return ReactorNettyClient.connect(configuration.toClientConfiguration(), configuration.getApplicationName(), configuration.getConnectionId()).cast(Client.class);
-        }), configuration);
+        this(MssqlConnectionFactory::connect, configuration);
     }
 
-    MssqlConnectionFactory(Mono<? extends Client> clientFactory, MssqlConnectionConfiguration configuration) {
+    MssqlConnectionFactory(Function<MssqlConnectionConfiguration, Mono<? extends Client>> clientFactory,
+                           MssqlConnectionConfiguration configuration) {
+
         this.clientFactory = Assert.requireNonNull(clientFactory, "clientFactory must not be null");
         this.configuration = Assert.requireNonNull(configuration, "configuration must not be null");
         this.connectionOptions = configuration.toConnectionOptions();
     }
 
+    private static Mono<? extends Client> connect(MssqlConnectionConfiguration configuration) {
+
+        return Mono.defer(() -> {
+            Assert.requireNonNull(configuration, "configuration must not be null");
+
+            return ReactorNettyClient.connect(configuration.toClientConfiguration(), configuration.getApplicationName(),
+                configuration.getConnectionId());
+        });
+    }
+
+    private Mono<? extends Client> initializeClient(final MssqlConnectionConfiguration configuration, boolean allowReroute) {
+
+        LoginConfiguration loginConfiguration = configuration.getLoginConfiguration();
+
+        return this.clientFactory.apply(configuration).flatMap(client -> {
+            return LoginFlow.exchange(client, loginConfiguration)
+                .doOnError(e -> client.close().subscribe())
+                .flatMap(result -> {
+                    switch (result.getOutcome()) {
+
+                        case CONNECTED:
+                            return Mono.just(client);
+
+                        case ROUTED: {
+                            if (!allowReroute) {
+                                return Mono.error(
+                                    new IllegalStateException("Client was redirected more than once."));
+                            }
+
+                            assert result.getAlternateServerName() != null;
+
+                            MssqlConnectionConfiguration routeConfiguration = configuration.toBuilder()
+                                .host(result.getAlternateServerName())
+                                .port(result.getAlternateServerPort())
+                                .build();
+
+                            return client.close().then(this.initializeClient(routeConfiguration, false));
+                        }
+
+                        default:
+                            return Mono.error(new IllegalStateException("Unhandled outcome for login flow."));
+                    }
+                })
+                .switchIfEmpty(Mono.error(new IllegalStateException("Empty result from login flow.")));
+        });
+    }
+
     @Override
     public Mono<MssqlConnection> create() {
 
-        LoginConfiguration loginConfiguration = this.configuration.getLoginConfiguration();
-
-        return this.clientFactory.delayUntil(client -> {
-            return LoginFlow.exchange(client, loginConfiguration)
-                .doOnError(e -> client.close().subscribe());
-        })
+        return initializeClient(this.configuration, true)
             .flatMap(it -> {
 
                 Flux<MssqlConnection> connectionFlux =
@@ -84,7 +126,6 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
                     return it.close().then(Mono.error(new R2dbcNonTransientResourceException("Cannot connect to " + this.configuration.getHost() + ":" + this.configuration.getPort(), throwable)));
                 });
             });
-
     }
 
     private static MssqlConnectionMetadata toConnectionMetadata(String version, Row row) {
