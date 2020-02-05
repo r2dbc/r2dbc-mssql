@@ -34,6 +34,7 @@ import java.util.function.Predicate;
  * An abstraction that wraps the networking part of exchanging {@link Message}s.
  *
  * @author Mark Paluch
+ * @author Lars Haatveit
  */
 public interface Client {
 
@@ -69,6 +70,28 @@ public interface Client {
     ConnectionContext getContext();
 
     /**
+     * Returns the database {@link Collation}.
+     *
+     * @return the database {@link Collation}.
+     */
+    Optional<Collation> getDatabaseCollation();
+
+    /**
+     * Returns the database version.
+     *
+     * @return the database version.
+     */
+    Optional<String> getDatabaseVersion();
+
+    /**
+     * Returns the server {@link Redirect}.
+     *
+     * @return the server redirect.
+     * @since 0.8.2
+     */
+    Optional<Redirect> getRedirect();
+
+    /**
      * Returns the {@link TransactionDescriptor}.
      *
      * @return the {@link TransactionDescriptor} describing the server-side transaction.
@@ -81,27 +104,6 @@ public interface Client {
      * @return the current {@link TransactionStatus}.
      */
     TransactionStatus getTransactionStatus();
-
-    /**
-     * Returns the database {@link Collation}.
-     *
-     * @return the database {@link Collation}.
-     */
-    Optional<Collation> getDatabaseCollation();
-
-    /**
-     * Returns the server {@link Redirect}.
-     *
-     * @return the server redirect.
-     */
-    Optional<Redirect> getRedirect();
-
-    /**
-     * Returns the database version.
-     *
-     * @return the database version.
-     */
-    Optional<String> getDatabaseVersion();
 
     /**
      * @return the required {@link Collation} for the current database.

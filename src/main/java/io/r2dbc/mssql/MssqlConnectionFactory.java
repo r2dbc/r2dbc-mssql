@@ -27,13 +27,13 @@ import io.r2dbc.spi.Row;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.Optional;
 import java.util.function.Function;
 
 /**
  * An implementation of {@link ConnectionFactory} for creating connections to a Microsoft SQL Server database.
  *
  * @author Mark Paluch
+ * @author Lars Haatveit
  */
 public final class MssqlConnectionFactory implements ConnectionFactory {
 
@@ -41,7 +41,7 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         "CAST(SERVERPROPERTY('Edition') AS VARCHAR(255)) AS Edition, " +
         "CAST(@@VERSION AS VARCHAR(255)) as VersionString";
 
-    private final Function<MssqlConnectionConfiguration, Mono<? extends Client>> clientFactory;
+    private final Function<MssqlConnectionConfiguration, Mono<Client>> clientFactory;
 
     private final MssqlConnectionConfiguration configuration;
 
@@ -57,7 +57,7 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         this(MssqlConnectionFactory::connect, configuration);
     }
 
-    MssqlConnectionFactory(Function<MssqlConnectionConfiguration, Mono<? extends Client>> clientFactory,
+    MssqlConnectionFactory(Function<MssqlConnectionConfiguration, Mono<Client>> clientFactory,
                            MssqlConnectionConfiguration configuration) {
 
         this.clientFactory = Assert.requireNonNull(clientFactory, "clientFactory must not be null");
@@ -65,7 +65,7 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         this.connectionOptions = configuration.toConnectionOptions();
     }
 
-    private static Mono<? extends Client> connect(MssqlConnectionConfiguration configuration) {
+    private static Mono<Client> connect(MssqlConnectionConfiguration configuration) {
 
         return Mono.defer(() -> {
             Assert.requireNonNull(configuration, "configuration must not be null");
@@ -75,29 +75,37 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         });
     }
 
-    private Mono<? extends Client> redirectClient(Client client, Redirect redirect) {
-
-        MssqlConnectionConfiguration routeConfiguration = configuration.withRedirect(redirect);
-        return client.close().then(this.initializeClient(routeConfiguration, false));
-    }
-
-    private Mono<? extends Client> initializeClient(final MssqlConnectionConfiguration configuration, boolean allowReroute) {
+    private Mono<Client> initializeClient(MssqlConnectionConfiguration configuration, boolean allowReroute) {
 
         LoginConfiguration loginConfiguration = configuration.getLoginConfiguration();
 
         return this.clientFactory.apply(configuration)
             .delayUntil(client -> LoginFlow.exchange(client, loginConfiguration)
-                .doOnError(e -> client.close().subscribe()))
+                .onErrorResume(e -> propagateError(client.close(), e)))
             .flatMap(client -> {
                 return client.getRedirect().map(redirect -> {
                     if (allowReroute) {
                         return redirectClient(client, redirect);
                     } else {
-                        return Mono.<Client>error(
-                            new IllegalStateException("Client was redirected more than once."));
+                        return this.<Client>propagateError(client.close(), new MssqlRoutingException("Client was redirected more than once"));
                     }
                 }).orElse(Mono.just(client));
             });
+    }
+
+    private Mono<Client> redirectClient(Client client, Redirect redirect) {
+
+        MssqlConnectionConfiguration routeConfiguration = this.configuration.withRedirect(redirect);
+
+        return client.close().then(this.initializeClient(routeConfiguration, false));
+    }
+
+    private <T> Mono<T> propagateError(Mono<?> action, Throwable e) {
+
+        return action.onErrorResume(suppressed -> {
+            e.addSuppressed(suppressed);
+            return Mono.error(e);
+        }).then(Mono.error(e));
     }
 
     @Override
@@ -142,6 +150,14 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         sb.append(" [configuration=").append(this.configuration);
         sb.append(']');
         return sb.toString();
+    }
+
+
+    static class MssqlRoutingException extends R2dbcNonTransientResourceException {
+
+        public MssqlRoutingException(String reason) {
+            super(reason);
+        }
     }
 
 }

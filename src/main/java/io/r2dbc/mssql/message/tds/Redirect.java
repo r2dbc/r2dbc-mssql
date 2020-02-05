@@ -4,8 +4,14 @@ import io.netty.buffer.ByteBuf;
 
 /**
  * Represents a client redirection to a different server.
+ *
+ * @author Lars Haatveit
+ * @see io.r2dbc.mssql.message.token.EnvChangeToken.EnvChangeType#Routing
+ * @since 0.8.2
  */
 public final class Redirect {
+
+    private static final int PROTOCOL_TCP_IP = 0;
 
     private final String serverName;
 
@@ -17,7 +23,7 @@ public final class Redirect {
      * @return the server name
      */
     public String getServerName() {
-        return serverName;
+        return this.serverName;
     }
 
     /**
@@ -26,12 +32,23 @@ public final class Redirect {
      * @return the port
      */
     public int getPort() {
-        return port;
+        return this.port;
     }
 
-    Redirect(String serverName, int port) {
+    private Redirect(String serverName, int port) {
         this.serverName = serverName;
         this.port = port;
+    }
+
+    /**
+     * Creates a new {@link Redirect}
+     *
+     * @param serverName the server name.
+     * @param port       the TCP port.
+     * @return the {@link Redirect}.
+     */
+    public static Redirect create(String serverName, int port) {
+        return new Redirect(serverName, port);
     }
 
     /**
@@ -42,18 +59,16 @@ public final class Redirect {
      */
     public static Redirect decode(ByteBuf buffer) {
 
-        final int PROTOCOL_TCP_IP = 0;
-
         int routingDataValueLength = buffer.readUnsignedShortLE();
 
         if (routingDataValueLength <= 5) {
-            throw new IllegalArgumentException("Decoding error, buffer is too short.");
+            throw new ProtocolException("Decoding error, buffer is too short");
         }
 
         int protocol = buffer.readUnsignedByte();
 
         if (protocol != PROTOCOL_TCP_IP) {
-            throw new IllegalArgumentException("Unknown route protocol.");
+            throw new ProtocolException("Unknown route protocol");
         }
 
         // The ProtocolProperty field represents the remote port when the protocol is TCP/IP.
@@ -62,6 +77,6 @@ public final class Redirect {
         int port = buffer.readUnsignedShortLE();
         String serverName = Decode.unicodeUString(buffer);
 
-        return new Redirect(serverName, port);
+        return Redirect.create(serverName, port);
     }
 }
