@@ -691,8 +691,6 @@ public final class ReactorNettyClient implements Client {
         // access via SUBMITTED
         private volatile int submitted = 0;
 
-        private volatile Sinkable sinkable;
-
         public void complete() {
             COMPLETED.set(this, 1);
         }
