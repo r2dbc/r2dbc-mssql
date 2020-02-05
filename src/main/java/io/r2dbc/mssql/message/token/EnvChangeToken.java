@@ -23,7 +23,11 @@ import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
 /**
+ * A notification of an environment change (for example, database, language, and so on).
+ *
  * @author Mark Paluch
+ * @author Lars Haatveit
+ * @see EnvChangeType
  */
 public final class EnvChangeToken extends AbstractDataToken {
 
@@ -205,6 +209,7 @@ public final class EnvChangeToken extends AbstractDataToken {
                 return super.toByteLength(dataLength) * 2;
             }
         },
+        // Routing is used for redirections to a different server
         Routing(20);
 
         private final byte type;

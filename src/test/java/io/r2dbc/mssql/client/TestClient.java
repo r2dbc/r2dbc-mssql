@@ -45,11 +45,14 @@ import java.util.function.Predicate;
 @SuppressWarnings({"unchecked", "rawtypes"})
 public final class TestClient implements Client {
 
-    public static final TestClient NO_OP = new TestClient(false, true, Flux.empty(), TransactionStatus.AUTO_COMMIT);
+    public static final TestClient NO_OP = new TestClient(false, true, Flux.empty(), Optional.empty(), TransactionStatus.AUTO_COMMIT);
+
 
     private final boolean expectClose;
 
     private final boolean connected;
+
+    private boolean closed;
 
     private final EmitterProcessor<Message> requestProcessor = EmitterProcessor.create(false);
 
@@ -59,10 +62,13 @@ public final class TestClient implements Client {
 
     private final TransactionStatus transactionStatus;
 
-    private TestClient(boolean expectClose, boolean connected, Flux<Window> windows, TransactionStatus transactionStatus) {
+    private final Optional<Redirect> redirect;
+
+    private TestClient(boolean expectClose, boolean connected, Flux<Window> windows, Optional<Redirect> redirect, TransactionStatus transactionStatus) {
 
         this.expectClose = expectClose;
         this.connected = connected;
+        this.redirect = redirect;
         this.transactionStatus = transactionStatus;
 
         FluxSink<Flux<Message>> responses = this.responseProcessor.sink();
@@ -93,7 +99,13 @@ public final class TestClient implements Client {
 
     @Override
     public Mono<Void> close() {
-        return this.expectClose ? Mono.empty() : Mono.error(new AssertionError("close called unexpectedly"));
+        return this.expectClose ? Mono.fromRunnable(() -> {
+            this.closed = true;
+        }) : Mono.error(new AssertionError("close called unexpectedly"));
+    }
+
+    public boolean isClosed() {
+        return this.closed;
     }
 
     public Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Predicate<Message> isLastResponseFrame) {
@@ -119,16 +131,6 @@ public final class TestClient implements Client {
     }
 
     @Override
-    public TransactionDescriptor getTransactionDescriptor() {
-        return TransactionDescriptor.empty();
-    }
-
-    @Override
-    public TransactionStatus getTransactionStatus() {
-        return this.transactionStatus;
-    }
-
-    @Override
     public Optional<Collation> getDatabaseCollation() {
 
         // windows-1252
@@ -136,13 +138,23 @@ public final class TestClient implements Client {
     }
 
     @Override
-    public Optional<Redirect> getRedirect() {
-        return Optional.empty();
+    public Optional<String> getDatabaseVersion() {
+        return Optional.of("1.2.3");
     }
 
     @Override
-    public Optional<String> getDatabaseVersion() {
-        return Optional.of("1.2.3");
+    public Optional<Redirect> getRedirect() {
+        return this.redirect;
+    }
+
+    @Override
+    public TransactionDescriptor getTransactionDescriptor() {
+        return TransactionDescriptor.empty();
+    }
+
+    @Override
+    public TransactionStatus getTransactionStatus() {
+        return this.transactionStatus;
     }
 
     @Override
@@ -163,13 +175,15 @@ public final class TestClient implements Client {
 
         private boolean connected = true;
 
+        private Optional<Redirect> redirect = Optional.empty();
+
         private TransactionStatus transactionStatus = TransactionStatus.AUTO_COMMIT;
 
         private Builder() {
         }
 
         public TestClient build() {
-            return new TestClient(this.expectClose, this.connected, Flux.fromIterable(this.windows).map(Window.Builder::build), transactionStatus);
+            return new TestClient(this.expectClose, this.connected, Flux.fromIterable(this.windows).map(Window.Builder::build), this.redirect, this.transactionStatus);
         }
 
         public Builder expectClose() {
@@ -179,6 +193,11 @@ public final class TestClient implements Client {
 
         public Builder withConnected(boolean connected) {
             this.connected = connected;
+            return this;
+        }
+
+        public Builder withRedirect(Redirect redirect) {
+            this.redirect = Optional.of(redirect);
             return this;
         }
 

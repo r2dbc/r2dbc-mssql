@@ -131,17 +131,17 @@ public final class ReactorNettyClient implements Client {
 
     private boolean encryptionSupported = false;
 
+    private volatile Optional<Collation> databaseCollation = Optional.empty();
+
     private Optional<String> databaseVersion = Optional.empty();
+
+    private volatile Optional<Redirect> redirect = Optional.empty();
 
     // May change during driver interaction, may be read on other threads.
 
     private volatile TransactionDescriptor transactionDescriptor = TransactionDescriptor.empty();
 
     private volatile TransactionStatus transactionStatus = TransactionStatus.AUTO_COMMIT;
-
-    private volatile Optional<Collation> databaseCollation = Optional.empty();
-
-    private volatile Optional<Redirect> redirect = Optional.empty();
 
     /**
      * Creates a new frame processor connected to a given TCP connection.
@@ -459,6 +459,21 @@ public final class ReactorNettyClient implements Client {
     }
 
     @Override
+    public Optional<Collation> getDatabaseCollation() {
+        return this.databaseCollation;
+    }
+
+    @Override
+    public Optional<String> getDatabaseVersion() {
+        return this.databaseVersion;
+    }
+
+    @Override
+    public Optional<Redirect> getRedirect() {
+        return this.redirect;
+    }
+
+    @Override
     public TransactionDescriptor getTransactionDescriptor() {
         return this.transactionDescriptor;
     }
@@ -466,21 +481,6 @@ public final class ReactorNettyClient implements Client {
     @Override
     public TransactionStatus getTransactionStatus() {
         return this.transactionStatus;
-    }
-
-    @Override
-    public Optional<Collation> getDatabaseCollation() {
-        return this.databaseCollation;
-    }
-
-    @Override
-    public Optional<Redirect> getRedirect() {
-        return redirect;
-    }
-
-    @Override
-    public Optional<String> getDatabaseVersion() {
-        return this.databaseVersion;
     }
 
     @Override
@@ -685,8 +685,10 @@ public final class ReactorNettyClient implements Client {
 
         private static final AtomicIntegerFieldUpdater<ExchangeRequest> SUBMITTED = AtomicIntegerFieldUpdater.newUpdater(ExchangeRequest.class, "submitted");
 
+        // access via COMPLETED
         private volatile int completed = 0;
 
+        // access via SUBMITTED
         private volatile int submitted = 0;
 
         private volatile Sinkable sinkable;

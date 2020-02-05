@@ -101,50 +101,17 @@ public final class MssqlConnectionConfiguration {
         return new Builder();
     }
 
-    /**
-     * Create a new {@link Builder} and configure it with this the values of this configuration instance.
-     *
-     * @return a {@link Builder} with this configuration
-     */
-    private Builder toBuilder() {
-
-        Builder builder = builder().host(this.host)
-            .hostNameInCertificate(this.hostNameInCertificate)
-            .username(this.username)
-            .password(this.password)
-            .database(this.database)
-            .port(this.port)
-            .sendStringParametersAsUnicode(this.sendStringParametersAsUnicode)
-            .preferCursoredExecution(this.preferCursoredExecution)
-            .connectTimeout(this.connectTimeout);
-
-        if (this.connectionId != null) {
-            builder.connectionId(this.connectionId);
-        }
-
-        if (this.applicationName != null) {
-            builder.applicationName(this.applicationName);
-        }
-
-        if (this.useSsl()) {
-            builder.enableSsl();
-        }
-
-        return builder;
-    }
 
     /**
      * Create a new configuration instance targeting the redirect.
      *
      * @param redirect the redirect
      * @return a new configuration instance
+     * @since 0.8.2
      */
-    MssqlConnectionConfiguration withRedirect(Redirect redirect)
-    {
-        return toBuilder()
-            .host(redirect.getServerName())
-            .port(redirect.getPort())
-            .build();
+    MssqlConnectionConfiguration withRedirect(Redirect redirect) {
+        return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, redirect.getServerName(), this.hostNameInCertificate, this.password,
+            this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.username);
     }
 
     ClientConfiguration toClientConfiguration() {
@@ -477,15 +444,15 @@ public final class MssqlConnectionConfiguration {
 
     private static class DefaultClientConfiguration implements ClientConfiguration {
 
-        private Duration connectTimeout;
+        private final Duration connectTimeout;
 
-        private String host;
+        private final String host;
 
-        private String hostNameInCertificate;
+        private final String hostNameInCertificate;
 
-        private int port;
+        private final int port;
 
-        private boolean ssl;
+        private final boolean ssl;
 
         DefaultClientConfiguration(Duration connectTimeout, String host, String hostNameInCertificate, int port, boolean ssl) {
 
