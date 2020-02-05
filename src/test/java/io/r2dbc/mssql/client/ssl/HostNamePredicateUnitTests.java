@@ -51,4 +51,9 @@ class HostNamePredicateUnitTests {
     void shouldMatchWildcardInWord() {
         assertThat(HostNamePredicate.of("foo.a*z.baz")).accepts("foo.agz.baz").accepts("foo.az.baz").rejects("foo.bar.baz");
     }
+
+    @Test
+    void shouldMatchWildcardInWildcardCertificate() {
+        assertThat(HostNamePredicate.of("*.foo.bar.net")).accepts("*.foo.bar.net").rejects("*.foo.bar.baz").rejects("*.subdomain.foo.bar.net");
+    }
 }

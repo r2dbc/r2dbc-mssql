@@ -24,6 +24,7 @@ import javax.net.ssl.X509TrustManager;
 import java.net.IDN;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.function.Predicate;
 
 /**
@@ -93,7 +94,14 @@ final class ExpectedHostnameX509TrustManager implements X509TrustManager {
 
         if (!isServerNameValidated) {
 
-            for (String subjectAlternativeName : X509CertificateUtil.getSubjectAlternativeNames(cert)) {
+
+            List<String> subjectAlternativeNames = X509CertificateUtil.getSubjectAlternativeNames(cert);
+
+            if (logger.isDebugEnabled()) {
+                logger.debug(String.format("Expecting server name validation failed. Checking alternative names (SAN) [%s]", subjectAlternativeNames));
+            }
+
+            for (String subjectAlternativeName : subjectAlternativeNames) {
 
                 isServerNameValidated = validateServerName(subjectAlternativeName);
 
