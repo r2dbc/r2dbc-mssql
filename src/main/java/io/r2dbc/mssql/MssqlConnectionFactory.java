@@ -19,6 +19,7 @@ package io.r2dbc.mssql;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.mssql.client.ReactorNettyClient;
+import io.r2dbc.mssql.message.tds.Redirect;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.ConnectionFactory;
 import io.r2dbc.spi.R2dbcNonTransientResourceException;
@@ -26,6 +27,7 @@ import io.r2dbc.spi.Row;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -73,41 +75,29 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         });
     }
 
+    private Mono<? extends Client> redirectClient(Client client, Redirect redirect) {
+
+        MssqlConnectionConfiguration routeConfiguration = configuration.withRedirect(redirect);
+        return client.close().then(this.initializeClient(routeConfiguration, false));
+    }
+
     private Mono<? extends Client> initializeClient(final MssqlConnectionConfiguration configuration, boolean allowReroute) {
 
         LoginConfiguration loginConfiguration = configuration.getLoginConfiguration();
 
-        return this.clientFactory.apply(configuration).flatMap(client -> {
-            return LoginFlow.exchange(client, loginConfiguration)
-                .doOnError(e -> client.close().subscribe())
-                .flatMap(result -> {
-                    switch (result.getOutcome()) {
-
-                        case CONNECTED:
-                            return Mono.just(client);
-
-                        case ROUTED: {
-                            if (!allowReroute) {
-                                return Mono.error(
-                                    new IllegalStateException("Client was redirected more than once."));
-                            }
-
-                            assert result.getAlternateServerName() != null;
-
-                            MssqlConnectionConfiguration routeConfiguration = configuration.toBuilder()
-                                .host(result.getAlternateServerName())
-                                .port(result.getAlternateServerPort())
-                                .build();
-
-                            return client.close().then(this.initializeClient(routeConfiguration, false));
-                        }
-
-                        default:
-                            return Mono.error(new IllegalStateException("Unhandled outcome for login flow."));
+        return this.clientFactory.apply(configuration)
+            .delayUntil(client -> LoginFlow.exchange(client, loginConfiguration)
+                .doOnError(e -> client.close().subscribe()))
+            .flatMap(client -> {
+                return client.getRedirect().map(redirect -> {
+                    if (allowReroute) {
+                        return redirectClient(client, redirect);
+                    } else {
+                        return Mono.<Client>error(
+                            new IllegalStateException("Client was redirected more than once."));
                     }
-                })
-                .switchIfEmpty(Mono.error(new IllegalStateException("Empty result from login flow.")));
-        });
+                }).orElse(Mono.just(client));
+            });
     }
 
     @Override

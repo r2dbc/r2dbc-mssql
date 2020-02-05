@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
+import io.r2dbc.mssql.message.tds.Redirect;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
@@ -132,6 +133,11 @@ public final class TestClient implements Client {
 
         // windows-1252
         return Optional.of(Collation.from(13632521, 52));
+    }
+
+    @Override
+    public Optional<Redirect> getRedirect() {
+        return Optional.empty();
     }
 
     @Override

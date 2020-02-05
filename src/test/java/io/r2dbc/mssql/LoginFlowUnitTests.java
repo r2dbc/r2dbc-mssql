@@ -16,13 +16,10 @@
 
 package io.r2dbc.mssql;
 
-import io.r2dbc.mssql.client.LoginExchangeResult;
 import io.r2dbc.mssql.client.TestClient;
 import io.r2dbc.mssql.message.token.DoneToken;
-import io.r2dbc.mssql.message.token.EnvChangeToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.Prelogin;
-import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.spi.R2dbcPermissionDeniedException;
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
@@ -73,31 +70,8 @@ class LoginFlowUnitTests {
 
         LoginFlow.exchange(client, login)
             .as(StepVerifier::create)
-            .expectNext(LoginExchangeResult.connected())
+            .expectNext(DoneToken.create(0))
             .verifyComplete();
-    }
-
-    @Test
-    void shouldFinishWithRoute() {
-
-        byte[] routingDataValue = new byte[21];
-
-        HexUtils.decodeToByteBuf("13000039300700740065007300740069006e006700").readBytes(routingDataValue);
-
-        EnvChangeToken routingToken = new EnvChangeToken(22, EnvChangeToken.EnvChangeType.Routing, routingDataValue,
-            null);
-
-        TestClient client = TestClient.builder()
-            .assertNextRequestWith(actual -> assertThat(actual).isInstanceOf(Prelogin.class))
-            .thenRespond(routingToken, DoneToken.create(0))
-            .build();
-
-        LoginConfiguration login = new LoginConfiguration("app", null, "db", "host", "bar", "server", false, "foo");
-
-        LoginFlow.exchange(client, login).as(StepVerifier::create).expectNextMatches(result -> {
-            return result.getOutcome() == LoginExchangeResult.Outcome.ROUTED && "testing".equals(
-                result.getAlternateServerName()) && result.getAlternateServerPort() == 12345;
-        }).verifyComplete();
     }
 
     @Test

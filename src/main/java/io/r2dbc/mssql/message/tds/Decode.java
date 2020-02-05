@@ -224,35 +224,4 @@ public final class Decode {
 
         return result;
     }
-
-    /**
-     * Decode a {@link RoutingData} from {@link ByteBuf}.
-     *
-     * @param buffer the data buffer
-     * @return the decoded {@link RoutingData}
-     */
-    public static RoutingData decodeRoute(ByteBuf buffer) {
-
-        final int PROTOCOL_TCP_IP = 0;
-
-        int routingDataValueLength = buffer.readUnsignedShortLE();
-
-        if (routingDataValueLength <= 5) {
-            throw new IllegalArgumentException("Decoding error, buffer is too short.");
-        }
-
-        int protocol = buffer.readUnsignedByte();
-
-        if (protocol != PROTOCOL_TCP_IP) {
-            throw new IllegalArgumentException("Unknown route protocol.");
-        }
-
-        // The ProtocolProperty field represents the remote port when the protocol is TCP/IP.
-        // https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-tds/2b3eb7e5-d43d-4d1b-bf4d-76b9e3afc791
-
-        int port = buffer.readUnsignedShortLE();
-        String serverName = Decode.unicodeUString(buffer);
-
-        return new RoutingData(serverName, port);
-    }
 }

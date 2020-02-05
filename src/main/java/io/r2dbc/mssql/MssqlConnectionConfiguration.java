@@ -18,6 +18,7 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.mssql.codec.DefaultCodecs;
+import io.r2dbc.mssql.message.tds.Redirect;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.StringUtils;
 import reactor.netty.resources.ConnectionProvider;
@@ -105,7 +106,7 @@ public final class MssqlConnectionConfiguration {
      *
      * @return a {@link Builder} with this configuration
      */
-    public Builder toBuilder() {
+    private Builder toBuilder() {
 
         Builder builder = builder().host(this.host)
             .hostNameInCertificate(this.hostNameInCertificate)
@@ -130,6 +131,20 @@ public final class MssqlConnectionConfiguration {
         }
 
         return builder;
+    }
+
+    /**
+     * Create a new configuration instance targeting the redirect.
+     *
+     * @param redirect the redirect
+     * @return a new configuration instance
+     */
+    MssqlConnectionConfiguration withRedirect(Redirect redirect)
+    {
+        return toBuilder()
+            .host(redirect.getServerName())
+            .port(redirect.getPort())
+            .build();
     }
 
     ClientConfiguration toClientConfiguration() {

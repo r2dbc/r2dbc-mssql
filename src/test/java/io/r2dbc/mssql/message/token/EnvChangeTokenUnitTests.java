@@ -18,8 +18,7 @@ package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.r2dbc.mssql.message.tds.Decode;
-import io.r2dbc.mssql.message.tds.RoutingData;
+import io.r2dbc.mssql.message.tds.Redirect;
 import io.r2dbc.mssql.util.HexUtils;
 import org.junit.jupiter.api.Test;
 
@@ -76,9 +75,9 @@ final class EnvChangeTokenUnitTests {
         assertThat(buffer.readByte()).isEqualTo(EnvChangeToken.TYPE);
 
         EnvChangeToken token = EnvChangeToken.decode(buffer);
-        RoutingData routingData = Decode.decodeRoute(Unpooled.wrappedBuffer(token.getNewValue()));
+        Redirect redirect = Redirect.decode(Unpooled.wrappedBuffer(token.getNewValue()));
 
-        assertThat(routingData.getPort()).isEqualTo(12345);
-        assertThat(routingData.getServerName()).isEqualTo("testing");
+        assertThat(redirect.getPort()).isEqualTo(12345);
+        assertThat(redirect.getServerName()).isEqualTo("testing");
     }
 }
