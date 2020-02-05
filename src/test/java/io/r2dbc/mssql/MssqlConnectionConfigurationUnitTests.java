@@ -16,6 +16,7 @@
 
 package io.r2dbc.mssql;
 
+import io.r2dbc.mssql.message.tds.Redirect;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -132,5 +133,75 @@ final class MssqlConnectionConfigurationUnitTests {
             .password("test-password")
             .build())
             .withMessage("username must not be null");
+    }
+
+    @Test
+    void redirect() {
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+            .applicationName("r2dbc")
+            .database("test-database")
+            .host("test-host")
+            .password("test-password")
+            .username("test-username")
+            .build();
+
+        MssqlConnectionConfiguration target = configuration.withRedirect(Redirect.create("target", 1234));
+
+        assertThat(target)
+            .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
+            .hasFieldOrPropertyWithValue("database", "test-database")
+            .hasFieldOrPropertyWithValue("host", "target")
+            .hasFieldOrPropertyWithValue("password", "test-password")
+            .hasFieldOrPropertyWithValue("port", 1234)
+            .hasFieldOrPropertyWithValue("username", "test-username")
+            .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true)
+            .hasFieldOrPropertyWithValue("hostNameInCertificate", "test-host");
+    }
+
+    @Test
+    void redirectOtherDomain() {
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+            .applicationName("r2dbc")
+            .database("test-database")
+            .host("test-host.windows.net")
+            .password("test-password")
+            .username("test-username")
+            .build();
+
+        MssqlConnectionConfiguration target = configuration.withRedirect(Redirect.create("target.other.domain", 1234));
+
+        assertThat(target)
+            .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
+            .hasFieldOrPropertyWithValue("database", "test-database")
+            .hasFieldOrPropertyWithValue("host", "target.other.domain")
+            .hasFieldOrPropertyWithValue("password", "test-password")
+            .hasFieldOrPropertyWithValue("port", 1234)
+            .hasFieldOrPropertyWithValue("username", "test-username")
+            .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true)
+            .hasFieldOrPropertyWithValue("hostNameInCertificate", "test-host.windows.net");
+    }
+
+    @Test
+    void redirectInDomain() {
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+            .applicationName("r2dbc")
+            .database("test-database")
+            .host("test-host.windows.net")
+            .password("test-password")
+            .username("test-username")
+            .hostNameInCertificate("*.windows.net")
+            .build();
+
+        MssqlConnectionConfiguration target = configuration.withRedirect(Redirect.create("worker.target.windows.net", 1234));
+
+        assertThat(target)
+            .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
+            .hasFieldOrPropertyWithValue("database", "test-database")
+            .hasFieldOrPropertyWithValue("host", "worker.target.windows.net")
+            .hasFieldOrPropertyWithValue("password", "test-password")
+            .hasFieldOrPropertyWithValue("port", 1234)
+            .hasFieldOrPropertyWithValue("username", "test-username")
+            .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true)
+            .hasFieldOrPropertyWithValue("hostNameInCertificate", "*.target.windows.net");
     }
 }

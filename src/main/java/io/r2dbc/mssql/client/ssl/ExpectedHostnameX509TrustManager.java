@@ -94,7 +94,6 @@ final class ExpectedHostnameX509TrustManager implements X509TrustManager {
 
         if (!isServerNameValidated) {
 
-
             List<String> subjectAlternativeNames = X509CertificateUtil.getSubjectAlternativeNames(cert);
 
             if (logger.isDebugEnabled()) {

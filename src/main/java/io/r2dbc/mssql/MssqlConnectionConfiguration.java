@@ -110,7 +110,22 @@ public final class MssqlConnectionConfiguration {
      * @since 0.8.2
      */
     MssqlConnectionConfiguration withRedirect(Redirect redirect) {
-        return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, redirect.getServerName(), this.hostNameInCertificate, this.password,
+
+        String redirectServerName = redirect.getServerName();
+        String hostNameInCertificate = this.hostNameInCertificate;
+
+        // Same behavior as mssql-jdbc
+        if (this.hostNameInCertificate.startsWith("*") && redirectServerName.indexOf('.') != -1) {
+
+            // Check if redirectServerName and hostNameInCertificate are from same domain.
+            boolean trustedDomain = redirectServerName.endsWith(hostNameInCertificate.substring(1));
+
+            if (trustedDomain) {
+                hostNameInCertificate = String.format("*%s", redirectServerName.substring(redirectServerName.indexOf('.')));
+            }
+        }
+
+        return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, redirectServerName, hostNameInCertificate, this.password,
             this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.username);
     }
 
