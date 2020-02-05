@@ -106,7 +106,7 @@ final class X509CertificateUtil {
         // find a subjectAlternateName entry corresponding to DNS Name
         for (List<?> sanEntry : sanCollection) {
 
-            if (sanEntry == null || sanEntry.size() <= 2) {
+            if (sanEntry == null || sanEntry.size() < 2) {
                 continue;
             }
             Object key = sanEntry.get(0);
