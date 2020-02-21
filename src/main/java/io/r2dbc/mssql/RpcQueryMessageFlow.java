@@ -144,13 +144,18 @@ final class RpcQueryMessageFlow {
 
                 state.update(message);
 
-
                 if (message.getClass() == ErrorToken.class) {
                     state.fail(ExceptionFactory.withSql(query).createException((ErrorToken) message));
                     return;
                 }
 
                 handleMessage(client, 0, null, state, message, sink, cursorComplete);
+            })
+            .doOnComplete(() -> {
+
+                if (state.hasSeenError) {
+                    throw state.exception;
+                }
             })
             .filter(WINDOW_PREDICATE)
             .doOnCancel(cursorComplete);
@@ -609,13 +614,14 @@ final class RpcQueryMessageFlow {
 
         volatile boolean cancelRequested;
 
-        volatile Exception exception;
+        volatile RuntimeException exception;
 
         Phase phase = Phase.NONE;
 
-        public void fail(Exception exception) {
+        public void fail(RuntimeException exception) {
 
             this.hasSeenError = true;
+            this.phase = Phase.ERROR;
             if (this.exception == null) {
                 this.exception = exception;
             } else {
