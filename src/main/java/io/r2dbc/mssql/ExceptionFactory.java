@@ -17,6 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.message.Message;
+import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.token.AbstractInfoToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.InfoToken;
@@ -31,6 +32,8 @@ import io.r2dbc.spi.R2dbcTimeoutException;
 import io.r2dbc.spi.R2dbcTransientException;
 import io.r2dbc.spi.R2dbcTransientResourceException;
 import reactor.core.publisher.SynchronousSink;
+
+import static io.r2dbc.mssql.message.token.AbstractInfoToken.Classification.GENERAL_ERROR;
 
 /**
  * Factory for SQL Server-specific {@link R2dbcException}s.
@@ -131,6 +134,10 @@ final class ExceptionFactory {
                 return new MssqlTransientResourceException(createExceptionDetails(token));
         }
 
+        if (token.getClassification() == GENERAL_ERROR && token.getNumber() == 4002) {
+            return new ProtocolException(token.getMessage());
+        }
+
         switch (token.getClassification()) {
             case OBJECT_DOES_NOT_EXIST:
             case SYNTAX_ERROR:
@@ -170,7 +177,7 @@ final class ExceptionFactory {
      *
      * @param message the message.
      */
-    Exception createException(ErrorToken message) {
+    RuntimeException createException(ErrorToken message) {
         return createException(message, this.sql);
     }
 
