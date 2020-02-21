@@ -504,8 +504,9 @@ public final class ReactorNettyClient implements Client {
     }
 
     @Override
-    public Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Predicate<Message> isLastResponseFrame) {
+    public Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Predicate<Message> takeUntil) {
 
+        Assert.requireNonNull(takeUntil, "takeUntil must not be null");
         Assert.requireNonNull(requests, "Requests must not be null");
 
         if (DEBUG_ENABLED) {
@@ -552,7 +553,7 @@ public final class ReactorNettyClient implements Client {
 
             sink.next(message);
 
-            if (isLastResponseFrame.test(message)) {
+            if (takeUntil.test(message)) {
                 exchangeRequest.complete();
                 sink.complete();
             }
