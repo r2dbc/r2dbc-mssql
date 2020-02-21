@@ -21,11 +21,14 @@ import io.r2dbc.mssql.client.TestClient;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.codec.Encoded;
 import io.r2dbc.mssql.codec.RpcParameterContext;
+import io.r2dbc.mssql.message.tds.ProtocolException;
+import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.ReturnValue;
 import io.r2dbc.mssql.message.token.RpcRequest;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import io.r2dbc.mssql.util.Types;
 import org.junit.jupiter.api.Test;
+import reactor.test.StepVerifier;
 
 import java.util.List;
 
@@ -207,5 +210,24 @@ class ParametrizedMssqlStatementUnitTests {
 
         assertThat(this.statementCache.getHandle(sql, binding)).isEqualTo(1);
         assertThat(this.statementCache.size()).isEqualTo(1);
+    }
+
+    @Test
+    void shouldPropagateError() {
+
+        TestClient testClient = TestClient.builder()
+            .assertNextRequestWith(it -> {
+                assertThat(it).isInstanceOf(RpcRequest.class);
+                RpcRequest request = (RpcRequest) it;
+                assertThat(request.getProcId()).isEqualTo(RpcRequest.Sp_ExecuteSql);
+            })
+            .thenRespond(new ErrorToken(0, 4002, (byte) 0, (byte) 16, "failure", "", "", 0))
+            .build();
+
+        String sql = "SELECT * from FOO where firstname = @firstname";
+        ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(testClient, this.connectionOptions, sql).fetchSize(0);
+
+        statement.bind("firstname", "");
+        statement.execute().as(StepVerifier::create).verifyError(ProtocolException.class);
     }
 }
