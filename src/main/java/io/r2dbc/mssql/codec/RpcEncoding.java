@@ -52,7 +52,6 @@ public final class RpcEncoding {
      */
     public static void encodeString(ByteBuf buffer, @Nullable String name, RpcDirection direction, Collation collation, @Nullable String value) {
 
-
         encodeHeader(buffer, name, direction, TdsDataType.NVARCHAR);
         CharacterEncoder.encodeBigVarchar(buffer, direction, collation, true, value);
     }

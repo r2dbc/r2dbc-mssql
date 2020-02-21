@@ -24,12 +24,14 @@ import io.r2dbc.mssql.codec.RpcParameterContext.CharacterValueContext;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ServerCharset;
 import io.r2dbc.mssql.message.type.Collation;
+import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.message.type.TypeUtils;
 import io.r2dbc.spi.Clob;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
 
 import java.nio.CharBuffer;
 
@@ -65,9 +67,9 @@ class CharacterEncoder {
      *
      * @return the {@link Encoded} {@link CharSequence}.
      */
-    static Encoded encodeBigVarchar(ByteBufAllocator allocator, RpcDirection direction, Collation collation, boolean sendStringParametersAsUnicode, CharSequence value) {
+    static Encoded encodeBigVarchar(ByteBufAllocator allocator, RpcDirection direction, Collation collation, boolean sendStringParametersAsUnicode, @Nullable CharSequence value) {
 
-        ByteBuf buffer = allocator.buffer((value.length() * 2) + 7);
+        ByteBuf buffer = allocator.buffer((value != null ? value.length() * 2 : 0) + 7);
 
         if (sendStringParametersAsUnicode) {
 
@@ -80,13 +82,15 @@ class CharacterEncoder {
     }
 
     /**
-     * Encode a {@link CharSequence} to {@code VARCHAR} or {@code NVARCHAR} depending on {@code sendStringParametersAsUnicode}.
+     * Encode a {@link CharSequence} to {@code VARCHAR} or {@code NVARCHAR} depending on {@code sendStringParametersAsUnicode}. Uses either {@code (N)VARCHAR} or {@code (N)VARCHAR(MAX)}, depending
+     * on the string size.
      */
-    static void encodeBigVarchar(ByteBuf buffer, RpcDirection direction, Collation collation, boolean sendStringParametersAsUnicode, CharSequence value) {
+    static void encodeBigVarchar(ByteBuf buffer, RpcDirection direction, Collation collation, boolean sendStringParametersAsUnicode, @Nullable CharSequence value) {
 
         ByteBuf characterData = encodeCharSequence(buffer.alloc(), collation, sendStringParametersAsUnicode, value);
         int valueLength = characterData.readableBytes();
         boolean isShortValue = valueLength <= TypeUtils.SHORT_VARTYPE_MAX_BYTES;
+        boolean isNull = value == null;
 
         // Textual RPC requires a collation. If none is provided, as is the case when
         // the SSType is non-textual, then use the database collation by default.
@@ -94,27 +98,62 @@ class CharacterEncoder {
         // Use PLP encoding on Yukon and later with long values and OUT parameters
         boolean usePLP = (!isShortValue || direction == RpcDirection.OUT);
         if (usePLP) {
-            throw new UnsupportedOperationException("Use ClobCodec");
-        }
 
-        // Write maximum length of data
-        Encode.uShort(buffer, TypeUtils.SHORT_VARTYPE_MAX_BYTES);
+            // Send v*max length indicator 0xFFFF.
+            Encode.uShort(buffer, (short) 0xFFFF);
 
-        collation.encode(buffer);
+            // Send collation if requested.
+            collation.encode(buffer);
 
-        // Write actual length of data
-        Encode.uShort(buffer, valueLength);
+            // Handle null here and return, we're done here if it's null.
+            if (isNull) {
+                // Null header for v*max types is 0xFFFFFFFFFFFFFFFF.
+                Encode.uLongLong(buffer, 0xFFFFFFFFFFFFFFFFL);
+            } else if (Length.UNKNOWN_STREAM_LENGTH == valueLength) {
+                // Append v*max length.
+                // UNKNOWN_PLP_LEN is 0xFFFFFFFFFFFFFFFE
+                Encode.uLongLong(buffer, 0xFFFFFFFFFFFFFFFEL);
 
-        // If length is zero, we're done.
-        if (0 != valueLength) {
-            buffer.writeBytes(characterData);
-            characterData.release();
+                // NOTE: Don't send the first chunk length, this will be calculated by caller.
+            } else {
+                // For v*max types with known length, length is <totallength8><chunklength4>
+                // We're sending same total length as chunk length (as we're sending 1 chunk).
+                Encode.uLongLong(buffer, valueLength);
+            }
+
+            // Send the data.
+            if (!isNull) {
+                if (valueLength > 0) {
+                    Encode.asInt(buffer, valueLength);
+                    buffer.writeBytes(characterData);
+                    characterData.release();
+                }
+            }
+
+            // Send the terminator PLP chunk.
+            Encode.asInt(buffer, 0);
+
+        } else {
+
+            // Write maximum length of data
+            Encode.uShort(buffer, TypeUtils.SHORT_VARTYPE_MAX_BYTES);
+
+            collation.encode(buffer);
+
+            // Write actual length of data
+            Encode.uShort(buffer, valueLength);
+
+            // If length is zero, we're done.
+            if (0 != valueLength) {
+                buffer.writeBytes(characterData);
+                characterData.release();
+            }
         }
     }
 
-    private static ByteBuf encodeCharSequence(ByteBufAllocator alloc, Collation collation, boolean sendStringParametersAsUnicode, CharSequence value) {
+    private static ByteBuf encodeCharSequence(ByteBufAllocator alloc, Collation collation, boolean sendStringParametersAsUnicode, @Nullable CharSequence value) {
 
-        if (value.length() == 0) {
+        if (value == null || value.length() == 0) {
             return Unpooled.EMPTY_BUFFER;
         }
 
