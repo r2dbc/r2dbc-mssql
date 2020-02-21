@@ -48,12 +48,12 @@ public interface Client {
     /**
      * Perform an exchange of messages. Calling this method while a previous exchange is active will return a deferred handle and queue the request until the previous exchange terminates.
      *
-     * @param requests            the publisher of outbound messages
-     * @param isLastResponseFrame {@link Predicate} determining the last response frame to {@link Subscriber#onComplete() complete} the stream and prevent multiple subscribers from consuming
-     *                            previous, active response streams.
+     * @param requests  the publisher of outbound messages
+     * @param takeUntil {@link Predicate} determining the last response frame to {@link Subscriber#onComplete() complete} the stream and prevent multiple subscribers from consuming
+     *                  previous, active response streams. Note that the last frame that matches {@code takeUntil} is emitted through the resulting {@link Flux}.
      * @return a {@link Flux} of incoming messages that ends with the end of the frame.
      */
-    Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Predicate<Message> isLastResponseFrame);
+    Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Predicate<Message> takeUntil);
 
     /**
      * Returns the {@link ByteBufAllocator}.

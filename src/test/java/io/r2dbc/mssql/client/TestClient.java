@@ -108,7 +108,7 @@ public final class TestClient implements Client {
         return this.closed;
     }
 
-    public Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Predicate<Message> isLastResponseFrame) {
+    public Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Predicate<Message> takeUntil) {
 
         Assert.requireNonNull(requests, "requests must not be null");
 
