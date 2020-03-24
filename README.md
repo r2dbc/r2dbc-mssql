@@ -1,4 +1,4 @@
-# Reactive Relational Database Connectivity Microsoft SQL Server Implementation [![Build Status](https://travis-ci.org/r2dbc/r2dbc-mssql.svg?branch=0.8.x)](https://travis-ci.org/r2dbc/r2dbc-mssql) 
+# Reactive Relational Database Connectivity Microsoft SQL Server Implementation [![Build Status](https://travis-ci.org/r2dbc/r2dbc-mssql.svg?branch=0.8.x)](https://travis-ci.org/r2dbc/r2dbc-mssql) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.r2dbc/r2dbc-mssql/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.r2dbc/r2dbc-mssql)
 
 This project contains the [Microsoft SQL Server][m] implementation of the [R2DBC SPI][r]. This implementation is not intended to be used directly, but rather to be used as the backing implementation for a humane client library to delegate to
 
@@ -113,20 +113,14 @@ Binding also allows positional index (zero-based) references. The parameter inde
 
 ### Maven configuration
 
-Add the Maven dependency and use our Maven milestone repository:
+Artifacts can be found on [Maven Central](https://search.maven.org/search?q=r2dbc-mssql).
 
 ```xml
 <dependency>
   <groupId>io.r2dbc</groupId>
   <artifactId>r2dbc-mssql</artifactId>
-  <version>${version}.RC1</version>
+  <version>${version}</version>
 </dependency>
-
-<repository>
-    <id>spring-milestones</id>
-    <name>Spring Milestones</name>
-    <url>https://repo.spring.io/milestone</url>
-</repository>
 ```
 
 If you'd rather like the latest snapshots of the upcoming major version, use our Maven snapshot repository and declare the appropriate dependency version.
