@@ -1,6 +1,16 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.8.2.RELEASE
+------------------
+* Upgrade build and test dependencies #146
+* Upgrade to Reactor Dysprosium-SR6 #145
+* Stage releases directly on maven central #144
+* Protocol errors get swallowed in RPC message flow for direct queries #141
+* Query String bigger than 4000 characters result in java.lang.UnsupportedOperationException  #140
+* Provide additional configuration options for hostNameInCertificiate #138
+* ENVCHANGE Token is not decoded properly for Routing type #116
+
 0.8.1.RELEASE
 ------------------
 * Update dependencies #134
