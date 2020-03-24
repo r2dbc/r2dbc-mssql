@@ -46,7 +46,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <r2dbc-spi.version>0.8.1.RELEASE</r2dbc-spi.version>
         <r2dbc-pool.version>0.8.1.RELEASE</r2dbc-pool.version>
-        <reactor.version>Dysprosium-SR4</reactor.version>
+        <reactor.version>Dysprosium-SR6</reactor.version>
         <slf4j.version>1.7.26</slf4j.version>
         <spring-framework.version>5.2.3.RELEASE</spring-framework.version>
         <testcontainers.version>1.13.0</testcontainers.version>
