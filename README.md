@@ -120,7 +120,7 @@ Artifacts can be found on [Maven Central](https://search.maven.org/search?q=r2db
 <dependency>
   <groupId>io.r2dbc</groupId>
   <artifactId>r2dbc-mssql</artifactId>
-  <version>${version}.RELEASE</version>
+  <version>${version}</version>
 </dependency>
 ```
 
