@@ -1,4 +1,4 @@
-# Reactive Relational Database Connectivity Microsoft SQL Server Implementation [![Concourse CI](https://ci.spring.io/api/v1/teams/r2dbc/pipelines/r2dbc/jobs/r2dbc-mssql/badge)](https://ci.spring.io/teams/r2dbc/pipelines/r2dbc/jobs/r2dbc-mssql/) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.r2dbc/r2dbc-mssql/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.r2dbc/r2dbc-mssql)
+# Reactive Relational Database Connectivity Microsoft SQL Server Implementation [![Build Status](https://travis-ci.org/r2dbc/r2dbc-mssql.svg?branch=master)](https://travis-ci.org/r2dbc/r2dbc-mssql) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.r2dbc/r2dbc-mssql/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.r2dbc/r2dbc-mssql)
  
 
 This project contains the [Microsoft SQL Server][m] implementation of the [R2DBC SPI][r]. This implementation is not intended to be used directly, but rather to be used as the backing implementation for a humane client library to delegate to
@@ -62,24 +62,21 @@ Mono<Connection> connectionMono = Mono.from(connectionFactory.create());
 
 **Supported ConnectionFactory Discovery Options**
 
-Core options:
-
-* `driver`: Must be `sqlserver`.
-* `host`: Server hostname to connect to.
-* `port`: Server port to connect to. Defaults to `1433`.
-* `username`: Login username.
-* `password`: Login password.
-
-Additional options:
-
-* `applicationName`: Name of the application. Defaults to driver name and version.
-* `connectionId`: Connection Id for tracing purposes. Defaults to a random Id.
-* `connectTimeout`: Connection Id for tracing purposes. Defaults to 30 seconds.
-* `database`: Initial database to select. Defaults to SQL Server user profile settings.
-* `ssl`: Whether to use transport-level encryption for the entire SQL server traffic, defaults to `false`.
-* `hostNameInCertificate`: Expected hostname in SSL certificate. Supports wildcards (e.g. `*.database.windows.net`)
-* `preferCursoredExecution`: Whether to prefer cursors  or direct execution for queries. Uses by default direct. Cursors require more round-trips but are more backpressure-friendly. Defaults to direct execution. Can be `boolean` or a `Predicate<String>` accepting the SQL query.
-* `sendStringParametersAsUnicode`. Configure whether to send character data as unicode (NVARCHAR, NCHAR, NTEXT) or whether to use the database encoding, defaults to `true`. If disabled, `CharSequence` data is sent using the database-specific collation such as ASCII/MBCS instead of Unicode.
+| Option            | Description
+| ----------------- | -----------
+| `ssl`             | Whether to use transport-level encryption for the entire SQL server traffic.
+| `driver`          | Must be `sqlserver`.
+| `host`            | Server hostname to connect to.
+| `port`            | Server port to connect to. Defaults to `1433`. _(Optional)_
+| `username`        | Login username.
+| `password`        | Login password.
+| `database`        | Initial database to select. Defaults to SQL Server user profile settings. _(Optional)_
+| `applicationName` | Name of the application. Defaults to driver name and version. _(Optional)_
+| `connectionId`    | Connection Id for tracing purposes. Defaults to a random Id. _(Optional)_
+| `connectTimeout`  | Connection Id for tracing purposes. Defaults to 30 seconds. _(Optional)_
+| `hostNameInCertificate` | Expected hostname in SSL certificate. Supports wildcards (e.g. `*.database.windows.net`). _(Optional)_
+| `preferCursoredExecution` | Whether to prefer cursors  or direct execution for queries. Uses by default direct. Cursors require more round-trips but are more backpressure-friendly. Defaults to direct execution. Can be `boolean` or a `Predicate<String>` accepting the SQL query. _(Optional)_
+| `sendStringParametersAsUnicode` | Configure whether to send character data as unicode (NVARCHAR, NCHAR, NTEXT) or whether to use the database encoding, defaults to `true`. If disabled, `CharSequence` data is sent using the database-specific collation such as ASCII/MBCS instead of Unicode.
 
 **Programmatic Configuration**
 
@@ -123,7 +120,7 @@ Artifacts can be found on [Maven Central](https://search.maven.org/search?q=r2db
 <dependency>
   <groupId>io.r2dbc</groupId>
   <artifactId>r2dbc-mssql</artifactId>
-  <version>0.8.0.RELEASE</version>
+  <version>${version}.RELEASE</version>
 </dependency>
 ```
 
