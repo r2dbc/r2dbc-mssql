@@ -51,6 +51,7 @@
         <slf4j.version>1.7.26</slf4j.version>
         <spring-framework.version>5.2.3.RELEASE</spring-framework.version>
         <testcontainers.version>1.13.0</testcontainers.version>
+        <bouncycastle.version>1.64</bouncycastle.version>
     </properties>
 
     <licenses>
@@ -208,6 +209,12 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>${logback.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk15on</artifactId>
+            <version>${bouncycastle.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
