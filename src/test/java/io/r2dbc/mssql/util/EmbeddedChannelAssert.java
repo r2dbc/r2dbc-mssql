@@ -75,7 +75,7 @@ public final class EmbeddedChannelAssert extends AbstractObjectAssert<EmbeddedCh
         public EncodedAssert hasByteBufMessage() {
 
             isNotNull();
-            Object poll = actual.poll();
+            Object poll = this.actual.poll();
 
             Assertions.assertThat(poll).describedAs(this.direction + " message").isNotNull().isInstanceOf(ByteBuf.class);
 

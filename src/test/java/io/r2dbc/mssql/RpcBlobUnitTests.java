@@ -18,8 +18,10 @@ package io.r2dbc.mssql;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.r2dbc.mssql.client.TdsEncoder;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.codec.PlpEncoded;
@@ -72,18 +74,22 @@ public class RpcBlobUnitTests {
         TdsEncoder encoder = new TdsEncoder(PacketIdProvider.just(1), 8000);
         ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
         when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
+        when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);
         ChannelPromise promise = mock(ChannelPromise.class);
+        when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any(), any(ChannelPromise.class))).then(invocationOnMock -> {
 
             ByteBuf buf = invocationOnMock.getArgument(0);
 
-
             int toRead = buf.readableBytes();
             byte[] bytes = new byte[toRead];
             buf.readBytes(bytes);
-            buf.release();
 
-            return null;
+            if (buf != Unpooled.EMPTY_BUFFER) {
+                buf.release();
+            }
+
+            return invocationOnMock.getArgument(1);
         });
 
         Flux.from(request.encode(ByteBufAllocator.DEFAULT, 8000))
@@ -92,6 +98,5 @@ public class RpcBlobUnitTests {
             .as(StepVerifier::create)
             .expectNextCount(32)
             .verifyComplete();
-
     }
 }
