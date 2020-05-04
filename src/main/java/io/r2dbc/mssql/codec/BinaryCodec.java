@@ -90,7 +90,7 @@ class BinaryCodec implements Codec<Object> {
 
             byte[] bytes = (byte[]) value;
 
-            if (bytes.length >= Encode.U_SHORT_MAX_VALUE) {
+            if (exceedsBigVarbinary(bytes.length)) {
                 return BlobCodec.INSTANCE.encode(allocator, context, Blob.from(Mono.just(ByteBuffer.wrap(bytes))));
             }
 
@@ -100,7 +100,7 @@ class BinaryCodec implements Codec<Object> {
 
             ByteBuffer bytes = (ByteBuffer) value;
 
-            if (bytes.remaining() >= Encode.U_SHORT_MAX_VALUE) {
+            if (exceedsBigVarbinary(bytes.remaining())) {
                 return BlobCodec.INSTANCE.encode(allocator, context, Blob.from(Mono.just(bytes)));
             }
 
@@ -205,5 +205,9 @@ class BinaryCodec implements Codec<Object> {
         public String getFormalType() {
             return FORMAL_TYPE;
         }
+    }
+
+    private static boolean exceedsBigVarbinary(int length) {
+        return length > TypeUtils.SHORT_VARTYPE_MAX_BYTES;
     }
 }

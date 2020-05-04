@@ -110,7 +110,6 @@ class CodecIntegrationTests extends IntegrationTestSupport {
         testType(connection, "DECIMAL(38,5)", new BigDecimal("12345.12345"));
     }
 
-
     @Test
     void shouldEncodeDoubleAsDecimal1() {
         testType(connection, "DECIMAL(38,0)", new BigDecimal("12345"));
@@ -254,6 +253,11 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     @Test
     void shouldEncodeByteArrayAsVarBinaryMax() {
         testType(connection, "VARBINARY(MAX)", "foobarbaz".getBytes(), byte[].class, actual -> assertThat(actual).isEqualTo(ByteBuffer.wrap("foobarbaz".getBytes())));
+        testType(connection, "VARBINARY(MAX)", new byte[8000], byte[].class, actual -> assertThat(actual).isEqualTo(ByteBuffer.wrap(new byte[8000])));
+        testType(connection, "VARBINARY(MAX)", new byte[8001], byte[].class, actual -> assertThat(actual).isEqualTo(ByteBuffer.wrap(new byte[8001])));
+        testType(connection, "VARBINARY(MAX)", new byte[65534], byte[].class, actual -> assertThat(actual).isEqualTo(ByteBuffer.wrap(new byte[65534])));
+        testType(connection, "VARBINARY(MAX)", new byte[65535], byte[].class, actual -> assertThat(actual).isEqualTo(ByteBuffer.wrap(new byte[65535])));
+        testType(connection, "VARBINARY(MAX)", new byte[65536], byte[].class, actual -> assertThat(actual).isEqualTo(ByteBuffer.wrap(new byte[65536])));
     }
 
     @Test
