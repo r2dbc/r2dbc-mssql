@@ -22,6 +22,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.PromiseCombiner;
 import io.r2dbc.mssql.message.header.Header;
 import io.r2dbc.mssql.message.header.HeaderOptions;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
@@ -256,51 +257,56 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
 
     private void writeChunkedMessage(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf body, HeaderOptions headerOptions, boolean lastLogicalPacket) {
 
-        ByteBuf chunked = body.alloc().buffer(estimateChunkedSize(getBytesToWrite(body.readableBytes())));
+        PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
 
-        while (body.readableBytes() > 0) {
+        try {
+            while (body.readableBytes() > 0) {
 
-            ByteBuf chunk;
-            if (this.lastChunkRemainder != null) {
+                ByteBuf chunk = body.alloc().buffer(estimateChunkSize(getBytesToWrite(body.readableBytes())));
 
-                int combinedSize = this.lastChunkRemainder.readableBytes() + body.readableBytes();
-                HeaderOptions optionsToUse = isLastTransportPacket(combinedSize, lastLogicalPacket) ? getLastHeader(headerOptions) : getChunkedHeaderOptions(headerOptions);
-                Header.encode(chunked, optionsToUse, this.packetSize, this.packetIdProvider);
+                if (this.lastChunkRemainder != null) {
 
-                int actualBodyReadableBytes = this.packetSize - Header.LENGTH - this.lastChunkRemainder.readableBytes();
-                chunked.writeBytes(this.lastChunkRemainder);
-                chunked.writeBytes(body, actualBodyReadableBytes);
+                    int combinedSize = this.lastChunkRemainder.readableBytes() + body.readableBytes();
+                    HeaderOptions optionsToUse = isLastTransportPacket(combinedSize, lastLogicalPacket) ? getLastHeader(headerOptions) : getChunkedHeaderOptions(headerOptions);
+                    Header.encode(chunk, optionsToUse, this.packetSize, this.packetIdProvider);
 
-                this.lastChunkRemainder.release();
-                this.lastChunkRemainder = null;
+                    int actualBodyReadableBytes = this.packetSize - Header.LENGTH - this.lastChunkRemainder.readableBytes();
+                    chunk.writeBytes(this.lastChunkRemainder);
+                    chunk.writeBytes(body, actualBodyReadableBytes);
 
-            } else {
+                    this.lastChunkRemainder.release();
+                    this.lastChunkRemainder = null;
 
-                if (!lastLogicalPacket && !requiresChunking(body.readableBytes())) {
+                } else {
 
-                    // Prevent partial packets/buffer underrun if not the last packet.
-                    this.lastChunkRemainder = body.alloc().compositeBuffer();
-                    this.lastChunkRemainder.addComponent(true, body.retain());
-                    break;
+                    if (!lastLogicalPacket && !requiresChunking(body.readableBytes())) {
+
+                        // Prevent partial packets/buffer underrun if not the last packet.
+                        this.lastChunkRemainder = body.alloc().compositeBuffer();
+                        this.lastChunkRemainder.addComponent(true, body.retain());
+                        break;
+                    }
+
+                    HeaderOptions optionsToUse = isLastTransportPacket(body.readableBytes(), lastLogicalPacket) ? getLastHeader(headerOptions) : getChunkedHeaderOptions(headerOptions);
+
+                    int byteCount = getEffectiveChunkSizeWithoutHeader(body.readableBytes());
+                    Header.encode(chunk, optionsToUse, Header.LENGTH + byteCount, this.packetIdProvider);
+
+                    chunk.writeBytes(body, byteCount);
                 }
 
-                HeaderOptions optionsToUse = isLastTransportPacket(body.readableBytes(), lastLogicalPacket) ? getLastHeader(headerOptions) : getChunkedHeaderOptions(headerOptions);
-
-                chunk = body.readSlice(getEffectiveChunkSizeWithoutHeader(body.readableBytes()));
-
-                Header.encode(chunked, optionsToUse, Header.LENGTH + chunk.readableBytes(), this.packetIdProvider);
-                chunked.writeBytes(chunk);
+                combiner.add(ctx.write(chunk, ctx.newPromise()));
             }
-        }
 
-        ctx.write(chunked, promise);
+            combiner.finish(promise);
+        } catch (RuntimeException e) {
+            promise.tryFailure(e);
+            throw e;
+        }
     }
 
-    int estimateChunkedSize(int readableBytes) {
-
-        int netPacketSize = this.packetSize + 1 - Header.LENGTH;
-
-        return readableBytes + (((readableBytes / netPacketSize) + 1) * Header.LENGTH);
+    int estimateChunkSize(int readableBytes) {
+        return Math.min(readableBytes + Header.LENGTH, this.packetSize);
     }
 
     private boolean requiresChunking(int readableBytes) {

@@ -128,12 +128,13 @@ class TdsEncoderUnitTests {
 
         channel.writeOutbound(fragment);
 
+        // Chunk 1
         assertThat(channel).outbound().hasByteBufMessage().isEncodedAs(buffer -> {
-
-            // Chunk 1
             encodeExpectation(buffer, StatusBit.NORMAL, 0x0c, "foob");
+        });
 
-            // Chunk 2
+        // Chunk 2
+        assertThat(channel).outbound().hasByteBufMessage().isEncodedAs(buffer -> {
             encodeExpectation(buffer, StatusBit.EOM, 0x0a, "ar");
         });
     }
@@ -288,6 +289,11 @@ class TdsEncoderUnitTests {
         assertThat(channel).outbound().hasByteBufMessage().isEncodedAs(buffer -> {
 
             encodeExpectation(buffer, StatusBit.NORMAL, 0x0c, "ijkl");
+        });
+
+        // Chunk 4
+        assertThat(channel).outbound().hasByteBufMessage().isEncodedAs(buffer -> {
+
             encodeExpectation(buffer, StatusBit.EOM, 0x0c, "mnop");
         });
     }
@@ -297,9 +303,9 @@ class TdsEncoderUnitTests {
 
         TdsEncoder encoder = new TdsEncoder(PacketIdProvider.just(42), 12);
 
-        Assertions.assertThat(encoder.estimateChunkedSize(1)).isEqualTo(9);
-        Assertions.assertThat(encoder.estimateChunkedSize(4)).isEqualTo(12);
-        Assertions.assertThat(encoder.estimateChunkedSize(5)).isEqualTo(21);
+        Assertions.assertThat(encoder.estimateChunkSize(1)).isEqualTo(9);
+        Assertions.assertThat(encoder.estimateChunkSize(4)).isEqualTo(12);
+        Assertions.assertThat(encoder.estimateChunkSize(5)).isEqualTo(12);
     }
 
     private static void encodeExpectation(ByteBuf buffer, StatusBit bit, int length, String content) {
