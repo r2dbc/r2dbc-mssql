@@ -24,6 +24,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.r2dbc.mssql.client.ssl.TdsSslHandler;
@@ -52,6 +53,7 @@ import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.SynchronousSink;
 import reactor.netty.Connection;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -69,6 +71,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+
+import static reactor.netty.tcp.SslProvider.DefaultConfigurationType.TCP;
 
 /**
  * An implementation of a TDS client based on the Reactor Netty project.
@@ -383,8 +387,11 @@ public final class ReactorNettyClient implements Client {
             }
 
             @Override
-            public String getHostNameInCertificate() {
-                return host;
+            public SslProvider getSslProvider() {
+                return SslProvider.builder()
+                    .sslContext(SslContextBuilder.forClient())
+                    .defaultConfiguration(TCP)
+                    .build();
             }
         }, null, null);
     }

@@ -28,6 +28,7 @@ import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import reactor.netty.tcp.SslProvider;
 
 import java.util.stream.IntStream;
 
@@ -51,7 +52,7 @@ class TdsSslHandlerUnitTests {
         }
 
         @Override
-        public String getHostNameInCertificate() {
+        public SslProvider getSslProvider() {
             return null;
         }
     }, new ConnectionContext());

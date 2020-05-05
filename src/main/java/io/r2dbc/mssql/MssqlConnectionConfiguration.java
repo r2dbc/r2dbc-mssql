@@ -16,20 +16,32 @@
 
 package io.r2dbc.mssql;
 
+import io.netty.handler.ssl.SslContextBuilder;
 import io.r2dbc.mssql.client.ClientConfiguration;
+import io.r2dbc.mssql.client.ssl.ExpectedHostnameX509TrustManager;
+import io.r2dbc.mssql.client.ssl.TrustAllTrustManager;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.tds.Redirect;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.StringUtils;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.tcp.SslProvider;
 import reactor.util.annotation.Nullable;
 
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Predicate;
+
+import static reactor.netty.tcp.SslProvider.DefaultConfigurationType.TCP;
 
 /**
  * Connection configuration information for connecting to a Microsoft SQL database.
@@ -73,10 +85,13 @@ public final class MssqlConnectionConfiguration {
 
     private final boolean ssl;
 
+    private final Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer;
+
     private final String username;
 
     private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, Duration connectTimeout, @Nullable String database, String host, String hostNameInCertificate
-        , CharSequence password, Predicate<String> preferCursoredExecution, int port, boolean sendStringParametersAsUnicode, boolean ssl, String username) {
+        , CharSequence password, Predicate<String> preferCursoredExecution, int port, boolean sendStringParametersAsUnicode, boolean ssl,
+                                         Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer, String username) {
 
         this.applicationName = applicationName;
         this.connectionId = connectionId;
@@ -89,6 +104,7 @@ public final class MssqlConnectionConfiguration {
         this.port = port;
         this.sendStringParametersAsUnicode = sendStringParametersAsUnicode;
         this.ssl = ssl;
+        this.sslContextBuilderCustomizer = sslContextBuilderCustomizer;
         this.username = Assert.requireNonNull(username, "username must not be null");
     }
 
@@ -126,11 +142,11 @@ public final class MssqlConnectionConfiguration {
         }
 
         return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, redirectServerName, hostNameInCertificate, this.password,
-            this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.username);
+            this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer, this.username);
     }
 
     ClientConfiguration toClientConfiguration() {
-        return new DefaultClientConfiguration(this.connectTimeout, this.host, this.hostNameInCertificate, this.port, this.ssl);
+        return new DefaultClientConfiguration(this.connectTimeout, this.host, this.hostNameInCertificate, this.port, this.ssl, sslContextBuilderCustomizer);
     }
 
     ConnectionOptions toConnectionOptions() {
@@ -152,6 +168,7 @@ public final class MssqlConnectionConfiguration {
         sb.append(", port=").append(this.port);
         sb.append(", sendStringParametersAsUnicode=").append(this.sendStringParametersAsUnicode);
         sb.append(", ssl=").append(this.ssl);
+        sb.append(", sslContextBuilderCustomizer=").append(this.sslContextBuilderCustomizer);
         sb.append(", username=\"").append(this.username).append('\"');
         sb.append(']');
         return sb.toString();
@@ -279,6 +296,8 @@ public final class MssqlConnectionConfiguration {
         private boolean sendStringParametersAsUnicode = true;
 
         private boolean ssl;
+
+        private Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer = Function.identity();
 
         private String username;
 
@@ -429,6 +448,21 @@ public final class MssqlConnectionConfiguration {
         }
 
         /**
+         * Configure a {@link SslContextBuilder} customizer. The customizer gets applied on each SSL connection attempt to allow for just-in-time configuration updates. The {@link Function} gets
+         * called with the prepared {@link SslContextBuilder} that has all configuration options applied. The customizer may return the same builder or return a new builder instance to be used to
+         * build the SSL context.
+         *
+         * @param sslContextBuilderCustomizer customizer function
+         * @return this {@link Builder}
+         * @throws IllegalArgumentException if {@code sslContextBuilderCustomizer} is {@code null}
+         * @since 0.8.3
+         */
+        public Builder sslContextBuilderCustomizer(Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer) {
+            this.sslContextBuilderCustomizer = Assert.requireNonNull(sslContextBuilderCustomizer, "sslContextBuilderCustomizer must not be null");
+            return this;
+        }
+
+        /**
          * Configure the username.
          *
          * @param username the username
@@ -453,7 +487,7 @@ public final class MssqlConnectionConfiguration {
 
             return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, this.host, this.hostNameInCertificate, this.password,
                 this.preferCursoredExecution, this.port,
-                this.sendStringParametersAsUnicode, this.ssl, this.username);
+                this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer, this.username);
         }
     }
 
@@ -469,13 +503,17 @@ public final class MssqlConnectionConfiguration {
 
         private final boolean ssl;
 
-        DefaultClientConfiguration(Duration connectTimeout, String host, String hostNameInCertificate, int port, boolean ssl) {
+        private final Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer;
+
+        DefaultClientConfiguration(Duration connectTimeout, String host, String hostNameInCertificate, int port, boolean ssl,
+                                   Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer) {
 
             this.connectTimeout = connectTimeout;
             this.host = host;
             this.hostNameInCertificate = hostNameInCertificate;
             this.port = port;
             this.ssl = ssl;
+            this.sslContextBuilderCustomizer = sslContextBuilderCustomizer;
         }
 
         @Override
@@ -504,8 +542,29 @@ public final class MssqlConnectionConfiguration {
         }
 
         @Override
-        public String getHostNameInCertificate() {
-            return this.hostNameInCertificate;
+        public SslProvider getSslProvider() throws GeneralSecurityException {
+
+            SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
+
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            KeyStore ks = null;
+            tmf.init(ks);
+
+            TrustManager[] trustManagers = tmf.getTrustManagers();
+            TrustManager result;
+
+            if (isSslEnabled()) {
+                result = new ExpectedHostnameX509TrustManager((X509TrustManager) trustManagers[0], this.hostNameInCertificate);
+            } else {
+                result = TrustAllTrustManager.INSTANCE;
+            }
+
+            sslContextBuilder.trustManager(result);
+
+            return SslProvider.builder()
+                .sslContext(this.sslContextBuilderCustomizer.apply(sslContextBuilder))
+                .defaultConfiguration(TCP)
+                .build();
         }
     }
 }

@@ -136,6 +136,14 @@ final class MssqlConnectionConfigurationUnitTests {
     }
 
     @Test
+    void constructorNoSslCustomizer() {
+        assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder()
+            .sslContextBuilderCustomizer(null)
+            .build())
+            .withMessage("sslContextBuilderCustomizer must not be null");
+    }
+
+    @Test
     void redirect() {
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
             .applicationName("r2dbc")
