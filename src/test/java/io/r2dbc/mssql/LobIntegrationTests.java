@@ -23,7 +23,6 @@ import io.r2dbc.spi.Clob;
 import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -31,7 +30,6 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,8 +43,6 @@ class LobIntegrationTests extends IntegrationTestSupport {
     static byte[] ALL_BYTES = new byte[-(-128) + 127];
 
     static {
-        Hooks.onOperatorDebug();
-
         for (int i = -128; i < 127; i++) {
             ALL_BYTES[-(-128) + i] = (byte) i;
         }
