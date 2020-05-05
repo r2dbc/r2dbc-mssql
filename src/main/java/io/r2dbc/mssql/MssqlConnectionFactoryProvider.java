@@ -16,6 +16,7 @@
 
 package io.r2dbc.mssql;
 
+import io.netty.handler.ssl.SslContextBuilder;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.ConnectionFactoryOptions;
 import io.r2dbc.spi.ConnectionFactoryProvider;
@@ -25,6 +26,7 @@ import reactor.util.Loggers;
 
 import java.time.Duration;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static io.r2dbc.spi.ConnectionFactoryOptions.CONNECT_TIMEOUT;
@@ -72,6 +74,13 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
      * If disabled, {@link CharSequence} data is sent using the database-specific collation such as ASCII/MBCS instead of Unicode.
      */
     public static final Option<Boolean> SEND_STRING_PARAMETERS_AS_UNICODE = Option.valueOf("sendStringParametersAsUnicode");
+
+    /**
+     * Customizer {@link Function} for {@link SslContextBuilder}.
+     *
+     * @since 0.8.3
+     */
+    public static final Option<Function<SslContextBuilder, SslContextBuilder>> SSL_CONTEXT_BUILDER_CUSTOMIZER = Option.valueOf("sslContextBuilderCustomizer");
 
     /**
      * Driver option value.
@@ -166,6 +175,10 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         builder.password(connectionFactoryOptions.getRequiredValue(PASSWORD));
         builder.username(connectionFactoryOptions.getRequiredValue(USER));
         builder.applicationName(connectionFactoryOptions.getRequiredValue(USER));
+
+        if (connectionFactoryOptions.hasOption(SSL_CONTEXT_BUILDER_CUSTOMIZER)) {
+            builder.sslContextBuilderCustomizer(connectionFactoryOptions.getRequiredValue(SSL_CONTEXT_BUILDER_CUSTOMIZER));
+        }
 
         MssqlConnectionConfiguration configuration = builder.build();
         if (this.logger.isDebugEnabled()) {

@@ -39,13 +39,8 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.X509TrustManager;
 import java.security.GeneralSecurityException;
-import java.security.KeyStore;
 
 /**
  * SSL handling for TDS connections.
@@ -118,29 +113,12 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
      * @return the configured {@link SslHandler}.
      * @throws GeneralSecurityException thrown on security API errors.
      */
-    private static SslHandler createSslHandler(SslConfiguration sslConfiguration) throws GeneralSecurityException {
+    private static SslHandler createSslHandler(SslConfiguration sslConfiguration, ByteBufAllocator allocator) throws GeneralSecurityException {
 
-        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        SSLContext sslContext = SSLContext.getInstance("TLS");
-        KeyStore ks = null;
-        tmf.init(ks);
+        SSLEngine sslEngine = sslConfiguration.getSslProvider().getSslContext()
+            .newEngine(allocator);
 
-        TrustManager[] trustManagers = tmf.getTrustManagers();
-        TrustManager[] tms = new TrustManager[]{getTrustManager(sslConfiguration, trustManagers[0])};
-        sslContext.init(null, tms, null);
-
-        SSLEngine sslEngine = sslContext.createSSLEngine();
-        sslEngine.setUseClientMode(true);
         return new SslHandler(sslEngine);
-    }
-
-    private static TrustManager getTrustManager(SslConfiguration sslConfiguration, TrustManager trustManager) {
-
-        if (sslConfiguration.isSslEnabled()) {
-            return new ExpectedHostnameX509TrustManager((X509TrustManager) trustManager, sslConfiguration.getHostNameInCertificate());
-        }
-
-        return TrustAllTrustManager.INSTANCE;
     }
 
     /**
@@ -156,7 +134,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
         if (evt == SslState.LOGIN_ONLY || evt == SslState.CONNECTION) {
 
             this.state = (SslState) evt;
-            this.sslHandler = createSslHandler(this.sslConfiguration);
+            this.sslHandler = createSslHandler(this.sslConfiguration, ctx.alloc());
 
             LOGGER.debug(this.connectionContext.getMessage("Registering Context Proxy and SSL Event Handlers to propagate SSL events to channelRead()"));
             ctx.pipeline().addAfter(getClass().getName(), ContextProxy.class.getName(), new ContextProxy());

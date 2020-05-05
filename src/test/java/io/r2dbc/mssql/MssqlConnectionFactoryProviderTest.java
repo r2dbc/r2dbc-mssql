@@ -24,6 +24,7 @@ import java.util.function.Predicate;
 
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.ALTERNATE_MSSQL_DRIVER;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.MSSQL_DRIVER;
+import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.SSL_CONTEXT_BUILDER_CUSTOMIZER;
 import static io.r2dbc.spi.ConnectionFactoryOptions.DRIVER;
 import static io.r2dbc.spi.ConnectionFactoryOptions.HOST;
 import static io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD;
@@ -31,6 +32,7 @@ import static io.r2dbc.spi.ConnectionFactoryOptions.PORT;
 import static io.r2dbc.spi.ConnectionFactoryOptions.SSL;
 import static io.r2dbc.spi.ConnectionFactoryOptions.USER;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 /**
  * Unit tests for {@link MssqlConnectionFactoryProvider}.
@@ -169,7 +171,23 @@ final class MssqlConnectionFactoryProviderTest {
         ClientConfiguration configuration = factory.getClientConfiguration();
 
         assertThat(configuration.isSslEnabled()).isTrue();
-        assertThat(configuration.getHostNameInCertificate()).isEqualTo("*.foo");
+    }
+
+    @Test
+    void shouldConfigureWithSslCustomizer() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(SSL, true)
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(SSL_CONTEXT_BUILDER_CUSTOMIZER, sslContextBuilder -> {
+                throw new IllegalStateException("Works!");
+            })
+            .build());
+
+        assertThatIllegalStateException().isThrownBy(() -> factory.getClientConfiguration().getSslProvider()).withMessageContaining("Works!");
     }
 
     @Test

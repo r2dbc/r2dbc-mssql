@@ -16,6 +16,10 @@
 
 package io.r2dbc.mssql.client.ssl;
 
+import reactor.netty.tcp.SslProvider;
+
+import java.security.GeneralSecurityException;
+
 /**
  * SSL Configuration for SQL Server connections.
  * <p>Microsoft SQL server supports various SSL setups:
@@ -28,7 +32,7 @@ package io.r2dbc.mssql.client.ssl;
  * <p>
  * Supported mode uses SSL during login to encrypt login credentials. SSL is disabled after login.
  * The client supports login-time SSL even when {@link #isSslEnabled()} is {@code false}. This mode does not validate certificates.
- * <p>Enabling {@link #isSslEnabled() SSL} enables also SSL certificate validation using {@link #getHostNameInCertificate()}.
+ * <p>Enabling {@link #isSslEnabled() SSL} enables also SSL certificate validation.
  *
  * @author Mark Paluch
  */
@@ -40,7 +44,8 @@ public interface SslConfiguration {
     boolean isSslEnabled();
 
     /**
-     * @return expected hostname in the SSL certificate.
+     * @return the {@link SslProvider}.
+     * @since 0.8.3
      */
-    String getHostNameInCertificate();
+    SslProvider getSslProvider() throws GeneralSecurityException;
 }

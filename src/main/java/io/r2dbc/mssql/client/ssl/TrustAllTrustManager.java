@@ -26,7 +26,7 @@ import java.security.cert.X509Certificate;
  *
  * @author Mark Paluch
  */
-enum TrustAllTrustManager implements X509TrustManager {
+public enum TrustAllTrustManager implements X509TrustManager {
 
     INSTANCE;
 

@@ -32,7 +32,7 @@ import java.util.function.Predicate;
  *
  * @author Mark Paluch
  */
-final class ExpectedHostnameX509TrustManager implements X509TrustManager {
+public final class ExpectedHostnameX509TrustManager implements X509TrustManager {
 
     private static final Logger logger = Loggers.getLogger(TdsSslHandler.class);
 
@@ -42,7 +42,7 @@ final class ExpectedHostnameX509TrustManager implements X509TrustManager {
 
     private final Predicate<String> matcher;
 
-    ExpectedHostnameX509TrustManager(X509TrustManager tm, String expectedHostName) {
+    public ExpectedHostnameX509TrustManager(X509TrustManager tm, String expectedHostName) {
 
         this.defaultTrustManager = tm;
         this.expectedHostName = expectedHostName;
