@@ -20,11 +20,15 @@ import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.spi.ConnectionFactoryOptions;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.util.function.Predicate;
 
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.ALTERNATE_MSSQL_DRIVER;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.MSSQL_DRIVER;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.SSL_CONTEXT_BUILDER_CUSTOMIZER;
+import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE;
+import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE_PASSWORD;
+import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE_TYPE;
 import static io.r2dbc.spi.ConnectionFactoryOptions.DRIVER;
 import static io.r2dbc.spi.ConnectionFactoryOptions.HOST;
 import static io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD;
@@ -188,6 +192,26 @@ final class MssqlConnectionFactoryProviderTest {
             .build());
 
         assertThatIllegalStateException().isThrownBy(() -> factory.getClientConfiguration().getSslProvider()).withMessageContaining("Works!");
+    }
+
+    @Test
+    void shouldConfigureWithTrustStoreCustomizer() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(SSL, true)
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(TRUST_STORE, new File("foo"))
+            .option(TRUST_STORE_PASSWORD, "hello".toCharArray())
+            .option(TRUST_STORE_TYPE, "PKCS")
+            .build());
+
+        assertThat(factory.getClientConfiguration())
+            .hasFieldOrPropertyWithValue("trustStore", new File("foo"))
+            .hasFieldOrPropertyWithValue("trustStorePassword", "hello".toCharArray())
+            .hasFieldOrPropertyWithValue("trustStoreType", "PKCS");
     }
 
     @Test

@@ -21,7 +21,6 @@ import io.r2dbc.spi.ColumnMetadata;
 import io.r2dbc.spi.R2dbcPermissionDeniedException;
 import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -128,56 +127,6 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
                     .containsEntry("first_name", "Walter")
                     .containsEntry("last_name", "White");
             })
-            .verifyComplete();
-    }
-
-    @Test
-    void shouldInsertAndSelectUsingMapUsingTls(@TempDir Path tempDir) {
-
-        final String password = UUID.randomUUID().toString();
-        final String trustStorePath = writeKeyStoreToTempFile(tempDir, SERVER.getTrustStore(), password);
-
-        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
-            .host(SERVER.getHost())
-            .port(SERVER.getPort())
-            .username(SERVER.getUsername())
-            .password(SERVER.getPassword())
-            .enableSsl()
-            .withTrustStore(trustStorePath)
-            .withTrustStorePassword(password.toCharArray())
-            .build();
-
-        MssqlConnectionFactory connectionFactory = new MssqlConnectionFactory(configuration);
-        MssqlConnection connection = connectionFactory.create().block();
-
-        createTable(connection);
-
-        insertRecord(connection, 1);
-
-        connection.createStatement("SELECT * FROM r2dbc_example ORDER BY first_name")
-            .execute()
-            .flatMap(it -> it.map((row, rowMetadata) -> {
-
-                Map<String, Object> values = new LinkedHashMap<>();
-
-                for (ColumnMetadata column : rowMetadata.getColumnMetadatas()) {
-                    values.put(column.getName(), row.get(column.getName()));
-                }
-
-                return values;
-            }))
-            .as(StepVerifier::create)
-            .consumeNextWith(actual -> {
-
-                assertThat(actual)
-                    .containsEntry("id", 1)
-                    .containsEntry("first_name", "Walter")
-                    .containsEntry("last_name", "White");
-            })
-            .verifyComplete();
-
-        connection.close()
-            .as(StepVerifier::create)
             .verifyComplete();
     }
 

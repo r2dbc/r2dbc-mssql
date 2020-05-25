@@ -18,7 +18,6 @@ package io.r2dbc.mssql.util;
 
 import com.zaxxer.hikari.HikariDataSource;
 import io.r2dbc.mssql.MssqlConnectionConfiguration;
-import io.r2dbc.mssql.util.TestCertificateAuthority.ServerKeyPair;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -30,7 +29,6 @@ import reactor.util.annotation.Nullable;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.security.KeyStore;
 import java.util.function.Supplier;
 
 /**
@@ -41,16 +39,20 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
 
     private volatile MSSQLServerContainer<?> containerInstance = null;
 
-    private final TestCertificateAuthority ca = new TestCertificateAuthority("CN=test-ca");
-
-    private final ServerKeyPair keyPair = ca.newServerKeyPair("CN=localhost");
-
     private final Supplier<MSSQLServerContainer<?>> container = () -> {
 
         if (this.containerInstance != null) {
             return this.containerInstance;
         }
-        return this.containerInstance = new TestMsSqlServerContainer(keyPair);
+        return this.containerInstance = new MSSQLServerContainer() {
+
+            protected void configure() {
+                this.addExposedPort(MS_SQL_SERVER_PORT);
+                this.addEnv("ACCEPT_EULA", "Y");
+                this.addEnv("SA_PASSWORD", getPassword());
+                this.withReuse(true);
+            }
+        };
     };
 
     private HikariDataSource dataSource;
@@ -118,10 +120,6 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
 
     public String getPassword() {
         return this.sqlServer.getPassword();
-    }
-
-    public KeyStore getTrustStore() {
-        return this.ca.getTrustStore();
     }
 
     /**
