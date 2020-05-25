@@ -77,6 +77,10 @@ Mono<Connection> connectionMono = Mono.from(connectionFactory.create());
 | `hostNameInCertificate` | Expected hostname in SSL certificate. Supports wildcards (e.g. `*.database.windows.net`). _(Optional)_
 | `preferCursoredExecution` | Whether to prefer cursors  or direct execution for queries. Uses by default direct. Cursors require more round-trips but are more backpressure-friendly. Defaults to direct execution. Can be `boolean` or a `Predicate<String>` accepting the SQL query. _(Optional)_
 | `sendStringParametersAsUnicode` | Configure whether to send character data as unicode (NVARCHAR, NCHAR, NTEXT) or whether to use the database encoding, defaults to `true`. If disabled, `CharSequence` data is sent using the database-specific collation such as ASCII/MBCS instead of Unicode.
+| `trustStoreType`  | Type of the TrustStore. Defaults to `KeyStore.getDefaultType()`. _(Optional)_
+| `trustStore`      | Path to the certificate TrustStore file. _(Optional)_
+| `trustStorePassword` | Password used to check the integrity of the TrustStore data. _(Optional)_
+
 
 **Programmatic Configuration**
 

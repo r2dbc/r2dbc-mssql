@@ -24,6 +24,7 @@ import io.r2dbc.spi.Option;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import java.io.File;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.function.Function;
@@ -81,6 +82,27 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
      * @since 0.8.3
      */
     public static final Option<Function<SslContextBuilder, SslContextBuilder>> SSL_CONTEXT_BUILDER_CUSTOMIZER = Option.valueOf("sslContextBuilderCustomizer");
+
+    /**
+     * Type of the TrustStore.
+     *
+     * @since 0.8.3
+     */
+    public static final Option<String> TRUST_STORE_TYPE = Option.valueOf("trustStoreType");
+
+    /**
+     * Path to the certificate TrustStore file.
+     *
+     * @since 0.8.3
+     */
+    public static final Option<File> TRUST_STORE = Option.valueOf("trustStore");
+
+    /**
+     * Password used to check the integrity of the TrustStore data.
+     *
+     * @since 0.8.3
+     */
+    public static final Option<char[]> TRUST_STORE_PASSWORD = Option.valueOf("trustStorePassword");
 
     /**
      * Driver option value.
@@ -149,7 +171,7 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
             } else {
 
                 try {
-                    Object predicate = Class.forName(value).getConstructor().newInstance();
+                    Object predicate = Class.forName(value).getDeclaredConstructor().newInstance();
                     if (predicate instanceof Predicate) {
                         builder.preferCursoredExecution((Predicate<String>) predicate);
                     } else {
@@ -175,6 +197,18 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         builder.password(connectionFactoryOptions.getRequiredValue(PASSWORD));
         builder.username(connectionFactoryOptions.getRequiredValue(USER));
         builder.applicationName(connectionFactoryOptions.getRequiredValue(USER));
+
+        if (connectionFactoryOptions.hasOption(TRUST_STORE)) {
+            builder.trustStore(connectionFactoryOptions.getRequiredValue(TRUST_STORE));
+        }
+
+        if (connectionFactoryOptions.hasOption(TRUST_STORE_PASSWORD)) {
+            builder.trustStorePassword(connectionFactoryOptions.getRequiredValue(TRUST_STORE_PASSWORD));
+        }
+
+        if (connectionFactoryOptions.hasOption(TRUST_STORE_TYPE)) {
+            builder.trustStoreType(connectionFactoryOptions.getRequiredValue(TRUST_STORE_TYPE));
+        }
 
         if (connectionFactoryOptions.hasOption(SSL_CONTEXT_BUILDER_CUSTOMIZER)) {
             builder.sslContextBuilderCustomizer(connectionFactoryOptions.getRequiredValue(SSL_CONTEXT_BUILDER_CUSTOMIZER));
