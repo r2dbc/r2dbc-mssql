@@ -31,11 +31,15 @@ import reactor.util.annotation.Nullable;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
@@ -48,6 +52,7 @@ import static reactor.netty.tcp.SslProvider.DefaultConfigurationType.TCP;
  * Allows configuration of the connection endpoint, login credentials, database and trace details such as application name and connection Id.
  *
  * @author Mark Paluch
+ * @author Alex Stockinger
  */
 public final class MssqlConnectionConfiguration {
 
@@ -89,9 +94,19 @@ public final class MssqlConnectionConfiguration {
 
     private final String username;
 
-    private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, Duration connectTimeout, @Nullable String database, String host, String hostNameInCertificate
-        , CharSequence password, Predicate<String> preferCursoredExecution, int port, boolean sendStringParametersAsUnicode, boolean ssl,
-                                         Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer, String username) {
+    @Nullable
+    private final File trustStore;
+
+    @Nullable
+    private final String trustStoreType;
+
+    @Nullable
+    private final char[] trustStorePassword;
+
+    private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, Duration connectTimeout, @Nullable String database, String host, String hostNameInCertificate,
+                                         CharSequence password, Predicate<String> preferCursoredExecution, int port, boolean sendStringParametersAsUnicode, boolean ssl,
+                                         Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer, @Nullable File trustStore, @Nullable String trustStoreType,
+                                         @Nullable char[] trustStorePassword, String username) {
 
         this.applicationName = applicationName;
         this.connectionId = connectionId;
@@ -105,6 +120,9 @@ public final class MssqlConnectionConfiguration {
         this.sendStringParametersAsUnicode = sendStringParametersAsUnicode;
         this.ssl = ssl;
         this.sslContextBuilderCustomizer = sslContextBuilderCustomizer;
+        this.trustStore = trustStore;
+        this.trustStoreType = trustStoreType;
+        this.trustStorePassword = trustStorePassword;
         this.username = Assert.requireNonNull(username, "username must not be null");
     }
 
@@ -142,11 +160,13 @@ public final class MssqlConnectionConfiguration {
         }
 
         return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, redirectServerName, hostNameInCertificate, this.password,
-            this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer, this.username);
+            this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer, this.trustStore, this.trustStoreType,
+            this.trustStorePassword, this.username);
     }
 
     ClientConfiguration toClientConfiguration() {
-        return new DefaultClientConfiguration(this.connectTimeout, this.host, this.hostNameInCertificate, this.port, this.ssl, sslContextBuilderCustomizer);
+        return new DefaultClientConfiguration(this.connectTimeout, this.host, this.hostNameInCertificate, this.port, this.ssl, this.sslContextBuilderCustomizer, this.trustStore, this.trustStoreType,
+            this.trustStorePassword);
     }
 
     ConnectionOptions toConnectionOptions() {
@@ -169,6 +189,9 @@ public final class MssqlConnectionConfiguration {
         sb.append(", sendStringParametersAsUnicode=").append(this.sendStringParametersAsUnicode);
         sb.append(", ssl=").append(this.ssl);
         sb.append(", sslContextBuilderCustomizer=").append(this.sslContextBuilderCustomizer);
+        sb.append(", trustStore=\"").append(this.trustStore).append("\"");
+        sb.append(", trustStorePassword=\"").append(repeat(this.trustStorePassword == null ? 0 : this.trustStorePassword.length, "*")).append('\"');
+        sb.append(", trustStoreType=\"").append(this.trustStoreType).append("\"");
         sb.append(", username=\"").append(this.username).append('\"');
         sb.append(']');
         return sb.toString();
@@ -300,6 +323,15 @@ public final class MssqlConnectionConfiguration {
         private Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer = Function.identity();
 
         private String username;
+
+        @Nullable
+        private File trustStore;
+
+        @Nullable
+        private String trustStoreType;
+
+        @Nullable
+        private char[] trustStorePassword;
 
         private Builder() {
         }
@@ -475,6 +507,56 @@ public final class MssqlConnectionConfiguration {
         }
 
         /**
+         * Configure the trust store type.
+         *
+         * @param trustStoreType the type of the trust store to be used for SSL certificate verification. Defaults to {@link KeyStore#getDefaultType()} if not set.
+         * @return this {@link Builder}
+         * @throws IllegalArgumentException if {@code trustStoreType} is {@code null}
+         * @since 0.8.3
+         */
+        public Builder trustStoreType(String trustStoreType) {
+            this.trustStoreType = Assert.requireNonNull(trustStoreType, "trustStoreType must not be null");
+            return this;
+        }
+
+        /**
+         * Configure the file path to the trust store.
+         *
+         * @param trustStoreFile the path of the trust store to be used for SSL certificate verification.
+         * @return this {@link Builder}
+         * @throws IllegalArgumentException if {@code trustStore} is {@code null}
+         * @since 0.8.3
+         */
+        public Builder trustStore(String trustStoreFile) {
+            return trustStore(new File(Assert.requireNonNull(trustStoreFile, "trustStore must not be null")));
+        }
+
+        /**
+         * Configure the path to the trust store.
+         *
+         * @param trustStore the path of the trust store to be used for SSL certificate verification.
+         * @return this {@link Builder}
+         * @throws IllegalArgumentException if {@code trustStore} is {@code null}
+         * @since 0.8.3
+         */
+        public Builder trustStore(File trustStore) {
+            this.trustStore = Assert.requireNonNull(trustStore, "trustStore must not be null");
+            return this;
+        }
+
+        /**
+         * Configure the password to read the trust store.
+         *
+         * @param trustStorePassword the password to read the trust store.
+         * @return this {@link Builder}
+         * @since 0.8.3
+         */
+        public Builder trustStorePassword(char[] trustStorePassword) {
+            this.trustStorePassword = Assert.requireNonNull(Arrays.copyOf(trustStorePassword, trustStorePassword.length), "trustStorePassword must not be null");
+            return this;
+        }
+
+        /**
          * Returns a configured {@link MssqlConnectionConfiguration}.
          *
          * @return a configured {@link MssqlConnectionConfiguration}.
@@ -486,12 +568,12 @@ public final class MssqlConnectionConfiguration {
             }
 
             return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, this.host, this.hostNameInCertificate, this.password,
-                this.preferCursoredExecution, this.port,
-                this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer, this.username);
+                this.preferCursoredExecution, this.port, this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer, this.trustStore, this.trustStoreType,
+                this.trustStorePassword, this.username);
         }
     }
 
-    private static class DefaultClientConfiguration implements ClientConfiguration {
+    static class DefaultClientConfiguration implements ClientConfiguration {
 
         private final Duration connectTimeout;
 
@@ -505,8 +587,18 @@ public final class MssqlConnectionConfiguration {
 
         private final Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer;
 
+        @Nullable
+        private final File trustStore;
+
+        @Nullable
+        private final String trustStoreType;
+
+        @Nullable
+        private final char[] trustStorePassword;
+
         DefaultClientConfiguration(Duration connectTimeout, String host, String hostNameInCertificate, int port, boolean ssl,
-                                   Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer) {
+                                   Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer, @Nullable File trustStore,
+                                   @Nullable String trustStoreType, @Nullable char[] trustStorePassword) {
 
             this.connectTimeout = connectTimeout;
             this.host = host;
@@ -514,6 +606,9 @@ public final class MssqlConnectionConfiguration {
             this.port = port;
             this.ssl = ssl;
             this.sslContextBuilderCustomizer = sslContextBuilderCustomizer;
+            this.trustStore = trustStore;
+            this.trustStoreType = trustStoreType;
+            this.trustStorePassword = trustStorePassword;
         }
 
         @Override
@@ -547,7 +642,7 @@ public final class MssqlConnectionConfiguration {
             SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
 
             TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            KeyStore ks = null;
+            KeyStore ks = loadCustomTrustStore();
             tmf.init(ks);
 
             TrustManager[] trustManagers = tmf.getTrustManagers();
@@ -565,6 +660,23 @@ public final class MssqlConnectionConfiguration {
                 .sslContext(this.sslContextBuilderCustomizer.apply(sslContextBuilder))
                 .defaultConfiguration(TCP)
                 .build();
+        }
+
+        @Nullable
+        KeyStore loadCustomTrustStore() throws GeneralSecurityException {
+
+            if (this.trustStore == null) {
+                return null;
+            }
+
+            KeyStore trustStoreInstance = KeyStore.getInstance(this.trustStoreType == null ? KeyStore.getDefaultType() : this.trustStoreType);
+
+            try (FileInputStream fis = new FileInputStream(this.trustStore)) {
+                trustStoreInstance.load(fis, this.trustStorePassword);
+                return trustStoreInstance;
+            } catch (IOException e) {
+                throw new GeneralSecurityException(String.format("Could not load custom trust store from %s", this.trustStore), e);
+            }
         }
     }
 }

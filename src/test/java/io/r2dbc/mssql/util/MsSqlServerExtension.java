@@ -211,4 +211,5 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
             return this.container.getPassword();
         }
     }
+
 }
