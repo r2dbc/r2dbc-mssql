@@ -45,6 +45,7 @@ public interface SslConfiguration {
 
     /**
      * @return the {@link SslProvider}.
+     * @throws GeneralSecurityException if setting up the SSL provider fails.
      * @since 0.8.3
      */
     SslProvider getSslProvider() throws GeneralSecurityException;
