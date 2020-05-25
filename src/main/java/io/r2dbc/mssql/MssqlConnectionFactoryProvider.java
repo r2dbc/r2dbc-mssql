@@ -25,7 +25,6 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import java.io.File;
-import java.time.Duration;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -122,97 +121,25 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
 
         MssqlConnectionConfiguration.Builder builder = MssqlConnectionConfiguration.builder();
 
-        String applicationName = connectionFactoryOptions.getValue(APPLICATION_NAME);
-        if (applicationName != null) {
-            builder.applicationName(applicationName);
-        }
+        OptionMapper mapper = OptionMapper.create(connectionFactoryOptions);
 
-        Boolean ssl = connectionFactoryOptions.getValue(SSL);
-        if (ssl != null && ssl) {
-            builder.enableSsl();
-        }
+        mapper.from(APPLICATION_NAME).to(builder::applicationName);
+        mapper.from(CONNECTION_ID).map(OptionMapper::toUuid).to(builder::connectionId);
+        mapper.from(CONNECT_TIMEOUT).map(OptionMapper::toDuration).to(builder::connectTimeout);
+        mapper.from(DATABASE).to(builder::database);
+        mapper.from(HOSTNAME_IN_CERTIFICATE).to(builder::hostNameInCertificate);
+        mapper.from(PORT).map(OptionMapper::toInteger).to(builder::port);
+        mapper.from(PREFER_CURSORED_EXECUTION).map(OptionMapper::toStringPredicate).to(builder::preferCursoredExecution);
+        mapper.from(SEND_STRING_PARAMETERS_AS_UNICODE).map(OptionMapper::toBoolean).to(builder::sendStringParametersAsUnicode);
+        mapper.from(SSL).to(builder::enableSsl);
+        mapper.from(SSL_CONTEXT_BUILDER_CUSTOMIZER).to(builder::sslContextBuilderCustomizer);
+        mapper.from(TRUST_STORE).map(OptionMapper::toFile).to(builder::trustStore);
+        mapper.from(TRUST_STORE_TYPE).to(builder::trustStoreType);
+        mapper.from(TRUST_STORE_PASSWORD).map(it -> it instanceof String ? ((String) it).toCharArray() : (char[]) it).to(builder::trustStorePassword);
 
-        String hostNameInCertificate = connectionFactoryOptions.getValue(HOSTNAME_IN_CERTIFICATE);
-
-        if (hostNameInCertificate != null) {
-            builder.hostNameInCertificate(hostNameInCertificate);
-        }
-
-        Integer port = connectionFactoryOptions.getValue(PORT);
-        if (port != null) {
-            builder.port(port);
-        }
-
-        UUID connectionId = connectionFactoryOptions.getValue(CONNECTION_ID);
-        if (connectionId != null) {
-            builder.connectionId(connectionId);
-        }
-
-        Duration connectTimeout = connectionFactoryOptions.getValue(CONNECT_TIMEOUT);
-        if (connectTimeout != null) {
-            builder.connectTimeout(connectTimeout);
-        }
-
-        Object preferCursoredExecution = connectionFactoryOptions.getValue(PREFER_CURSORED_EXECUTION);
-
-        if (preferCursoredExecution instanceof Predicate) {
-            builder.preferCursoredExecution((Predicate<String>) preferCursoredExecution);
-        }
-
-        if (preferCursoredExecution instanceof Boolean) {
-            builder.preferCursoredExecution((boolean) preferCursoredExecution);
-        }
-
-        if (preferCursoredExecution instanceof String) {
-
-            String value = (String) preferCursoredExecution;
-            if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
-                builder.preferCursoredExecution((Boolean.parseBoolean(value)));
-            } else {
-
-                try {
-                    Object predicate = Class.forName(value).getDeclaredConstructor().newInstance();
-                    if (predicate instanceof Predicate) {
-                        builder.preferCursoredExecution((Predicate<String>) predicate);
-                    } else {
-                        throw new IllegalArgumentException("Value '" + value + "' must be an instance of Predicate");
-                    }
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalArgumentException("Cannot instantiate '" + value + "'", e);
-                }
-            }
-        }
-
-        Object sendStringParametersAsUnicode = connectionFactoryOptions.getValue(SEND_STRING_PARAMETERS_AS_UNICODE);
-        if (sendStringParametersAsUnicode instanceof Boolean) {
-            builder.sendStringParametersAsUnicode((boolean) sendStringParametersAsUnicode);
-        }
-
-        if (sendStringParametersAsUnicode instanceof String) {
-            builder.sendStringParametersAsUnicode((Boolean.parseBoolean(sendStringParametersAsUnicode.toString())));
-        }
-
-        builder.database(connectionFactoryOptions.getValue(DATABASE));
         builder.host(connectionFactoryOptions.getRequiredValue(HOST));
         builder.password(connectionFactoryOptions.getRequiredValue(PASSWORD));
         builder.username(connectionFactoryOptions.getRequiredValue(USER));
-        builder.applicationName(connectionFactoryOptions.getRequiredValue(USER));
-
-        if (connectionFactoryOptions.hasOption(TRUST_STORE)) {
-            builder.trustStore(connectionFactoryOptions.getRequiredValue(TRUST_STORE));
-        }
-
-        if (connectionFactoryOptions.hasOption(TRUST_STORE_PASSWORD)) {
-            builder.trustStorePassword(connectionFactoryOptions.getRequiredValue(TRUST_STORE_PASSWORD));
-        }
-
-        if (connectionFactoryOptions.hasOption(TRUST_STORE_TYPE)) {
-            builder.trustStoreType(connectionFactoryOptions.getRequiredValue(TRUST_STORE_TYPE));
-        }
-
-        if (connectionFactoryOptions.hasOption(SSL_CONTEXT_BUILDER_CUSTOMIZER)) {
-            builder.sslContextBuilderCustomizer(connectionFactoryOptions.getRequiredValue(SSL_CONTEXT_BUILDER_CUSTOMIZER));
-        }
 
         MssqlConnectionConfiguration configuration = builder.build();
         if (this.logger.isDebugEnabled()) {
