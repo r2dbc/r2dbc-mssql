@@ -1,6 +1,16 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.8.3.RELEASE
+------------------
+* Upgrade dependencies #155
+* Add sslContextBuilderCustomizer(Function<SslContextBuilder, SslContextBuilder>) #152
+* Issue inserting byte objects when size is greater than 8000 and and less than 65535 bytes #151
+* Add support for configuring a custom trust store #150
+* Add BlockHound to integration tests #149
+* Allow custom trust store for server certificate verification. #148
+* Multiple TDS chunks in a single buffer cause connection reset on Azure SQL #142
+
 0.8.2.RELEASE
 ------------------
 * Upgrade build and test dependencies #146
