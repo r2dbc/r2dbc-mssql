@@ -21,7 +21,7 @@ Next steps:
 
 ## Code of Conduct
 
-This project is governed by the [Spring Code of Conduct](CODE_OF_CONDUCT.adoc). By participating, you are expected to uphold this code of conduct. Please report unacceptable behavior to [spring-code-of-conduct@pivotal.io](mailto:spring-code-of-conduct@pivotal.io).
+This project is governed by the [R2DBC Code of Conduct](https://github.com/r2dbc/.github/blob/main/CODE_OF_CONDUCT.adoc). By participating, you are expected to uphold this code of conduct. Please report unacceptable behavior to [info@r2dbc.io](mailto:info@r2dbc.io).
 
 ## Getting Started
 
@@ -253,8 +253,8 @@ Logging facilities:
 
 Having trouble with R2DBC? We'd love to help!
 
-* Check the [spec documentation](https://r2dbc.io/spec/0.8.0.M8/spec/html/), and [Javadocs](https://r2dbc.io/spec/0.8.0.M8/api/).
-* If you are upgrading, check out the [changelog](https://r2dbc.io/spec/0.8.0.M8/CHANGELOG.txt) for "new and noteworthy" features.
+* Check the [spec documentation](https://r2dbc.io/spec/0.8.0.RELEASE/spec/html/), and [Javadoc](https://r2dbc.io/spec/0.8.0.RELEASE/api/).
+* If you are upgrading, check out the [changelog](https://r2dbc.io/spec/0.8.0.RELEASE/CHANGELOG.txt) for "new and noteworthy" features.
 * Ask a question - we monitor [stackoverflow.com](https://stackoverflow.com) for questions
   tagged with [`r2dbc`](https://stackoverflow.com/tags/r2dbc). 
   You can also chat with the community on [Gitter](https://gitter.im/r2dbc/r2dbc).
@@ -272,10 +272,9 @@ If you want to raise an issue, please follow the recommendations below:
 * If possible try to create a test-case or project that replicates the issue. 
 Attach a link to your code or a compressed file containing your code.
 
-
 ## Building from Source
 
-You don't need to build from source to use R2DBC MSSQL (binaries in [repo.spring.io](https://repo.spring.io)), but if you want to try out the latest and greatest, R2DBC MSSQL can be easily built with the
+You don't need to build from source to use R2DBC MSSQL (binaries in Maven Central), but if you want to try out the latest and greatest, R2DBC MSSQL can be easily built with the
 [maven wrapper](https://github.com/takari/maven-wrapper). You also need JDK 1.8 and Docker to run integration tests.
 
 ```bash
@@ -284,7 +283,7 @@ You don't need to build from source to use R2DBC MSSQL (binaries in [repo.spring
 
 If you want to build with the regular `mvn` command, you will need [Maven v3.5.0 or above](https://maven.apache.org/run-maven/index.html).
 
-_Also see [CONTRIBUTING.adoc](CONTRIBUTING.adoc) if you wish to submit pull requests, and in particular please sign the [Contributor's Agreement](https://cla.pivotal.io/sign/spring) before your first change, however trivial._
+_Also see [CONTRIBUTING.adoc](https://github.com/r2dbc/.github/blob/main/CONTRIBUTING.adoc) if you wish to submit pull requests, and in particular please sign the [Contributor's Agreement](https://cla.pivotal.io/sign/reactor) before your first change, however trivial._
 
 ### Running JMH Benchmarks
 
