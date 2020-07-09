@@ -23,6 +23,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.util.Optional;
+
 /**
  * Integration tests for {@link ParametrizedMssqlStatement}.
  *
@@ -54,4 +56,20 @@ class ParametrizedMssqlStatementIntegrationTests extends IntegrationTestSupport 
             .expectNext(1, 1, 1)
             .verifyComplete();
     }
+
+    @Test
+    void shouldDecodeNull() {
+
+        shouldExecuteBatch();
+
+        Flux.from(connection.createStatement("SELECT null, first_name FROM r2dbc_example")
+            .execute())
+            .flatMap(result -> result.map((row, rowMetadata) -> {
+                return Optional.ofNullable(row.get(0));
+            }))
+            .as(StepVerifier::create)
+            .expectNext(Optional.empty(), Optional.empty(), Optional.empty())
+            .verifyComplete();
+    }
+
 }
