@@ -20,6 +20,7 @@ import io.r2dbc.mssql.util.IntegrationTestSupport;
 import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -31,6 +32,10 @@ import java.util.Optional;
  * @author Mark Paluch
  */
 class ParametrizedMssqlStatementIntegrationTests extends IntegrationTestSupport {
+
+    static {
+        Hooks.onOperatorDebug();
+    }
 
     @Test
     void shouldExecuteBatch() {
@@ -55,6 +60,33 @@ class ParametrizedMssqlStatementIntegrationTests extends IntegrationTestSupport 
             .as(StepVerifier::create)
             .expectNext(1, 1, 1)
             .verifyComplete();
+    }
+
+    @Test
+    void failureShouldNotLockUpConnection() {
+
+        connection.createStatement("DROP TABLE r2dbc_example").execute()
+            .flatMap(MssqlResult::getRowsUpdated)
+            .onErrorResume(e -> Mono.empty())
+            .thenMany(connection.createStatement("CREATE TABLE r2dbc_example (" +
+                "id int NOT NULL, " +
+                "first_name varchar(255), " +
+                "last_name varchar(255))")
+                .execute().flatMap(MssqlResult::getRowsUpdated).then())
+            .as(StepVerifier::create)
+            .verifyComplete();
+
+        for (int i = 0; i < 10; i++) {
+
+            connection.createStatement("INSERT INTO r2dbc_example (id, first_name) VALUES(@P1, @P2)")
+                .bindNull("@P1", Integer.class)
+                .bind("@P2", "foo")
+                .returnGeneratedValues()
+                .execute()
+                .flatMap(Result::getRowsUpdated)
+                .as(StepVerifier::create)
+                .verifyError();
+        }
     }
 
     @Test

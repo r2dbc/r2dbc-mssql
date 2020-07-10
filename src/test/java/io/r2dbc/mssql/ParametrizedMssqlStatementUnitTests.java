@@ -176,7 +176,7 @@ class ParametrizedMssqlStatementUnitTests {
 
         Binding binding = statement.getBindings().getCurrent();
 
-        statement.execute().subscribe();
+        statement.execute().flatMap(MssqlResult::getRowsUpdated).subscribe();
 
         assertThat(this.statementCache.getHandle(sql, binding)).isEqualTo(1);
     }
@@ -228,6 +228,6 @@ class ParametrizedMssqlStatementUnitTests {
         ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(testClient, this.connectionOptions, sql).fetchSize(0);
 
         statement.bind("firstname", "");
-        statement.execute().as(StepVerifier::create).verifyError(ProtocolException.class);
+        statement.execute().flatMap(MssqlResult::getRowsUpdated).as(StepVerifier::create).verifyError(ProtocolException.class);
     }
 }
