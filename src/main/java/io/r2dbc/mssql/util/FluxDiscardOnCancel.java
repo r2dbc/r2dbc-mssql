@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Draining data is required to complete a particular request/response window and clear the protocol state as client code expects to start a request/response conversation without any previous
  * response state.
  *
+ * @param <T> produced type
  * @author Mark Paluch
  */
 class FluxDiscardOnCancel<T> extends FluxOperator<T, T> {

@@ -144,18 +144,7 @@ final class RpcQueryMessageFlow {
 
                 state.update(message);
 
-                if (message.getClass() == ErrorToken.class) {
-                    state.fail(ExceptionFactory.withSql(query).createException((ErrorToken) message));
-                    return;
-                }
-
                 handleMessage(client, 0, null, state, message, sink, cursorComplete);
-            })
-            .doOnComplete(() -> {
-
-                if (state.hasSeenError) {
-                    throw state.exception;
-                }
             })
             .filter(WINDOW_PREDICATE)
             .doOnCancel(cursorComplete);
@@ -207,11 +196,6 @@ final class RpcQueryMessageFlow {
                 }
 
                 state.update(message);
-
-                if (message.getClass() == ErrorToken.class) {
-                    sink.error(ExceptionFactory.withSql(query).createException((ErrorToken) message));
-                    return;
-                }
 
                 handleMessage(client, fetchSize, outbound, state, message, sink, cursorComplete);
             })
@@ -289,11 +273,6 @@ final class RpcQueryMessageFlow {
                 }
 
                 state.update(message);
-
-                if (message.getClass() == ErrorToken.class) {
-                    sink.error(ExceptionFactory.withSql(query).createException((ErrorToken) message));
-                    return;
-                }
 
                 handleMessage(client, fetchSize, outbound, state, message, sink, cursorComplete);
             })
@@ -614,20 +593,7 @@ final class RpcQueryMessageFlow {
 
         volatile boolean cancelRequested;
 
-        volatile RuntimeException exception;
-
         Phase phase = Phase.NONE;
-
-        public void fail(RuntimeException exception) {
-
-            this.hasSeenError = true;
-            this.phase = Phase.ERROR;
-            if (this.exception == null) {
-                this.exception = exception;
-            } else {
-                this.exception.addSuppressed(exception);
-            }
-        }
 
         boolean wantsMore() {
             return !this.cancelRequested;
@@ -678,16 +644,12 @@ final class RpcQueryMessageFlow {
         @Override
         public void run() {
 
+            this.downstream.onComplete();
+
             Subscription subscription = get();
 
             if (subscription != null) {
                 subscription.cancel();
-            }
-
-            if (this.state.hasSeenError && this.state.exception != null) {
-                this.downstream.onError(this.state.exception);
-            } else {
-                this.downstream.onComplete();
             }
         }
     }

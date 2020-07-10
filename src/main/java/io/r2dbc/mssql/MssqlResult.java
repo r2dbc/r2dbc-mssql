@@ -58,7 +58,7 @@ public final class MssqlResult implements Result {
 
     private volatile MssqlRowMetadata rowMetadata;
 
-    private volatile Throwable throwable;
+    private volatile RuntimeException throwable;
 
     private MssqlResult(String sql, ConnectionContext context, Codecs codecs, Flux<Message> messages) {
 
@@ -91,16 +91,8 @@ public final class MssqlResult implements Result {
     @Override
     public Mono<Integer> getRowsUpdated() {
 
-        return messages
+        return this.messages
             .<Long>handle((message, sink) -> {
-
-                if (AbstractDoneToken.isDone(message)) {
-                    Throwable exception = this.throwable;
-                    if (exception != null) {
-                        sink.error(exception);
-                        return;
-                    }
-                }
 
                 if (message instanceof AbstractDoneToken) {
 
@@ -130,6 +122,11 @@ public final class MssqlResult implements Result {
                 }
 
                 ReferenceCountUtil.release(message);
+            }).doOnComplete(() -> {
+                RuntimeException exception = this.throwable;
+                if (exception != null) {
+                    throw exception;
+                }
             }).reduce(Long::sum).map(Long::intValue);
     }
 
@@ -138,9 +135,8 @@ public final class MssqlResult implements Result {
 
         Assert.requireNonNull(f, "Mapping function must not be null");
 
-        return messages
-            .handle((message, sink) -> {
-
+        return this.messages
+            .<T>handle((message, sink) -> {
 
                 if (message.getClass() == ColumnMetadataToken.class) {
 
@@ -178,14 +174,6 @@ public final class MssqlResult implements Result {
                     return;
                 }
 
-                if (AbstractDoneToken.isDone(message)) {
-                    Throwable exception = this.throwable;
-                    if (exception != null) {
-                        sink.error(exception);
-                        return;
-                    }
-                }
-
                 if (message instanceof ErrorToken) {
 
                     R2dbcException mssqlException = ExceptionFactory.createException((ErrorToken) message, this.sql);
@@ -201,6 +189,11 @@ public final class MssqlResult implements Result {
                 }
 
                 ReferenceCountUtil.release(message);
+            }).doOnComplete(() -> {
+                RuntimeException exception = this.throwable;
+                if (exception != null) {
+                    throw exception;
+                }
             });
     }
 
