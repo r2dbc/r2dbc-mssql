@@ -1,6 +1,15 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.8.4.RELEASE
+------------------
+* Ensure no snapshots get referenced in release builds #165
+* Add integration tests for null decode #163
+* Failed statement with returnGeneratedValues enabled causes onErrorDropped #162
+* Rename master branch to main #159
+* Upgrade to Reactor Dysprosium SR9 #158
+* Upgrade to Reactor Dysprosium SR8 #157
+
 0.8.3.RELEASE
 ------------------
 * Upgrade dependencies #155
