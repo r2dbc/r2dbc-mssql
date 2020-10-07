@@ -29,6 +29,8 @@ import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+
 import static io.r2dbc.mssql.message.type.TypeInformation.builder;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -150,6 +152,24 @@ class StringCodecUnitTests {
         String value = StringCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), String.class);
 
         assertThat(value).isEqualTo("foobar");
+    }
+
+    @Test
+    void shouldDecodeVarcharMaxSplitCharacter() {
+
+        TypeInformation type =
+            builder().withMaxLength(50).withLengthStrategy(LengthStrategy.PARTLENTYPE).withPrecision(50).withServerType(SqlServerType.NVARCHARMAX).withCharset(StandardCharsets.UTF_16LE).build();
+
+        ByteBuf data = HexUtils.decodeToByteBuf("62 00 00 00 00 00 00 00 " +
+            "2d 00 00 00 " +
+            "6c 00 65 00 61 00 6e 00 6e 00 65 00 2e 00 61 00 73 00 68 00 74 00 6f 00 6e 00 40 00 64 00 64 00 2d 00 70 00 75 00 62 00 2e 00 63 00 6f " +
+            "35 00 00 00 " +
+            "00 6d 00 2c 00 64 00 61 00 76 00 69 00 64 00 2e 00 6d 00 61 00 61 00 73 00 73 00 65 00 6e 00 40 00 64 00 64 00 2d 00 70 00 75 00 62 00 2e 00 63 00 6f 00 6d 00 " +
+            "00 00 00 00");
+
+        String value = StringCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), String.class);
+
+        assertThat(value).isEqualTo("leanne.ashton@dd-pub.com,david.maassen@dd-pub.com");
     }
 
     @Test
