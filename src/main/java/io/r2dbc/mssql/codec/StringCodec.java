@@ -44,6 +44,7 @@ import java.util.UUID;
  * </ul>
  *
  * @author Mark Paluch
+ * @author Anton Duyun
  */
 final class StringCodec extends AbstractCodec<String> {
 
@@ -57,7 +58,6 @@ final class StringCodec extends AbstractCodec<String> {
         SqlServerType.VARCHARMAX, SqlServerType.NVARCHARMAX,
         SqlServerType.TEXT, SqlServerType.NTEXT,
         SqlServerType.GUID);
-
 
     private StringCodec() {
         super(String.class);
@@ -153,4 +153,5 @@ final class StringCodec extends AbstractCodec<String> {
         // Use PLP encoding on Yukon and later with long values and OUT parameters
         return (!isShortValue || direction == RpcDirection.OUT);
     }
+
 }
