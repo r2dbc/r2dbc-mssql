@@ -26,9 +26,11 @@ import io.r2dbc.mssql.message.type.PlpLength;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.EncodedAssert;
+import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import io.r2dbc.spi.Clob;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
 import java.nio.charset.StandardCharsets;
@@ -124,7 +126,7 @@ class ClobCodecUnitTests {
         TypeInformation varchar =
             builder().withServerType(SqlServerType.VARCHAR).withLengthStrategy(LengthStrategy.PARTLENTYPE).withCharset(StandardCharsets.US_ASCII).build();
 
-        ByteBuf buffer = TestByteBufAllocator.TEST.buffer(12 + 24);
+        ByteBuf buffer = TestByteBufAllocator.TEST.heapBuffer(12 + 24);
         PlpLength.of(24).encode(buffer);
 
         Length.of(8).encode(buffer, varchar);
@@ -167,6 +169,70 @@ class ClobCodecUnitTests {
             .verifyComplete();
 
         assertThat(buffer.refCnt()).isZero();
+    }
+
+    @Test
+    void shouldReleaseEmptyBuffer() {
+
+        TypeInformation type =
+            builder().withMaxLength(50).withLengthStrategy(LengthStrategy.PARTLENTYPE).withPrecision(50).withServerType(SqlServerType.NVARCHARMAX).withCharset(StandardCharsets.UTF_16LE).build();
+
+        ByteBuf data = HexUtils.decodeToByteBuf("00 00 00 00 00 00 00 00");
+
+        Clob clob = ClobCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), Clob.class);
+        data.release();
+
+        Flux.from(clob.stream())
+            .as(StepVerifier::create)
+            .verifyComplete();
+
+        assertThat(data.refCnt()).isZero();
+    }
+
+    @Test
+    void shouldDecodeVarcharMaxSplitCharacter() {
+
+        TypeInformation type =
+            builder().withMaxLength(50).withLengthStrategy(LengthStrategy.PARTLENTYPE).withPrecision(50).withServerType(SqlServerType.NVARCHARMAX).withCharset(StandardCharsets.UTF_16LE).build();
+
+        ByteBuf data = HexUtils.decodeToByteBuf("62 00 00 00 00 00 00 00 " +
+            "2d 00 00 00 " +
+            "6c 00 65 00 61 00 6e 00 6e 00 65 00 2e 00 61 00 73 00 68 00 74 00 6f 00 6e 00 40 00 64 00 64 00 2d 00 70 00 75 00 62 00 2e 00 63 00 6f " +
+            "35 00 00 00 " +
+            "00 6d 00 2c 00 64 00 61 00 76 00 69 00 64 00 2e 00 6d 00 61 00 61 00 73 00 73 00 65 00 6e 00 40 00 64 00 64 00 2d 00 70 00 75 00 62 00 2e 00 63 00 6f 00 6d 00 " +
+            "00 00 00 00");
+
+        Clob clob = ClobCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), Clob.class);
+        data.release();
+
+        Flux.from(clob.stream())
+            .as(StepVerifier::create)
+            .expectNext("leanne.ashton@dd-pub.c")
+            .expectNext("om,david.maassen@dd-pub.com")
+            .verifyComplete();
+
+        assertThat(data.refCnt()).isZero();
+    }
+
+    @Test
+    void shouldReportRemainderInDecodeBuffer() {
+
+        TypeInformation type =
+            builder().withMaxLength(50).withLengthStrategy(LengthStrategy.PARTLENTYPE).withPrecision(50).withServerType(SqlServerType.NVARCHARMAX).withCharset(StandardCharsets.UTF_16LE).build();
+
+        ByteBuf data = HexUtils.decodeToByteBuf("2d 00 00 00 00 00 00 00 " +
+            "2d 00 00 00 " +
+            "6c 00 65 00 61 00 6e 00 6e 00 65 00 2e 00 61 00 73 00 68 00 74 00 6f 00 6e 00 40 00 64 00 64 00 2d 00 70 00 75 00 62 00 2e 00 63 00 6f");
+
+        Clob clob = ClobCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), Clob.class);
+        data.release();
+
+        Flux.from(clob.stream())
+            .as(StepVerifier::create)
+            .expectNext("leanne.ashton@dd-pub.c")
+            .verifyError(ClobCodec.ClobDecodeException.class);
+
+        assertThat(data.refCnt()).isZero();
     }
 
     @Test
