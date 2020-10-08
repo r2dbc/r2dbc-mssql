@@ -18,6 +18,9 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.util.ReferenceCountUtil;
 import io.r2dbc.mssql.codec.RpcParameterContext.CharacterValueContext;
 import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.LengthStrategy;
@@ -26,14 +29,23 @@ import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Clob;
+import io.r2dbc.spi.R2dbcNonTransientException;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CoderResult;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.MalformedInputException;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Codec for character values that are represented as {@link Clob}.
@@ -92,7 +104,7 @@ public class ClobCodec extends AbstractCodec<Clob> {
 
         if (decodable.getType().getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
 
-            PlpLength plpLength = PlpLength.decode(buffer, decodable.getType());
+            PlpLength plpLength = buffer.isReadable() ? PlpLength.decode(buffer, decodable.getType()) : PlpLength.nullLength();
             length = Length.of(Math.toIntExact(plpLength.getLength()), plpLength.isNull());
         } else {
             length = Length.decode(buffer, decodable.getType());
@@ -134,65 +146,133 @@ public class ClobCodec extends AbstractCodec<Clob> {
      */
     static class ScalarClob implements Clob {
 
-        final TypeInformation type;
+        private final TypeInformation type;
 
         private final Length valueLength;
 
-        final ByteBuf buffer;
+        private final ByteBuf buffer;
+
+        private final CompositeByteBuf remainder;
 
         ScalarClob(TypeInformation type, Length valueLength, ByteBuf buffer) {
             this.type = type;
             this.valueLength = valueLength;
             this.buffer = buffer.touch("ScalarClob");
+            this.remainder = buffer.alloc().compositeBuffer();
         }
 
         @Override
         public Publisher<CharSequence> stream() {
 
-            return Flux.<CharSequence>generate(sink -> {
+            CharsetDecoder decoder = this.type.getCharset().newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT);
 
-                try {
-                    if (!this.buffer.isReadable()) {
-                        sink.complete();
-                        return;
-                    }
+            AtomicReference<CoderResult> result = new AtomicReference<>();
+            AtomicInteger counter = new AtomicInteger();
+            return createBufferStream(this.buffer, this.valueLength, this.type).<CharSequence>handle((buffer, sink) -> {
 
-                    Length length;
-                    if (this.type.getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
-                        length = Length.decode(this.buffer, this.type);
-                    } else {
-                        length = this.valueLength;
-                    }
-
-                    String value = this.buffer.toString(this.buffer.readerIndex(), length.getLength(), this.type.getCharset());
-                    this.buffer.skipBytes(length.getLength());
-
-                    sink.next(value);
-                } catch (Exception e) {
-                    sink.error(e);
+                if (!buffer.isReadable()) {
+                    // ensure release if not consumed
+                    buffer.release();
+                    return;
                 }
-            }).doOnCancel(() -> {
-                if (this.buffer.refCnt() > 0) {
-                    this.buffer.release();
+
+                this.remainder.addComponent(true, buffer);
+                ByteBuffer byteBuffer = this.remainder.nioBuffer();
+
+                int size = byteBuffer.remaining();
+                CharBuffer outBuffer = CharBuffer.allocate(byteBuffer.remaining());
+
+                CoderResult decode;
+                synchronized (decoder) {
+                    decode = decoder.decode(byteBuffer, outBuffer, false);
                 }
+
+                result.set(decode);
+                int consumed = size - byteBuffer.remaining();
+
+                if (consumed > 0) {
+                    this.remainder.skipBytes(consumed);
+                } else {
+                    sink.error(new MalformedInputException(consumed));
+                    return;
+                }
+
+                if (counter.incrementAndGet() % 16 == 0) {
+                    this.remainder.discardSomeReadBytes();
+                }
+
+                outBuffer.flip();
+                sink.next(outBuffer.toString());
+            }).doOnComplete(() -> {
+
+                CoderResult coderResult = result.get();
+
+                if (coderResult != null && coderResult.isError()) {
+
+                    if (coderResult.isMalformed()) {
+                        throw new ClobDecodeException("Cannot decode CLOB data. Malformed character input");
+                    }
+                    if (coderResult.isUnmappable()) {
+                        throw new ClobDecodeException("Cannot decode CLOB data. Unmappable characters");
+                    }
+                }
+
+                if (this.remainder.isReadable()) {
+                    throw new ClobDecodeException("Cannot decode CLOB data. Buffer has remainder: " + ByteBufUtil.hexDump(this.remainder));
+                }
+
             })
-                .doAfterTerminate(() -> {
-
-                    if (this.buffer.refCnt() > 0) {
-                        this.buffer.release();
-                    }
+                .doFinally(s -> {
+                    ReferenceCountUtil.safeRelease(this.remainder);
                 });
         }
 
         @Override
         public Publisher<Void> discard() {
-
-            return Mono.fromRunnable(() -> {
-
-                if (this.buffer.refCnt() > 0) {
-                    this.buffer.release();
-                }
-            });
+            return Mono.fromRunnable(this::releaseBuffers);
         }
+
+        private void releaseBuffers() {
+
+            ReferenceCountUtil.safeRelease(this.remainder);
+            ReferenceCountUtil.safeRelease(this.buffer);
+        }
+
+        private static Flux<ByteBuf> createBufferStream(ByteBuf plpStream, Length valueLength, TypeInformation type) {
+
+            return Flux.<ByteBuf>generate(sink -> {
+
+                try {
+                    if (!plpStream.isReadable()) {
+                        sink.complete();
+                        return;
+                    }
+
+                    Length length;
+                    if (type.getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
+                        length = Length.decode(plpStream, type);
+                    } else {
+                        length = valueLength;
+                    }
+
+                    sink.next(plpStream.readRetainedSlice(length.getLength()));
+                } catch (Exception e) {
+                    sink.error(e);
+                }
+            })
+                .doFinally(s -> {
+                    ReferenceCountUtil.safeRelease(plpStream);
+                });
+        }
+
     }
+
+    static class ClobDecodeException extends R2dbcNonTransientException {
+
+        public ClobDecodeException(String reason) {
+            super(reason);
+        }
+
+    }
+
 }
