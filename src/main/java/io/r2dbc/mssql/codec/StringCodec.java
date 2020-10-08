@@ -18,6 +18,7 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
 import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.LengthStrategy;
 import io.r2dbc.mssql.message.type.PlpLength;
@@ -123,17 +124,19 @@ final class StringCodec extends AbstractCodec<String> {
 
         if (typeInformation.getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
 
-            StringBuilder result = new StringBuilder();
+            CompositeByteBuf result = buffer.alloc().compositeBuffer();
 
-            while (buffer.isReadable()) {
+            try {
+                while (buffer.isReadable()) {
 
-                Length chunkLength = Length.decode(buffer, typeInformation);
+                    Length chunkLength = Length.decode(buffer, typeInformation);
+                    result.addComponent(true, buffer.readRetainedSlice(chunkLength.getLength()));
+                }
 
-                result.append(buffer.toString(buffer.readerIndex(), chunkLength.getLength(), charset));
-                buffer.skipBytes(chunkLength.getLength());
+                return result.toString(charset);
+            } finally {
+                result.release();
             }
-
-            return result.toString();
         }
 
         String value = buffer.toString(buffer.readerIndex(), length.getLength(), charset);
