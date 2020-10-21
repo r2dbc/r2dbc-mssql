@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 /**
  * TDS protocol support, message envelopes and encoding/decoding helpers.
  */

@@ -53,4 +53,5 @@ final class ShortCodec extends AbstractNumericCodec<Short> {
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
         return RpcEncoding.wrap(NULL, SqlServerType.SMALLINT);
     }
+
 }

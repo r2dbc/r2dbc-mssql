@@ -30,9 +30,9 @@ public interface DataToken extends Message {
      */
     byte getType();
 
-
     /**
      * @return symbolic name of the {@link DataToken}.
      */
     String getName();
+
 }

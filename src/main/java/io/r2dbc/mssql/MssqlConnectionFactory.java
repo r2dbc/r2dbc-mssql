@@ -152,12 +152,12 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         return sb.toString();
     }
 
-
     static class MssqlRoutingException extends R2dbcNonTransientResourceException {
 
         public MssqlRoutingException(String reason) {
             super(reason);
         }
+
     }
 
 }

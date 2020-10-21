@@ -79,4 +79,5 @@ public interface MssqlStatement extends Statement {
      */
     @Override
     MssqlStatement fetchSize(int fetchSize);
+
 }

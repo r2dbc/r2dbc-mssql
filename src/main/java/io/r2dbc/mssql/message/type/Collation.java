@@ -655,9 +655,9 @@ public final class Collation {
             return this.serverCharset;
         }
 
-
         public final String toString() {
             return this.name;
         }
     }
+
 }

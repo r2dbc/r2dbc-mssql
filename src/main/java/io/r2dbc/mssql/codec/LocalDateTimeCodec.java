@@ -159,4 +159,5 @@ final class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
 
         throw new UnsupportedOperationException(String.format("Cannot encode [%s] to server type [%s]", value, type));
     }
+
 }

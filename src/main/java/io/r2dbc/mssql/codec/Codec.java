@@ -99,4 +99,5 @@ interface Codec<T> {
      * @return the Java type.
      */
     Class<T> getType();
+
 }

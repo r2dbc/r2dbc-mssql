@@ -122,4 +122,5 @@ public class ConnectionContext {
     public ConnectionContext withChannelId(String channelId) {
         return new ConnectionContext(this.applicationName, this.connectionId, channelId, this.connectionCounter, this.connectionIdPrefix);
     }
+
 }

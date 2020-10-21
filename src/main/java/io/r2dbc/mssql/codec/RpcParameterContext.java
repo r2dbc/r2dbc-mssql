@@ -153,7 +153,6 @@ public final class RpcParameterContext {
         return sb.toString();
     }
 
-
     /**
      * Marker interface for additional contextual information that are used for value encoding.
      */
@@ -162,6 +161,7 @@ public final class RpcParameterContext {
         public static ValueContext character(Collation collation, boolean sendStringParametersAsUnicode) {
             return new CharacterValueContext(collation, sendStringParametersAsUnicode);
         }
+
     }
 
     /**
@@ -185,5 +185,7 @@ public final class RpcParameterContext {
         public boolean isSendStringParametersAsUnicode() {
             return this.sendStringParametersAsUnicode;
         }
+
     }
+
 }

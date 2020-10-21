@@ -95,7 +95,6 @@ class Binding {
             builder.append('@').append(entry.getKey()).append(' ').append(entry.getValue().getFormalType());
         }
 
-
         formalRepresentation = builder.toString();
         this.formalRepresentation = formalRepresentation;
 
@@ -164,4 +163,5 @@ class Binding {
         sb.append(']');
         return sb.toString();
     }
+
 }

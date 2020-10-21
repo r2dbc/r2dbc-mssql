@@ -207,4 +207,5 @@ final class MssqlRowMetadata extends ColumnSource implements RowMetadata, Collec
     public void clear() {
         throw new UnsupportedOperationException();
     }
+
 }

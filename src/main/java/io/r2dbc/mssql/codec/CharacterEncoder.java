@@ -207,6 +207,7 @@ class CharacterEncoder {
         public String getFormalType() {
             return FORMAL_TYPE;
         }
+
     }
 
     private static class VarcharEncoded extends RpcEncoding.HintedEncoded {
@@ -221,5 +222,7 @@ class CharacterEncoder {
         public String getFormalType() {
             return FORMAL_TYPE;
         }
+
     }
+
 }

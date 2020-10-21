@@ -339,4 +339,5 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
     public enum ResetHeader {
         INSTANCE;
     }
+
 }

@@ -170,7 +170,6 @@ public final class RpcRequest implements ClientMessage, TokenStream {
 
         Assert.requireNonNull(allocator, "ByteBufAllocator must not be null");
 
-
         return Flux.defer(() -> {
 
             int name = 2 + (this.procName != null ? this.procName.length() * 2 : 0);
@@ -548,6 +547,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
             return new RpcRequest(AllHeaders.transactional(this.transactionDescriptor.toBytes(), 1), this.procName, this.procId, this.optionFlags, this.statusFlags,
                 new ArrayList<>(this.parameterDescriptors));
         }
+
     }
 
     /**
@@ -606,6 +606,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
         public byte getValue() {
             return (byte) this.optionByte;
         }
+
     }
 
     /**
@@ -646,6 +647,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
         public String getName() {
             return this.name;
         }
+
     }
 
     /**
@@ -701,6 +703,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
             sb.append(']');
             return sb.toString();
         }
+
     }
 
     /**
@@ -752,6 +755,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
             sb.append(']');
             return sb.toString();
         }
+
     }
 
     /**
@@ -816,6 +820,8 @@ public final class RpcRequest implements ClientMessage, TokenStream {
             sb.append(']');
             return sb.toString();
         }
+
     }
+
 }
 

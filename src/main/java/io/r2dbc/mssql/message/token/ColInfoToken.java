@@ -155,7 +155,6 @@ public class ColInfoToken extends AbstractDataToken {
         @Nullable
         private final String name;
 
-
         private ColInfo(byte column, byte table, byte status, @Nullable String name) {
             this.column = column;
             this.table = table;
@@ -191,5 +190,7 @@ public class ColInfoToken extends AbstractDataToken {
             sb.append(']');
             return sb.toString();
         }
+
     }
+
 }

@@ -702,6 +702,7 @@ public final class ReactorNettyClient implements Client {
                 }
             }
         }
+
     }
 
     /**
@@ -746,6 +747,7 @@ public final class ReactorNettyClient implements Client {
                 }
             });
         }
+
     }
 
     class TransactionListener implements EnvironmentChangeListener {
@@ -802,6 +804,7 @@ public final class ReactorNettyClient implements Client {
             ReactorNettyClient.this.transactionStatus = status;
             ReactorNettyClient.this.transactionDescriptor = descriptor;
         }
+
     }
 
     class CollationListener implements EnvironmentChangeListener {
@@ -815,6 +818,7 @@ public final class ReactorNettyClient implements Client {
                 ReactorNettyClient.this.databaseCollation = Optional.of(collation);
             }
         }
+
     }
 
     class RedirectListener implements EnvironmentChangeListener {
@@ -828,6 +832,7 @@ public final class ReactorNettyClient implements Client {
                 ReactorNettyClient.this.redirect = Optional.of(redirect);
             }
         }
+
     }
 
     interface Sinkable {
@@ -843,6 +848,7 @@ public final class ReactorNettyClient implements Client {
         public MssqlConnectionClosedException(String reason) {
             super(reason);
         }
+
     }
 
     static class MssqlConnectionException extends R2dbcNonTransientResourceException {
@@ -850,5 +856,7 @@ public final class ReactorNettyClient implements Client {
         public MssqlConnectionException(Throwable cause) {
             super(cause);
         }
+
     }
+
 }

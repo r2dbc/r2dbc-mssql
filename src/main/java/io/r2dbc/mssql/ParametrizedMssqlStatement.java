@@ -530,6 +530,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
             sb.append(']');
             return sb.toString();
         }
+
     }
 
     /**
@@ -545,7 +546,6 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
             this.name = name;
             this.position = position;
         }
-
 
         public String getName() {
             return this.name;
@@ -582,6 +582,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
             sb.append(']');
             return sb.toString();
         }
+
     }
 
     static final class Bindings {
@@ -630,4 +631,5 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         }
 
     }
+
 }

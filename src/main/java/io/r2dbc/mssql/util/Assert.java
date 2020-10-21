@@ -376,4 +376,5 @@ public final class Assert {
     private static String nullSafeGet(@Nullable Supplier<String> messageSupplier) {
         return (messageSupplier != null ? messageSupplier.get() : null);
     }
+
 }

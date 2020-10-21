@@ -287,4 +287,5 @@ public final class Encode {
     public static void rpcString(ByteBuf buffer, CharSequence value, Charset charset) {
         buffer.writeCharSequence(value, charset);
     }
+
 }

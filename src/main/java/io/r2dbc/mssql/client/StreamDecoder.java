@@ -312,7 +312,6 @@ final class StreamDecoder {
 
             } while (canReadChunk());
 
-
             if (hasNewHeader) {
                 return newState(this.remainder, this.aggregatedBody, this.header);
             }
@@ -348,5 +347,7 @@ final class StreamDecoder {
         int getChunkLength() {
             return getRequiredHeader().getLength() - Header.LENGTH;
         }
+
     }
+
 }

@@ -38,4 +38,5 @@ public interface TypeDecoderStrategy {
      * @param buffer   the data buffer.
      */
     void decode(MutableTypeInformation typeInfo, ByteBuf buffer);
+
 }

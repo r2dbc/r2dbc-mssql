@@ -26,7 +26,6 @@ public enum Type {
     SQL_BATCH(1), PRE_TDS7_LOGIN(2), RPC(3), TABULAR_RESULT(4), ATTENTION(6), BULK_LOAD_DATA(7), FED_AUTH_TOKEN(
         8), TX_MGR(14), TDS7_LOGIN(16), SSPI(17), PRE_LOGIN(18);
 
-
     Type(int value) {
         this.value = Integer.valueOf(value).byteValue();
     }

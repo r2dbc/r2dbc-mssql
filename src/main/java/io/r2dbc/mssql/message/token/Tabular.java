@@ -318,7 +318,6 @@ public final class Tabular implements Message {
          */
         FINISHED,
 
-
         /**
          * The {@link DecodeFunction} is not able to decode a {@link DataToken} from the given data buffer.
          */
@@ -429,6 +428,7 @@ public final class Tabular implements Message {
 
             return hasMessages;
         }
+
     }
 
     /**
@@ -445,5 +445,7 @@ public final class Tabular implements Message {
          * @return a decoded {@link DataToken} or a {@link DecodeFinished} marker.
          */
         DataToken tryDecode(byte type, ByteBuf buffer);
+
     }
+
 }

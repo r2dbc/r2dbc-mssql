@@ -56,4 +56,5 @@ final class EscapeAwareColumnMatcher {
 
         return exactMatch ? o1.equals(o2) : o1.equalsIgnoreCase(o2);
     }
+
 }

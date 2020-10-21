@@ -134,7 +134,6 @@ public enum SqlServerType {
         throw new IllegalArgumentException(String.format("Unknown type: %s", typeName));
     }
 
-
     public int getMaxLength() {
         return this.maxLength;
     }

@@ -25,4 +25,5 @@ public interface TokenStream {
      * @return symbolic name of the {@link TokenStream}.
      */
     String getName();
+
 }

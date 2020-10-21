@@ -134,4 +134,5 @@ public class Column implements Decodable {
     public int hashCode() {
         return Objects.hash(this.index, this.name, this.table);
     }
+
 }

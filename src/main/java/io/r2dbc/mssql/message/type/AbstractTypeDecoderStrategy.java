@@ -40,4 +40,5 @@ abstract class AbstractTypeDecoderStrategy implements TypeDecoderStrategy {
     public final boolean canDecode(ByteBuf buffer) {
         return buffer.readableBytes() >= this.typeDescriptorLength;
     }
+
 }

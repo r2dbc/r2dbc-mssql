@@ -267,4 +267,5 @@ public abstract class AbstractInfoToken extends AbstractDataToken {
             return Classification.UNKNOWN;
         }
     }
+
 }

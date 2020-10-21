@@ -67,4 +67,5 @@ final class QueryMessageFlow {
             }
         }
     }
+
 }

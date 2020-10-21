@@ -140,6 +140,7 @@ public class PlpEncoded extends Encoded {
         public void subscribe(CoreSubscriber<? super ByteBuf> actual) {
             this.source.subscribe(new ChunkSubscriber(actual, this.allocator, this.chunkSizeSupplier, this.withSizeHeaders));
         }
+
     }
 
     static class ChunkSubscriber extends AtomicLong implements CoreSubscriber<ByteBuf>, Subscription {
@@ -317,7 +318,6 @@ public class PlpEncoded extends Encoded {
 
                 this.actual.onError(t);
 
-
                 if (aggregator != null) {
                     aggregator.release();
                 }
@@ -368,5 +368,7 @@ public class PlpEncoded extends Encoded {
                 }
             }
         }
+
     }
+
 }

@@ -292,4 +292,5 @@ public final class MssqlConnection implements Connection {
         return Flux.defer(() -> function.apply(this.client.getTransactionStatus()))
             .then();
     }
+
 }

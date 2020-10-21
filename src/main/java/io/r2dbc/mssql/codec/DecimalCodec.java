@@ -89,7 +89,6 @@ final class DecimalCodec extends AbstractNumericCodec<BigDecimal> {
         return super.doDecode(buffer, length, type, valueType);
     }
 
-
     private static void encodeBigDecimal(ByteBuf buffer, BigDecimal value) {
 
         boolean isNegative = (value.signum() < 0);
@@ -127,5 +126,7 @@ final class DecimalCodec extends AbstractNumericCodec<BigDecimal> {
         public String getFormalType() {
             return super.getFormalType() + "(" + this.length + "," + this.scale + ")";
         }
+
     }
+
 }

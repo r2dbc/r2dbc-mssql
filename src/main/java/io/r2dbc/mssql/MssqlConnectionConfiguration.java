@@ -141,7 +141,6 @@ public final class MssqlConnectionConfiguration {
         return new Builder();
     }
 
-
     /**
      * Create a new configuration instance targeting the redirect.
      *
@@ -614,6 +613,7 @@ public final class MssqlConnectionConfiguration {
                 this.trustStoreType,
                 this.trustStorePassword, this.username);
         }
+
     }
 
     static class DefaultClientConfiguration implements ClientConfiguration {

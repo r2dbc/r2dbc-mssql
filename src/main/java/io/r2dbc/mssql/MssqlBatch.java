@@ -68,4 +68,5 @@ public final class MssqlBatch implements Batch {
         sb.append(']');
         return sb.toString();
     }
+
 }

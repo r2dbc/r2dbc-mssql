@@ -184,5 +184,7 @@ public final class DefaultCodecs implements Codecs {
         public String getName() {
             return typeInformation.getServerTypeName();
         }
+
     }
+
 }

@@ -23,7 +23,6 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TDSVersion;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.token.DoneToken;
-import io.r2dbc.mssql.message.token.EnvChangeToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.Login7;
 import io.r2dbc.mssql.message.token.Prelogin;
@@ -147,4 +146,5 @@ final class LoginFlow {
 
         throw ProtocolException.unsupported("Unsupported server version: " + serverVersion);
     }
+
 }

@@ -106,6 +106,7 @@ interface TypeDecoderStrategies {
             typeInfo.displaySize = this.displaySize;
             typeInfo.scale = this.scale;
         }
+
     }
 
     /**
@@ -138,6 +139,7 @@ interface TypeDecoderStrategies {
             typeInfo.displaySize = precision + 2;
             typeInfo.scale = scale;
         }
+
     }
 
     /**
@@ -174,6 +176,7 @@ interface TypeDecoderStrategies {
 
             typeInfo.lengthStrategy = LengthStrategy.BYTELENTYPE;
         }
+
     }
 
     /**
@@ -226,5 +229,7 @@ interface TypeDecoderStrategies {
             typeInfo.serverType = this.serverType;
             typeInfo.displaySize = typeInfo.precision;
         }
+
     }
+
 }

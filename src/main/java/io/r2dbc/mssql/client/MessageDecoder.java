@@ -51,4 +51,5 @@ interface MessageDecoder extends BiFunction<Header, ByteBuf, List<? extends Mess
         messages.forEach(sink::next);
         return true;
     }
+
 }

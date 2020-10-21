@@ -79,4 +79,5 @@ final class LoginConfiguration {
         }
         return builder;
     }
+
 }

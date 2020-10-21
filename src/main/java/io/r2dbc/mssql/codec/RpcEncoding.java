@@ -253,7 +253,6 @@ public final class RpcEncoding {
                 Encode.uShort(buffer, maxLength);
                 Encode.uShort(buffer, length);
 
-
                 return buffer;
             default:
                 throw new UnsupportedOperationException(lengthStrategy.toString());
@@ -276,5 +275,7 @@ public final class RpcEncoding {
         public String getFormalType() {
             return this.sqlServerType.toString();
         }
+
     }
+
 }

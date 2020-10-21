@@ -53,4 +53,5 @@ final class IntegerCodec extends AbstractNumericCodec<Integer> {
     Encoded doEncodeNull(ByteBufAllocator allocator) {
         return RpcEncoding.wrap(NULL, SqlServerType.INTEGER);
     }
+
 }

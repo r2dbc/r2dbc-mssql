@@ -103,4 +103,5 @@ final class OffsetDateTimeCodec extends AbstractCodec<OffsetDateTime> {
 
         Encode.uShort(buffer, localMinutesOffset);
     }
+
 }

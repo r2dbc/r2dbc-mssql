@@ -58,4 +58,5 @@ public final class ErrorToken extends AbstractInfoToken {
     public String getName() {
         return "ERROR";
     }
+
 }

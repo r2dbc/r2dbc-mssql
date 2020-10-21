@@ -126,4 +126,5 @@ public interface Client {
      * @return {@literal true} if the client is connected to a server.
      */
     boolean isConnected();
+
 }

@@ -73,4 +73,5 @@ final class BigIntegerCodec extends AbstractNumericCodec<BigInteger> {
 
         return super.doDecode(buffer, length, typeInformation, valueType);
     }
+
 }

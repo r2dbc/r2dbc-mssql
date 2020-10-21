@@ -150,4 +150,5 @@ public final class ExpectedHostnameX509TrustManager implements X509TrustManager 
             logger.debug(String.format("The name in certificate [%s] validated against server name [%s].", nameInCert, this.expectedHostName));
         }
     }
+
 }

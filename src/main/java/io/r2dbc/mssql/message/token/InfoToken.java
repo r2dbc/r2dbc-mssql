@@ -62,4 +62,5 @@ public final class InfoToken extends AbstractInfoToken {
     public String getName() {
         return "INFO";
     }
+
 }
