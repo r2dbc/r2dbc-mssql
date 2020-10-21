@@ -18,14 +18,17 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.spi.ConnectionFactoryOptions;
+import io.r2dbc.spi.Option;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.ALTERNATE_MSSQL_DRIVER;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.MSSQL_DRIVER;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.SSL_CONTEXT_BUILDER_CUSTOMIZER;
+import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.SSL_TUNNEL;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE_PASSWORD;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE_TYPE;
@@ -157,7 +160,7 @@ final class MssqlConnectionFactoryProviderTest {
             .option(MssqlConnectionFactoryProvider.SEND_STRING_PARAMETERS_AS_UNICODE, true)
             .build());
 
-        assertThat(factory.getConnectionOptions().isSendStringParametersAsUnicode()).isFalse();
+        assertThat(factory.getConnectionOptions().isSendStringParametersAsUnicode()).isTrue();
     }
 
     @Test
@@ -175,6 +178,7 @@ final class MssqlConnectionFactoryProviderTest {
         ClientConfiguration configuration = factory.getClientConfiguration();
 
         assertThat(configuration.isSslEnabled()).isTrue();
+        assertThat(configuration.getSslTunnelConfiguration().isSslEnabled()).isFalse();
     }
 
     @Test
@@ -192,6 +196,47 @@ final class MssqlConnectionFactoryProviderTest {
             .build());
 
         assertThatIllegalStateException().isThrownBy(() -> factory.getClientConfiguration().getSslProvider()).withMessageContaining("Works!");
+    }
+
+    @Test
+    void shouldConfigureWithSslTunnel() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(SSL, true)
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(Option.valueOf("sslTunnel"), true)
+            .build());
+
+        assertThat(factory.getClientConfiguration().getSslTunnelConfiguration().isSslEnabled()).isTrue();
+
+        factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(SSL, true)
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(Option.valueOf("sslTunnel"), false)
+            .build());
+
+        assertThat(factory.getClientConfiguration().getSslTunnelConfiguration().isSslEnabled()).isFalse();
+    }
+
+    @Test
+    void shouldConfigureWithSslTunnelCustomizer() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(SSL, true)
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(SSL_TUNNEL, Function.identity())
+            .build());
+
+        assertThat(factory.getClientConfiguration().getSslTunnelConfiguration().isSslEnabled()).isTrue();
     }
 
     @Test

@@ -19,6 +19,7 @@ package io.r2dbc.mssql;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.mssql.client.ssl.ExpectedHostnameX509TrustManager;
+import io.r2dbc.mssql.client.ssl.SslConfiguration;
 import io.r2dbc.mssql.client.ssl.TrustAllTrustManager;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.tds.Redirect;
@@ -92,6 +93,9 @@ public final class MssqlConnectionConfiguration {
 
     private final Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer;
 
+    @Nullable
+    private final Function<SslContextBuilder, SslContextBuilder> sslTunnelSslContextBuilderCustomizer;
+
     private final String username;
 
     @Nullable
@@ -105,7 +109,8 @@ public final class MssqlConnectionConfiguration {
 
     private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, Duration connectTimeout, @Nullable String database, String host, String hostNameInCertificate,
                                          CharSequence password, Predicate<String> preferCursoredExecution, int port, boolean sendStringParametersAsUnicode, boolean ssl,
-                                         Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer, @Nullable File trustStore, @Nullable String trustStoreType,
+                                         Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer,
+                                         @Nullable Function<SslContextBuilder, SslContextBuilder> sslTunnelSslContextBuilderCustomizer, @Nullable File trustStore, @Nullable String trustStoreType,
                                          @Nullable char[] trustStorePassword, String username) {
 
         this.applicationName = applicationName;
@@ -120,6 +125,7 @@ public final class MssqlConnectionConfiguration {
         this.sendStringParametersAsUnicode = sendStringParametersAsUnicode;
         this.ssl = ssl;
         this.sslContextBuilderCustomizer = sslContextBuilderCustomizer;
+        this.sslTunnelSslContextBuilderCustomizer = sslTunnelSslContextBuilderCustomizer;
         this.trustStore = trustStore;
         this.trustStoreType = trustStoreType;
         this.trustStorePassword = trustStorePassword;
@@ -160,12 +166,16 @@ public final class MssqlConnectionConfiguration {
         }
 
         return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, redirectServerName, hostNameInCertificate, this.password,
-            this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer, this.trustStore, this.trustStoreType,
+            this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer, this.sslTunnelSslContextBuilderCustomizer,
+            this.trustStore,
+            this.trustStoreType,
             this.trustStorePassword, this.username);
     }
 
     ClientConfiguration toClientConfiguration() {
-        return new DefaultClientConfiguration(this.connectTimeout, this.host, this.hostNameInCertificate, this.port, this.ssl, this.sslContextBuilderCustomizer, this.trustStore, this.trustStoreType,
+        return new DefaultClientConfiguration(this.connectTimeout, this.host, this.hostNameInCertificate, this.port, this.ssl, this.sslContextBuilderCustomizer,
+            this.sslTunnelSslContextBuilderCustomizer,
+            this.trustStore, this.trustStoreType,
             this.trustStorePassword);
     }
 
@@ -189,6 +199,7 @@ public final class MssqlConnectionConfiguration {
         sb.append(", sendStringParametersAsUnicode=").append(this.sendStringParametersAsUnicode);
         sb.append(", ssl=").append(this.ssl);
         sb.append(", sslContextBuilderCustomizer=").append(this.sslContextBuilderCustomizer);
+        sb.append(", sslTunnelSslContextBuilderCustomizer=").append(this.sslTunnelSslContextBuilderCustomizer);
         sb.append(", trustStore=\"").append(this.trustStore).append("\"");
         sb.append(", trustStorePassword=\"").append(repeat(this.trustStorePassword == null ? 0 : this.trustStorePassword.length, "*")).append('\"');
         sb.append(", trustStoreType=\"").append(this.trustStoreType).append("\"");
@@ -322,6 +333,9 @@ public final class MssqlConnectionConfiguration {
 
         private Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer = Function.identity();
 
+        @Nullable
+        private Function<SslContextBuilder, SslContextBuilder> sslTunnelSslContextBuilderCustomizer;
+
         private String username;
 
         @Nullable
@@ -393,6 +407,34 @@ public final class MssqlConnectionConfiguration {
          */
         public Builder enableSsl() {
             this.ssl = true;
+            return this;
+        }
+
+        /**
+         * Enable SSL tunnel usage to encrypt all traffic right from the connect phase. This option is required when using a SSL tunnel (e.g. stunnel or other SSL terminator) in front of the SQL
+         * server and it is not related to SQL Server's built-in SSL support.
+         *
+         * @return this {@link Builder}
+         * @since 0.8.5
+         */
+        public Builder enableSslTunnel() {
+            return enableSslTunnel(Function.identity());
+        }
+
+        /**
+         * Enable SSL tunnel usage to encrypt all traffic right from the connect phase. This option is required when using a SSL tunnel (e.g. stunnel or other SSL terminator) in front of the SQL
+         * server and it is not related to SQL Server's built-in SSL support.
+         * The given customizer gets applied on each SSL connection attempt to allow for just-in-time configuration updates. The {@link Function} gets
+         * * called with the prepared {@link SslContextBuilder} that has all configuration options applied. The customizer may return the same builder or return a new builder instance to be used to
+         * * build the SSL context.
+         *
+         * @param sslTunnelSslContextBuilderCustomizer customizer function
+         * @return this {@link Builder}
+         * @throws IllegalArgumentException if {@code sslTunnelSslContextBuilderCustomizer} is {@code null}
+         * @since 0.8.5
+         */
+        public Builder enableSslTunnel(Function<SslContextBuilder, SslContextBuilder> sslTunnelSslContextBuilderCustomizer) {
+            this.sslTunnelSslContextBuilderCustomizer = Assert.requireNonNull(sslTunnelSslContextBuilderCustomizer, "sslTunnelSslContextBuilderCustomizer must not be null");
             return this;
         }
 
@@ -568,7 +610,8 @@ public final class MssqlConnectionConfiguration {
             }
 
             return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, this.host, this.hostNameInCertificate, this.password,
-                this.preferCursoredExecution, this.port, this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer, this.trustStore, this.trustStoreType,
+                this.preferCursoredExecution, this.port, this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer, this.sslTunnelSslContextBuilderCustomizer, this.trustStore,
+                this.trustStoreType,
                 this.trustStorePassword, this.username);
         }
     }
@@ -588,6 +631,9 @@ public final class MssqlConnectionConfiguration {
         private final Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer;
 
         @Nullable
+        private final Function<SslContextBuilder, SslContextBuilder> sslTunnelSslContextBuilderCustomizer;
+
+        @Nullable
         private final File trustStore;
 
         @Nullable
@@ -597,7 +643,9 @@ public final class MssqlConnectionConfiguration {
         private final char[] trustStorePassword;
 
         DefaultClientConfiguration(Duration connectTimeout, String host, String hostNameInCertificate, int port, boolean ssl,
-                                   Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer, @Nullable File trustStore,
+                                   Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer,
+                                   @Nullable Function<SslContextBuilder, SslContextBuilder> sslTunnelSslContextBuilderCustomizer
+            , @Nullable File trustStore,
                                    @Nullable String trustStoreType, @Nullable char[] trustStorePassword) {
 
             this.connectTimeout = connectTimeout;
@@ -606,6 +654,7 @@ public final class MssqlConnectionConfiguration {
             this.port = port;
             this.ssl = ssl;
             this.sslContextBuilderCustomizer = sslContextBuilderCustomizer;
+            this.sslTunnelSslContextBuilderCustomizer = sslTunnelSslContextBuilderCustomizer;
             this.trustStore = trustStore;
             this.trustStoreType = trustStoreType;
             this.trustStorePassword = trustStorePassword;
@@ -678,5 +727,34 @@ public final class MssqlConnectionConfiguration {
                 throw new GeneralSecurityException(String.format("Could not load custom trust store from %s", this.trustStore), e);
             }
         }
+
+        @Override
+        public SslConfiguration getSslTunnelConfiguration() {
+
+            if (this.sslTunnelSslContextBuilderCustomizer == null) {
+                return ClientConfiguration.super.getSslTunnelConfiguration();
+            }
+
+            return new SslConfiguration() {
+
+                @Override
+                public boolean isSslEnabled() {
+                    return true;
+                }
+
+                @Override
+                public SslProvider getSslProvider() {
+
+                    SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
+
+                    return SslProvider.builder()
+                        .sslContext(DefaultClientConfiguration.this.sslTunnelSslContextBuilderCustomizer.apply(sslContextBuilder))
+                        .defaultConfiguration(TCP)
+                        .build();
+                }
+            };
+        }
+
     }
+
 }

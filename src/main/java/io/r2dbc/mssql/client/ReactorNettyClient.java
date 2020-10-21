@@ -25,8 +25,10 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.r2dbc.mssql.client.ssl.SslConfiguration;
 import io.r2dbc.mssql.client.ssl.TdsSslHandler;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
@@ -61,6 +63,7 @@ import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
 import javax.annotation.Nullable;
+import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.Queue;
@@ -421,20 +424,37 @@ public final class ReactorNettyClient implements Client {
             .connect()
             .doOnNext(it -> {
 
+                SslConfiguration tunnel = configuration.getSslTunnelConfiguration();
                 ChannelPipeline pipeline = it.channel().pipeline();
-                pipeline.addFirst(tdsEncoder.getClass().getName(), tdsEncoder);
+
+                if (tunnel.isSslEnabled()) {
+                    logger.debug(connectionContext.getMessage("Enabling SSL tunnel"));
+                    try {
+                        pipeline.addFirst("sslTunnel", createSslTunnelHandler(it.channel().alloc(), tunnel));
+                    } catch (GeneralSecurityException e) {
+                        it.channel().close();
+                        throw new IllegalStateException("Cannot configure SSL tunnel", e);
+                    }
+                    pipeline.addAfter("sslTunnel", tdsEncoder.getClass().getName(), tdsEncoder);
+                } else {
+                    pipeline.addFirst(tdsEncoder.getClass().getName(), tdsEncoder);
+                }
 
                 TdsSslHandler handler = new TdsSslHandler(packetIdProvider, configuration, connectionContext.withChannelId(it.channel().toString()));
                 pipeline.addAfter(tdsEncoder.getClass().getName(), handler.getClass().getName(), handler);
 
                 InternalLogger logger = InternalLoggerFactory.getInstance(ReactorNettyClient.class);
                 if (logger.isTraceEnabled()) {
-                    pipeline.addFirst(LoggingHandler.class.getSimpleName(),
+                    pipeline.addBefore(tdsEncoder.getClass().getName(), LoggingHandler.class.getSimpleName(),
                         new LoggingHandler(ReactorNettyClient.class, LogLevel.TRACE));
                 }
             });
 
         return connection.map(it -> new ReactorNettyClient(it, tdsEncoder, connectionContext.withChannelId(it.channel().toString())));
+    }
+
+    private static SslHandler createSslTunnelHandler(ByteBufAllocator allocator, SslConfiguration tunnel) throws GeneralSecurityException {
+        return new SslHandler(tunnel.getSslProvider().getSslContext().newEngine(allocator));
     }
 
     @Override
