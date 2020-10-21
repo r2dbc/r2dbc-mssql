@@ -311,7 +311,6 @@ public interface TypeInformation {
             return this;
         }
 
-
         /**
          * Build a new {@link TypeInformation}.
          *
@@ -334,6 +333,7 @@ public interface TypeInformation {
 
             return mutableTypeInformation;
         }
+
     }
 
     /**
@@ -353,4 +353,5 @@ public interface TypeInformation {
             return this.value;
         }
     }
+
 }

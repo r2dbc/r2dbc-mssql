@@ -616,6 +616,7 @@ public final class Login7 implements TokenStream, ClientMessage {
                 this.optionFlags1, this.optionFlags2, this.typeFlags, this.optionFlags3, requestTokens, this.clientId);
 
         }
+
     }
 
     /**
@@ -832,6 +833,7 @@ public final class Login7 implements TokenStream, ClientMessage {
         public byte getValue() {
             return (byte) this.optionByte;
         }
+
     }
 
     /**
@@ -992,6 +994,7 @@ public final class Login7 implements TokenStream, ClientMessage {
         public byte getValue() {
             return (byte) this.optionByte;
         }
+
     }
 
     /**
@@ -1081,6 +1084,7 @@ public final class Login7 implements TokenStream, ClientMessage {
         public byte getValue() {
             return (byte) this.optionByte;
         }
+
     }
 
     /**
@@ -1175,6 +1179,7 @@ public final class Login7 implements TokenStream, ClientMessage {
         public byte getValue() {
             return (byte) this.optionByte;
         }
+
     }
 
     public final static class LoginRequestToken {
@@ -1264,6 +1269,7 @@ public final class Login7 implements TokenStream, ClientMessage {
             }
             return data;
         }
+
     }
 
     enum TokenType {
@@ -1286,6 +1292,7 @@ public final class Login7 implements TokenStream, ClientMessage {
          * @param buffer the target {@link ByteBuf}.
          */
         void encode(ByteBuf buffer);
+
     }
 
     /**
@@ -1321,4 +1328,5 @@ public final class Login7 implements TokenStream, ClientMessage {
         public void encode(ByteBuf buffer) {
         }
     }
+
 }

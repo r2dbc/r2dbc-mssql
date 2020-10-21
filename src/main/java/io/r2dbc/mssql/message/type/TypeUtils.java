@@ -138,4 +138,5 @@ public final class TypeUtils {
 
         return SCALED_TIME_LENGTHS[scale];
     }
+
 }

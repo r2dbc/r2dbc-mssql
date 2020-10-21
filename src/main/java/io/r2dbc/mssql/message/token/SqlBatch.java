@@ -130,4 +130,5 @@ public final class SqlBatch implements ClientMessage, TokenStream {
         sb.append(']');
         return sb.toString();
     }
+
 }

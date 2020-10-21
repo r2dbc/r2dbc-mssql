@@ -126,4 +126,5 @@ public class LoginAckToken extends AbstractDataToken {
         sb.append(']');
         return sb.toString();
     }
+
 }

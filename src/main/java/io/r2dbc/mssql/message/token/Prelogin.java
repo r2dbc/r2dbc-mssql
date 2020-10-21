@@ -405,6 +405,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
 
             return new Prelogin(tokens);
         }
+
     }
 
     /**
@@ -508,6 +509,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
         int getDataLength() {
             return this.length;
         }
+
     }
 
     /**
@@ -544,6 +546,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
             sb.append(" []");
             return sb.toString();
         }
+
     }
 
     /**
@@ -635,6 +638,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
             sb.append(']');
             return sb.toString();
         }
+
     }
 
     /**
@@ -713,6 +717,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
 
             return result;
         }
+
     }
 
     /**
@@ -823,6 +828,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
             sb.append(']');
             return sb.toString();
         }
+
     }
 
     /**
@@ -862,6 +868,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
             sb.append(']');
             return sb.toString();
         }
+
     }
 
     /**
@@ -934,6 +941,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
             sb.append(']');
             return sb.toString();
         }
+
     }
 
     /**
@@ -967,6 +975,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
         public String toString() {
             return getClass().getSimpleName();
         }
+
     }
 
     /**
@@ -978,6 +987,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
     interface DecodeFunction<T> {
 
         T decode(short length, ByteBuf buffer);
+
     }
 
     /**
@@ -1007,6 +1017,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
         static LengthValidator ignore() {
             return IGNORE;
         }
+
     }
 
     /**
@@ -1056,5 +1067,7 @@ public final class Prelogin implements TokenStream, ClientMessage {
 
             return data;
         }
+
     }
+
 }

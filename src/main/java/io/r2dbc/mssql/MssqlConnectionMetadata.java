@@ -72,4 +72,5 @@ public final class MssqlConnectionMetadata implements ConnectionMetadata {
     public String getDatabaseVersion() {
         return this.databaseVersion;
     }
+
 }

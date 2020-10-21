@@ -178,4 +178,5 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
 
         return (c == 's' || c == 'S') && sql.toLowerCase(Locale.ENGLISH).startsWith("select");
     }
+
 }

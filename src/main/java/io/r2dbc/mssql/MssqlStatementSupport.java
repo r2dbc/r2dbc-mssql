@@ -84,4 +84,5 @@ abstract class MssqlStatementSupport implements MssqlStatement {
         this.fetchSize = fetchSize;
         return this;
     }
+
 }

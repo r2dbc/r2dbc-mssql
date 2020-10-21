@@ -32,4 +32,5 @@ public interface MssqlException {
      * @return the {@link ErrorDetails}.
      */
     ErrorDetails getErrorDetails();
+
 }

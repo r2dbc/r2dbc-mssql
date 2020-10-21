@@ -95,4 +95,5 @@ class HostNamePredicate implements Predicate<String> {
     public boolean test(String s) {
         return this.hostnamePattern.matcher(s).matches();
     }
+
 }

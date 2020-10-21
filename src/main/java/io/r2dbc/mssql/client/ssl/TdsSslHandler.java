@@ -467,6 +467,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
         static boolean isCompletePacketAvailable(Header header, ByteBuf buffer) {
             return (buffer.readableBytes() + Header.LENGTH) >= header.getLength();
         }
+
     }
 
 }

@@ -102,4 +102,5 @@ final class MoneyCodec extends AbstractCodec<BigDecimal> {
                 throw ProtocolException.invalidTds(String.format("Unexpected value length: %d", length));
         }
     }
+
 }

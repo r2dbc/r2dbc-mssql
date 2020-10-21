@@ -74,4 +74,5 @@ final class ZonedDateTimeCodec extends AbstractCodec<ZonedDateTime> {
         OffsetDateTime offsetDateTime = OffsetDateTimeCodec.INSTANCE.doDecode(buffer, length, type, OffsetDateTime.class);
         return offsetDateTime.toZonedDateTime();
     }
+
 }

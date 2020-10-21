@@ -53,4 +53,5 @@ final class BooleanCodec extends AbstractNumericCodec<Boolean> {
     Encoded doEncodeNull(ByteBufAllocator allocator) {
         return RpcEncoding.wrap(NULL, SqlServerType.TINYINT);
     }
+
 }

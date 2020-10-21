@@ -65,4 +65,5 @@ public interface PacketIdProvider {
         AtomicLong counter = new AtomicLong();
         return () -> (byte) (counter.incrementAndGet() % 256);
     }
+
 }

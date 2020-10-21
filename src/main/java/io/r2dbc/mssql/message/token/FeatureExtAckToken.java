@@ -110,6 +110,7 @@ public final class FeatureExtAckToken extends AbstractDataToken {
             this.featureId = featureId;
             this.length = length;
         }
+
     }
 
     /**
@@ -167,6 +168,7 @@ public final class FeatureExtAckToken extends AbstractDataToken {
             sb.append(']');
             return sb.toString();
         }
+
     }
 
     /**
@@ -199,5 +201,7 @@ public final class FeatureExtAckToken extends AbstractDataToken {
 
             return new UnknownFeature(featureId, length, bytes);
         }
+
     }
+
 }

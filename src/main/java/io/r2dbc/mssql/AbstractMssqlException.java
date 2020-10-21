@@ -16,7 +16,6 @@
 
 package io.r2dbc.mssql;
 
-
 import io.r2dbc.spi.R2dbcException;
 import reactor.util.annotation.Nullable;
 
@@ -123,4 +122,5 @@ public class AbstractMssqlException extends R2dbcException {
     public AbstractMssqlException(@Nullable Throwable cause) {
         this(null, cause);
     }
+
 }

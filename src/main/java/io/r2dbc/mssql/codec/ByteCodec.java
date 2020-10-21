@@ -53,4 +53,5 @@ final class ByteCodec extends AbstractNumericCodec<Byte> {
     Encoded doEncodeNull(ByteBufAllocator allocator) {
         return RpcEncoding.wrap(NULL, SqlServerType.TINYINT);
     }
+
 }

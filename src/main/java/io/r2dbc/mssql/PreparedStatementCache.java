@@ -65,4 +65,5 @@ interface PreparedStatementCache {
      * @return the number of prepared statement handles in this cache.
      */
     int size();
+
 }

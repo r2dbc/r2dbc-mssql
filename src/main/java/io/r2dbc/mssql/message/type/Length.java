@@ -203,7 +203,6 @@ public final class Length {
             case FIXEDLENTYPE:
                 return true;
 
-
             case BYTELENTYPE:
             case USHORTLENTYPE:
                 return buffer.readableBytes() >= 2;
@@ -331,4 +330,5 @@ public final class Length {
         sb.append(']');
         return sb.toString();
     }
+
 }

@@ -179,5 +179,7 @@ public class BlobCodec extends AbstractCodec<Blob> {
                 }
             });
         }
+
     }
+
 }

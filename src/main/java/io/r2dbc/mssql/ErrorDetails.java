@@ -188,4 +188,5 @@ public final class ErrorDetails {
         }
         return "S000" + databaseState;
     }
+
 }

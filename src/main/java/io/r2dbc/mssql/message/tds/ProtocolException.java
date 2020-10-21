@@ -115,4 +115,5 @@ public final class ProtocolException extends R2dbcNonTransientResourceException 
     public static ProtocolException unsupported(Throwable cause) {
         return new ProtocolException(null, cause, DRIVER_ERROR_UNSUPPORTED_CONFIG);
     }
+
 }

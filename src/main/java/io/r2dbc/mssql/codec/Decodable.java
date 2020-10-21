@@ -38,4 +38,5 @@ public interface Decodable {
      * @return the name of the decodable.
      */
     String getName();
+
 }

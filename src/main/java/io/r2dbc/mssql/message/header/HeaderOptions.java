@@ -96,4 +96,5 @@ public interface HeaderOptions {
 
         return new DefaultHeaderOptions(type, status);
     }
+
 }

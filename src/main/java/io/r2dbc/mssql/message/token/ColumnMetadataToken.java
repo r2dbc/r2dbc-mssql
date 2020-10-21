@@ -151,7 +151,6 @@ public final class ColumnMetadataToken extends AbstractDataToken {
                 buffer.skipBytes(2);
             }
 
-
             for (int i = 0; i < columnCount; i++) {
 
                 if (!TypeInformation.canDecode(buffer, true)) {
@@ -260,4 +259,5 @@ public final class ColumnMetadataToken extends AbstractDataToken {
         sb.append(']');
         return sb.toString();
     }
+
 }

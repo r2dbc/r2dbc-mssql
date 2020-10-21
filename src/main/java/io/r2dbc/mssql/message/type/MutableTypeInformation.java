@@ -197,4 +197,5 @@ final class MutableTypeInformation implements TypeInformation {
 
         return sb.toString();
     }
+
 }

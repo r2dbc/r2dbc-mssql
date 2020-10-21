@@ -124,4 +124,5 @@ final class GeneratedValues {
 
         throw new UnsupportedOperationException("SQL Server does not support multiple generated keys");
     }
+
 }

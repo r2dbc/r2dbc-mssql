@@ -117,4 +117,5 @@ final class UuidCodec extends AbstractCodec<UUID> {
 
         return bytes;
     }
+
 }

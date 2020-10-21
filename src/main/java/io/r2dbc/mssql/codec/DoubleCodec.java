@@ -73,4 +73,5 @@ final class DoubleCodec extends AbstractCodec<Double> {
 
         return Decode.asDouble(buffer);
     }
+
 }

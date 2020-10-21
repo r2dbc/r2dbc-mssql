@@ -75,4 +75,5 @@ public interface Codecs {
      * @throws IllegalArgumentException if {@code type} is {@code null}
      */
     Class<?> getJavaType(TypeInformation type);
+
 }

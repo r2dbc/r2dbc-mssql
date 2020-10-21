@@ -32,4 +32,5 @@ final class QueryLogger {
     static void logQuery(ConnectionContext context, String query) {
         QUERY_LOGGER.debug(context.getMessage("Executing query: {}"), query);
     }
+
 }

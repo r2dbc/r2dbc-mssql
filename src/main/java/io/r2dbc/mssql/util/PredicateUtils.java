@@ -57,4 +57,5 @@ public final class PredicateUtils {
 
         return Arrays.stream(ts).reduce(Predicate::or).orElseThrow(() -> new IllegalStateException("Unable to combine predicates together via logical OR"));
     }
+
 }

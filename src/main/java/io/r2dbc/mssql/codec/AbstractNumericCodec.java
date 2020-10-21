@@ -128,5 +128,7 @@ abstract class AbstractNumericCodec<T> extends AbstractCodec<T> {
          * @return the function result
          */
         T apply(long value);
+
     }
+
 }

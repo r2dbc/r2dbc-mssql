@@ -99,4 +99,5 @@ final class LocalDateCodec extends AbstractCodec<LocalDate> {
         buffer.writeByte((byte) (days >> 8) & 0xFF);
         buffer.writeByte((byte) (days >> 16) & 0xFF);
     }
+
 }

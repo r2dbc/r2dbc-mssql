@@ -137,4 +137,5 @@ abstract class ColumnSource {
         sb.append(" [").append(Arrays.stream(this.columns).map(Column::getName).collect(Collectors.joining(", "))).append("]");
         return sb.toString();
     }
+
 }

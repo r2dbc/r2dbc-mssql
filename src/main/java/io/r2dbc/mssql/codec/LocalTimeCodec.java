@@ -94,7 +94,6 @@ final class LocalTimeCodec extends AbstractCodec<LocalTime> {
         return LocalTime.ofNanoOfDay(hundredNanosSinceMidnight * 100);
     }
 
-
     static void doEncode(ByteBuf buffer, int scale, LocalTime value) {
 
         int valueLength = TypeUtils.getTimeValueLength(scale);
@@ -110,4 +109,5 @@ final class LocalTimeCodec extends AbstractCodec<LocalTime> {
             buffer.writeByte((byte) ((nanosSinceMidnight >> (8 * i)) & 0xFF));
         }
     }
+
 }

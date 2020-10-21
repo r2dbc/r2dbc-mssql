@@ -53,4 +53,5 @@ final class LongCodec extends AbstractNumericCodec<Long> {
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
         return RpcEncoding.wrap(NULL, SqlServerType.BIGINT);
     }
+
 }

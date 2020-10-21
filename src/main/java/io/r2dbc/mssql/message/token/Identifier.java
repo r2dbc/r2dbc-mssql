@@ -310,5 +310,7 @@ public final class Identifier {
 
             return new Identifier(this.serverName, this.databaseName, this.schemaName, this.objectName);
         }
+
     }
+
 }

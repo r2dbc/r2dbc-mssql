@@ -324,7 +324,6 @@ final class RpcQueryMessageFlow {
             return;
         }
 
-
         if (!(message instanceof DoneProcToken)) {
             sink.next(message);
             return;
@@ -616,6 +615,7 @@ final class RpcQueryMessageFlow {
         enum Phase {
             NONE, FETCHING, CLOSING, CLOSED, ERROR
         }
+
     }
 
     static class IntermediateCount extends AbstractDoneToken {
@@ -628,6 +628,7 @@ final class RpcQueryMessageFlow {
         public String getName() {
             return "INTERMEDIATE_COUNT";
         }
+
     }
 
     static class OnCursorComplete extends AtomicReference<Subscription> implements Runnable {
@@ -652,5 +653,7 @@ final class RpcQueryMessageFlow {
                 subscription.cancel();
             }
         }
+
     }
+
 }

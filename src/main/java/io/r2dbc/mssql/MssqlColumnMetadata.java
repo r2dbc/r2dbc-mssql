@@ -77,4 +77,5 @@ public final class MssqlColumnMetadata implements ColumnMetadata {
     public TypeInformation getNativeTypeMetadata() {
         return this.column.getType();
     }
+
 }

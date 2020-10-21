@@ -172,4 +172,5 @@ public final class NbcRowToken extends RowToken {
         sb.append(']');
         return sb.toString();
     }
+
 }

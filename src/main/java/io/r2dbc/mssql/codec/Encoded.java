@@ -76,4 +76,5 @@ public class Encoded extends AbstractReferenceCounted {
 
         throw new IllegalStateException(String.format("Cannot determine a formal type for %s", this.dataType));
     }
+
 }

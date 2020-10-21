@@ -52,4 +52,5 @@ public interface SslConfiguration {
      * @since 0.8.3
      */
     SslProvider getSslProvider() throws GeneralSecurityException;
+
 }

@@ -45,4 +45,5 @@ public abstract class AbstractDataToken implements DataToken {
      * @return symbolic name of the {@link AbstractDataToken}.
      */
     public abstract String getName();
+
 }

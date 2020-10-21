@@ -57,7 +57,6 @@ abstract class ByteArray {
      */
     static byte[] fromBuffer(Function<ByteBufAllocator, ByteBuf> encodeFunction) {
 
-
         ByteBuf buffer = encodeFunction.apply(ByteBufAllocator.DEFAULT);
 
         try {
@@ -70,4 +69,5 @@ abstract class ByteArray {
     // Utility constructor
     private ByteArray() {
     }
+
 }

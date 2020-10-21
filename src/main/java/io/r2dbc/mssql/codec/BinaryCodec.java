@@ -169,7 +169,6 @@ class BinaryCodec implements Codec<Object> {
 
     Object doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends Object> valueType) {
 
-
         byte[] bytes = new byte[length.getLength()];
 
         if (type.getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
@@ -205,9 +204,11 @@ class BinaryCodec implements Codec<Object> {
         public String getFormalType() {
             return FORMAL_TYPE;
         }
+
     }
 
     private static boolean exceedsBigVarbinary(int length) {
         return length > TypeUtils.SHORT_VARTYPE_MAX_BYTES;
     }
+
 }

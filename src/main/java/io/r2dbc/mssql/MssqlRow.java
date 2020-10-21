@@ -82,7 +82,6 @@ final class MssqlRow implements Row {
         return this.metadata;
     }
 
-
     @Override
     public <T> T get(int index, Class<T> type) {
 
@@ -140,4 +139,5 @@ final class MssqlRow implements Row {
             throw new IllegalStateException("Value cannot be retrieved after row has been released");
         }
     }
+
 }

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 /**
  * Classes to read and build type information.
  */

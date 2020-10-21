@@ -45,4 +45,5 @@ class PlpEncodedCharacters extends PlpEncoded {
 
         this.collation.encode(byteBuf);
     }
+
 }
