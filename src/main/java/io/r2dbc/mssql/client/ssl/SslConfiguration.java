@@ -44,8 +44,11 @@ public interface SslConfiguration {
     boolean isSslEnabled();
 
     /**
+     * Return the {@link SslProvider} if {@link #isSslEnabled() SSL is enabled}.
+     *
      * @return the {@link SslProvider}.
      * @throws GeneralSecurityException if setting up the SSL provider fails.
+     * @throws IllegalStateException    if the SSL configuration is not enabled
      * @since 0.8.3
      */
     SslProvider getSslProvider() throws GeneralSecurityException;

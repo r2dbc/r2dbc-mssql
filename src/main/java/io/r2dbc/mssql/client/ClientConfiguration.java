@@ -47,4 +47,13 @@ public interface ClientConfiguration extends SslConfiguration {
      * @return connection provider.
      */
     ConnectionProvider getConnectionProvider();
+
+    /**
+     * @return the SSL tunnel configuration.
+     * @since 0.8.5
+     */
+    default SslConfiguration getSslTunnelConfiguration() {
+        return DisabledSslTunnel.INSTANCE;
+    }
+
 }

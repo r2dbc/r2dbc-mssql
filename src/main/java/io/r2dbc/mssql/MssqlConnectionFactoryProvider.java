@@ -83,6 +83,14 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
     public static final Option<Function<SslContextBuilder, SslContextBuilder>> SSL_CONTEXT_BUILDER_CUSTOMIZER = Option.valueOf("sslContextBuilderCustomizer");
 
     /**
+     * Enable SSL tunnel usage to encrypt all traffic right from the connect phase by providing a customizer {@link Function}. This option is required when using a SSL tunnel (e.g. stunnel or other
+     * SSL terminator) in front of the SQL server and it is not related to SQL Server's built-in SSL support.
+     *
+     * @since 0.8.5
+     */
+    public static final Option<Function<SslContextBuilder, SslContextBuilder>> SSL_TUNNEL = Option.valueOf("sslTunnel");
+
+    /**
      * Type of the TrustStore.
      *
      * @since 0.8.3
@@ -133,6 +141,24 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         mapper.from(SEND_STRING_PARAMETERS_AS_UNICODE).map(OptionMapper::toBoolean).to(builder::sendStringParametersAsUnicode);
         mapper.from(SSL).to(builder::enableSsl);
         mapper.from(SSL_CONTEXT_BUILDER_CUSTOMIZER).to(builder::sslContextBuilderCustomizer);
+        mapper.from(SSL_TUNNEL).map(it -> {
+
+            if (it instanceof Boolean) {
+                if ((Boolean) it) {
+                    return Function.identity();
+                }
+                return null;
+            }
+
+            return it;
+
+        }).to(it -> {
+
+            if (it != null) {
+                builder.enableSslTunnel((Function<SslContextBuilder, SslContextBuilder>) it);
+            }
+        });
+
         mapper.from(TRUST_STORE).map(OptionMapper::toFile).to(builder::trustStore);
         mapper.from(TRUST_STORE_TYPE).to(builder::trustStoreType);
         mapper.from(TRUST_STORE_PASSWORD).map(it -> it instanceof String ? ((String) it).toCharArray() : (char[]) it).to(builder::trustStorePassword);
@@ -173,4 +199,5 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
     public String getDriver() {
         return MSSQL_DRIVER;
     }
+
 }
