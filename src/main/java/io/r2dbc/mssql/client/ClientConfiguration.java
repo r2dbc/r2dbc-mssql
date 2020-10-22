@@ -44,6 +44,18 @@ public interface ClientConfiguration extends SslConfiguration {
     Duration getConnectTimeout();
 
     /**
+     * @return whether TCP KeepAlive is enabled.
+     * @since 0.8.5
+     */
+    boolean isTcpKeepAlive();
+
+    /**
+     * @return whether TCP NoDelay is enabled.
+     * @since 0.8.5
+     */
+    boolean isTcpNoDelay();
+
+    /**
      * @return connection provider.
      */
     ConnectionProvider getConnectionProvider();
