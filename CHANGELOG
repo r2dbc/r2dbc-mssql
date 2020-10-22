@@ -1,6 +1,16 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.8.5.RELEASE
+------------------
+* Upgrade dependencies #178
+* Add config options for TCP KeepAlive and NoDelay #177
+* Add support for SSL tunnels #176
+* Use GitHub actions to deploy to OSS Sonatype/Maven Central #173
+* Clob decoding is prone to in-character decoding splits #172
+* StringCodec fix for characters split between PLP chunks #171
+* Upgrade to R2DBC SPI 0.8.3 #170
+
 0.8.4.RELEASE
 ------------------
 * Ensure no snapshots get referenced in release builds #165
