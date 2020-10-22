@@ -91,6 +91,20 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
     public static final Option<Function<SslContextBuilder, SslContextBuilder>> SSL_TUNNEL = Option.valueOf("sslTunnel");
 
     /**
+     * Enable/Disable TCP KeepAlive.
+     *
+     * @since 0.8.5
+     */
+    public static final Option<Boolean> TCP_KEEPALIVE = Option.valueOf("tcpKeepAlive");
+
+    /**
+     * Enable/Disable TCP NoDelay.
+     *
+     * @since 0.8.5
+     */
+    public static final Option<Boolean> TCP_NODELAY = Option.valueOf("tcpNoDelay");
+
+    /**
      * Type of the TrustStore.
      *
      * @since 0.8.3
@@ -159,6 +173,8 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
             }
         });
 
+        mapper.from(TCP_KEEPALIVE).map(OptionMapper::toBoolean).to(builder::tcpKeepAlive);
+        mapper.from(TCP_NODELAY).map(OptionMapper::toBoolean).to(builder::tcpNoDelay);
         mapper.from(TRUST_STORE).map(OptionMapper::toFile).to(builder::trustStore);
         mapper.from(TRUST_STORE_TYPE).to(builder::trustStoreType);
         mapper.from(TRUST_STORE_PASSWORD).map(it -> it instanceof String ? ((String) it).toCharArray() : (char[]) it).to(builder::trustStorePassword);

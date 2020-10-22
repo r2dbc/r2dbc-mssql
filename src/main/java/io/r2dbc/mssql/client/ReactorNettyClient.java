@@ -380,6 +380,16 @@ public final class ReactorNettyClient implements Client {
             }
 
             @Override
+            public boolean isTcpKeepAlive() {
+                return false;
+            }
+
+            @Override
+            public boolean isTcpNoDelay() {
+                return true;
+            }
+
+            @Override
             public ConnectionProvider getConnectionProvider() {
                 return ConnectionProvider.newConnection();
             }
@@ -419,6 +429,8 @@ public final class ReactorNettyClient implements Client {
 
         Mono<? extends Connection> connection = TcpClient.create(configuration.getConnectionProvider())
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Math.toIntExact(configuration.getConnectTimeout().toMillis()))
+            .option(ChannelOption.SO_KEEPALIVE, configuration.isTcpKeepAlive())
+            .option(ChannelOption.TCP_NODELAY, configuration.isTcpNoDelay())
             .host(configuration.getHost())
             .port(configuration.getPort())
             .connect()

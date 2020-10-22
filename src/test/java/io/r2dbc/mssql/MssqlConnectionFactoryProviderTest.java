@@ -29,6 +29,8 @@ import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.ALTERNATE_MSSQL_DRIV
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.MSSQL_DRIVER;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.SSL_CONTEXT_BUILDER_CUSTOMIZER;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.SSL_TUNNEL;
+import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TCP_KEEPALIVE;
+import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TCP_NODELAY;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE_PASSWORD;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE_TYPE;
@@ -38,6 +40,7 @@ import static io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD;
 import static io.r2dbc.spi.ConnectionFactoryOptions.PORT;
 import static io.r2dbc.spi.ConnectionFactoryOptions.SSL;
 import static io.r2dbc.spi.ConnectionFactoryOptions.USER;
+import static io.r2dbc.spi.ConnectionFactoryOptions.builder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
@@ -240,6 +243,34 @@ final class MssqlConnectionFactoryProviderTest {
     }
 
     @Test
+    void shouldConfigureTcpKeepAlive() {
+
+        MssqlConnectionFactory factory = this.provider.create(builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(TCP_KEEPALIVE, true)
+            .build());
+
+        assertThat(factory.getClientConfiguration().isTcpKeepAlive()).isTrue();
+    }
+
+    @Test
+    void shouldConfigureTcpNoDelay() {
+
+        MssqlConnectionFactory factory = this.provider.create(builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(TCP_NODELAY, true)
+            .build());
+
+        assertThat(factory.getClientConfiguration().isTcpNoDelay()).isTrue();
+    }
+
+    @Test
     void shouldConfigureWithTrustStoreCustomizer() {
 
         MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
@@ -303,5 +334,7 @@ final class MssqlConnectionFactoryProviderTest {
         public boolean test(String s) {
             return s.equals("foo");
         }
+
     }
+
 }
