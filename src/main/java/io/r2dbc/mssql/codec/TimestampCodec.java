@@ -52,7 +52,17 @@ final class TimestampCodec extends AbstractCodec<byte[]> {
     }
 
     @Override
+    public boolean canEncodeNull(SqlServerType serverType) {
+        return false;
+    }
+
+    @Override
     protected Encoded doEncodeNull(ByteBufAllocator allocator) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
         throw new UnsupportedOperationException();
     }
 

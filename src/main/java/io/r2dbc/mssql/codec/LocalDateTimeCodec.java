@@ -75,8 +75,18 @@ final class LocalDateTimeCodec extends AbstractCodec<LocalDateTime> {
     }
 
     @Override
+    public boolean canEncodeNull(SqlServerType serverType) {
+        return serverType == SqlServerType.DATETIME2;
+    }
+
+    @Override
     Encoded doEncodeNull(ByteBufAllocator allocator) {
         return RpcEncoding.wrap(NULL, SqlServerType.DATETIME2);
+    }
+
+    @Override
+    public Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
+        return RpcEncoding.encodeTemporalNull(allocator, serverType, 7);
     }
 
     @Override

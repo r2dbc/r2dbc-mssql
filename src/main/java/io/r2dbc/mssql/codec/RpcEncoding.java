@@ -166,7 +166,6 @@ public final class RpcEncoding {
      */
     public static Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
 
-        Assert.isTrue(serverType.getMaxLength() > 0, "Server type does not declare a max length");
         Assert.notNull(serverType.getNullableType(), "Server type does not declare a nullable type");
         ByteBuf buffer = prepareBuffer(allocator, serverType.getNullableType().getLengthStrategy(), serverType.getMaxLength(), 0);
 

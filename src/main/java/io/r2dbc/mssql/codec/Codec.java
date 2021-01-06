@@ -65,12 +65,31 @@ interface Codec<T> {
     boolean canEncodeNull(Class<?> type);
 
     /**
+     * Determine whether this {@link Codec} is capable of encoding a {@code null} value for the given {@link SqlServerType} type.
+     *
+     * @param type the desired value type.
+     * @return {@code true} if this {@link Codec} is able to encode {@code null} values for the given {@link SqlServerType} type.
+     * @see #encodeNull
+     * @since 0.9
+     */
+    boolean canEncodeNull(SqlServerType serverType);
+
+    /**
      * Encode a {@code null} value.
      *
      * @param allocator the allocator to allocate encoding buffers.
      * @return the encoded {@code null} value.
      */
     Encoded encodeNull(ByteBufAllocator allocator);
+
+    /**
+     * Encode a {@code null} value.
+     *
+     * @param allocator the allocator to allocate encoding buffers.
+     * @return the encoded {@code null} value.
+     * @since 0.9
+     */
+    Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType);
 
     /**
      * Determine whether this {@link Codec} is capable of decoding a value for the given {@link Decodable} and whether it can represent the decoded value as the desired {@link Class type}.

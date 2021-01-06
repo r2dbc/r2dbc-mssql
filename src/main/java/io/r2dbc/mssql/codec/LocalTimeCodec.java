@@ -64,8 +64,18 @@ final class LocalTimeCodec extends AbstractCodec<LocalTime> {
     }
 
     @Override
+    public boolean canEncodeNull(SqlServerType serverType) {
+        return serverType == SqlServerType.TIME;
+    }
+
+    @Override
     Encoded doEncodeNull(ByteBufAllocator allocator) {
         return RpcEncoding.wrap(NULL, SqlServerType.TIME);
+    }
+
+    @Override
+    public Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
+        return RpcEncoding.encodeTemporalNull(allocator, serverType, 7);
     }
 
     @Override

@@ -68,8 +68,18 @@ final class MoneyCodec extends AbstractCodec<BigDecimal> {
     }
 
     @Override
+    public boolean canEncodeNull(SqlServerType serverType) {
+        return serverType == SqlServerType.MONEY || serverType == SqlServerType.SMALLMONEY;
+    }
+
+    @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
         return RpcEncoding.wrap(NULL, SqlServerType.MONEY);
+    }
+
+    @Override
+    public Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
+        return RpcEncoding.encodeNull(allocator, serverType);
     }
 
     @Override

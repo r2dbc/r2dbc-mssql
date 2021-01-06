@@ -21,6 +21,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.spi.Parameter;
+import io.r2dbc.spi.R2dbcType;
+import io.r2dbc.spi.Type;
 import reactor.util.annotation.Nullable;
 
 import java.util.Arrays;
@@ -92,13 +95,65 @@ public final class DefaultCodecs implements Codecs {
         Assert.requireNonNull(context, "RpcParameterContext must not be null");
         Assert.requireNonNull(value, "Value must not be null");
 
-        for (Codec<?> codec : this.codecs) {
-            if (codec.canEncode(value)) {
-                return ((Codec) codec).encode(allocator, context, value);
+        Object parameterValue = value;
+        SqlServerType serverType;
+
+        if (value instanceof Parameter) {
+
+            Parameter parameter = (Parameter) value;
+            parameterValue = parameter.getValue();
+
+            if (parameter.getType() instanceof Type.InferredType && parameterValue == null) {
+                return encodeNull(allocator, parameter.getType().getJavaType());
             }
+
+            serverType = getServerType(parameter);
+
+        } else {
+            serverType = null;
         }
 
-        throw new IllegalArgumentException(String.format("Cannot encode [%s] parameter of type [%s]", value, value.getClass().getName()));
+        if (serverType == null) {
+
+            for (Codec<?> codec : this.codecs) {
+                if (codec.canEncode(parameterValue)) {
+                    return ((Codec) codec).encode(allocator, context, parameterValue);
+                }
+            }
+        } else {
+
+            if (parameterValue == null) {
+
+                for (Codec<?> codec : this.codecs) {
+                    if (codec.canEncodeNull(serverType)) {
+                        return codec.encodeNull(allocator, serverType);
+                    }
+                }
+            } else {
+
+                for (Codec<?> codec : this.codecs) {
+                    if (codec.canEncode(parameterValue)) {
+                        return ((Codec) codec).encode(allocator, context.withServerType(serverType), parameterValue);
+                    }
+                }
+            }
+
+        }
+
+        throw new IllegalArgumentException(String.format("Cannot encode [%s] parameter of type [%s]", parameterValue, value.getClass().getName()));
+    }
+
+    private SqlServerType getServerType(Parameter parameter) {
+
+        if (parameter.getType() instanceof R2dbcType) {
+            return SqlServerType.of((R2dbcType) parameter.getType());
+        }
+
+        if (parameter.getType() instanceof SqlServerType) {
+            return (SqlServerType) parameter.getType();
+        }
+
+        return SqlServerType.of(parameter.getType().getName());
     }
 
     @Override
@@ -177,12 +232,12 @@ public final class DefaultCodecs implements Codecs {
 
         @Override
         public TypeInformation getType() {
-            return typeInformation;
+            return this.typeInformation;
         }
 
         @Override
         public String getName() {
-            return typeInformation.getServerTypeName();
+            return this.typeInformation.getServerTypeName();
         }
 
     }

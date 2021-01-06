@@ -68,16 +68,28 @@ final class StringCodec extends AbstractCodec<String> {
 
         RpcParameterContext.CharacterValueContext valueContext = context.getRequiredValueContext(RpcParameterContext.CharacterValueContext.class);
 
-        if (exceedsBigVarchar(context.getDirection(), value)) {
-            return CharacterEncoder.encodePlp(allocator, valueContext, value);
+        SqlServerType serverType = context.getServerType();
+
+        if (exceedsBigVarchar(context.getDirection(), value) || serverType == SqlServerType.VARCHARMAX || serverType == SqlServerType.NVARCHARMAX) {
+            return CharacterEncoder.encodePlp(allocator, serverType, valueContext, value);
         }
 
-        return CharacterEncoder.encodeBigVarchar(allocator, context.getDirection(), valueContext.getCollation(), valueContext.isSendStringParametersAsUnicode(), value);
+        return CharacterEncoder.encodeBigVarchar(allocator, context.getDirection(), serverType, valueContext.getCollation(), valueContext.isSendStringParametersAsUnicode(), value);
+    }
+
+    @Override
+    public boolean canEncodeNull(SqlServerType serverType) {
+        return serverType == SqlServerType.VARCHAR || serverType == SqlServerType.NVARCHAR;
     }
 
     @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return CharacterEncoder.encodeNull();
+        return encodeNull(allocator, SqlServerType.NVARCHAR);
+    }
+
+    @Override
+    public Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
+        return CharacterEncoder.encodeNull(serverType);
     }
 
     @Override

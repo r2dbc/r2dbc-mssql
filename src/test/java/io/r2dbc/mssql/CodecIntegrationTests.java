@@ -17,17 +17,22 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.codec.DefaultCodecs;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.util.IntegrationTestSupport;
 import io.r2dbc.spi.Blob;
 import io.r2dbc.spi.Clob;
 import io.r2dbc.spi.ConnectionFactories;
 import io.r2dbc.spi.ConnectionFactoryOptions;
+import io.r2dbc.spi.Parameters;
+import io.r2dbc.spi.R2dbcType;
 import io.r2dbc.spi.Result;
+import io.r2dbc.spi.Type;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+import reactor.util.annotation.Nullable;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -153,11 +158,17 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     @Test
     void shouldEncodeStringAsVarchar() {
         testType(connection, "VARCHAR(255)", "Hello, World!");
+        testType(connection, "VARCHAR(255)", "Hello, World!", R2dbcType.VARCHAR);
+        testType(connection, "VARCHAR(255)", "Hello, World!", R2dbcType.NVARCHAR);
+        testType(connection, "VARCHAR(255)", "Hello, World!", SqlServerType.VARCHAR);
+        testType(connection, "VARCHAR(255)", "Hello, World!", SqlServerType.NVARCHAR);
     }
 
     @Test
     void shouldEncodeStringAsNVarchar() {
         testType(connection, "NVARCHAR(255)", "Hello, World! äöü");
+        testType(connection, "NVARCHAR(255)", "Hello, World! äöü", R2dbcType.NVARCHAR);
+        testType(connection, "NVARCHAR(255)", "Hello, World!äöü", SqlServerType.NVARCHAR);
     }
 
     @Test
@@ -191,6 +202,9 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     @Test
     void shouldEncodeStringAsNVarcharMax() {
         testType(connection, "NVARCHAR(MAX)", "Hello, World! äöü");
+        testType(connection, "NVARCHAR(MAX)", "Hello, World! äöü", R2dbcType.NVARCHAR);
+        testType(connection, "NVARCHAR(MAX)", "Hello, World! äöü", SqlServerType.NVARCHARMAX);
+        testType(connection, "NVARCHAR(MAX)", "Hello, World! äöü", R2dbcType.VARCHAR);
     }
 
     @Test
@@ -200,7 +214,7 @@ class CodecIntegrationTests extends IntegrationTestSupport {
             Flux.from(((Clob) actual).stream()).as(StepVerifier::create).expectNext("Hello, World! äöü").verifyComplete();
         }, actual -> {
             assertThat(actual).isEqualTo("Hello, World! äöü");
-        });
+        }, null);
     }
 
     @Test
@@ -214,7 +228,7 @@ class CodecIntegrationTests extends IntegrationTestSupport {
             Flux.from(((Clob) actual).stream()).as(StepVerifier::create).expectNext("Hello, World!").verifyComplete();
         }, actual -> {
             assertThat(actual).isEqualTo("Hello, World!");
-        });
+        }, null);
 
         natlConnection.close().block();
     }
@@ -227,7 +241,7 @@ class CodecIntegrationTests extends IntegrationTestSupport {
             Flux.from(((Clob) actual).stream()).as(StepVerifier::create).expectNext("Hello, World!").verifyComplete();
         }, actual -> {
             assertThat(actual).isEqualTo("Hello, World!");
-        });
+        }, null);
     }
 
     @Test
@@ -267,7 +281,7 @@ class CodecIntegrationTests extends IntegrationTestSupport {
             assertThat(actual).isInstanceOf(Blob.class);
             Mono.from(((Blob) actual).discard()).subscribe();
 
-        }, actual -> assertThat(actual).isEqualTo(ByteBuffer.wrap("foobarbaz".getBytes())));
+        }, actual -> assertThat(actual).isEqualTo(ByteBuffer.wrap("foobarbaz".getBytes())), null);
     }
 
     @Test
@@ -300,28 +314,47 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     }
 
     private void testType(MssqlConnection connection, String columnType, Object value) {
-        testType(connection, columnType, value, value.getClass(), value);
+        testType(connection, columnType, value, value.getClass(), value, null);
+    }
+
+    private void testType(MssqlConnection connection, String columnType, Object value, @Nullable Type parameterValueType) {
+        testType(connection, columnType, value, value.getClass(), value, parameterValueType);
     }
 
     private void testType(MssqlConnection connection, String columnType, Object value, Class<?> valueClass, Object expectedGetObjectValue) {
-        testType(connection, columnType, value, valueClass, actual -> assertThat(actual).isEqualTo(value), actual -> assertThat(actual).isEqualTo(expectedGetObjectValue));
+        testType(connection, columnType, value, valueClass, actual -> assertThat(actual).isEqualTo(value), actual -> assertThat(actual).isEqualTo(expectedGetObjectValue), null);
+    }
+
+    private void testType(MssqlConnection connection, String columnType, Object value, Class<?> valueClass, Object expectedGetObjectValue, @Nullable Type parameterValueType) {
+        testType(connection, columnType, value, valueClass, actual -> assertThat(actual).isEqualTo(value), actual -> assertThat(actual).isEqualTo(expectedGetObjectValue), parameterValueType);
     }
 
     private void testType(MssqlConnection connection, String columnType, Object value, Class<?> valueClass, Consumer<Object> nativeValueConsumer) {
-        testType(connection, columnType, value, valueClass, actual -> assertThat(actual).isEqualTo(value), nativeValueConsumer);
+        testType(connection, columnType, value, valueClass, actual -> assertThat(actual).isEqualTo(value), nativeValueConsumer, null);
     }
 
-    private void testType(MssqlConnection connection, String columnType, Object value, Class<?> valueClass, Consumer<Object> expectedValueConsumer, Consumer<Object> nativeValueConsumer) {
+    private void testType(MssqlConnection connection, String columnType, Object value, Class<?> valueClass, Consumer<Object> expectedValueConsumer, Consumer<Object> nativeValueConsumer,
+                          @Nullable Type parameterValueType) {
 
         createTable(connection, columnType);
 
-        Flux.from(connection.createStatement("INSERT INTO codec_test values(@P0)")
-            .bind("P0", value)
-            .execute())
-            .flatMap(Result::getRowsUpdated)
-            .as(StepVerifier::create)
-            .expectNext(1)
-            .verifyComplete();
+        if (parameterValueType == null) {
+            Flux.from(connection.createStatement("INSERT INTO codec_test values(@P0)")
+                .bind("P0", value)
+                .execute())
+                .flatMap(Result::getRowsUpdated)
+                .as(StepVerifier::create)
+                .expectNext(1)
+                .verifyComplete();
+        } else {
+            Flux.from(connection.createStatement("INSERT INTO codec_test values(@P0)")
+                .bind("P0", Parameters.in(parameterValueType, value))
+                .execute())
+                .flatMap(Result::getRowsUpdated)
+                .as(StepVerifier::create)
+                .expectNext(1)
+                .verifyComplete();
+        }
 
         if (value instanceof ByteBuffer) {
             ((ByteBuffer) value).rewind();
@@ -341,20 +374,53 @@ class CodecIntegrationTests extends IntegrationTestSupport {
             .consumeNextWith(nativeValueConsumer)
             .verifyComplete();
 
-        Flux.from(connection.createStatement("UPDATE codec_test SET my_col = @P0")
-            .bindNull("P0", value.getClass())
-            .execute())
-            .flatMap(Result::getRowsUpdated)
-            .as(StepVerifier::create)
-            .expectNext(1)
-            .verifyComplete();
+        if (parameterValueType == null) {
+            Flux.from(connection.createStatement("UPDATE codec_test SET my_col = @P0")
+                .bindNull("P0", value.getClass())
+                .execute())
+                .flatMap(Result::getRowsUpdated)
+                .as(StepVerifier::create)
+                .expectNext(1)
+                .verifyComplete();
 
-        connection.createStatement("SELECT my_col FROM codec_test")
-            .execute()
-            .flatMap(it -> it.map((row, rowMetadata) -> Optional.ofNullable((Object) row.get("my_col", valueClass))))
-            .as(StepVerifier::create)
-            .expectNext(Optional.empty())
-            .verifyComplete();
+            connection.createStatement("SELECT my_col FROM codec_test")
+                .execute()
+                .flatMap(it -> it.map((row, rowMetadata) -> Optional.ofNullable((Object) row.get("my_col", valueClass))))
+                .as(StepVerifier::create)
+                .expectNext(Optional.empty())
+                .verifyComplete();
+
+            Flux.from(connection.createStatement("UPDATE codec_test SET my_col = @P0")
+                .bind("P0", Parameters.in(value.getClass()))
+                .execute())
+                .flatMap(Result::getRowsUpdated)
+                .as(StepVerifier::create)
+                .expectNext(1)
+                .verifyComplete();
+
+            connection.createStatement("SELECT my_col FROM codec_test")
+                .execute()
+                .flatMap(it -> it.map((row, rowMetadata) -> Optional.ofNullable((Object) row.get("my_col", valueClass))))
+                .as(StepVerifier::create)
+                .expectNext(Optional.empty())
+                .verifyComplete();
+        } else {
+
+            Flux.from(connection.createStatement("UPDATE codec_test SET my_col = @P0")
+                .bind("P0", Parameters.in(parameterValueType))
+                .execute())
+                .flatMap(Result::getRowsUpdated)
+                .as(StepVerifier::create)
+                .expectNext(1)
+                .verifyComplete();
+
+            connection.createStatement("SELECT my_col FROM codec_test")
+                .execute()
+                .flatMap(it -> it.map((row, rowMetadata) -> Optional.ofNullable((Object) row.get("my_col", valueClass))))
+                .as(StepVerifier::create)
+                .expectNext(Optional.empty())
+                .verifyComplete();
+        }
     }
 
     private void createTable(MssqlConnection connection, String columnType) {
@@ -367,4 +433,5 @@ class CodecIntegrationTests extends IntegrationTestSupport {
             .as(StepVerifier::create)
             .verifyComplete();
     }
+
 }

@@ -17,6 +17,7 @@
 package io.r2dbc.mssql.codec;
 
 import io.r2dbc.mssql.message.type.Collation;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
@@ -27,17 +28,21 @@ import reactor.util.annotation.Nullable;
  */
 public final class RpcParameterContext {
 
-    private static final RpcParameterContext IN = new RpcParameterContext(RpcDirection.IN, null);
+    private static final RpcParameterContext IN = new RpcParameterContext(RpcDirection.IN, null, null);
 
-    private static final RpcParameterContext OUT = new RpcParameterContext(RpcDirection.OUT, null);
+    private static final RpcParameterContext OUT = new RpcParameterContext(RpcDirection.OUT, null, null);
 
     private final RpcDirection direction;
 
     @Nullable
     private final ValueContext valueContext;
 
-    private RpcParameterContext(RpcDirection direction, @Nullable ValueContext valueContext) {
+    @Nullable
+    private final SqlServerType serverType;
+
+    private RpcParameterContext(RpcDirection direction, @Nullable ValueContext valueContext, @Nullable SqlServerType serverType) {
         this.direction = direction;
+        this.serverType = serverType;
         this.valueContext = valueContext;
     }
 
@@ -59,7 +64,7 @@ public final class RpcParameterContext {
      * @see RpcDirection#IN
      */
     public static RpcParameterContext in(ValueContext valueContext) {
-        return new RpcParameterContext(RpcDirection.IN, Assert.requireNonNull(valueContext, "ValueContext must not be null"));
+        return new RpcParameterContext(RpcDirection.IN, Assert.requireNonNull(valueContext, "ValueContext must not be null"), null);
     }
 
     /**
@@ -80,7 +85,7 @@ public final class RpcParameterContext {
      * @see RpcDirection#IN
      */
     public static RpcParameterContext out(ValueContext valueContext) {
-        return new RpcParameterContext(RpcDirection.OUT, Assert.requireNonNull(valueContext, "ValueContext must not be null"));
+        return new RpcParameterContext(RpcDirection.OUT, Assert.requireNonNull(valueContext, "ValueContext must not be null"), null);
     }
 
     /**
@@ -110,6 +115,11 @@ public final class RpcParameterContext {
     @Nullable
     public ValueContext getValueContext() {
         return this.valueContext;
+    }
+
+    @Nullable
+    public SqlServerType getServerType() {
+        return this.serverType;
     }
 
     /**
@@ -151,6 +161,11 @@ public final class RpcParameterContext {
         sb.append(", valueContext=").append(this.valueContext);
         sb.append(']');
         return sb.toString();
+    }
+
+    public RpcParameterContext withServerType(SqlServerType serverType) {
+        Assert.requireNonNull(serverType, "SqlServerType must not be null");
+        return new RpcParameterContext(this.direction, this.valueContext, serverType);
     }
 
     /**

@@ -54,8 +54,18 @@ final class UuidCodec extends AbstractCodec<UUID> {
     }
 
     @Override
+    public boolean canEncodeNull(SqlServerType serverType) {
+        return serverType == SqlServerType.GUID;
+    }
+
+    @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
         return RpcEncoding.wrap(NULL, SqlServerType.GUID);
+    }
+
+    @Override
+    public Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
+        return RpcEncoding.encodeNull(allocator, serverType);
     }
 
     @Override

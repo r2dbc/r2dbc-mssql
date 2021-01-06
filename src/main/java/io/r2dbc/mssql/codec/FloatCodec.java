@@ -50,8 +50,18 @@ final class FloatCodec extends AbstractCodec<Float> {
     }
 
     @Override
+    public boolean canEncodeNull(SqlServerType serverType) {
+        return serverType == SqlServerType.REAL;
+    }
+
+    @Override
     Encoded doEncodeNull(ByteBufAllocator allocator) {
         return RpcEncoding.wrap(NULL, SqlServerType.REAL);
+    }
+
+    @Override
+    public Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
+        return RpcEncoding.encodeNull(allocator, serverType);
     }
 
     @Override

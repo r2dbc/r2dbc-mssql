@@ -34,7 +34,7 @@ import java.util.function.Supplier;
 /**
  * Test container extension for Microsoft SQL Server.
  */
-@SuppressWarnings({"unchecked", "rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes", "deprecation"})
 public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCallback {
 
     private volatile MSSQLServerContainer<?> containerInstance = null;

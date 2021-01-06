@@ -112,6 +112,11 @@ class BinaryCodec implements Codec<Object> {
     }
 
     @Override
+    public boolean canEncodeNull(SqlServerType serverType) {
+        return SUPPORTED_TYPES.contains(serverType);
+    }
+
+    @Override
     public boolean canEncodeNull(Class<?> type) {
 
         Assert.requireNonNull(type, "Type must not be null");
@@ -128,6 +133,11 @@ class BinaryCodec implements Codec<Object> {
 
     @Override
     public Encoded encodeNull(ByteBufAllocator allocator) {
+        return new VarbinaryEncoded(TdsDataType.BIGVARBINARY, Unpooled.wrappedBuffer(NULL));
+    }
+
+    @Override
+    public Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
         return new VarbinaryEncoded(TdsDataType.BIGVARBINARY, Unpooled.wrappedBuffer(NULL));
     }
 

@@ -69,8 +69,18 @@ public class BlobCodec extends AbstractCodec<Blob> {
     }
 
     @Override
+    public boolean canEncodeNull(SqlServerType serverType) {
+        return SUPPORTED_TYPES.contains(serverType);
+    }
+
+    @Override
     Encoded doEncodeNull(ByteBufAllocator allocator) {
         return BinaryCodec.INSTANCE.encodeNull(allocator);
+    }
+
+    @Override
+    public Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
+        return BinaryCodec.INSTANCE.encodeNull(allocator, serverType);
     }
 
     @Override

@@ -77,12 +77,22 @@ public class ClobCodec extends AbstractCodec<Clob> {
 
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, Clob value) {
-        return CharacterEncoder.encodePlp(allocator, context.getRequiredValueContext(CharacterValueContext.class), value);
+        return CharacterEncoder.encodePlp(allocator, context.getServerType(), context.getRequiredValueContext(CharacterValueContext.class), value);
+    }
+
+    @Override
+    public boolean canEncodeNull(SqlServerType serverType) {
+        return SUPPORTED_TYPES.contains(serverType);
     }
 
     @Override
     Encoded doEncodeNull(ByteBufAllocator allocator) {
         return StringCodec.INSTANCE.doEncodeNull(allocator);
+    }
+
+    @Override
+    public Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
+        return StringCodec.INSTANCE.encodeNull(allocator, serverType);
     }
 
     @Override

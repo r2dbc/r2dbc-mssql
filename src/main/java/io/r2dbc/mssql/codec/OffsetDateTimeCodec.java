@@ -69,8 +69,18 @@ final class OffsetDateTimeCodec extends AbstractCodec<OffsetDateTime> {
     }
 
     @Override
+    public boolean canEncodeNull(SqlServerType serverType) {
+        return serverType == SqlServerType.DATETIMEOFFSET;
+    }
+
+    @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
         return RpcEncoding.wrap(NULL, SqlServerType.DATETIMEOFFSET);
+    }
+
+    @Override
+    public Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
+        return RpcEncoding.encodeTemporalNull(allocator, serverType, 7);
     }
 
     @Override

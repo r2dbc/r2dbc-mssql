@@ -51,8 +51,18 @@ final class DoubleCodec extends AbstractCodec<Double> {
     }
 
     @Override
+    public boolean canEncodeNull(SqlServerType serverType) {
+        return serverType == SqlServerType.FLOAT;
+    }
+
+    @Override
     Encoded doEncodeNull(ByteBufAllocator allocator) {
         return RpcEncoding.wrap(NULL, SqlServerType.FLOAT);
+    }
+
+    @Override
+    public Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
+        return RpcEncoding.encodeNull(allocator, serverType);
     }
 
     @Override

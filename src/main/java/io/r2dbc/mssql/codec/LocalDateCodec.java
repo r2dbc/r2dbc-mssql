@@ -67,8 +67,18 @@ final class LocalDateCodec extends AbstractCodec<LocalDate> {
     }
 
     @Override
+    public boolean canEncodeNull(SqlServerType serverType) {
+        return serverType == SqlServerType.DATE;
+    }
+
+    @Override
     public Encoded doEncodeNull(ByteBufAllocator allocator) {
         return RpcEncoding.wrap(NULL, SqlServerType.DATE);
+    }
+
+    @Override
+    public Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
+        return RpcEncoding.encodeTemporalNull(allocator, serverType);
     }
 
     @Override

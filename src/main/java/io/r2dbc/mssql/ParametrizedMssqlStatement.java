@@ -24,11 +24,13 @@ import io.r2dbc.mssql.codec.RpcParameterContext;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Clob;
+import io.r2dbc.spi.Parameter;
 import io.r2dbc.spi.Statement;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -217,7 +219,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         Assert.isInstanceOf(String.class, identifier, "identifier must be a String");
 
         RpcParameterContext parameterContext = RpcParameterContext.in();
-        if (value instanceof CharSequence || value instanceof Clob) {
+        if (isTextual(value) || (value instanceof Parameter && isTextual(((Parameter) value).getValue()))) {
             parameterContext = RpcParameterContext.in(new RpcParameterContext.CharacterValueContext(this.client.getRequiredCollation(), this.sendStringParametersAsUnicode));
         }
 
@@ -303,6 +305,10 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
         Assert.requireNonNull(sql, "SQL must not be null");
         return sql.lastIndexOf('@') != -1;
+    }
+
+    private static boolean isTextual(@Nullable Object value) {
+        return value instanceof CharSequence || value instanceof Clob;
     }
 
     /**

@@ -17,6 +17,7 @@
 package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.type.Length;
@@ -68,6 +69,11 @@ abstract class AbstractNumericCodec<T> extends AbstractCodec<T> {
     }
 
     @Override
+    public boolean canEncodeNull(SqlServerType serverType) {
+        return SUPPORTED_TYPES.contains(serverType);
+    }
+
+    @Override
     boolean doCanDecode(TypeInformation typeInformation) {
         return SUPPORTED_TYPES.contains(typeInformation.getServerType());
     }
@@ -110,6 +116,11 @@ abstract class AbstractNumericCodec<T> extends AbstractCodec<T> {
         }
 
         return new BigDecimal(new BigInteger(sign, magnitude), scale);
+    }
+
+    @Override
+    public Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
+        return RpcEncoding.encodeNull(allocator, serverType);
     }
 
     /**

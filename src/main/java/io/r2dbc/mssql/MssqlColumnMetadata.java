@@ -22,6 +22,7 @@ import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.ColumnMetadata;
 import io.r2dbc.spi.Nullability;
+import io.r2dbc.spi.Type;
 
 import javax.annotation.Nonnull;
 
@@ -69,7 +70,12 @@ public final class MssqlColumnMetadata implements ColumnMetadata {
 
     @Override
     public Class<?> getJavaType() {
-        return codecs.getJavaType(getNativeTypeMetadata());
+        return this.codecs.getJavaType(getNativeTypeMetadata());
+    }
+
+    @Override
+    public Type getType() {
+        return getNativeTypeMetadata().getServerType();
     }
 
     @Override
