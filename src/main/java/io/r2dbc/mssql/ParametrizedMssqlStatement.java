@@ -107,9 +107,9 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
     @Override
     public Flux<MssqlResult> execute() {
 
-        if (this.bindings.bindings.isEmpty()) {
+        /*if (this.bindings.bindings.isEmpty()) {
             throw new IllegalStateException(String.format("No parameters bound for query '%s'", this.parsedQuery.sql));
-        }
+        } */
 
         this.bindings.validate(this.parsedQuery.getParameters());
 
@@ -122,6 +122,13 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
             boolean useGeneratedKeysClause = GeneratedValues.shouldExpectGeneratedKeys(this.getGeneratedColumns());
             String sql = useGeneratedKeysClause ? GeneratedValues.augmentQuery(this.parsedQuery.sql, getGeneratedColumns()) : this.parsedQuery.sql;
+
+            if (this.bindings.bindings.size() == 0) {
+
+                Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, new Binding());
+
+                return Flux.just(MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, exchange));
+            }
 
             if (this.bindings.bindings.size() == 1) {
 

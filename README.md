@@ -8,6 +8,7 @@ This project contains the [Microsoft SQL Server][m] implementation of the [R2DBC
 
 This driver provides the following features:
 
+* Complies with R2DBC 0.9
 * Login with username/password with temporary SSL encryption
 * Full SSL encryption support (for e.g. Azure usage).
 * Transaction Control
@@ -142,16 +143,36 @@ If you'd rather like the latest snapshots of the upcoming major version, use our
 </dependency>
 
 <repository>
-  <id>sonatype-nexus-snapshots</id>
-  <name>Sonatype OSS Snapshot Repository</name>
-  <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+<id>sonatype-nexus-snapshots</id>
+<name>Sonatype OSS Snapshot Repository</name>
+<url>https://oss.sonatype.org/content/repositories/snapshots</url>
 </repository>
 ``` 
 
-### Data Type Mapping 
+## Transaction Definitions
+
+SQL Server supports additional options when starting a transaction. In particular, the following options can be specified:
+
+* Isolation Level (`isolationLevel`) (reset after the transaction to previous value)
+* Transaction Name (`name`)
+* Transaction Log Mark (`mark`)
+* Lock Wait Timeout (`lockWaitTimeout`) (reset after the transaction to `-1`)
+
+These options can be specified upon transaction begin to start the transaction and apply options in a single command roundtrip:
+
+```java
+MssqlConnection connection= …;
+
+        connection.beginTransaction(MssqlTransactionDefinition.from(IsolationLevel.READ_UNCOMMITTED)
+        .name("my-transaction").mark("tx-log-mark")
+        .lockTimeout(Duration.ofMinutes(1)));
+```
+
+See also: https://docs.microsoft.com/en-us/sql/t-sql/language-elements/begin-transaction-transact-sql
+
+### Data Type Mapping
 
 This reference table shows the type mapping between [Microsoft SQL Server][m] and Java data types:
-
 
 | Microsoft SQL Server Type                 | Java Data Type                                                                                                                           | 
 |:------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------|

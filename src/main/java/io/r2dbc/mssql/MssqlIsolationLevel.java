@@ -59,4 +59,11 @@ public final class MssqlIsolationLevel {
      */
     public static final IsolationLevel SNAPSHOT = IsolationLevel.valueOf("SNAPSHOT");
 
+    /**
+     * Unspecified isolation level.
+     *
+     * @since 0.9
+     */
+    public static final IsolationLevel UNSPECIFIED = IsolationLevel.valueOf("UNSPECIFIED");
+
 }

@@ -59,7 +59,7 @@ class MssqlConnectionUnitTests {
     void shouldBeginTransactionFromInitialState() {
 
         TestClient client =
-            TestClient.builder().expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "SET IMPLICIT_TRANSACTIONS ON;")).thenRespond(DoneToken.create(0)).build();
+            TestClient.builder().expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "BEGIN TRANSACTION;")).thenRespond(DoneToken.create(0)).build();
 
         MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
 
@@ -72,7 +72,7 @@ class MssqlConnectionUnitTests {
     void shouldBeginTransactionFromExplicitState() {
 
         TestClient client =
-            TestClient.builder().withTransactionStatus(TransactionStatus.EXPLICIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "SET IMPLICIT_TRANSACTIONS ON;")).thenRespond(DoneToken.create(0)).build();
+            TestClient.builder().withTransactionStatus(TransactionStatus.EXPLICIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "BEGIN TRANSACTION;")).thenRespond(DoneToken.create(0)).build();
 
         MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
 
@@ -103,7 +103,7 @@ class MssqlConnectionUnitTests {
     void shouldCommitFromExplicitTransaction() {
 
         TestClient client =
-            TestClient.builder().withTransactionStatus(TransactionStatus.STARTED).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "IF @@TRANCOUNT > 0 COMMIT TRANSACTION")).thenRespond(DoneToken.create(0)).build();
+            TestClient.builder().withTransactionStatus(TransactionStatus.STARTED).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "IF @@TRANCOUNT > 0 COMMIT TRANSACTION;")).thenRespond(DoneToken.create(0)).build();
 
         MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
 
@@ -134,7 +134,7 @@ class MssqlConnectionUnitTests {
     void shouldRollbackFromExplicitTransaction() {
 
         TestClient client =
-            TestClient.builder().withTransactionStatus(TransactionStatus.STARTED).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION")).thenRespond(DoneToken.create(0)).build();
+            TestClient.builder().withTransactionStatus(TransactionStatus.STARTED).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(), "IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;")).thenRespond(DoneToken.create(0)).build();
 
         MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
 

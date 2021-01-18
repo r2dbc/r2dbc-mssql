@@ -16,12 +16,19 @@
 
 package io.r2dbc.mssql;
 
+import io.r2dbc.mssql.api.MssqlTransactionDefinition;
 import io.r2dbc.mssql.util.IntegrationTestSupport;
+import io.r2dbc.spi.IsolationLevel;
 import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests for transactional behavior.
@@ -98,11 +105,11 @@ class TransactionIntegrationTests extends IntegrationTestSupport {
             .concatWith(Flux.from(connection.createStatement("INSERT INTO r2dbc_example VALUES(@P1, @P2, @P3)")
                 .bind(0, 0).bind(1, "Walter").bind(2, "White").execute())
                 .flatMap(Result::getRowsUpdated))
-            .concatWith(connection.createSavepoint("savepoint"))
+            .concatWith(connection.createSavepoint("savepoint.1"))
             .concatWith(Flux.from(connection.createStatement("INSERT INTO r2dbc_example VALUES(@P1, @P2, @P3)")
                 .bind(0, 2).bind(1, "Hank").bind(2, "Schrader").execute())
                 .flatMap(Result::getRowsUpdated))
-            .concatWith(connection.rollbackTransactionToSavepoint("savepoint"))
+            .concatWith(connection.rollbackTransactionToSavepoint("savepoint.1"))
             .concatWith(Flux.from(connection.createStatement("SELECT COUNT(*) FROM r2dbc_example /* in-tx */")
                 .execute())
                 .flatMap(result -> result.map((row, rowMetadata) -> row.get(0, Integer.class))))
@@ -123,9 +130,13 @@ class TransactionIntegrationTests extends IntegrationTestSupport {
 
         createTable(connection);
 
+        assertThat(connection.isAutoCommit()).isTrue();
+
         connection.setAutoCommit(false)
             .as(StepVerifier::create)
             .verifyComplete();
+
+        assertThat(connection.isAutoCommit()).isFalse();
 
         connection.createStatement("INSERT INTO r2dbc_example VALUES(0, 'Walter', 'White')").execute()
             .<Object>flatMap(Result::getRowsUpdated)
@@ -231,6 +242,173 @@ class TransactionIntegrationTests extends IntegrationTestSupport {
             .as(StepVerifier::create)
             .expectNext(0)
             .verifyComplete();
+    }
+
+    @Test
+    void shouldBeginExtendedTransaction() {
+
+        getTransactionCount()
+            .as(StepVerifier::create)
+            .expectNext(0)
+            .verifyComplete();
+
+        connection.beginTransaction(MssqlTransactionDefinition.from(IsolationLevel.READ_UNCOMMITTED)
+            .name("foo-1").mark("bar")
+            .lockTimeout(Duration.ofMinutes(1))).as(StepVerifier::create).verifyComplete();
+
+        getTransactionCount()
+            .as(StepVerifier::create)
+            .expectNext(1)
+            .verifyComplete();
+
+        connection.createStatement("SELECT @@LOCK_TIMEOUT").execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> row.get(0, Long.class)))
+            .as(StepVerifier::create)
+            .expectNext(TimeUnit.MINUTES.toMillis(1))
+            .verifyComplete();
+
+        getIsolationLevel()
+            .as(StepVerifier::create)
+            .expectNext(MssqlIsolationLevel.READ_UNCOMMITTED)
+            .verifyComplete();
+
+        connection.rollbackTransaction().as(StepVerifier::create).verifyComplete();
+
+        getTransactionCount()
+            .as(StepVerifier::create)
+            .expectNext(0)
+            .verifyComplete();
+    }
+
+    private Flux<Integer> getTransactionCount() {
+        return connection.createStatement("SELECT @@TRANCOUNT").execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> row.get(0, Integer.class)));
+    }
+
+    @Test
+    void shouldRestoreAutoCommitAfterExtendedTx() {
+
+        getImplicitTransactions().as(StepVerifier::create).expectNext(false).verifyComplete();
+
+        connection.beginTransaction(IsolationLevel.READ_UNCOMMITTED).as(StepVerifier::create).verifyComplete();
+        assertThat(connection.isAutoCommit()).isFalse();
+        getImplicitTransactions().as(StepVerifier::create).expectNext(false).verifyComplete();
+
+        connection.rollbackTransaction().as(StepVerifier::create).verifyComplete();
+        assertThat(connection.isAutoCommit()).isTrue();
+
+        // huh?
+        getImplicitTransactions().as(StepVerifier::create).expectNext(false).verifyComplete();
+
+        connection.setAutoCommit(true).as(StepVerifier::create).verifyComplete();
+        assertThat(connection.isAutoCommit()).isTrue();
+        getImplicitTransactions().as(StepVerifier::create).expectNext(false).verifyComplete();
+
+        assertAutoCommit();
+    }
+
+    private void assertAutoCommit() {
+        createTable(connection);
+
+        connection.createStatement("INSERT INTO r2dbc_example VALUES(0, 'Walter', 'White')")
+            .execute()
+            .flatMap(Result::getRowsUpdated)
+            .as(StepVerifier::create)
+            .expectNextCount(1)
+            .verifyComplete();
+
+        getTransactionCount()
+            .as(StepVerifier::create)
+            .expectNext(0)
+            .verifyComplete();
+
+        MssqlConnection connection = connectionFactory.create().block();
+
+        connection.createStatement("SELECT COUNT(*) FROM r2dbc_example")
+            .execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> row.get(0, Integer.class)))
+            .as(StepVerifier::create)
+            .expectNext(1)
+            .verifyComplete();
+
+        connection.close().as(StepVerifier::create).verifyComplete();
+    }
+
+    @Test
+    void shouldResetIsolationLevelAfterTransaction() {
+
+        getIsolationLevel()
+            .as(StepVerifier::create)
+            .expectNext(MssqlIsolationLevel.READ_COMMITTED)
+            .verifyComplete();
+
+        connection.beginTransaction(IsolationLevel.READ_UNCOMMITTED).as(StepVerifier::create).verifyComplete();
+
+        connection.rollbackTransaction().as(StepVerifier::create).verifyComplete();
+
+        getIsolationLevel()
+            .as(StepVerifier::create)
+            .expectNext(MssqlIsolationLevel.READ_COMMITTED)
+            .verifyComplete();
+
+        assertThat(connection.getTransactionIsolationLevel()).isEqualTo(MssqlIsolationLevel.READ_COMMITTED);
+    }
+
+    @Test
+    void shouldResetLockTimeoutAfterTransaction() {
+
+        connection.createStatement("SELECT @@LOCK_TIMEOUT").execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> row.get(0, Integer.class)))
+            .as(StepVerifier::create)
+            .expectNext(-1)
+            .verifyComplete();
+
+        connection.beginTransaction(MssqlTransactionDefinition.named("foo").lockTimeout(Duration.ofMinutes(60))).as(StepVerifier::create).verifyComplete();
+        connection.rollbackTransaction().as(StepVerifier::create).verifyComplete();
+
+        connection.createStatement("SELECT @@LOCK_TIMEOUT").execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> row.get(0, Integer.class)))
+            .as(StepVerifier::create)
+            .expectNext(-1)
+            .verifyComplete();
+    }
+
+    Mono<IsolationLevel> getIsolationLevel() {
+
+        return connection.createStatement("SELECT CASE transaction_isolation_level \n" +
+            "WHEN 0 THEN 'UNSPECIFIED' \n" +
+            "WHEN 1 THEN 'READ_UNCOMMITTED' \n" +
+            "WHEN 2 THEN 'READ_COMMITTED' \n" +
+            "WHEN 3 THEN 'REPEATABLE_READ' \n" +
+            "WHEN 4 THEN 'SERIALIZABLE' \n" +
+            "WHEN 5 THEN 'SNAPSHOT' END AS TRANSACTION_ISOLATION_LEVEL \n" +
+            "FROM sys.dm_exec_sessions \n" +
+            "where session_id = @@SPID").execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> row.get(0, String.class)))
+            .map(it -> {
+
+                switch (it) {
+                    case "READ_UNCOMMITTED":
+                        return MssqlIsolationLevel.READ_UNCOMMITTED;
+                    case "READ_COMMITTED":
+                        return MssqlIsolationLevel.READ_COMMITTED;
+                    case "SERIALIZABLE":
+                        return MssqlIsolationLevel.SERIALIZABLE;
+                    case "REPEATABLE_READ":
+                        return MssqlIsolationLevel.REPEATABLE_READ;
+                    case "SNAPSHOT":
+                        return MssqlIsolationLevel.SNAPSHOT;
+                }
+
+                return MssqlIsolationLevel.UNSPECIFIED;
+            }).single();
+    }
+
+    Mono<Boolean> getImplicitTransactions() {
+
+        return connection.createStatement("SELECT @@OPTIONS AS IMPLICIT_TRANSACTIONS;").execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> (row.get(0, Integer.class) & 2) == 2))
+            .single();
     }
 
     private void createTable(MssqlConnection connection) {

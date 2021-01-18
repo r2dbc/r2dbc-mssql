@@ -18,6 +18,7 @@ package io.r2dbc.mssql;
 
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.r2dbc.mssql.api.MssqlTransactionDefinition;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.client.TransactionStatus;
@@ -26,6 +27,8 @@ import io.r2dbc.mssql.util.Operators;
 import io.r2dbc.spi.Batch;
 import io.r2dbc.spi.Connection;
 import io.r2dbc.spi.IsolationLevel;
+import io.r2dbc.spi.Option;
+import io.r2dbc.spi.TransactionDefinition;
 import io.r2dbc.spi.ValidationDepth;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
@@ -35,6 +38,7 @@ import reactor.core.publisher.Mono;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import java.time.Duration;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
@@ -49,7 +53,9 @@ import java.util.regex.Pattern;
  */
 public final class MssqlConnection implements Connection {
 
-    private static final Pattern SAVEPOINT_PATTERN = Pattern.compile("[\\d\\w_]{1,32}");
+    private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("[\\d\\w_]{1,32}");
+
+    private static final Pattern IDENTIFIER128_PATTERN = Pattern.compile("[\\d\\w_]{1,128}");
 
     private static final Logger logger = Loggers.getLogger(MssqlConnection.class);
 
@@ -67,6 +73,10 @@ public final class MssqlConnection implements Connection {
 
     private volatile IsolationLevel isolationLevel;
 
+    private volatile IsolationLevel previousIsolationLevel;
+
+    private volatile boolean resetLockWaitTime = false;
+
     MssqlConnection(Client client, MssqlConnectionMetadata connectionMetadata, ConnectionOptions connectionOptions) {
 
         this.client = Assert.requireNonNull(client, "Client must not be null");
@@ -82,6 +92,11 @@ public final class MssqlConnection implements Connection {
 
     @Override
     public Mono<Void> beginTransaction() {
+        return beginTransaction(EmptyTransactionDefinition.INSTANCE);
+    }
+
+    @Override
+    public Mono<Void> beginTransaction(TransactionDefinition transactionDefinition) {
 
         return useTransactionStatus(tx -> {
 
@@ -90,11 +105,48 @@ public final class MssqlConnection implements Connection {
                 return Mono.empty();
             }
 
-            String sql = "SET IMPLICIT_TRANSACTIONS ON;";
+            String name = transactionDefinition.getAttribute(MssqlTransactionDefinition.NAME);
+            String mark = transactionDefinition.getAttribute(MssqlTransactionDefinition.MARK);
+            IsolationLevel isolationLevel = transactionDefinition.getAttribute(MssqlTransactionDefinition.ISOLATION_LEVEL);
+            Duration lockWaitTime = transactionDefinition.getAttribute(MssqlTransactionDefinition.LOCK_WAIT_TIMEOUT);
+
+            StringBuilder builder = new StringBuilder();
+
+            builder.append("BEGIN TRANSACTION");
+            if (name != null) {
+                String nameToUse = sanitize(name);
+                Assert.isTrue(IDENTIFIER_PATTERN.matcher(nameToUse).matches(), "Transaction names must contain only characters and numbers and must not exceed 32 characters");
+                builder.append(" ").append(nameToUse);
+
+                if (mark != null) {
+                    String markToUse = sanitize(mark);
+                    Assert.isTrue(IDENTIFIER128_PATTERN.matcher(markToUse.substring(0, Math.min(128, markToUse.length()))).matches(), "Transaction names must contain only characters and numbers and" +
+                        " must not " +
+                        "exceed 128 characters");
+                    builder.append(' ').append("WITH MARK '").append(markToUse).append("'");
+                }
+            }
+            builder.append(';');
+
+            if (isolationLevel != null) {
+                builder.append(renderSetIsolationLevel(isolationLevel)).append(';');
+            }
+
+            if (lockWaitTime != null) {
+                this.resetLockWaitTime = true;
+                builder.append("SET LOCK_TIMEOUT ").append(lockWaitTime.isNegative() ? "-1" : lockWaitTime.toMillis()).append(';');
+            }
 
             logger.debug(this.context.getMessage("Beginning transaction from status [{}]"), tx);
 
-            return exchange(sql);
+            return exchange(builder.toString()).doOnSuccess(unused -> {
+
+                this.previousIsolationLevel = this.isolationLevel;
+
+                if (isolationLevel != null) {
+                    this.isolationLevel = isolationLevel;
+                }
+            });
         });
     }
 
@@ -115,8 +167,30 @@ public final class MssqlConnection implements Connection {
 
             logger.debug(this.context.getMessage("Committing transaction with status [{}]"), tx);
 
-            return exchange("IF @@TRANCOUNT > 0 COMMIT TRANSACTION");
+            return exchange("IF @@TRANCOUNT > 0 COMMIT TRANSACTION;" + cleanup()).doOnSuccess(v -> {
+
+                if (this.previousIsolationLevel != null) {
+                    this.isolationLevel = this.previousIsolationLevel;
+                    this.previousIsolationLevel = null;
+                }
+
+                this.resetLockWaitTime = false;
+            });
         });
+    }
+
+    private String cleanup() {
+
+        String cleanupSql = "";
+        if (this.previousIsolationLevel != null && this.previousIsolationLevel != this.isolationLevel) {
+            cleanupSql = renderSetIsolationLevel(this.previousIsolationLevel) + ";";
+        }
+
+        if (this.resetLockWaitTime) {
+            cleanupSql += "SET LOCK_TIMEOUT -1;";
+        }
+
+        return cleanupSql;
     }
 
     @Override
@@ -128,17 +202,19 @@ public final class MssqlConnection implements Connection {
     public Mono<Void> createSavepoint(String name) {
 
         Assert.requireNonNull(name, "Savepoint name must not be null");
-        Assert.isTrue(SAVEPOINT_PATTERN.matcher(name).matches(), "Save point names must contain only characters and numbers and must not exceed 32 characters");
+
+        String nameToUse = sanitize(name);
+        Assert.isTrue(IDENTIFIER_PATTERN.matcher(nameToUse).matches(), "Save point names must contain only characters and numbers and must not exceed 32 characters");
 
         return useTransactionStatus(tx -> {
 
-            logger.debug(this.context.getMessage("Creating savepoint for transaction with status [{}]"), tx);
+            logger.debug(this.context.getMessage("Creating savepoint [{}] for transaction with status [{}]"), nameToUse, tx);
 
             if (this.autoCommit) {
                 logger.debug(this.context.getMessage("Setting auto-commit mode to [false]"));
             }
 
-            return exchange(String.format("SET IMPLICIT_TRANSACTIONS ON; IF @@TRANCOUNT = 0 BEGIN BEGIN TRAN IF @@TRANCOUNT = 2 COMMIT TRAN END SAVE TRAN %s;", name)).doOnSuccess(ignore -> {
+            return exchange(String.format("SET IMPLICIT_TRANSACTIONS ON; IF @@TRANCOUNT = 0 BEGIN BEGIN TRAN IF @@TRANCOUNT = 2 COMMIT TRAN END SAVE TRAN %s;", nameToUse)).doOnSuccess(ignore -> {
                 this.autoCommit = false;
             });
         });
@@ -174,7 +250,23 @@ public final class MssqlConnection implements Connection {
 
             logger.debug(this.context.getMessage("Rolling back transaction with status [{}]"), tx);
 
-            return exchange("IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION");
+            return exchange("IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;" + cleanup()).doOnSuccess(v -> {
+
+                if (this.previousIsolationLevel != null) {
+                    this.isolationLevel = this.previousIsolationLevel;
+                    this.previousIsolationLevel = null;
+                }
+
+                this.resetLockWaitTime = false;
+            }).doOnSuccess(v -> {
+
+                if (this.previousIsolationLevel != null) {
+                    this.isolationLevel = this.previousIsolationLevel;
+                    this.previousIsolationLevel = null;
+                }
+
+                this.resetLockWaitTime = false;
+            });
         });
     }
 
@@ -182,23 +274,24 @@ public final class MssqlConnection implements Connection {
     public Mono<Void> rollbackTransactionToSavepoint(String name) {
 
         Assert.requireNonNull(name, "Savepoint name must not be null");
-        Assert.isTrue(SAVEPOINT_PATTERN.matcher(name).matches(), "Save point names must contain only characters and numbers and must not exceed 32 characters");
+        String nameToUse = sanitize(name);
+        Assert.isTrue(IDENTIFIER_PATTERN.matcher(nameToUse).matches(), "Save point names must contain only characters and numbers and must not exceed 32 characters");
 
         return useTransactionStatus(tx -> {
 
             if (tx != TransactionStatus.STARTED) {
-                logger.debug(this.context.getMessage("Skipping rollback transaction to savepoint [{}] because status is [{}]"), name, tx);
+                logger.debug(this.context.getMessage("Skipping rollback transaction to savepoint [{}] because status is [{}]"), nameToUse, tx);
                 return Mono.empty();
             }
 
-            logger.debug(this.context.getMessage("Rolling back transaction to savepoint [{}] with status [{}]"), name, tx);
+            logger.debug(this.context.getMessage("Rolling back transaction to savepoint [{}] with status [{}]"), nameToUse, tx);
 
-            return exchange(String.format("ROLLBACK TRANSACTION %s", name));
+            return exchange(String.format("ROLLBACK TRANSACTION %s", nameToUse));
         });
     }
 
     public boolean isAutoCommit() {
-        return this.autoCommit;
+        return this.autoCommit && this.client.getTransactionStatus() != TransactionStatus.STARTED;
     }
 
     public Mono<Void> setAutoCommit(boolean autoCommit) {
@@ -234,7 +327,7 @@ public final class MssqlConnection implements Connection {
     public Mono<Void> setTransactionIsolationLevel(IsolationLevel isolationLevel) {
         Assert.requireNonNull(isolationLevel, "IsolationLevel must not be null");
 
-        return exchange("SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql()).doOnSuccess(ignore -> this.isolationLevel = isolationLevel);
+        return exchange(renderSetIsolationLevel(isolationLevel)).doOnSuccess(ignore -> this.isolationLevel = isolationLevel);
     }
 
     @Override
@@ -278,19 +371,36 @@ public final class MssqlConnection implements Connection {
         });
     }
 
+    private static String renderSetIsolationLevel(IsolationLevel isolationLevel) {
+        return "SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql();
+    }
+
+    private static String sanitize(String identifier) {
+        return identifier.replace('-', '_').replace('.', '_');
+    }
+
     private Mono<Void> exchange(String sql) {
 
         ExceptionFactory factory = ExceptionFactory.withSql(sql);
         return QueryMessageFlow.exchange(this.client, sql)
-            .handle(factory::handleErrorResponse)
             .transform(Operators::discardOnCancel)
             .doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release)
+            .handle(factory::handleErrorResponse)
             .then();
     }
 
     private Mono<Void> useTransactionStatus(Function<TransactionStatus, Publisher<?>> function) {
         return Flux.defer(() -> function.apply(this.client.getTransactionStatus()))
             .then();
+    }
+
+    enum EmptyTransactionDefinition implements TransactionDefinition {
+        INSTANCE;
+
+        @Override
+        public <T> T getAttribute(Option<T> option) {
+            return null;
+        }
     }
 
 }
