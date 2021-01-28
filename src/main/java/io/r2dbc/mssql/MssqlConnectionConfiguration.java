@@ -92,6 +92,8 @@ public final class MssqlConnectionConfiguration {
 
     private final boolean ssl;
 
+    private final boolean trustServerCertificate;
+
     private final Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer;
 
     @Nullable
@@ -113,7 +115,7 @@ public final class MssqlConnectionConfiguration {
     private final char[] trustStorePassword;
 
     private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, Duration connectTimeout, @Nullable String database, String host, String hostNameInCertificate,
-                                         CharSequence password, Predicate<String> preferCursoredExecution, int port, boolean sendStringParametersAsUnicode, boolean ssl,
+                                         CharSequence password, Predicate<String> preferCursoredExecution, int port, boolean sendStringParametersAsUnicode, boolean ssl, boolean trustServerCertificate,
                                          Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer,
                                          @Nullable Function<SslContextBuilder, SslContextBuilder> sslTunnelSslContextBuilderCustomizer, boolean tcpKeepAlive, boolean tcpNoDelay,
                                          @Nullable File trustStore, @Nullable String trustStoreType,
@@ -130,6 +132,7 @@ public final class MssqlConnectionConfiguration {
         this.port = port;
         this.sendStringParametersAsUnicode = sendStringParametersAsUnicode;
         this.ssl = ssl;
+        this.trustServerCertificate = trustServerCertificate;
         this.sslContextBuilderCustomizer = sslContextBuilderCustomizer;
         this.sslTunnelSslContextBuilderCustomizer = sslTunnelSslContextBuilderCustomizer;
         this.tcpKeepAlive = tcpKeepAlive;
@@ -173,13 +176,14 @@ public final class MssqlConnectionConfiguration {
         }
 
         return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, redirectServerName, hostNameInCertificate, this.password,
-            this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer, this.sslTunnelSslContextBuilderCustomizer,
-            this.tcpKeepAlive, this.tcpNoDelay, this.trustStore, this.trustStoreType, this.trustStorePassword, this.username);
+            this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.trustServerCertificate, this.sslContextBuilderCustomizer,
+            this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustStore, this.trustStoreType, this.trustStorePassword, this.username);
     }
 
     ClientConfiguration toClientConfiguration() {
-        return new DefaultClientConfiguration(this.connectTimeout, this.host, this.hostNameInCertificate, this.port, this.ssl, this.sslContextBuilderCustomizer,
-            this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustStore, this.trustStoreType, this.trustStorePassword);
+        return new DefaultClientConfiguration(this.connectTimeout, this.host, this.hostNameInCertificate, this.port, this.ssl, this.trustServerCertificate,
+            this.sslContextBuilderCustomizer, this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustStore, this.trustStoreType,
+            this.trustStorePassword);
     }
 
     ConnectionOptions toConnectionOptions() {
@@ -201,6 +205,7 @@ public final class MssqlConnectionConfiguration {
         sb.append(", port=").append(this.port);
         sb.append(", sendStringParametersAsUnicode=").append(this.sendStringParametersAsUnicode);
         sb.append(", ssl=").append(this.ssl);
+        sb.append(", trustServerCertificate=").append(this.trustServerCertificate);
         sb.append(", sslContextBuilderCustomizer=").append(this.sslContextBuilderCustomizer);
         sb.append(", sslTunnelSslContextBuilderCustomizer=").append(this.sslTunnelSslContextBuilderCustomizer);
         sb.append(", tcpKeepAlive=\"").append(this.tcpKeepAlive).append("\"");
@@ -344,6 +349,8 @@ public final class MssqlConnectionConfiguration {
 
         private boolean ssl;
 
+        private boolean trustServerCertificate;
+
         private Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer = Function.identity();
 
         @Nullable
@@ -424,6 +431,16 @@ public final class MssqlConnectionConfiguration {
          */
         public Builder enableSsl() {
             this.ssl = true;
+            return this;
+        }
+
+        /**
+         * Allow using SSL when server uses self signed certificate.
+         *
+         * @return this {@link Builder}
+         */
+        public Builder trustServerCertificate() {
+            this.trustServerCertificate = true;
             return this;
         }
 
@@ -653,7 +670,8 @@ public final class MssqlConnectionConfiguration {
             }
 
             return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, this.host, this.hostNameInCertificate, this.password,
-                this.preferCursoredExecution, this.port, this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer, this.sslTunnelSslContextBuilderCustomizer, tcpKeepAlive,
+                this.preferCursoredExecution, this.port, this.sendStringParametersAsUnicode, this.ssl, this.trustServerCertificate, this.sslContextBuilderCustomizer,
+                this.sslTunnelSslContextBuilderCustomizer, tcpKeepAlive,
                 tcpNoDelay, this.trustStore,
                 this.trustStoreType,
                 this.trustStorePassword, this.username);
@@ -672,6 +690,8 @@ public final class MssqlConnectionConfiguration {
         private final int port;
 
         private final boolean ssl;
+
+        private final boolean trustServerCertificate;
 
         private final Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer;
 
@@ -692,7 +712,7 @@ public final class MssqlConnectionConfiguration {
         private final char[] trustStorePassword;
 
         DefaultClientConfiguration(Duration connectTimeout, String host, String hostNameInCertificate, int port, boolean ssl,
-                                   Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer,
+                                   boolean trustServerCertificate, Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer,
                                    @Nullable Function<SslContextBuilder, SslContextBuilder> sslTunnelSslContextBuilderCustomizer
             , boolean tcpKeepAlive, boolean tcpNoDelay, @Nullable File trustStore,
                                    @Nullable String trustStoreType, @Nullable char[] trustStorePassword) {
@@ -702,6 +722,7 @@ public final class MssqlConnectionConfiguration {
             this.hostNameInCertificate = hostNameInCertificate;
             this.port = port;
             this.ssl = ssl;
+            this.trustServerCertificate = trustServerCertificate;
             this.sslContextBuilderCustomizer = sslContextBuilderCustomizer;
             this.sslTunnelSslContextBuilderCustomizer = sslTunnelSslContextBuilderCustomizer;
             this.tcpKeepAlive = tcpKeepAlive;
@@ -758,7 +779,7 @@ public final class MssqlConnectionConfiguration {
             TrustManager[] trustManagers = tmf.getTrustManagers();
             TrustManager result;
 
-            if (isSslEnabled()) {
+            if (isSslEnabled() && !trustServerCertificate) {
                 result = new ExpectedHostnameX509TrustManager((X509TrustManager) trustManagers[0], this.hostNameInCertificate);
             } else {
                 result = TrustAllTrustManager.INSTANCE;
