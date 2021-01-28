@@ -87,6 +87,26 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
     }
 
     @Test
+    void shouldConnectWithSelfSignedCert() {
+
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+            .host(SERVER.getHost())
+            .port(SERVER.getPort())
+            .database("master")
+            .username(SERVER.getUsername())
+            .password(SERVER.getPassword())
+            .enableSsl()
+            .trustServerCertificate()
+            .build();
+
+        MssqlConnectionFactory connectionFactory = new MssqlConnectionFactory(configuration);
+        MssqlConnection newConnection = connectionFactory.create().block();
+
+        createTable(newConnection);
+        insertRecord(newConnection, 999);
+    }
+
+    @Test
     void shouldReportMetadata() throws Exception {
 
         try (Connection connection = SERVER.getDataSource().getConnection()) {
