@@ -21,6 +21,7 @@ import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -37,8 +38,29 @@ abstract class ColumnSource {
 
     ColumnSource(Column[] columns, Map<String, Column> nameKeyedColumns) {
 
-        this.columns = columns;
-        this.nameKeyedColumns = nameKeyedColumns;
+        if (shouldStripROWSTAT(columns)) {
+
+            this.columns = new Column[columns.length - 1];
+            System.arraycopy(columns, 0, this.columns, 0, this.columns.length);
+
+            this.nameKeyedColumns = new HashMap<>(this.columns.length, 1);
+            for (Column column : this.columns) {
+
+                Column old = this.nameKeyedColumns.put(column.getName(), column);
+                if (old != null) {
+                    this.nameKeyedColumns.put(column.getName(), old);
+                }
+            }
+        } else {
+
+            this.columns = columns;
+            this.nameKeyedColumns = nameKeyedColumns;
+        }
+    }
+
+    // Hide ROWSTAT column from metatada if it's the last column. Typically synthesized in cursored fetch.
+    private static boolean shouldStripROWSTAT(Column[] columns) {
+        return columns.length > 0 && "ROWSTAT".equals(columns[columns.length - 1].getName());
     }
 
     /**

@@ -21,7 +21,6 @@ import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.token.Column;
-import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.message.type.LengthStrategy;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
@@ -35,6 +34,7 @@ import java.util.stream.Collectors;
 
 import static io.r2dbc.mssql.message.type.TypeInformation.builder;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
  * Unit tests for {@link MssqlRowMetadata}.
@@ -51,8 +51,6 @@ class MssqlRowMetadataUnitTests {
 
     ByteBuf data = Unpooled.wrappedBuffer(new byte[]{(byte) 0x42, 0, 0, 0});
 
-    RowToken rowToken = RowToken.decode(this.data, new Column[]{this.column});
-
     MssqlRowMetadata rowMetadata = new MssqlRowMetadata(this.codecs, new Column[]{this.column}, Collections.singletonMap("foo", this.column));
 
     @Test
@@ -67,6 +65,40 @@ class MssqlRowMetadataUnitTests {
         assertThat(columnMetadata.getScale()).isEqualTo(5);
         assertThat(columnMetadata.getNullability()).isEqualTo(Nullability.NON_NULL);
         assertThat(columnMetadata.getNativeTypeMetadata()).isEqualTo(this.integer);
+    }
+
+    @Test
+    void shouldRemoveRowstatIfLastColumn() {
+
+        Column rowstat = new Column(0, "ROWSTAT", this.integer, null);
+
+        MssqlRowMetadata rowMetadata1 = new MssqlRowMetadata(this.codecs, new Column[]{this.column, rowstat}, new HashMap<>());
+
+        assertThat(rowMetadata1.getColumnNames()).containsOnly("foo");
+        assertThat(rowMetadata1.getColumnCount()).isOne();
+        assertThatIllegalArgumentException().isThrownBy(() -> rowMetadata1.getColumnMetadata("ROWSTAT"));
+        assertThat(rowMetadata1.getColumnNames()).containsOnly("foo");
+
+        MssqlRowMetadata rowMetadata2 = new MssqlRowMetadata(this.codecs, new Column[]{rowstat}, new HashMap<>());
+
+        assertThat(rowMetadata2.getColumnNames()).isEmpty();
+        assertThat(rowMetadata2.getColumnCount()).isZero();
+        assertThatIllegalArgumentException().isThrownBy(() -> rowMetadata2.getColumnMetadata("ROWSTAT"));
+        assertThat(rowMetadata2.getColumnNames()).isEmpty();
+    }
+
+    @Test
+    void retainsRowstatIfNotLastColumn() {
+
+        Column rowstat = new Column(0, "ROWSTAT", this.integer, null);
+        Map<String, Column> nameKeyedColumns = new HashMap<>();
+        nameKeyedColumns.put("foo", this.column);
+        nameKeyedColumns.put("ROWSTAT", rowstat);
+
+        MssqlRowMetadata rowMetadata = new MssqlRowMetadata(this.codecs, new Column[]{rowstat, this.column}, nameKeyedColumns);
+
+        assertThat(rowMetadata.getColumnNames()).contains("foo", "ROWSTAT");
+        assertThat(rowMetadata.getColumnCount()).isEqualTo(2);
     }
 
     @Test
