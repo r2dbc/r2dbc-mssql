@@ -45,7 +45,7 @@
         <mssql-jdbc.version>8.3.0.jre8-preview</mssql-jdbc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <r2dbc-spi.version>0.8.3.RELEASE</r2dbc-spi.version>
+        <r2dbc-spi.version>0.8.4.RELEASE</r2dbc-spi.version>
         <r2dbc-pool.version>0.8.5.RELEASE</r2dbc-pool.version>
         <reactor.version>Dysprosium-SR12</reactor.version>
         <slf4j.version>1.7.26</slf4j.version>
