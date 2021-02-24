@@ -233,26 +233,43 @@ values are fully materialized in the client before decoding. Make sure to accoun
 [sql-dtof-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/datetimeoffset-transact-sql?view=sql-server-2017
 [sql-money-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/money-and-smallmoney-transact-sql?view=sql-server-2017
 [sql-(var)char-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/char-and-varchar-transact-sql?view=sql-server-2017
+
 [sql-n(var)char-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/nchar-and-nvarchar-transact-sql?view=sql-server-2017
+
 [sql-(n)text-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/ntext-text-and-image-transact-sql?view=sql-server-2017
+
 [sql-binary-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/binary-and-varbinary-transact-sql?view=sql-server-2017
+
 [sql-sql-variant-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/sql-variant-transact-sql?view=sql-server-2017
+
 [sql-xml-ref]: https://docs.microsoft.com/en-us/sql/t-sql/xml/xml-transact-sql?view=sql-server-2017
+
 [sql-udt-ref]: https://docs.microsoft.com/en-us/sql/relational-databases/clr-integration-database-objects-user-defined-types/clr-user-defined-types?view=sql-server-2017
+
 [sql-geometry-ref]: https://docs.microsoft.com/en-us/sql/t-sql/spatial-geometry/spatial-types-geometry-transact-sql?view=sql-server-2017
+
 [sql-geography-ref]: https://docs.microsoft.com/en-us/sql/t-sql/spatial-geography/spatial-types-geography?view=sql-server-2017
 
-[r2dbc-blob-ref]: https://r2dbc.io/spec/0.8.0.RELEASE/api/io/r2dbc/spi/Blob.html
-[r2dbc-clob-ref]: https://r2dbc.io/spec/0.8.0.RELEASE/api/io/r2dbc/spi/Clob.html
+[r2dbc-blob-ref]: https://r2dbc.io/spec/0.9.0.M1/api/io/r2dbc/spi/Blob.html
+
+[r2dbc-clob-ref]: https://r2dbc.io/spec/0.9.0.M1/api/io/r2dbc/spi/Clob.html
 
 [java-bigdecimal-ref]: https://docs.oracle.com/javase/8/docs/api/java/math/BigDecimal.html
+
 [java-biginteger-ref]: https://docs.oracle.com/javase/8/docs/api/java/math/BigInteger.html
+
 [java-boolean-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Boolean.html
+
 [java-byte-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Byte.html
+
 [java-ByteBuffer-ref]: https://docs.oracle.com/javase/8/docs/api/java/nio/ByteBuffer.html
+
 [java-double-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Double.html
+
 [java-float-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Float.html
+
 [java-integer-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Integer.html
+
 [java-long-ref]: https://docs.oracle.com/javase/8/docs/api/java/lang/Long.html
 [java-ldt-ref]: https://docs.oracle.com/javase/8/docs/api/java/time/LocalDateTime.html
 [java-ld-ref]: https://docs.oracle.com/javase/8/docs/api/java/time/LocalDate.html
@@ -279,11 +296,10 @@ Logging facilities:
 
 Having trouble with R2DBC? We'd love to help!
 
-* Check the [spec documentation](https://r2dbc.io/spec/0.8.0.RELEASE/spec/html/), and [Javadoc](https://r2dbc.io/spec/0.8.0.RELEASE/api/).
-* If you are upgrading, check out the [changelog](https://r2dbc.io/spec/0.8.0.RELEASE/CHANGELOG.txt) for "new and noteworthy" features.
-* Ask a question - we monitor [stackoverflow.com](https://stackoverflow.com) for questions
-  tagged with [`r2dbc`](https://stackoverflow.com/tags/r2dbc). 
-  You can also chat with the community on [Gitter](https://gitter.im/r2dbc/r2dbc).
+* Check the [spec documentation](https://r2dbc.io/spec/0.9.0.M1/spec/html/), and [Javadoc](https://r2dbc.io/spec/0.9.0.M1/api/).
+* If you are upgrading, check out the [changelog](https://r2dbc.io/spec/0.9.0.M1/CHANGELOG.txt) for "new and noteworthy" features.
+* Ask a question - we monitor [stackoverflow.com](https://stackoverflow.com) for questions tagged with [`r2dbc`](https://stackoverflow.com/tags/r2dbc). You can also chat with the community
+  on [Gitter](https://gitter.im/r2dbc/r2dbc).
 * Report bugs with R2DBC MSSQL at [github.com/r2dbc/r2dbc-mssql/issues](https://github.com/r2dbc/r2dbc-mssql/issues).
 
 ## Reporting Issues
