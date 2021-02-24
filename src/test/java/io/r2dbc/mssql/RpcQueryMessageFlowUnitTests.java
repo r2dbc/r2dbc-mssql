@@ -35,7 +35,7 @@ import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.reactivestreams.Processor;
+import reactor.core.publisher.Sinks;
 import reactor.core.publisher.SynchronousSink;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -54,7 +54,7 @@ class RpcQueryMessageFlowUnitTests {
 
     Client client = mock(Client.class);
 
-    Processor<ClientMessage, ClientMessage> requests = mock(Processor.class);
+    Sinks.Many<ClientMessage> requests = mock(Sinks.Many.class);
 
     SynchronousSink<Message> sink = mock(SynchronousSink.class);
 
@@ -67,16 +67,16 @@ class RpcQueryMessageFlowUnitTests {
 
     @BeforeEach
     void setUp() {
-        when(client.getTransactionDescriptor()).thenReturn(TransactionDescriptor.empty());
+        when(this.client.getTransactionDescriptor()).thenReturn(TransactionDescriptor.empty());
     }
 
     @Test
     void shouldEncodeSpExecuteSql() {
 
         Binding binding = new Binding();
-        binding.add("P0", codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(ValueContext.character(collation, true)), "mark"));
+        binding.add("P0", this.codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(ValueContext.character(this.collation, true)), "mark"));
 
-        RpcRequest rpcRequest = RpcQueryMessageFlow.spExecuteSql("SELECT * FROM my_table", binding, collation, TransactionDescriptor.empty());
+        RpcRequest rpcRequest = RpcQueryMessageFlow.spExecuteSql("SELECT * FROM my_table", binding, this.collation, TransactionDescriptor.empty());
 
         String hex = "ff ff 0a 00 00 00 00 00 e7 40" +
             "1f 09 04 d0 00 34 2c 00 53 00 45 00 4c 00 45 00" +
@@ -101,7 +101,7 @@ class RpcQueryMessageFlowUnitTests {
     @Test
     void shouldEncodeSpCursorOpen() {
 
-        RpcRequest rpcRequest = RpcQueryMessageFlow.spCursorOpen("SELECT * FROM my_table", collation, TransactionDescriptor.empty());
+        RpcRequest rpcRequest = RpcQueryMessageFlow.spCursorOpen("SELECT * FROM my_table", this.collation, TransactionDescriptor.empty());
 
         String hex = "FFFF020000000001260404000000000000E7" +
             "401F0904D000342C00530045004C0045" +
@@ -178,9 +178,9 @@ class RpcQueryMessageFlowUnitTests {
         String sql = "UPDATE my_table set first_name = @P0";
 
         Binding binding = new Binding();
-        binding.add("P0", codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(ValueContext.character(collation, true)), "mark"));
+        binding.add("P0", this.codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(ValueContext.character(this.collation, true)), "mark"));
 
-        RpcRequest rpcRequest = RpcQueryMessageFlow.spCursorPrepExec(0, sql, binding, collation, TransactionDescriptor.empty());
+        RpcRequest rpcRequest = RpcQueryMessageFlow.spCursorPrepExec(0, sql, binding, this.collation, TransactionDescriptor.empty());
 
         ClientMessageAssert.assertThat(rpcRequest).encoded()
             .hasHeader(HeaderOptions.create(Type.RPC, Status.empty()))
@@ -203,7 +203,7 @@ class RpcQueryMessageFlowUnitTests {
             "00 6b 00";
 
         Binding binding = new Binding();
-        binding.add("P0", codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(ValueContext.character(collation, true)), "mark"));
+        binding.add("P0", this.codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(ValueContext.character(this.collation, true)), "mark"));
 
         RpcRequest rpcRequest = RpcQueryMessageFlow.spCursorExec(2, binding, TransactionDescriptor.empty());
 
@@ -224,11 +224,11 @@ class RpcQueryMessageFlowUnitTests {
         state.cursorId = 42;
         state.hasMore = true;
 
-        RpcQueryMessageFlow.onDone(client, 128, requests, state, completion);
+        RpcQueryMessageFlow.onDone(this.client, 128, this.requests, state, this.completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.FETCHING);
-        verify(requests).onNext(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
-        verifyNoInteractions(completion);
+        verify(this.requests).emitNext(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()), Sinks.EmitFailureHandler.FAIL_FAST);
+        verifyNoInteractions(this.completion);
     }
 
     @Test
@@ -239,11 +239,11 @@ class RpcQueryMessageFlowUnitTests {
         state.phase = CursorState.Phase.FETCHING;
         state.hasSeenRows = true;
 
-        RpcQueryMessageFlow.onDone(client, 128, requests, state, completion);
+        RpcQueryMessageFlow.onDone(this.client, 128, this.requests, state, this.completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.FETCHING);
-        verify(requests).onNext(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
-        verifyNoInteractions(completion);
+        verify(this.requests).emitNext(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()), Sinks.EmitFailureHandler.FAIL_FAST);
+        verifyNoInteractions(this.completion);
     }
 
     @Test
@@ -253,11 +253,11 @@ class RpcQueryMessageFlowUnitTests {
         state.cursorId = 42;
         state.phase = CursorState.Phase.FETCHING;
 
-        RpcQueryMessageFlow.onDone(client, 128, requests, state, completion);
+        RpcQueryMessageFlow.onDone(this.client, 128, this.requests, state, this.completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSING);
-        verify(requests).onNext(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
-        verifyNoInteractions(sink);
+        verify(this.requests).emitNext(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()), Sinks.EmitFailureHandler.FAIL_FAST);
+        verifyNoInteractions(this.sink);
     }
 
     @Test
@@ -266,11 +266,11 @@ class RpcQueryMessageFlowUnitTests {
         CursorState state = new CursorState();
         state.cursorId = 42;
 
-        RpcQueryMessageFlow.onDone(client, 128, requests, state, completion);
+        RpcQueryMessageFlow.onDone(this.client, 128, this.requests, state, this.completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSING);
-        verify(requests).onNext(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
-        verifyNoInteractions(completion);
+        verify(this.requests).emitNext(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()), Sinks.EmitFailureHandler.FAIL_FAST);
+        verifyNoInteractions(this.completion);
     }
 
     @Test
@@ -280,10 +280,10 @@ class RpcQueryMessageFlowUnitTests {
         state.cursorId = 42;
         state.phase = CursorState.Phase.CLOSING;
 
-        RpcQueryMessageFlow.onDone(client, 128, requests, state, completion);
+        RpcQueryMessageFlow.onDone(this.client, 128, this.requests, state, this.completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSED);
-        verifyNoInteractions(requests);
-        verify(completion).run();
+        verifyNoInteractions(this.requests);
+        verify(this.completion).run();
     }
 }

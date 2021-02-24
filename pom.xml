@@ -47,7 +47,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <r2dbc-spi.version>0.9.0.M1</r2dbc-spi.version>
         <r2dbc-pool.version>0.9.0.BUILD-SNAPSHOT</r2dbc-pool.version>
-        <reactor.version>Dysprosium-SR12</reactor.version>
+        <reactor.version>2020.0.4</reactor.version>
         <slf4j.version>1.7.26</slf4j.version>
         <spring-framework.version>5.2.9.RELEASE</spring-framework.version>
         <testcontainers.version>1.15.1</testcontainers.version>
@@ -222,6 +222,7 @@
                     <compilerArgs>
                         <arg>-Werror</arg>
                         <arg>-Xlint:all</arg>
+                        <arg>-Xlint:-deprecation</arg>
                         <arg>-Xlint:-options</arg>
                         <arg>-Xlint:-processing</arg>
                         <arg>-Xlint:-serial</arg>

@@ -26,8 +26,8 @@ import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Clob;
 import io.r2dbc.spi.Parameter;
 import io.r2dbc.spi.Statement;
-import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -38,6 +38,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -107,10 +108,6 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
     @Override
     public Flux<MssqlResult> execute() {
 
-        /*if (this.bindings.bindings.isEmpty()) {
-            throw new IllegalStateException(String.format("No parameters bound for query '%s'", this.parsedQuery.sql));
-        } */
-
         this.bindings.validate(this.parsedQuery.getParameters());
 
         int effectiveFetchSize = getEffectiveFetchSize();
@@ -137,19 +134,30 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
                 return Flux.just(MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, exchange));
             }
 
+            Sinks.Many<Binding> sink = Sinks.many().unicast().onBackpressureBuffer();
             Iterator<Binding> iterator = this.bindings.bindings.iterator();
-            EmitterProcessor<Binding> bindingEmitter = EmitterProcessor.create(true);
-            return bindingEmitter.startWith(iterator.next())
-                .map(it -> {
 
-                    Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, it);
+            AtomicBoolean cancelled = new AtomicBoolean();
 
-                    return MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, exchange.doOnComplete(() -> {
-                        tryNextBinding(iterator, bindingEmitter);
-                    }));
+            return sink.asFlux().map(it -> {
+
+                Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, it);
+
+                return MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, exchange.doOnComplete(() -> {
+                    tryNextBinding(iterator, sink, cancelled);
+                }));
+
+            }).doOnSubscribe(it -> {
+
+                Binding initial = iterator.next();
+                sink.emitNext(initial, Sinks.EmitFailureHandler.FAIL_FAST);
+            })
+                .doOnCancel(() -> {
+                    cancelled.set(true);
+                    clearBindings(iterator);
                 })
-                .doOnCancel(() -> clearBindings(iterator))
                 .doOnError(e -> clearBindings(iterator));
+
         });
     }
 
@@ -202,20 +210,20 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         return this;
     }
 
-    private static void tryNextBinding(Iterator<Binding> iterator, EmitterProcessor<Binding> boundRequests) {
+    private static void tryNextBinding(Iterator<Binding> iterator, Sinks.Many<Binding> boundRequests, AtomicBoolean cancelled) {
 
-        if (boundRequests.isCancelled()) {
+        if (cancelled.get()) {
             return;
         }
 
         try {
             if (iterator.hasNext()) {
-                boundRequests.onNext(iterator.next());
+                boundRequests.emitNext(iterator.next(), Sinks.EmitFailureHandler.FAIL_FAST);
             } else {
-                boundRequests.onComplete();
+                boundRequests.emitComplete(Sinks.EmitFailureHandler.FAIL_FAST);
             }
         } catch (Exception e) {
-            boundRequests.onError(e);
+            boundRequests.emitError(e, Sinks.EmitFailureHandler.FAIL_FAST);
         }
     }
 

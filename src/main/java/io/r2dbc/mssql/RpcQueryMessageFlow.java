@@ -37,12 +37,12 @@ import io.r2dbc.mssql.message.token.RpcRequest;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.Operators;
-import org.reactivestreams.Processor;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.core.publisher.SynchronousSink;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -170,13 +170,15 @@ final class RpcQueryMessageFlow {
         Assert.requireNonNull(client, "Client must not be null");
         Assert.requireNonNull(query, "Query must not be null");
 
-        EmitterProcessor<ClientMessage> outbound = EmitterProcessor.create(false);
-
+        Sinks.Many<ClientMessage> outbound = Sinks.many().unicast().onBackpressureBuffer();
         EmitterProcessor<Message> inbound = EmitterProcessor.create(false);
 
         CursorState state = new CursorState();
 
-        Flux<Message> exchange = client.exchange(Flux.defer(() -> outbound.startWith(spCursorOpen(query, client.getRequiredCollation(), client.getTransactionDescriptor()))), isFinalToken(state));
+        Flux<Message> exchange = client.exchange(Flux.defer(() -> {
+            outbound.emitNext(spCursorOpen(query, client.getRequiredCollation(), client.getTransactionDescriptor()), Sinks.EmitFailureHandler.FAIL_FAST);
+            return outbound.asFlux();
+        }), isFinalToken(state));
 
         OnCursorComplete cursorComplete = new OnCursorComplete(inbound, state);
 
@@ -225,7 +227,7 @@ final class RpcQueryMessageFlow {
         Assert.requireNonNull(client, "Client must not be null");
         Assert.requireNonNull(query, "Query must not be null");
 
-        EmitterProcessor<ClientMessage> outbound = EmitterProcessor.create(false);
+        Sinks.Many<ClientMessage> outbound = Sinks.many().unicast().onBackpressureBuffer();
         EmitterProcessor<Message> inbound = EmitterProcessor.create(false);
         CursorState state = new CursorState();
 
@@ -235,11 +237,18 @@ final class RpcQueryMessageFlow {
         Flux<ClientMessage> messageProducer;
 
         if (handle == PreparedStatementCache.UNPREPARED) {
-            messageProducer = Flux.defer(() -> outbound.startWith(spCursorPrepExec(PreparedStatementCache.UNPREPARED, query, binding, client.getRequiredCollation(),
-                client.getTransactionDescriptor())));
+            messageProducer = Flux.defer(() -> {
+                outbound.emitNext(spCursorPrepExec(PreparedStatementCache.UNPREPARED, query, binding, client.getRequiredCollation(),
+                    client.getTransactionDescriptor()), Sinks.EmitFailureHandler.FAIL_FAST);
+                return outbound.asFlux();
+            });
+
             needsPrepare = true;
         } else {
-            messageProducer = Flux.defer(() -> outbound.startWith(spCursorExec(handle, binding, client.getTransactionDescriptor())));
+            messageProducer = Flux.defer(() -> {
+                outbound.emitNext(spCursorExec(handle, binding, client.getTransactionDescriptor()), Sinks.EmitFailureHandler.FAIL_FAST);
+                return outbound.asFlux();
+            });
             needsPrepare = false;
         }
 
@@ -292,7 +301,7 @@ final class RpcQueryMessageFlow {
         return cursorId;
     }
 
-    private static void handleMessage(Client client, int fetchSize, EmitterProcessor<ClientMessage> requests, CursorState state, Message message, SynchronousSink<Message> sink,
+    private static void handleMessage(Client client, int fetchSize, Sinks.Many<ClientMessage> requests, CursorState state, Message message, SynchronousSink<Message> sink,
                                       Runnable onCursorComplete) {
 
         if (message instanceof ColumnMetadataToken && !((ColumnMetadataToken) message).hasColumns()) {
@@ -338,7 +347,7 @@ final class RpcQueryMessageFlow {
         }
     }
 
-    static void onDone(Client client, int fetchSize, Processor<ClientMessage, ClientMessage> requests, CursorState state, Runnable completion) {
+    static void onDone(Client client, int fetchSize, Sinks.Many<ClientMessage> requests, CursorState state, Runnable completion) {
 
         Phase phase = state.phase;
 
@@ -356,11 +365,11 @@ final class RpcQueryMessageFlow {
                 if (phase == Phase.NONE) {
                     state.phase = Phase.FETCHING;
                 }
-                requests.onNext(spCursorFetch(state.cursorId, FETCH_NEXT, fetchSize, client.getTransactionDescriptor()));
+                requests.emitNext(spCursorFetch(state.cursorId, FETCH_NEXT, fetchSize, client.getTransactionDescriptor()), Sinks.EmitFailureHandler.FAIL_FAST);
             } else {
                 state.phase = Phase.CLOSING;
                 // TODO: spCursorClose should happen also if a subscriber cancels its subscription.
-                requests.onNext(spCursorClose(state.cursorId, client.getTransactionDescriptor()));
+                requests.emitNext(spCursorClose(state.cursorId, client.getTransactionDescriptor()), Sinks.EmitFailureHandler.FAIL_FAST);
             }
 
             state.hasSeenRows = false;

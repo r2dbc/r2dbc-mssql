@@ -27,9 +27,8 @@ import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.Login7;
 import io.r2dbc.mssql.message.token.Prelogin;
 import io.r2dbc.mssql.util.Assert;
-import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
+import reactor.core.publisher.Sinks;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -55,8 +54,6 @@ final class LoginFlow {
         Assert.requireNonNull(client, "client must not be null");
         Assert.requireNonNull(login, "Login must not be null");
 
-        EmitterProcessor<ClientMessage> requestProcessor = EmitterProcessor.create();
-        FluxSink<ClientMessage> requests = requestProcessor.sink();
 
         Prelogin.Builder builder = Prelogin.builder();
         if (login.getConnectionId() != null) {
@@ -68,10 +65,12 @@ final class LoginFlow {
         }
 
         AtomicReference<Prelogin> preloginResponse = new AtomicReference<>();
+        Sinks.Many<ClientMessage> requests = Sinks.many().unicast().onBackpressureBuffer();
 
         Prelogin request = builder.build();
+        requests.emitNext(request, Sinks.EmitFailureHandler.FAIL_FAST);
 
-        return client.exchange(requestProcessor.startWith(request), DoneToken::isDone) //
+        return client.exchange(requests.asFlux(), DoneToken::isDone) //
             .filter(or(Prelogin.class::isInstance, SslState.class::isInstance, DoneToken.class::isInstance, ErrorToken.class::isInstance)) //
             .handle((message, sink) -> {
 
@@ -85,7 +84,7 @@ final class LoginFlow {
                         Prelogin.Encryption encryption = response.getRequiredToken(Prelogin.Encryption.class);
 
                         if (!encryption.requiresSslHandshake()) {
-                            requests.next(createLoginMessage(login, response));
+                            requests.emitNext(createLoginMessage(login, response), Sinks.EmitFailureHandler.FAIL_FAST);
                         }
 
                         return;
@@ -94,7 +93,7 @@ final class LoginFlow {
                     if (message instanceof SslState && message == SslState.NEGOTIATED) {
 
                         Prelogin prelogin = preloginResponse.get();
-                        requests.next(createLoginMessage(login, prelogin));
+                        requests.emitNext(createLoginMessage(login, prelogin), Sinks.EmitFailureHandler.FAIL_FAST);
                         return;
                     }
 
@@ -113,7 +112,7 @@ final class LoginFlow {
 
                     throw ProtocolException.unsupported(String.format("Unexpected login flow message: %s", message));
                 } catch (Exception e) {
-                    requests.error(e);
+                    requests.emitError(e, Sinks.EmitFailureHandler.FAIL_FAST);
                     sink.error(e);
                 }
             });
