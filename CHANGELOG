@@ -1,6 +1,89 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.9.0.M1
+------------------
+* Upgrade to Reactor 2020.0.4 #193
+* Upgrade to R2DBC Pool 0.9.0.M1 #192
+* Upgrade to R2DBC SPI 0.9.0.M1 #190
+* Strip ROWSTAT column from MssqlRowMetadata #188
+* Add support for extended transaction definitions #183
+* Add support for SPI Parameters #182
+* Enable Developer Certificate of Origin #181
+* Restrict CI and release task to r2dbc/r2dbc-mssql repo #179
+* Upgrade dependencies #178
+* Add config options for TCP KeepAlive and NoDelay #177
+* Add support for SSL tunnels #176
+* Use GitHub actions to deploy to OSS Sonatype/Maven Central #173
+* Clob decoding is prone to in-character decoding splits #172
+* StringCodec fix for characters split between PLP chunks #171
+* Upgrade to R2DBC SPI 0.8.3 #170
+* Ensure no snapshots get referenced in release builds #165
+* Add integration tests for null decode #163
+* Failed statement with returnGeneratedValues enabled causes onErrorDropped #162
+* Rename master branch to main #159
+* Upgrade to Reactor Dysprosium SR9 #158
+* Upgrade to Reactor Dysprosium SR8 #157
+* Upgrade dependencies #155
+* Add sslContextBuilderCustomizer(Function<SslContextBuilder, SslContextBuilder>) #152
+* Issue inserting byte objects when size is greater than 8000 and and less than 65535 bytes #151
+* Add support for configuring a custom trust store #150
+* Add BlockHound to integration tests #149
+* Allow custom trust store for server certificate verification. #148
+* Upgrade build and test dependencies #146
+* Upgrade to Reactor Dysprosium-SR6 #145
+* Stage releases directly on maven central #143
+* Multiple TDS chunks in a single buffer cause connection reset on Azure SQL #142
+* Protocol errors get swallowed in RPC message flow for direct queries #141
+* Query String bigger than 4000 characters result in java.lang.UnsupportedOperationException  #140
+* Provide additional configuration options for hostNameInCertificiate #138
+* Update dependencies #134
+* Upgrade to Testcontainers 1.12.5 #132
+* Fix infinite loop when clearing bindings #131
+* Support casting of BIGINT to BigDecimal #130
+* Enable Travis for pull requests #125
+* Migrate to Jenkins CI #124
+* ENVCHANGE Token is not decoded properly for Routing type #116
+
+0.8.5.RELEASE
+------------------
+* Upgrade dependencies #178
+* Add config options for TCP KeepAlive and NoDelay #177
+* Add support for SSL tunnels #176
+* Use GitHub actions to deploy to OSS Sonatype/Maven Central #173
+* Clob decoding is prone to in-character decoding splits #172
+* StringCodec fix for characters split between PLP chunks #171
+* Upgrade to R2DBC SPI 0.8.3 #170
+
+0.8.4.RELEASE
+------------------
+* Ensure no snapshots get referenced in release builds #165
+* Add integration tests for null decode #163
+* Failed statement with returnGeneratedValues enabled causes onErrorDropped #162
+* Rename master branch to main #159
+* Upgrade to Reactor Dysprosium SR9 #158
+* Upgrade to Reactor Dysprosium SR8 #157
+
+0.8.3.RELEASE
+------------------
+* Upgrade dependencies #155
+* Add sslContextBuilderCustomizer(Function<SslContextBuilder, SslContextBuilder>) #152
+* Issue inserting byte objects when size is greater than 8000 and and less than 65535 bytes #151
+* Add support for configuring a custom trust store #150
+* Add BlockHound to integration tests #149
+* Allow custom trust store for server certificate verification. #148
+* Multiple TDS chunks in a single buffer cause connection reset on Azure SQL #142
+
+0.8.2.RELEASE
+------------------
+* Upgrade build and test dependencies #146
+* Upgrade to Reactor Dysprosium-SR6 #145
+* Stage releases directly on maven central #144
+* Protocol errors get swallowed in RPC message flow for direct queries #141
+* Query String bigger than 4000 characters result in java.lang.UnsupportedOperationException  #140
+* Provide additional configuration options for hostNameInCertificiate #138
+* ENVCHANGE Token is not decoded properly for Routing type #116
+
 0.8.1.RELEASE
 ------------------
 * Update dependencies #134
