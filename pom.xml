@@ -48,7 +48,6 @@
         <r2dbc-spi.version>0.8.4.RELEASE</r2dbc-spi.version>
         <r2dbc-pool.version>0.8.5.RELEASE</r2dbc-pool.version>
         <reactor.version>Dysprosium-SR12</reactor.version>
-        <slf4j.version>1.7.26</slf4j.version>
         <spring-framework.version>5.2.9.RELEASE</spring-framework.version>
         <testcontainers.version>1.14.2</testcontainers.version>
     </properties>
@@ -197,6 +196,12 @@
             <artifactId>HikariCP</artifactId>
             <version>${hikari-cp.version}</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
