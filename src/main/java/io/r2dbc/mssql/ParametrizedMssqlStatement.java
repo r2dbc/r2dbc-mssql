@@ -22,6 +22,7 @@ import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.Encoded;
 import io.r2dbc.mssql.codec.RpcParameterContext;
 import io.r2dbc.mssql.message.Message;
+import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Clob;
 import io.r2dbc.spi.Statement;
@@ -117,20 +118,19 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
             if (this.bindings.bindings.size() == 1) {
 
                 Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, this.bindings.bindings.get(0));
-
-                return Flux.just(MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, exchange));
+                return exchange.windowUntil(DoneInProcToken.class::isInstance).map(it -> MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it));
             }
 
             Iterator<Binding> iterator = this.bindings.bindings.iterator();
             EmitterProcessor<Binding> bindingEmitter = EmitterProcessor.create(true);
             return bindingEmitter.startWith(iterator.next())
-                .map(it -> {
+                .flatMap(binding -> {
 
-                    Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, it);
+                    Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, binding);
 
-                    return MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, exchange.doOnComplete(() -> {
+                    return exchange.doOnComplete(() -> {
                         tryNextBinding(iterator, bindingEmitter);
-                    }));
+                    }).windowUntil(DoneInProcToken.class::isInstance).map(it -> MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it));
                 })
                 .doOnCancel(() -> clearBindings(iterator))
                 .doOnError(e -> clearBindings(iterator));

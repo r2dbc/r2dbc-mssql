@@ -25,6 +25,10 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests for {@link ParametrizedMssqlStatement}.
@@ -112,6 +116,109 @@ class ParametrizedMssqlStatementIntegrationTests extends IntegrationTestSupport 
             .execute())
             .flatMap(it -> it.map((r, m) -> r.get(0)))
             .as(StepVerifier::create).expectNextCount(1).verifyComplete();
+    }
+
+    @Test
+    void shouldEmitSingleResultForCursoredExecution() {
+
+        shouldExecuteBatch();
+
+        AtomicInteger resultCounter = new AtomicInteger();
+        AtomicInteger rowCounter = new AtomicInteger();
+
+        Flux.from(connection.createStatement("SELECT first_name FROM r2dbc_example")
+            .fetchSize(2)
+            .execute())
+            .flatMap(result -> {
+
+                resultCounter.incrementAndGet();
+                return result.map((row, rowMetadata) -> new Object()).doOnNext(it -> rowCounter.incrementAndGet()).then();
+            })
+            .as(StepVerifier::create)
+            .verifyComplete();
+
+        assertThat(resultCounter).hasValue(1);
+        assertThat(rowCounter).hasValue(3);
+    }
+
+    @Test
+    void shouldRunStatementWithMultipleResults() {
+
+        AtomicInteger resultCounter = new AtomicInteger();
+        AtomicInteger firstUpdateCount = new AtomicInteger();
+        AtomicInteger rowCount = new AtomicInteger();
+
+        Flux.from(connection.createStatement("DECLARE @t TABLE(i INT);INSERT INTO @t VALUES (@P1),(2),(3);SELECT * FROM @t;\n")
+            .bind("@P1", 1)
+            .execute()).flatMap(it -> {
+
+            if (resultCounter.compareAndSet(0, 1)) {
+                return it.getRowsUpdated().doOnNext(firstUpdateCount::set).then();
+            }
+
+            if (resultCounter.incrementAndGet() == 2) {
+                return it.map(((row, rowMetadata) -> {
+                    rowCount.incrementAndGet();
+
+                    return new Object();
+                })).then();
+            }
+
+            throw new IllegalStateException("Unexpected result");
+        }).as(StepVerifier::create).verifyComplete();
+
+        assertThat(resultCounter).hasValue(2);
+        assertThat(firstUpdateCount).hasValue(3);
+        assertThat(rowCount).hasValue(3);
+    }
+
+    @Test
+    void shouldRunStatementWithMultipleBindingsAndResults() {
+
+        AtomicBoolean firstGurard = new AtomicBoolean();
+        AtomicBoolean secondGurard = new AtomicBoolean();
+        AtomicBoolean thirdGurard = new AtomicBoolean();
+        AtomicBoolean fourthGurard = new AtomicBoolean();
+
+        AtomicInteger firstUpdateCount = new AtomicInteger();
+        AtomicInteger secondUpdateCount = new AtomicInteger();
+        AtomicInteger rowCount = new AtomicInteger();
+
+        Flux.from(connection.createStatement("DECLARE @t TABLE(i INT);INSERT INTO @t VALUES (@P1),(2),(3);SELECT * FROM @t;\n")
+            .bind("@P1", 1).add()
+            .bind("@P1", 2)
+            .execute()).flatMap(it -> {
+
+            if (firstGurard.compareAndSet(false, true)) {
+                return it.getRowsUpdated().doOnNext(firstUpdateCount::set).then();
+            }
+
+            if (secondGurard.compareAndSet(false, true)) {
+                return it.map(((row, rowMetadata) -> {
+                    rowCount.incrementAndGet();
+
+                    return new Object();
+                })).then();
+            }
+
+            if (thirdGurard.compareAndSet(false, true)) {
+                return it.getRowsUpdated().doOnNext(secondUpdateCount::set).then();
+            }
+
+            if (fourthGurard.compareAndSet(false, true)) {
+                return it.map(((row, rowMetadata) -> {
+                    rowCount.incrementAndGet();
+
+                    return new Object();
+                })).then();
+            }
+
+            throw new IllegalStateException("Unexpected result");
+        }).as(StepVerifier::create).verifyComplete();
+
+        assertThat(firstUpdateCount).hasValue(3);
+        assertThat(secondUpdateCount).hasValue(3);
+        assertThat(rowCount).hasValue(6);
     }
 
 }
