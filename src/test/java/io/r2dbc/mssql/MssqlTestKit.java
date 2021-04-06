@@ -21,6 +21,7 @@ import io.r2dbc.spi.ConnectionFactories;
 import io.r2dbc.spi.ConnectionFactory;
 import io.r2dbc.spi.ConnectionFactoryOptions;
 import io.r2dbc.spi.test.TestKit;
+import org.junit.jupiter.api.Disabled;
 import org.springframework.jdbc.core.JdbcOperations;
 
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.MSSQL_DRIVER;
@@ -87,6 +88,16 @@ final class MssqlTestKit extends IntegrationTestSupport implements TestKit<Strin
     @Override
     public String getPlaceholder(int index) {
         return String.format("@P%d", index);
+    }
+
+    @Override
+    @Disabled
+    public void prepareStatementWithIncompleteBatchFails() {
+    }
+
+    @Override
+    @Disabled
+    public void prepareStatementWithIncompleteBindingFails() {
     }
 
 }

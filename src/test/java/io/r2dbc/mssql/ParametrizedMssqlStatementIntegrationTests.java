@@ -104,4 +104,14 @@ class ParametrizedMssqlStatementIntegrationTests extends IntegrationTestSupport 
             .verifyComplete();
     }
 
+    @Test
+    void shouldRunQueryWithLocalVariableDeclarations() {
+
+        Flux.from(connection.createStatement("declare @i int = 1; select @i where @x = 1")
+            .bind("x", 1)
+            .execute())
+            .flatMap(it -> it.map((r, m) -> r.get(0)))
+            .as(StepVerifier::create).expectNextCount(1).verifyComplete();
+    }
+
 }
