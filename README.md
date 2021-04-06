@@ -81,6 +81,7 @@ Mono<Connection> connectionMono = Mono.from(connectionFactory.create());
 | `sslContextBuilderCustomizer`  | SSL Context customizer to configure SQL Server's built-in SSL support (`Function<SslContextBuilder, SslContextBuilder>`) _(Optional)_
 | `tcpKeepAlive`    | Enable/disable TCP KeepAlive. Disabled by default. _(Optional)_
 | `tcpNoDelay`      | Enable/disable TCP NoDelay. Enabled by default. _(Optional)_
+| `trustServerCertificate` | Fully trust the server certificate bypassing X.509 certificate validation. Disabled by default. _(Optional)_
 | `trustStoreType`  | Type of the TrustStore. Defaults to `KeyStore.getDefaultType()`. _(Optional)_
 | `trustStore`      | Path to the certificate TrustStore file. _(Optional)_
 | `trustStorePassword` | Password used to check the integrity of the TrustStore data. _(Optional)_

@@ -26,6 +26,7 @@ import reactor.util.Loggers;
 
 import java.io.File;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -105,6 +106,13 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
     public static final Option<Boolean> TCP_NODELAY = Option.valueOf("tcpNoDelay");
 
     /**
+     * Allow using SSL by fully trusting the server certificate. Enabling this option skips certificate verification.
+     *
+     * @since 0.8.6
+     */
+    public static final Option<Boolean> TRUST_SERVER_CERTIFICATE = Option.valueOf("trustServerCertificate");
+
+    /**
      * Type of the TrustStore.
      *
      * @since 0.8.3
@@ -175,6 +183,7 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
 
         mapper.from(TCP_KEEPALIVE).map(OptionMapper::toBoolean).to(builder::tcpKeepAlive);
         mapper.from(TCP_NODELAY).map(OptionMapper::toBoolean).to(builder::tcpNoDelay);
+        mapper.from(TRUST_SERVER_CERTIFICATE).map(OptionMapper::toBoolean).to((Consumer<Boolean>) builder::trustServerCertificate);
         mapper.from(TRUST_STORE).map(OptionMapper::toFile).to(builder::trustStore);
         mapper.from(TRUST_STORE_TYPE).to(builder::trustStoreType);
         mapper.from(TRUST_STORE_PASSWORD).map(it -> it instanceof String ? ((String) it).toCharArray() : (char[]) it).to(builder::trustStorePassword);

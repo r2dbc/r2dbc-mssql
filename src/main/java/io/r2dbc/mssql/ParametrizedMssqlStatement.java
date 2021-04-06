@@ -115,6 +115,12 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
             boolean useGeneratedKeysClause = GeneratedValues.shouldExpectGeneratedKeys(this.getGeneratedColumns());
             String sql = useGeneratedKeysClause ? GeneratedValues.augmentQuery(this.parsedQuery.sql, getGeneratedColumns()) : this.parsedQuery.sql;
 
+            if (this.bindings.bindings.isEmpty()) {
+
+                Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, new Binding());
+                return exchange.windowUntil(DoneInProcToken.class::isInstance).map(it -> MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it));
+            }
+
             if (this.bindings.bindings.size() == 1) {
 
                 Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, this.bindings.bindings.get(0));
