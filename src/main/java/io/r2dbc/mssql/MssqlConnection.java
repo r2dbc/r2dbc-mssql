@@ -24,7 +24,6 @@ import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.client.TransactionStatus;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.Operators;
-import io.r2dbc.spi.Batch;
 import io.r2dbc.spi.Connection;
 import io.r2dbc.spi.IsolationLevel;
 import io.r2dbc.spi.Option;
@@ -194,7 +193,7 @@ public final class MssqlConnection implements Connection {
     }
 
     @Override
-    public Batch createBatch() {
+    public MssqlBatch createBatch() {
         return new MssqlBatch(this.client, this.connectionOptions);
     }
 
