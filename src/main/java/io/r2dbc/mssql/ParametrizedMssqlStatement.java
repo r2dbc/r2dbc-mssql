@@ -22,6 +22,7 @@ import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.Encoded;
 import io.r2dbc.mssql.codec.RpcParameterContext;
 import io.r2dbc.mssql.message.Message;
+import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Clob;
 import io.r2dbc.spi.Parameter;
@@ -121,14 +122,14 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
                 Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, new Binding());
 
-                return Flux.just(MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, exchange));
+                return exchange.windowUntil(DoneInProcToken.class::isInstance).map(it -> MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it));
             }
 
             if (this.bindings.bindings.size() == 1) {
 
                 Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, this.bindings.bindings.get(0));
 
-                return Flux.just(MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, exchange));
+                return exchange.windowUntil(DoneInProcToken.class::isInstance).map(it -> MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it));
             }
 
             Sinks.Many<Binding> sink = Sinks.many().unicast().onBackpressureBuffer();
@@ -136,14 +137,13 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
             AtomicBoolean cancelled = new AtomicBoolean();
 
-            return sink.asFlux().map(it -> {
+            return sink.asFlux().flatMap(binding -> {
 
-                Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, it);
+                Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, binding);
 
-                return MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, exchange.doOnComplete(() -> {
+                return exchange.doOnComplete(() -> {
                     tryNextBinding(iterator, sink, cancelled);
-                }));
-
+                }).windowUntil(DoneInProcToken.class::isInstance).map(it -> MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it));
             }).doOnSubscribe(it -> {
 
                 Binding initial = iterator.next();
