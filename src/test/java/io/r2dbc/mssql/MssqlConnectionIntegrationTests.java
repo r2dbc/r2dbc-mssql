@@ -100,10 +100,12 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
             .build();
 
         MssqlConnectionFactory connectionFactory = new MssqlConnectionFactory(configuration);
-        MssqlConnection newConnection = connectionFactory.create().block();
 
-        createTable(newConnection);
-        insertRecord(newConnection, 999);
+        Flux.usingWhen(connectionFactory.create(), conn -> conn.createStatement("SELECT @@VERSION").execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> row.get(0))), MssqlConnection::close)
+            .as(StepVerifier::create)
+            .expectNextCount(1)
+            .verifyComplete();
     }
 
     @Test

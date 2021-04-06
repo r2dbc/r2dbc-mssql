@@ -31,6 +31,7 @@ import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.SSL_CONTEXT_BUILDER_
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.SSL_TUNNEL;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TCP_KEEPALIVE;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TCP_NODELAY;
+import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_SERVER_CERTIFICATE;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE_PASSWORD;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE_TYPE;
@@ -271,6 +272,24 @@ final class MssqlConnectionFactoryProviderTest {
     }
 
     @Test
+    void shouldConfigureWithTrustServerCertificate() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(SSL, true)
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(TRUST_SERVER_CERTIFICATE, true)
+            .option(TRUST_STORE_PASSWORD, "hello".toCharArray())
+            .option(TRUST_STORE_TYPE, "PKCS")
+            .build());
+
+        assertThat(factory.getClientConfiguration())
+            .hasFieldOrPropertyWithValue("trustServerCertificate", true);
+    }
+
+    @Test
     void shouldConfigureWithTrustStoreCustomizer() {
 
         MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
@@ -285,6 +304,7 @@ final class MssqlConnectionFactoryProviderTest {
             .build());
 
         assertThat(factory.getClientConfiguration())
+            .hasFieldOrPropertyWithValue("trustServerCertificate", false)
             .hasFieldOrPropertyWithValue("trustStore", new File("foo"))
             .hasFieldOrPropertyWithValue("trustStorePassword", "hello".toCharArray())
             .hasFieldOrPropertyWithValue("trustStoreType", "PKCS");
