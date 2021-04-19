@@ -28,6 +28,7 @@ import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.token.ColumnMetadataToken;
 import io.r2dbc.mssql.message.token.DataToken;
 import io.r2dbc.mssql.message.token.DoneToken;
+import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.message.token.RowTokenFactory;
 import io.r2dbc.mssql.message.token.RpcRequest;
@@ -38,6 +39,7 @@ import io.r2dbc.mssql.message.type.LengthStrategy;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.spi.ColumnMetadata;
+import io.r2dbc.spi.R2dbcNonTransientResourceException;
 import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -102,6 +104,133 @@ class SimpleMssqlStatementUnitTests {
     @Test
     void shouldReturnColumnData() {
 
+        TestClient client = simpleResultAndCount();
+
+        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo").fetchSize(0);
+
+        statement.execute()
+            .flatMap(result -> result.map((row, md) -> {
+
+                Map<String, Object> rowData = new HashMap<>();
+                for (ColumnMetadata column : md.getColumnMetadatas()) {
+                    rowData.put(column.getName(), row.get(column.getName()));
+                }
+
+                return rowData;
+            }))
+            .as(StepVerifier::create)
+            .consumeNextWith(actual -> {
+
+                assertThat(actual).containsEntry("first_name", "mark").containsEntry("last_name", "paluch");
+
+            })
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldFlatMapResults() {
+
+        TestClient client = simpleResultAndCount();
+
+        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo").fetchSize(0);
+
+        statement.execute()
+            .flatMap(result -> result.flatMap(segment -> Mono.just(segment.toString())))
+            .as(StepVerifier::create)
+            .consumeNextWith(actual -> {
+                assertThat(actual).contains("MssqlRow");
+            })
+            .consumeNextWith(actual -> {
+                assertThat(actual).contains("DoneToken");
+            })
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldFilterAndFlatMapCount() {
+
+        TestClient client = simpleResultAndCount();
+
+        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo").fetchSize(0);
+
+        statement.execute()
+            .flatMap(result -> result.filter(Result.UpdateCount.class::isInstance).flatMap(segment -> Mono.just(segment.toString())))
+            .as(StepVerifier::create)
+            .consumeNextWith(actual -> {
+                assertThat(actual).contains("DoneToken");
+            })
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldFilterAndFlatMapData() {
+
+        TestClient client = simpleResultAndCount();
+
+        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo").fetchSize(0);
+
+        statement.execute()
+            .flatMap(result -> result.filter(Result.Data.class::isInstance).flatMap(segment -> {
+
+                Result.Data data = (Result.Data) segment;
+
+                Map<String, Object> rowData = new HashMap<>();
+                for (ColumnMetadata column : data.metadata().getColumnMetadatas()) {
+                    rowData.put(column.getName(), data.get(column.getName()));
+                }
+
+                return Mono.just(rowData);
+            }))
+            .as(StepVerifier::create)
+            .consumeNextWith(actual -> {
+                assertThat(actual).containsEntry("first_name", "mark").containsEntry("last_name", "paluch");
+            })
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldFilterError() {
+
+        SqlBatch batch = SqlBatch.create(1, TransactionDescriptor.empty(), "SELECT * FROM foo");
+
+        TestClient client = TestClient.builder().expectRequest(batch).thenRespond(new ErrorToken(10, 10, (byte) 1, (byte) 1, "foo", null, null, 0)).build();
+
+        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo").fetchSize(0);
+
+        statement.execute()
+            .flatMap(result -> result.filter(Result.Data.class::isInstance).getRowsUpdated())
+            .as(StepVerifier::create)
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldFlatMapErrorMessage() {
+
+        SqlBatch batch = SqlBatch.create(1, TransactionDescriptor.empty(), "SELECT * FROM foo");
+
+        TestClient client = TestClient.builder().expectRequest(batch).thenRespond(new ErrorToken(10, 10, (byte) 1, (byte) 2, "foo", null, null, 0)).build();
+
+        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo").fetchSize(0);
+
+        statement.execute()
+            .flatMap(result -> result.filter(Result.Message.class::isInstance).flatMap(segment -> {
+                return Mono.just(segment).cast(Result.Message.class);
+            }))
+            .as(StepVerifier::create)
+            .consumeNextWith(actual -> {
+
+                assertThat(actual.errorCode()).isEqualTo(10);
+                assertThat(actual.message()).isEqualTo("foo");
+                assertThat(actual.sqlState()).isEqualTo("S0001");
+                assertThat(actual.severity()).isEqualTo(Result.Message.Severity.ERROR);
+                assertThat(actual.exception()).isInstanceOf(R2dbcNonTransientResourceException.class);
+
+            })
+            .verifyComplete();
+    }
+
+    private TestClient simpleResultAndCount() {
+
         SqlBatch batch = SqlBatch.create(1, TransactionDescriptor.empty(), "SELECT * FROM foo");
 
         ColumnMetadataToken columns = ColumnMetadataToken.create(COLUMNS);
@@ -119,28 +248,7 @@ class SimpleMssqlStatementUnitTests {
 
         Tabular tabular = Tabular.create(columns, rowToken, DoneToken.create(1));
 
-        TestClient client = TestClient.builder().expectRequest(batch).thenRespond(tabular.getTokens().toArray(new DataToken[0])).build();
-
-        SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo").fetchSize(0);
-
-        statement.execute()
-            .flatMap(result -> result.map((row, md) -> {
-
-                Map<String, Object> rowData = new HashMap<>();
-                for (ColumnMetadata column : md.getColumnMetadatas()) {
-                    rowData.put(column.getName(), row.get(column.getName()));
-
-                }
-
-                return rowData;
-            }))
-            .as(StepVerifier::create)
-            .consumeNextWith(actual -> {
-
-                assertThat(actual).containsEntry("first_name", "mark").containsEntry("last_name", "paluch");
-
-            })
-            .verifyComplete();
+        return TestClient.builder().expectRequest(batch).thenRespond(tabular.getTokens().toArray(new DataToken[0])).build();
     }
 
     @Test

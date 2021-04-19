@@ -90,20 +90,20 @@ final class ExceptionFactory {
             case 565: // A stack overflow occurred in the server while compiling the query. Please simplify the query.
             case 4408: // Too many tables. The query and the views or functions in it exceed the limit of %d tables. Revise the query to reduce the number of tables.
             case 2812: // Could not find stored procedure '%.*ls'.
-                return new MssqlBadGrammarException(createExceptionDetails(token), sql);
+                return new MssqlBadGrammarException(createErrorDetails(token), sql);
 
             case 2601: // Cannot insert duplicate key row in object '%.*ls' with unique index '%.*ls'. The duplicate key value is %ls.
             case 2627: // Violation of %ls constraint '%.*ls'. Cannot insert duplicate key in object '%.*ls'. The duplicate key value is %ls.
             case 544: // Cannot insert explicit value for identity column in table '%.*ls' when IDENTITY_INSERT is set to OFF.
             case 8114: // Error converting data type %ls to %ls.
             case 8115:  // Arithmetic overflow error converting %ls to data type %ls.
-                return new MssqlDataIntegrityViolationException(createExceptionDetails(token));
+                return new MssqlDataIntegrityViolationException(createErrorDetails(token));
 
             case 701: // Maximum number of databases used for each query has been exceeded. The maximum allowed is %d.
             case 1222: // Lock request time out period exceeded.
             case 1204: // The instance of the SQL Server Database Engine cannot obtain a LOCK resource at this time. Rerun your statement when there are fewer active users. Ask the database
                 // administrator to check the lock and memory configuration for this instance, or to check for
-                return new MssqlTransientException(createExceptionDetails(token));
+                return new MssqlTransientException(createErrorDetails(token));
 
             case 1203: // Process ID %d attempted to unlock a resource it does not own: %.*ls. Retry the transaction, because this error may be caused by a timing condition. If the problem
                 // persists, contact the database administrator.
@@ -117,7 +117,7 @@ final class ExceptionFactory {
             case 3938: // The transaction has been stopped because it conflicted with the execution of a FILESTREAM close operation using the same transaction.  The transaction will be rolled back.
             case 28611: // The request is aborted because the transaction has been aborted by Matrix Transaction Coordination Manager. This is mostly caused by one or more transaction particpant
                 // brick went offline.
-                return new MssqlRollbackException(createExceptionDetails(token));
+                return new MssqlRollbackException(createErrorDetails(token));
 
             case 921:  // Database '%.*ls' has not been recovered yet. Wait and try again.
             case 941:  // Database '%.*ls' cannot be opened because it is not started. Retry when the database is started.
@@ -131,7 +131,7 @@ final class ExceptionFactory {
             case 40642: // The server is currently too busy.  Please try again later.
             case 40675: // The service is currently too busy.  Please try again later.
             case 40825: // Unable to complete request now. Please try again later.
-                return new MssqlTransientResourceException(createExceptionDetails(token));
+                return new MssqlTransientResourceException(createErrorDetails(token));
         }
 
         if (token.getClassification() == GENERAL_ERROR && token.getNumber() == 4002) {
@@ -141,19 +141,19 @@ final class ExceptionFactory {
         switch (token.getClassification()) {
             case OBJECT_DOES_NOT_EXIST:
             case SYNTAX_ERROR:
-                return new MssqlBadGrammarException(createExceptionDetails(token), sql);
+                return new MssqlBadGrammarException(createErrorDetails(token), sql);
             case INCONSISTENT_NO_LOCK:
-                return new MssqlDataIntegrityViolationException(createExceptionDetails(token));
+                return new MssqlDataIntegrityViolationException(createErrorDetails(token));
             case TX_DEADLOCK:
-                return new MssqlRollbackException(createExceptionDetails(token));
+                return new MssqlRollbackException(createErrorDetails(token));
             case SECURITY:
-                return new MssqlPermissionDeniedException(createExceptionDetails(token));
+                return new MssqlPermissionDeniedException(createErrorDetails(token));
             case GENERAL_ERROR:
-                return new MssqlNonTransientException(createExceptionDetails(token));
+                return new MssqlNonTransientException(createErrorDetails(token));
             case OUT_OF_RESOURCES:
-                return new MssqlTransientResourceException(createExceptionDetails(token));
+                return new MssqlTransientResourceException(createErrorDetails(token));
             default:
-                return new MssqlNonTransientResourceException(createExceptionDetails(token));
+                return new MssqlNonTransientResourceException(createErrorDetails(token));
         }
     }
 
@@ -181,7 +181,7 @@ final class ExceptionFactory {
         return createException(message, this.sql);
     }
 
-    private static ErrorDetails createExceptionDetails(AbstractInfoToken token) {
+    static ErrorDetails createErrorDetails(AbstractInfoToken token) {
         return new ErrorDetails(token.getMessage(), token.getNumber(), token.getState(), token.getInfoClass(), token.getServerName(), token.getProcName(), token.getLineNumber());
     }
 

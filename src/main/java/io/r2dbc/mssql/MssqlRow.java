@@ -23,7 +23,9 @@ import io.r2dbc.mssql.message.token.Column;
 import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.spi.Result;
 import io.r2dbc.spi.Row;
+import io.r2dbc.spi.RowMetadata;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -35,7 +37,7 @@ import reactor.util.annotation.Nullable;
  * @see #release()
  * @see ReferenceCounted
  */
-final class MssqlRow implements Row {
+final class MssqlRow implements Row, Result.Data {
 
     private static final int STATE_ACTIVE = 0;
 
@@ -79,6 +81,11 @@ final class MssqlRow implements Row {
      * @return the {@link MssqlRowMetadata} associated with this {@link Row}.
      */
     public MssqlRowMetadata getMetadata() {
+        return this.metadata;
+    }
+
+    @Override
+    public RowMetadata metadata() {
         return this.metadata;
     }
 

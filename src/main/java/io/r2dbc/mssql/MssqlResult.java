@@ -19,8 +19,8 @@ package io.r2dbc.mssql;
 import io.netty.util.ReferenceCountUtil;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.codec.Codecs;
-import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
+import io.r2dbc.mssql.message.token.AbstractInfoToken;
 import io.r2dbc.mssql.message.token.ColumnMetadataToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.NbcRowToken;
@@ -30,12 +30,15 @@ import io.r2dbc.spi.R2dbcException;
 import io.r2dbc.spi.Result;
 import io.r2dbc.spi.Row;
 import io.r2dbc.spi.RowMetadata;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * {@link Result} of query results.
@@ -54,13 +57,13 @@ public final class MssqlResult implements Result {
 
     private final Codecs codecs;
 
-    private final Flux<Message> messages;
+    private final Flux<io.r2dbc.mssql.message.Message> messages;
 
     private volatile MssqlRowMetadata rowMetadata;
 
     private volatile RuntimeException throwable;
 
-    private MssqlResult(String sql, ConnectionContext context, Codecs codecs, Flux<Message> messages) {
+    private MssqlResult(String sql, ConnectionContext context, Codecs codecs, Flux<io.r2dbc.mssql.message.Message> messages) {
 
         this.sql = sql;
         this.context = context;
@@ -76,7 +79,7 @@ public final class MssqlResult implements Result {
      * @param messages message stream.
      * @return {@link Result} object.
      */
-    static MssqlResult toResult(String sql, ConnectionContext context, Codecs codecs, Flux<Message> messages) {
+    static MssqlResult toResult(String sql, ConnectionContext context, Codecs codecs, Flux<io.r2dbc.mssql.message.Message> messages) {
 
         Assert.requireNonNull(sql, "SQL must not be null");
         Assert.requireNonNull(codecs, "Codecs must not be null");
@@ -195,6 +198,153 @@ public final class MssqlResult implements Result {
                     throw exception;
                 }
             });
+    }
+
+    @Override
+    public Result filter(Predicate<Segment> filter) {
+
+        Flux<io.r2dbc.mssql.message.Message> filteredMessages = this.messages.filter(message -> {
+
+            if (message.getClass() == ColumnMetadataToken.class) {
+
+                ColumnMetadataToken token = (ColumnMetadataToken) message;
+
+                if (token.hasColumns()) {
+                    this.rowMetadata = MssqlRowMetadata.create(this.codecs, token);
+                }
+                return true;
+            }
+
+            if (message.getClass() == RowToken.class || message.getClass() == NbcRowToken.class) {
+
+                MssqlRowMetadata rowMetadata = this.rowMetadata;
+
+                if (rowMetadata == null) {
+                    return false;
+                }
+
+                MssqlRow row = MssqlRow.toRow(this.codecs, (RowToken) message, rowMetadata);
+
+                boolean result = filter.test(row);
+
+                if (!result) {
+                    row.release();
+                }
+
+                return result;
+            }
+
+            if (message instanceof AbstractInfoToken) {
+                return filter.test(createMessage((AbstractInfoToken) message));
+            }
+
+            if (message instanceof AbstractDoneToken) {
+
+                AbstractDoneToken doneToken = (AbstractDoneToken) message;
+                if (doneToken.hasCount()) {
+
+                    return filter.test(doneToken);
+                }
+            }
+            return true;
+        });
+
+        return new MssqlResult(this.sql, this.context, this.codecs, filteredMessages);
+    }
+
+    @Override
+    public <T> Flux<T> flatMap(Function<Segment, ? extends Publisher<? extends T>> mappingFunction) {
+
+        return this.messages
+            .flatMap(message -> {
+
+                if (message instanceof AbstractDoneToken) {
+
+                    AbstractDoneToken doneToken = (AbstractDoneToken) message;
+                    if (doneToken.hasCount()) {
+
+                        if (DEBUG_ENABLED) {
+                            LOGGER.debug(this.context.getMessage("Incoming row count: {}"), doneToken);
+                        }
+
+                        return mappingFunction.apply(doneToken);
+                    }
+                }
+
+                if (message.getClass() == ColumnMetadataToken.class) {
+
+                    ColumnMetadataToken token = (ColumnMetadataToken) message;
+
+                    if (!token.hasColumns()) {
+                        return Mono.empty();
+                    }
+
+                    if (DEBUG_ENABLED) {
+                        LOGGER.debug(this.context.getMessage("Result column definition: {}"), message);
+                    }
+
+                    this.rowMetadata = MssqlRowMetadata.create(this.codecs, token);
+                }
+
+                if (message.getClass() == RowToken.class || message.getClass() == NbcRowToken.class) {
+
+                    MssqlRowMetadata rowMetadata1 = this.rowMetadata;
+
+                    if (rowMetadata1 == null) {
+                        return Mono.error(new IllegalStateException("No MssqlRowMetadata available"));
+                    }
+
+                    MssqlRow row = MssqlRow.toRow(this.codecs, (RowToken) message, rowMetadata1);
+
+                    try {
+                        return Flux.from(mappingFunction.apply(row)).doFinally(it -> row.release());
+                    } catch (RuntimeException e) {
+                        row.release();
+                        throw e;
+                    }
+                }
+
+                if (message instanceof AbstractInfoToken) {
+                    return mappingFunction.apply(createMessage((AbstractInfoToken) message));
+                }
+
+                ReferenceCountUtil.release(message);
+
+                return Mono.empty();
+            });
+    }
+
+    private Message createMessage(AbstractInfoToken message) {
+
+        ErrorDetails errorDetails = ExceptionFactory.createErrorDetails(message);
+
+        return new Message() {
+
+            @Override
+            public R2dbcException exception() {
+                return ExceptionFactory.createException(message, MssqlResult.this.sql);
+            }
+
+            @Override
+            public int errorCode() {
+                return (int) errorDetails.getNumber();
+            }
+
+            @Override
+            public String sqlState() {
+                return errorDetails.getStateCode();
+            }
+
+            @Override
+            public String message() {
+                return errorDetails.getMessage();
+            }
+
+            @Override
+            public Severity severity() {
+                return message instanceof ErrorToken ? Severity.ERROR : Severity.INFO;
+            }
+        };
     }
 
 }

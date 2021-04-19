@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.spi.Result;
 
 import java.util.Objects;
 
@@ -28,7 +29,7 @@ import java.util.Objects;
  *
  * @author Mark Paluch
  */
-public abstract class AbstractDoneToken extends AbstractDataToken {
+public abstract class AbstractDoneToken extends AbstractDataToken implements Result.UpdateCount {
 
     /**
      * Packet length in bytes.
@@ -244,6 +245,11 @@ public abstract class AbstractDoneToken extends AbstractDataToken {
         sb.append(", currentCommand=").append(getCurrentCommand());
         sb.append(']');
         return sb.toString();
+    }
+
+    @Override
+    public long value() {
+        return hasCount() ? getRowCount() : 0;
     }
 
 }
