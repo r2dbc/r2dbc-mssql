@@ -16,7 +16,6 @@
 
 package io.r2dbc.mssql;
 
-
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.Message;
@@ -32,7 +31,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for {@link MssqlResult}.
+ * Unit tests for {@link DefaultMssqlResult}.
  *
  * @author Mark Paluch
  */
@@ -45,7 +44,7 @@ class MssqlResultUnitTests {
         DoneToken done = DoneToken.create(0);
         Iterator<Message> iterator = Stream.of(error, done).map(Message.class::cast).iterator();
 
-        MssqlResult result = MssqlResult.toResult("", new ConnectionContext(), new DefaultCodecs(), Flux.fromIterable(() -> iterator));
+        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), new DefaultCodecs(), Flux.fromIterable(() -> iterator), false);
 
         result.getRowsUpdated()
             .as(StepVerifier::create)

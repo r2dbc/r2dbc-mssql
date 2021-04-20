@@ -45,20 +45,20 @@ abstract class NamedCollectionSupport<N> implements Collection<String> {
     private final String itemName;
 
     @SuppressWarnings("unchecked")
-    NamedCollectionSupport(N[] named, Map<String, N> nameKeyed, Function<N, String> nameMapper, String itemName) {
+    NamedCollectionSupport(N[] items, Map<String, N> nameKeyed, Function<N, String> nameMapper, String itemName) {
 
         this.nameMapper = nameMapper;
         this.itemName = itemName;
 
-        if (shouldStripROWSTAT(named)) {
+        if (shouldStripROWSTAT(items)) {
 
-            this.items = (N[]) Array.newInstance(named.getClass().getComponentType(), named.length - 1);
-            System.arraycopy(named, 0, this.items, 0, this.items.length);
+            this.items = (N[]) Array.newInstance(items.getClass().getComponentType(), items.length - 1);
+            System.arraycopy(items, 0, this.items, 0, this.items.length);
 
-            this.nameKeyed = toMap(named, nameMapper);
+            this.nameKeyed = toMap(this.items, nameMapper);
         } else {
 
-            this.items = named;
+            this.items = items;
             this.nameKeyed = nameKeyed;
         }
     }

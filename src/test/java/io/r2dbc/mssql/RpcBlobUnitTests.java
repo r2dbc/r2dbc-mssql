@@ -25,6 +25,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.r2dbc.mssql.client.TdsEncoder;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.codec.PlpEncoded;
+import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.codec.RpcParameterContext;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
@@ -67,7 +68,7 @@ public class RpcBlobUnitTests {
         DefaultCodecs codecs = new DefaultCodecs();
 
         Binding binding = new Binding();
-        binding.add("P0", codecs.encode(ByteBufAllocator.DEFAULT, RpcParameterContext.in(), blob));
+        binding.add("P0", RpcDirection.IN, codecs.encode(ByteBufAllocator.DEFAULT, RpcParameterContext.in(), blob));
 
         RpcRequest request = RpcQueryMessageFlow.spExecuteSql("INSERT INTO lob_test values(@P0)", binding, Collation.RAW, TransactionDescriptor.empty());
 

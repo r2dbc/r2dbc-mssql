@@ -17,6 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.codec.Encoded;
+import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
@@ -34,7 +35,9 @@ import java.util.function.BiConsumer;
  */
 class Binding {
 
-    private final Map<String, Encoded> parameters = new LinkedHashMap<>();
+    private final Map<String, RpcParameter> parameters = new LinkedHashMap<>();
+
+    private boolean hasOutParameters = false;
 
     @Nullable
     private volatile String formalRepresentation;
@@ -43,18 +46,31 @@ class Binding {
      * Add a {@link Encoded encoded parameter} to the binding.
      *
      * @param name      the name of the {@link Encoded encoded parameter}
+     * @param direction the direction of the encoded parameter
      * @param parameter the {@link Encoded encoded parameter}
      * @return this {@link Binding}
      */
-    public Binding add(String name, Encoded parameter) {
+    public Binding add(String name, RpcDirection direction, Encoded parameter) {
 
         Assert.requireNonNull(name, "Name must not be null");
+        Assert.requireNonNull(direction, "RpcDirection must not be null");
         Assert.requireNonNull(parameter, "Parameter must not be null");
 
         this.formalRepresentation = null;
-        this.parameters.put(name, parameter);
-
+        this.parameters.put(name, new RpcParameter(direction, parameter));
+        if (direction == RpcDirection.OUT) {
+            this.hasOutParameters = true;
+        }
         return this;
+    }
+
+    /**
+     * Returns parameter names of the return values.
+     *
+     * @return
+     */
+    boolean hasOutParameters() {
+        return this.hasOutParameters;
     }
 
     /**
@@ -62,9 +78,9 @@ class Binding {
      */
     void clear() {
 
-        this.parameters.forEach((s, encoded) -> {
-            while (encoded.refCnt() > 0) {
-                encoded.release();
+        this.parameters.forEach((s, parameter) -> {
+            while (parameter.encoded.refCnt() > 0) {
+                parameter.encoded.release();
             }
         });
 
@@ -84,15 +100,19 @@ class Binding {
         }
 
         StringBuilder builder = new StringBuilder(this.parameters.size() * 16);
-        Set<Map.Entry<String, Encoded>> entries = this.parameters.entrySet();
+        Set<Map.Entry<String, RpcParameter>> entries = this.parameters.entrySet();
 
-        for (Map.Entry<String, Encoded> entry : entries) {
+        for (Map.Entry<String, RpcParameter> entry : entries) {
 
             if (builder.length() != 0) {
                 builder.append(',');
             }
 
-            builder.append('@').append(entry.getKey()).append(' ').append(entry.getValue().getFormalType());
+            builder.append('@').append(entry.getKey()).append(' ').append(entry.getValue().encoded.getFormalType());
+
+            if (entry.getValue().rpcDirection == RpcDirection.OUT) {
+                builder.append(" OUTPUT");
+            }
         }
 
         formalRepresentation = builder.toString();
@@ -109,14 +129,14 @@ class Binding {
      *
      * @param action The action to be performed for each bound parameter.
      */
-    public void forEach(BiConsumer<String, Encoded> action) {
+    public void forEach(BiConsumer<String, RpcParameter> action) {
 
         Assert.requireNonNull(action, "Action must not be null");
 
         this.parameters.forEach(action);
     }
 
-    public Map<String, Encoded> getParameters() {
+    Map<String, RpcParameter> getParameters() {
         return this.parameters;
     }
 
@@ -162,6 +182,19 @@ class Binding {
         sb.append(" [parameters=").append(this.parameters);
         sb.append(']');
         return sb.toString();
+    }
+
+    public static class RpcParameter {
+
+        final RpcDirection rpcDirection;
+
+        final Encoded encoded;
+
+        public RpcParameter(RpcDirection rpcDirection, Encoded encoded) {
+            this.rpcDirection = rpcDirection;
+            this.encoded = encoded;
+        }
+
     }
 
 }

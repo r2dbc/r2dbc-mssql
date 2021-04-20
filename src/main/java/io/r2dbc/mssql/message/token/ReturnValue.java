@@ -66,6 +66,19 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
      * @param type          type descriptor of this value.
      * @param value         the actual value.
      */
+    public ReturnValue(int ordinal, @Nullable String parameterName, int status, TypeInformation type, ByteBuf value) {
+        this(ordinal, parameterName, (byte) status, type, value);
+    }
+
+    /**
+     * Creates a new {@link ReturnValue}.
+     *
+     * @param ordinal       the ordinal position of the output parameter in the original RPC call.
+     * @param parameterName the parameter name.
+     * @param status        indicator whether the value is a {@literal OUT} value or a UDF.
+     * @param type          type descriptor of this value.
+     * @param value         the actual value.
+     */
     public ReturnValue(int ordinal, @Nullable String parameterName, byte status, TypeInformation type, ByteBuf value) {
 
         super();

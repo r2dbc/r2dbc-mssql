@@ -16,14 +16,19 @@
 
 package io.r2dbc.mssql;
 
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.Encoded;
+import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.codec.RpcParameterContext;
 import io.r2dbc.mssql.message.Message;
+import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.mssql.util.Operators;
 import io.r2dbc.spi.Clob;
 import io.r2dbc.spi.Parameter;
 import io.r2dbc.spi.Statement;
@@ -42,6 +47,8 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static io.r2dbc.mssql.util.PredicateUtils.or;
 
 /**
  * Parametrized {@link Statement} with parameter markers executed against a Microsoft SQL Server database.
@@ -120,15 +127,17 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
             if (this.bindings.bindings.isEmpty()) {
 
-                Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, new Binding());
-                return exchange.windowUntil(DoneInProcToken.class::isInstance).map(it -> MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it));
+                Flux<Message> exchange = QueryMessageFlow.exchange(this.client, sql).transform(Operators::discardOnCancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release);
+                return exchange.windowUntil(AbstractDoneToken.class::isInstance).map(it -> MssqlSegmentResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it, false));
             }
 
             if (this.bindings.bindings.size() == 1) {
 
-                Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, this.bindings.bindings.get(0));
+                Binding binding = this.bindings.bindings.get(0);
+                Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, binding);
 
-                return exchange.windowUntil(DoneInProcToken.class::isInstance).map(it -> MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it));
+                return exchange.windowUntil(or(DoneInProcToken.class::isInstance)).map(it -> MssqlSegmentResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it,
+                    binding.hasOutParameters()));
             }
 
             Sinks.Many<Binding> sink = Sinks.many().unicast().onBackpressureBuffer();
@@ -142,7 +151,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
                 return exchange.doOnComplete(() -> {
                     tryNextBinding(iterator, sink, cancelled);
-                }).windowUntil(DoneInProcToken.class::isInstance).map(it -> MssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it));
+                }).windowUntil(or(DoneInProcToken.class::isInstance)).map(it -> MssqlSegmentResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it, binding.hasOutParameters()));
             }).doOnSubscribe(it -> {
 
                 Binding initial = iterator.next();
@@ -229,15 +238,16 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         Assert.requireNonNull(identifier, "identifier must not be null");
         Assert.isInstanceOf(String.class, identifier, "identifier must be a String");
 
-        RpcParameterContext parameterContext = RpcParameterContext.in();
+        boolean isIn = !(value instanceof Parameter.Out);
+        RpcParameterContext parameterContext = createContext(isIn, null);
         if (isTextual(value) || (value instanceof Parameter && isTextual(((Parameter) value).getValue()))) {
-            parameterContext = RpcParameterContext.in(new RpcParameterContext.CharacterValueContext(this.client.getRequiredCollation(), this.sendStringParametersAsUnicode));
+            parameterContext = createContext(isIn, new RpcParameterContext.CharacterValueContext(this.client.getRequiredCollation(), this.sendStringParametersAsUnicode));
         }
 
         Encoded encoded = this.codecs.encode(this.client.getByteBufAllocator(), parameterContext, value);
         encoded.touch("ParametrizedMssqlStatement.bind(…)");
 
-        addBinding(getParameterName(identifier), encoded);
+        addBinding(getParameterName(identifier), isIn ? RpcDirection.IN : RpcDirection.OUT, encoded);
 
         return this;
     }
@@ -263,7 +273,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
         Encoded encoded = this.codecs.encodeNull(this.client.getByteBufAllocator(), type);
         encoded.touch("ParametrizedMssqlStatement.bindNull(…)");
-        addBinding(getParameterName(identifier), encoded);
+        addBinding(getParameterName(identifier), RpcDirection.IN, encoded);
         return this;
     }
 
@@ -275,11 +285,20 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         return bindNull(getParameterName(index), type);
     }
 
-    private void addBinding(String name, Encoded parameter) {
+    private static RpcParameterContext createContext(boolean in, @Nullable RpcParameterContext.ValueContext value) {
+
+        if (in) {
+            return value != null ? RpcParameterContext.in(value) : RpcParameterContext.in();
+        }
+
+        return value != null ? RpcParameterContext.out(value) : RpcParameterContext.out();
+    }
+
+    private void addBinding(String name, RpcDirection rpcDirection, Encoded parameter) {
 
         assertNotExecuted();
 
-        this.bindings.getCurrent().add(name, parameter);
+        this.bindings.getCurrent().add(name, rpcDirection, parameter);
     }
 
     private void assertNotExecuted() {

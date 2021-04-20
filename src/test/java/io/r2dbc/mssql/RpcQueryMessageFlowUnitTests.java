@@ -19,6 +19,7 @@ package io.r2dbc.mssql;
 import io.r2dbc.mssql.RpcQueryMessageFlow.CursorState;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.codec.DefaultCodecs;
+import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.codec.RpcParameterContext;
 import io.r2dbc.mssql.codec.RpcParameterContext.ValueContext;
 import io.r2dbc.mssql.message.ClientMessage;
@@ -74,7 +75,7 @@ class RpcQueryMessageFlowUnitTests {
     void shouldEncodeSpExecuteSql() {
 
         Binding binding = new Binding();
-        binding.add("P0", this.codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(ValueContext.character(this.collation, true)), "mark"));
+        binding.add("P0", RpcDirection.IN, this.codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(ValueContext.character(this.collation, true)), "mark"));
 
         RpcRequest rpcRequest = RpcQueryMessageFlow.spExecuteSql("SELECT * FROM my_table", binding, this.collation, TransactionDescriptor.empty());
 
@@ -178,7 +179,7 @@ class RpcQueryMessageFlowUnitTests {
         String sql = "UPDATE my_table set first_name = @P0";
 
         Binding binding = new Binding();
-        binding.add("P0", this.codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(ValueContext.character(this.collation, true)), "mark"));
+        binding.add("P0", RpcDirection.IN, this.codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(ValueContext.character(this.collation, true)), "mark"));
 
         RpcRequest rpcRequest = RpcQueryMessageFlow.spCursorPrepExec(0, sql, binding, this.collation, TransactionDescriptor.empty());
 
@@ -203,7 +204,7 @@ class RpcQueryMessageFlowUnitTests {
             "00 6b 00";
 
         Binding binding = new Binding();
-        binding.add("P0", this.codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(ValueContext.character(this.collation, true)), "mark"));
+        binding.add("P0", RpcDirection.IN, this.codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(ValueContext.character(this.collation, true)), "mark"));
 
         RpcRequest rpcRequest = RpcQueryMessageFlow.spCursorExec(2, binding, TransactionDescriptor.empty());
 

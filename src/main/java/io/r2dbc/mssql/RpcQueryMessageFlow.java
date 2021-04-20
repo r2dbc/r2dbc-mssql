@@ -64,8 +64,9 @@ import static io.r2dbc.mssql.util.PredicateUtils.or;
  */
 final class RpcQueryMessageFlow {
 
-    private static final Predicate<Message> WINDOW_PREDICATE = or(RowToken.class::isInstance,
+    private static final Predicate<Message> FILTER_PREDICATE = or(RowToken.class::isInstance,
         ColumnMetadataToken.class::isInstance,
+        ReturnValue.class::isInstance,
         DoneInProcToken.class::isInstance,
         IntermediateCount.class::isInstance,
         AbstractInfoToken.class::isInstance,
@@ -136,17 +137,11 @@ final class RpcQueryMessageFlow {
         Flux<Message> messages = inbound //
             .<Message>handle((message, sink) -> {
 
-                if (message.getClass() == ReturnValue.class) {
-
-                    ReturnValue returnValue = (ReturnValue) message;
-                    returnValue.release();
-                }
-
                 state.update(message);
 
-                handleMessage(client, 0, null, state, message, sink, cursorComplete);
+                handleMessage(client, 0, null, state, message, sink, cursorComplete, true);
             })
-            .filter(WINDOW_PREDICATE)
+            .filter(FILTER_PREDICATE)
             .doOnCancel(cursorComplete);
 
         return messages.doOnSubscribe(ignore -> {
@@ -185,6 +180,7 @@ final class RpcQueryMessageFlow {
         Flux<Message> messages = inbound //
             .<Message>handle((message, sink) -> {
 
+                boolean emit = true;
                 if (message.getClass() == ReturnValue.class) {
 
                     ReturnValue returnValue = (ReturnValue) message;
@@ -194,14 +190,18 @@ final class RpcQueryMessageFlow {
                         state.cursorId = parseCursorId(codecs, state, returnValue);
                     }
 
-                    returnValue.release();
+                    // skip spCursorOpen OUT
+                    if (returnValue.getOrdinal() < 5) {
+                        returnValue.release();
+                        emit = false;
+                    }
                 }
 
                 state.update(message);
 
-                handleMessage(client, fetchSize, outbound, state, message, sink, cursorComplete);
+                handleMessage(client, fetchSize, outbound, state, message, sink, cursorComplete, emit);
             })
-            .filter(WINDOW_PREDICATE);
+            .filter(FILTER_PREDICATE);
 
         return messages.doOnSubscribe(ignore -> {
             QueryLogger.logQuery(client.getContext(), query);
@@ -258,40 +258,55 @@ final class RpcQueryMessageFlow {
         Flux<Message> messages = inbound //
             .<Message>handle((message, sink) -> {
 
+                boolean emit = true;
                 if (message.getClass() == ReturnValue.class) {
 
                     ReturnValue returnValue = (ReturnValue) message;
 
-                    if (needsPrepare) {
+                    emit = handleSpCursorReturnValue(statementCache, codecs, query, binding, state, needsPrepare, returnValue);
 
-                        // prepared statement handle
-                        if (returnValue.getOrdinal() == 0) {
-
-                            int preparedStatementHandle = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
-                            logger.debug("Prepared statement with handle: {}", preparedStatementHandle);
-                            statementCache.putHandle(preparedStatementHandle, query, binding);
-                        }
+                    if (!emit) {
+                        returnValue.release();
                     }
-
-                    // cursor Id
-                    if (returnValue.getOrdinal() == 1) {
-                        state.cursorId = parseCursorId(codecs, state, returnValue);
-                    }
-
-                    returnValue.release();
                 }
 
                 state.update(message);
 
-                handleMessage(client, fetchSize, outbound, state, message, sink, cursorComplete);
+                handleMessage(client, fetchSize, outbound, state, message, sink, cursorComplete, emit);
             })
-            .filter(WINDOW_PREDICATE);
+            .filter(FILTER_PREDICATE);
 
         return messages.doOnSubscribe(ignore -> {
             QueryLogger.logQuery(client.getContext(), query);
             exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound);
         })
             .transform(it -> Operators.discardOnCancel(it, state::cancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release));
+    }
+
+    private static boolean handleSpCursorReturnValue(PreparedStatementCache statementCache, Codecs codecs, String query, Binding binding, CursorState state, boolean needsPrepare,
+                                                     ReturnValue returnValue) {
+
+        // cursor Id
+        if (returnValue.getOrdinal() == 1) {
+            state.cursorId = parseCursorId(codecs, state, returnValue);
+        }
+
+        if (needsPrepare) {
+
+            // prepared statement handle
+            if (returnValue.getOrdinal() == 0) {
+
+                int preparedStatementHandle = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
+                logger.debug("Prepared statement with handle: {}", preparedStatementHandle);
+                statementCache.putHandle(preparedStatementHandle, query, binding);
+            }
+
+            // skip spCursorPrepExec OUT
+            return returnValue.getOrdinal() >= 7;
+        } else {
+            // skip spCursorExec OUT
+            return returnValue.getOrdinal() >= 5;
+        }
     }
 
     private static int parseCursorId(Codecs codecs, CursorState state, ReturnValue returnValue) {
@@ -302,7 +317,7 @@ final class RpcQueryMessageFlow {
     }
 
     private static void handleMessage(Client client, int fetchSize, Sinks.Many<ClientMessage> requests, CursorState state, Message message, SynchronousSink<Message> sink,
-                                      Runnable onCursorComplete) {
+                                      Runnable onCursorComplete, boolean emit) {
 
         if (message instanceof ColumnMetadataToken && !((ColumnMetadataToken) message).hasColumns()) {
             return;
@@ -334,7 +349,10 @@ final class RpcQueryMessageFlow {
         }
 
         if (!(message instanceof DoneProcToken)) {
-            sink.next(message);
+
+            if (emit) {
+                sink.next(message);
+            }
             return;
         }
 
@@ -428,8 +446,8 @@ final class RpcQueryMessageFlow {
             .withParameter(RpcDirection.IN, collation, query) //
             .withParameter(RpcDirection.IN, collation, binding.getFormalParameters()); // formal parameter defn
 
-        binding.forEach((name, encoded) -> {
-            builder.withNamedParameter(RpcDirection.IN, name, encoded);
+        binding.forEach((name, parameter) -> {
+            builder.withNamedParameter(parameter.rpcDirection, name, parameter.encoded);
         });
 
         return builder.build();
@@ -540,8 +558,8 @@ final class RpcQueryMessageFlow {
             .withParameter(RpcDirection.IN, resultSetCCOpt) // ccopt
             .withParameter(RpcDirection.OUT, 0);// rowcount
 
-        binding.forEach((name, encoded) -> {
-            builder.withNamedParameter(RpcDirection.IN, name, encoded);
+        binding.forEach((name, parameter) -> {
+            builder.withNamedParameter(parameter.rpcDirection, name, parameter.encoded);
         });
 
         return builder.build();
@@ -575,8 +593,8 @@ final class RpcQueryMessageFlow {
             .withParameter(RpcDirection.IN, resultSetCCOpt) // ccopt
             .withParameter(RpcDirection.OUT, 0);// rowcount
 
-        binding.forEach((name, encoded) -> {
-            builder.withNamedParameter(RpcDirection.IN, name, encoded);
+        binding.forEach((name, parameter) -> {
+            builder.withNamedParameter(parameter.rpcDirection, name, parameter.encoded);
         });
 
         return builder.build();

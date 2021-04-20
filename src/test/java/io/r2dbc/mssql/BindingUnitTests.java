@@ -19,6 +19,7 @@ package io.r2dbc.mssql;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.codec.Encoded;
+import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.message.type.TdsDataType;
 import org.junit.jupiter.api.Test;
 
@@ -35,7 +36,7 @@ class BindingUnitTests {
     void shouldReportFormalParameters() {
 
         Binding binding = new Binding();
-        binding.add("foo", Encoded.of(TdsDataType.INT8, Unpooled.EMPTY_BUFFER));
+        binding.add("foo", RpcDirection.IN, Encoded.of(TdsDataType.INT8, Unpooled.EMPTY_BUFFER));
 
         assertThat(binding.getFormalParameters()).isEqualTo("@foo bigint");
     }
@@ -44,8 +45,8 @@ class BindingUnitTests {
     void shouldReportMultipleFormalParameters() {
 
         Binding binding = new Binding();
-        binding.add("foo", Encoded.of(TdsDataType.INT8, Unpooled.EMPTY_BUFFER));
-        binding.add("bar", Encoded.of(TdsDataType.MONEY8, Unpooled.EMPTY_BUFFER));
+        binding.add("foo", RpcDirection.IN, Encoded.of(TdsDataType.INT8, Unpooled.EMPTY_BUFFER));
+        binding.add("bar", RpcDirection.IN, Encoded.of(TdsDataType.MONEY8, Unpooled.EMPTY_BUFFER));
 
         assertThat(binding.getFormalParameters()).isEqualTo("@foo bigint,@bar money");
     }
@@ -55,10 +56,10 @@ class BindingUnitTests {
 
         Binding binding = new Binding();
 
-        binding.add("foo", Encoded.of(TdsDataType.INT8, Unpooled.EMPTY_BUFFER));
+        binding.add("foo", RpcDirection.IN, Encoded.of(TdsDataType.INT8, Unpooled.EMPTY_BUFFER));
         assertThat(binding.getFormalParameters()).isEqualTo("@foo bigint");
 
-        binding.add("bar", Encoded.of(TdsDataType.MONEY8, Unpooled.EMPTY_BUFFER));
+        binding.add("bar", RpcDirection.IN, Encoded.of(TdsDataType.MONEY8, Unpooled.EMPTY_BUFFER));
         assertThat(binding.getFormalParameters()).isEqualTo("@foo bigint,@bar money");
     }
 
@@ -67,7 +68,7 @@ class BindingUnitTests {
 
         Binding binding = new Binding();
 
-        binding.add("foo", Encoded.of(TdsDataType.INT8, Unpooled.EMPTY_BUFFER));
+        binding.add("foo", RpcDirection.IN, Encoded.of(TdsDataType.INT8, Unpooled.EMPTY_BUFFER));
 
         assertThat(binding.getParameters()).isNotEmpty();
         assertThat(binding.isEmpty()).isFalse();
@@ -80,7 +81,7 @@ class BindingUnitTests {
         Binding binding = new Binding();
 
         ByteBuf buffer = Unpooled.buffer();
-        binding.add("foo", Encoded.of(TdsDataType.INT8, buffer));
+        binding.add("foo", RpcDirection.IN, Encoded.of(TdsDataType.INT8, buffer));
         binding.clear();
 
         assertThat(binding.isEmpty()).isTrue();

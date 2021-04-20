@@ -47,7 +47,7 @@ import java.util.regex.Pattern;
  * @author Mark Paluch
  * @author Hebert Coelho
  * @see MssqlConnection
- * @see MssqlResult
+ * @see DefaultMssqlResult
  * @see ErrorDetails
  */
 public final class MssqlConnection implements Connection {
