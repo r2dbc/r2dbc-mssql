@@ -17,7 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.codec.Codecs;
-import io.r2dbc.mssql.message.token.Column;
+import io.r2dbc.mssql.codec.Decodable;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.ColumnMetadata;
@@ -27,30 +27,30 @@ import io.r2dbc.spi.Type;
 import javax.annotation.Nonnull;
 
 /**
- * Microsoft SQL Server-specific {@link ColumnMetadata} based on {@link Column}.
+ * Microsoft SQL Server-specific {@link ColumnMetadata} based on {@link Decodable}.
  *
  * @author Mark Paluch
  */
 public final class MssqlColumnMetadata implements ColumnMetadata {
 
-    private final Column column;
+    private final Decodable decodable;
 
     private final Codecs codecs;
 
     /**
      * Creates a new {@link MssqlColumnMetadata}.
      *
-     * @param column the column.
-     * @param codecs the {@link Codecs codec registry}
+     * @param decodable the column.
+     * @param codecs    the {@link Codecs codec registry}
      */
-    MssqlColumnMetadata(Column column, Codecs codecs) {
-        this.column = Assert.requireNonNull(column, "Column must not be null");
+    MssqlColumnMetadata(Decodable decodable, Codecs codecs) {
+        this.decodable = Assert.requireNonNull(decodable, "Decodable must not be null");
         this.codecs = Assert.requireNonNull(codecs, "Codecs must not be null");
     }
 
     @Override
     public String getName() {
-        return this.column.getName();
+        return this.decodable.getName();
     }
 
     @Override
@@ -81,7 +81,7 @@ public final class MssqlColumnMetadata implements ColumnMetadata {
     @Override
     @Nonnull
     public TypeInformation getNativeTypeMetadata() {
-        return this.column.getType();
+        return this.decodable.getType();
     }
 
 }

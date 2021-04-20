@@ -26,10 +26,10 @@ import java.util.Collection;
  *
  * @author Mark Paluch
  */
-final class EscapeAwareColumnMatcher {
+final class EscapeAwareNameMatcher {
 
     @Nullable
-    public static String findColumn(String name, Collection<String> names) {
+    public static String find(String name, Collection<String> names) {
 
         for (String s : names) {
             if (matches(name, s)) {

@@ -24,22 +24,22 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for {@link EscapeAwareColumnMatcher}.
+ * Unit tests for {@link EscapeAwareNameMatcher}.
  *
  * @author Mark Paluch
  */
-class EscapeAwareColumnMatcherUnitTests {
+class EscapeAwareNameMatcherUnitTests {
 
     List<String> columns = Arrays.asList("one", "two", "three", "one");
 
     @Test
     void containsConsidersNamingRules() {
 
-        assertThat(EscapeAwareColumnMatcher.findColumn("one", columns)).isNotNull();
-        assertThat(EscapeAwareColumnMatcher.findColumn("[one]", columns)).isNotNull();
-        assertThat(EscapeAwareColumnMatcher.findColumn("[one", columns)).isNull();
-        assertThat(EscapeAwareColumnMatcher.findColumn("one]", columns)).isNull();
-        assertThat(EscapeAwareColumnMatcher.findColumn("[One]", columns)).isNull();
+        assertThat(EscapeAwareNameMatcher.find("one", columns)).isNotNull();
+        assertThat(EscapeAwareNameMatcher.find("[one]", columns)).isNotNull();
+        assertThat(EscapeAwareNameMatcher.find("[one", columns)).isNull();
+        assertThat(EscapeAwareNameMatcher.find("one]", columns)).isNull();
+        assertThat(EscapeAwareNameMatcher.find("[One]", columns)).isNull();
     }
 
 }

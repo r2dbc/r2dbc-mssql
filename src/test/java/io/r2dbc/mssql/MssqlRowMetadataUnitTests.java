@@ -75,14 +75,14 @@ class MssqlRowMetadataUnitTests {
         MssqlRowMetadata rowMetadata1 = new MssqlRowMetadata(this.codecs, new Column[]{this.column, rowstat}, new HashMap<>());
 
         assertThat(rowMetadata1.getColumnNames()).containsOnly("foo");
-        assertThat(rowMetadata1.getColumnCount()).isOne();
+        assertThat(rowMetadata1.getCount()).isOne();
         assertThatIllegalArgumentException().isThrownBy(() -> rowMetadata1.getColumnMetadata("ROWSTAT"));
         assertThat(rowMetadata1.getColumnNames()).containsOnly("foo");
 
         MssqlRowMetadata rowMetadata2 = new MssqlRowMetadata(this.codecs, new Column[]{rowstat}, new HashMap<>());
 
         assertThat(rowMetadata2.getColumnNames()).isEmpty();
-        assertThat(rowMetadata2.getColumnCount()).isZero();
+        assertThat(rowMetadata2.getCount()).isZero();
         assertThatIllegalArgumentException().isThrownBy(() -> rowMetadata2.getColumnMetadata("ROWSTAT"));
         assertThat(rowMetadata2.getColumnNames()).isEmpty();
     }
@@ -98,7 +98,7 @@ class MssqlRowMetadataUnitTests {
         MssqlRowMetadata rowMetadata = new MssqlRowMetadata(this.codecs, new Column[]{rowstat, this.column}, nameKeyedColumns);
 
         assertThat(rowMetadata.getColumnNames()).contains("foo", "ROWSTAT");
-        assertThat(rowMetadata.getColumnCount()).isEqualTo(2);
+        assertThat(rowMetadata.getCount()).isEqualTo(2);
     }
 
     @Test

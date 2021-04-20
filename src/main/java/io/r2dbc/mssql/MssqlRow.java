@@ -95,7 +95,7 @@ final class MssqlRow implements Row, Result.Data {
         Assert.requireNonNull(type, "Type must not be null");
         requireNotReleased();
 
-        Column column = this.metadata.getColumn(index);
+        Column column = this.metadata.get(index);
         return doGet(column, type);
     }
 
@@ -106,7 +106,7 @@ final class MssqlRow implements Row, Result.Data {
         Assert.requireNonNull(type, "Type must not be null");
         requireNotReleased();
 
-        Column column = this.metadata.getColumn(name);
+        Column column = this.metadata.get(name);
         return doGet(column, type);
     }
 
