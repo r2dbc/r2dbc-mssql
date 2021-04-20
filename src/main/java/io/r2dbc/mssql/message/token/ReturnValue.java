@@ -126,11 +126,11 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
                 buffer.skipBytes(2);
                 int nameLength = Decode.asByte(buffer);
 
-                if (buffer.readableBytes() < nameLength + /* status */ 1) {
+                if (buffer.readableBytes() < (nameLength * 2) + /* status */ 1) {
                     return false;
                 }
 
-                buffer.skipBytes(nameLength + 1);
+                buffer.skipBytes((nameLength * 2) + 1);
 
                 if (!TypeInformation.canDecode(buffer, true)) {
                     return false;
