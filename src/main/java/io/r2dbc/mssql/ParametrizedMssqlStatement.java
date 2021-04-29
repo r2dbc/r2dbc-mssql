@@ -315,7 +315,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
     public static boolean supports(String sql) {
 
         Assert.requireNonNull(sql, "SQL must not be null");
-        return sql.lastIndexOf('@') != -1;
+        return sql.lastIndexOf('@') != -1 && PARAMETER_MATCHER.matcher(sql).find();
     }
 
     private static boolean isTextual(@Nullable Object value) {

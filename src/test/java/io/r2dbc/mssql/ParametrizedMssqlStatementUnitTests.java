@@ -56,6 +56,7 @@ class ParametrizedMssqlStatementUnitTests {
         assertThat(ParametrizedMssqlStatement.supports("SELECT * from FOO where firstname = @foo_bar")).isTrue();
 
         assertThat(ParametrizedMssqlStatement.supports("SELECT * from FOO where firstname = 'foo'")).isFalse();
+        assertThat(ParametrizedMssqlStatement.supports("SELECT * from FOO where firstname = 'user[@]email'")).isFalse();
     }
 
     @Test
