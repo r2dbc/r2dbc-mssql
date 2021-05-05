@@ -84,6 +84,7 @@ class MssqlRowMetadataUnitTests {
     }
 
     @Test
+    @SuppressWarnings("cast")
     void shouldReturnOrderedColumnNames() {
 
         Column c1 = new Column(0, "one", this.integer, null);
@@ -103,6 +104,8 @@ class MssqlRowMetadataUnitTests {
 
         assertThat(rowMetadata.getColumnNames().contains("One")).isTrue();
         assertThat(rowMetadata.getColumnNames().contains("óne")).isFalse();
+        assertThat(rowMetadata.getColumnNames().toArray()).contains("one", "two");
+        assertThat((String[]) rowMetadata.getColumnNames().toArray(new String[0])).contains("one", "two");
     }
 
     @Test

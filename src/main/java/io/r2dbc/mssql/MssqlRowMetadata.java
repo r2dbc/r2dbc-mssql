@@ -23,6 +23,7 @@ import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.RowMetadata;
 import reactor.util.annotation.Nullable;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -163,7 +164,16 @@ final class MssqlRowMetadata extends ColumnSource implements RowMetadata, Collec
     @Override
     @SuppressWarnings("unchecked")
     public <T> T[] toArray(T[] a) {
-        return (T[]) toArray();
+
+        if (a.length < size()) {
+            a = (T[]) Array.newInstance(a.getClass().getComponentType(), size());
+        }
+
+        for (int i = 0; i < size(); i++) {
+            a[i] = (T) this.getColumn(i).getName();
+        }
+
+        return a;
     }
 
     @Override
