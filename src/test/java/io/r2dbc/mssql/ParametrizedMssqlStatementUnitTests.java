@@ -74,6 +74,13 @@ class ParametrizedMssqlStatementUnitTests {
     }
 
     @Test
+    void executeWithoutBindingsShouldNotFail() {
+
+        new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname").execute();
+        new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * FROM users WHERE email = 'name[@]gmail.com'").execute();
+    }
+
+    @Test
     void shouldBindParameterByIndex() {
 
         ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
