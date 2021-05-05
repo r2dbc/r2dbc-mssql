@@ -262,9 +262,9 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
         try {
             while (body.readableBytes() > 0) {
 
-                ByteBuf chunk = body.alloc().buffer(estimateChunkSize(getBytesToWrite(body.readableBytes())));
-
                 if (this.lastChunkRemainder != null) {
+
+                    ByteBuf chunk = body.alloc().buffer(estimateChunkSize(getBytesToWrite(body.readableBytes())));
 
                     int combinedSize = this.lastChunkRemainder.readableBytes() + body.readableBytes();
                     HeaderOptions optionsToUse = isLastTransportPacket(combinedSize, lastLogicalPacket) ? getLastHeader(headerOptions) : getChunkedHeaderOptions(headerOptions);
@@ -277,6 +277,7 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
                     this.lastChunkRemainder.release();
                     this.lastChunkRemainder = null;
 
+                    combiner.add(ctx.write(chunk, ctx.newPromise()));
                 } else {
 
                     if (!lastLogicalPacket && !requiresChunking(body.readableBytes())) {
@@ -287,15 +288,15 @@ public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements E
                         break;
                     }
 
+                    ByteBuf chunk = body.alloc().buffer(estimateChunkSize(getBytesToWrite(body.readableBytes())));
                     HeaderOptions optionsToUse = isLastTransportPacket(body.readableBytes(), lastLogicalPacket) ? getLastHeader(headerOptions) : getChunkedHeaderOptions(headerOptions);
 
                     int byteCount = getEffectiveChunkSizeWithoutHeader(body.readableBytes());
                     Header.encode(chunk, optionsToUse, Header.LENGTH + byteCount, this.packetIdProvider);
 
                     chunk.writeBytes(body, byteCount);
+                    combiner.add(ctx.write(chunk, ctx.newPromise()));
                 }
-
-                combiner.add(ctx.write(chunk, ctx.newPromise()));
             }
 
             combiner.finish(promise);
