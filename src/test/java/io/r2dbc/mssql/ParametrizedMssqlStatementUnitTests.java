@@ -27,7 +27,6 @@ import io.r2dbc.mssql.message.token.ReturnValue;
 import io.r2dbc.mssql.message.token.RpcRequest;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import io.r2dbc.mssql.util.Types;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
 
@@ -75,12 +74,10 @@ class ParametrizedMssqlStatementUnitTests {
     }
 
     @Test
-    @Disabled("TODO")
-    void executeWithoutBindingsShouldFail() {
+    void executeWithoutBindingsShouldNotFail() {
 
-        ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
-
-        assertThatThrownBy(statement::execute).isInstanceOf(IllegalStateException.class);
+        new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname").execute();
+        new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * FROM users WHERE email = 'name[@]gmail.com'").execute();
     }
 
     @Test
