@@ -49,7 +49,7 @@
         <r2dbc-pool.version>0.8.5.RELEASE</r2dbc-pool.version>
         <reactor.version>Dysprosium-SR12</reactor.version>
         <spring-framework.version>5.2.9.RELEASE</spring-framework.version>
-        <testcontainers.version>1.14.2</testcontainers.version>
+        <testcontainers.version>1.15.3</testcontainers.version>
     </properties>
 
     <licenses>

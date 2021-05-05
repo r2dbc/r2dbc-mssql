@@ -44,7 +44,7 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
         if (this.containerInstance != null) {
             return this.containerInstance;
         }
-        return this.containerInstance = new MSSQLServerContainer() {
+        return this.containerInstance = new MSSQLServerContainer("mcr.microsoft.com/mssql/server:2019-CU10-ubuntu-20.04") {
 
             protected void configure() {
                 this.addExposedPort(MS_SQL_SERVER_PORT);
