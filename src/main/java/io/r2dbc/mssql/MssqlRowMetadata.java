@@ -121,10 +121,14 @@ final class MssqlRowMetadata extends ColumnSource implements RowMetadata, Collec
     public boolean contains(Object o) {
 
         if (o instanceof String) {
-            return this.findColumn((String) o) != null;
+            return contains((String) o);
         }
 
         return false;
+    }
+
+    public boolean contains(String columnName) {
+        return this.findColumn(columnName) != null;
     }
 
     @Override
