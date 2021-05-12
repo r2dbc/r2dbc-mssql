@@ -1,6 +1,19 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.8.6.RELEASE
+------------------
+* Upgrade to SPI 0.8.5.RELEASE #205
+* Upgrade to Reactor Dysprosium SR20 #204
+* Upgrade to Testcontainers 1.15.3 #203
+* ClassCastException when calling RowMetadata.getColumnNames().toArray(T[]) #200
+* Exclude transitive SLF4J pulled from HikariCP #198
+* Can't combine bind variables with T-SQL local variables #197
+* Statement batch doesn't produce the correct number of update counts #196
+* Eager buffer allocation in `TdsEncoder.writeChunkedMessage(…)` can lead to memory leaks #195
+* Upgrade to R2DBC SPI 0.8.4.RELEASE #189
+* Add support for trustServerCertificate flag #184
+
 0.8.5.RELEASE
 ------------------
 * Upgrade dependencies #178
