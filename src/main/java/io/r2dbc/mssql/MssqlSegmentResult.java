@@ -16,7 +16,9 @@
 
 package io.r2dbc.mssql;
 
+import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
@@ -27,7 +29,9 @@ import io.r2dbc.mssql.message.token.NbcRowToken;
 import io.r2dbc.mssql.message.token.ReturnValue;
 import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.spi.OutParameters;
 import io.r2dbc.spi.R2dbcException;
+import io.r2dbc.spi.Readable;
 import io.r2dbc.spi.Result;
 import io.r2dbc.spi.Row;
 import io.r2dbc.spi.RowMetadata;
@@ -48,6 +52,7 @@ import java.util.function.Predicate;
  * {@link Result} of query results.
  *
  * @author Mark Paluch
+ * @since 0.9
  */
 final class MssqlSegmentResult implements MssqlResult {
 
@@ -82,7 +87,7 @@ final class MssqlSegmentResult implements MssqlResult {
      * @param expectReturnValues {@code true} if the result is expected to have result values.
      * @return {@link Result} object.
      */
-    static MssqlResult toResult(String sql, ConnectionContext context, Codecs codecs, Flux<io.r2dbc.mssql.message.Message> messages, boolean expectReturnValues) {
+    static MssqlSegmentResult toResult(String sql, ConnectionContext context, Codecs codecs, Flux<io.r2dbc.mssql.message.Message> messages, boolean expectReturnValues) {
 
         Assert.requireNonNull(sql, "SQL must not be null");
         Assert.requireNonNull(codecs, "Codecs must not be null");
@@ -101,19 +106,19 @@ final class MssqlSegmentResult implements MssqlResult {
 
         if (expectReturnValues) {
 
-            final List<ReturnValue> returnValues = new ArrayList<>();
+            List<ReturnValue> returnValues = new ArrayList<>();
 
             messageStream = messageStream.doOnNext(message -> {
 
                 if (message instanceof ReturnValue) {
                     returnValues.add((ReturnValue) message);
                 }
-            });
+            }).filter(it -> !(it instanceof ReturnValue));
 
             returnValueStream = Flux.defer(() -> {
 
                 if (returnValues.size() != 0) {
-                    return Flux.just(MssqlReturnValues.toReturnValues(codecs, returnValues));
+                    return Flux.just(new MsqlOutSegment(codecs, returnValues));
                 }
 
                 return Flux.empty();
@@ -141,7 +146,7 @@ final class MssqlSegmentResult implements MssqlResult {
                     return;
                 }
 
-                sink.next(MssqlRow.toRow(codecs, (RowToken) message, rowMetadata));
+                sink.next(new MssqlRowSegment(codecs, (RowToken) message, rowMetadata));
                 return;
             }
 
@@ -154,10 +159,11 @@ final class MssqlSegmentResult implements MssqlResult {
 
                 AbstractDoneToken doneToken = (AbstractDoneToken) message;
                 if (doneToken.hasCount()) {
-
                     sink.next(doneToken);
                 }
             }
+
+            ReferenceCountUtil.release(message);
         });
 
         if (expectReturnValues) {
@@ -199,18 +205,48 @@ final class MssqlSegmentResult implements MssqlResult {
     }
 
     @Override
-    public <T> Flux<T> map(BiFunction<Row, RowMetadata, ? extends T> f) {
+    public <T> Flux<T> map(BiFunction<Row, RowMetadata, ? extends T> mappingFunction) {
 
-        Assert.requireNonNull(f, "Mapping function must not be null");
+        Assert.requireNonNull(mappingFunction, "Mapping function must not be null");
+
+        return doMap(true, false, readable -> {
+            Row row = (Row) readable;
+            return mappingFunction.apply(row, row.getMetadata());
+        });
+    }
+
+    @Override
+    public <T> Flux<T> map(Function<? super Readable, ? extends T> mappingFunction) {
+
+        Assert.requireNonNull(mappingFunction, "Mapping function must not be null");
+
+        return doMap(true, true, mappingFunction);
+    }
+
+    private <T> Flux<T> doMap(boolean rows, boolean outparameters, Function<? super Readable, ? extends T> mappingFunction) {
 
         return this.segments
             .<T>handle((segment, sink) -> {
 
-                if (segment instanceof Data) {
+                if (rows && segment instanceof RowSegment) {
 
-                    Data data = (Data) segment;
+                    RowSegment data = (RowSegment) segment;
+                    Row row = data.row();
                     try {
-                        sink.next(f.apply(data, data.metadata()));
+                        sink.next(mappingFunction.apply(row));
+                    } finally {
+                        ReferenceCountUtil.release(data);
+                    }
+
+                    return;
+                }
+
+                if (outparameters && segment instanceof OutSegment) {
+
+                    OutSegment data = (OutSegment) segment;
+                    OutParameters outParameters = data.outParameters();
+                    try {
+                        sink.next(mappingFunction.apply(outParameters));
                     } finally {
                         ReferenceCountUtil.release(data);
                     }
@@ -232,23 +268,10 @@ final class MssqlSegmentResult implements MssqlResult {
             });
     }
 
-    private void handleError(Message segment) {
-        R2dbcException mssqlException = segment.exception();
-
-        Throwable exception = this.throwable;
-        if (exception != null) {
-            exception.addSuppressed(mssqlException);
-        } else {
-            this.throwable = mssqlException;
-        }
-    }
-
-    private boolean isError(Segment segment) {
-        return segment instanceof Message && ((Message) segment).severity() == Message.Severity.ERROR;
-    }
-
     @Override
-    public Result filter(Predicate<Segment> filter) {
+    public MssqlResult filter(Predicate<Segment> filter) {
+
+        Assert.requireNonNull(filter, "filter must not be null");
 
         Flux<Segment> filteredSegments = this.segments.filter(message -> {
 
@@ -264,57 +287,142 @@ final class MssqlSegmentResult implements MssqlResult {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <T> Flux<T> flatMap(Function<Segment, ? extends Publisher<? extends T>> mappingFunction) {
+
+        Assert.requireNonNull(mappingFunction, "mappingFunction must not be null");
 
         return this.segments
             .flatMap(segment -> {
 
-                try {
-                    Publisher<? extends T> publisher = mappingFunction.apply(segment);
+                Publisher<? extends T> result = mappingFunction.apply(segment);
 
-                    if (publisher instanceof Mono) {
-                        return ((Mono<T>) publisher).doFinally(it -> ReferenceCountUtil.release(segment));
-                    }
-
-                    return Flux.from(publisher).doFinally(it -> ReferenceCountUtil.release(segment));
-                } catch (RuntimeException e) {
-                    ReferenceCountUtil.release(segment);
-                    throw e;
+                if (result == null) {
+                    return Mono.error(new IllegalStateException("The mapper returned a null Publisher"));
                 }
+
+                // doAfterTerminate to not release resources before they had a chance to get emitted
+                if (result instanceof Mono) {
+                    return ((Mono<T>) result).doAfterTerminate(() -> ReferenceCountUtil.release(segment));
+                }
+
+                return Flux.from(result).doAfterTerminate(() -> ReferenceCountUtil.release(segment));
             });
+    }
+
+    private void handleError(Message segment) {
+        R2dbcException mssqlException = segment.exception();
+
+        Throwable exception = this.throwable;
+        if (exception != null) {
+            exception.addSuppressed(mssqlException);
+        } else {
+            this.throwable = mssqlException;
+        }
+    }
+
+    private boolean isError(Segment segment) {
+        return segment instanceof MssqlMessage && ((MssqlMessage) segment).isError();
     }
 
     private static Message createMessage(String sql, AbstractInfoToken message) {
 
         ErrorDetails errorDetails = ExceptionFactory.createErrorDetails(message);
 
-        return new Message() {
+        return new MssqlMessage(message, sql, errorDetails);
+    }
 
-            @Override
-            public R2dbcException exception() {
-                return ExceptionFactory.createException(message, sql);
-            }
+    static class MssqlMessage implements Message {
 
-            @Override
-            public int errorCode() {
-                return (int) errorDetails.getNumber();
-            }
+        private final ErrorDetails errorDetails;
 
-            @Override
-            public String sqlState() {
-                return errorDetails.getStateCode();
-            }
+        private final AbstractInfoToken message;
 
-            @Override
-            public String message() {
-                return errorDetails.getMessage();
-            }
+        private final String sql;
 
-            @Override
-            public Severity severity() {
-                return message instanceof ErrorToken ? Severity.ERROR : Severity.INFO;
-            }
-        };
+        public MssqlMessage(AbstractInfoToken message, String sql, ErrorDetails errorDetails) {
+            this.message = message;
+            this.sql = sql;
+            this.errorDetails = errorDetails;
+        }
+
+        @Override
+        public R2dbcException exception() {
+            return ExceptionFactory.createException(this.message, this.sql);
+        }
+
+        @Override
+        public int errorCode() {
+            return (int) this.errorDetails.getNumber();
+        }
+
+        @Override
+        public String sqlState() {
+            return this.errorDetails.getStateCode();
+        }
+
+        @Override
+        public String message() {
+            return this.errorDetails.getMessage();
+        }
+
+        public boolean isError() {
+            return this.message instanceof ErrorToken;
+        }
+
+    }
+
+    private static class MssqlRowSegment extends AbstractReferenceCounted implements RowSegment {
+
+        private final RowToken rowToken;
+
+        private final MssqlRow row;
+
+        public MssqlRowSegment(Codecs codecs, RowToken rowToken, MssqlRowMetadata rowMetadata) {
+            this.rowToken = rowToken;
+            this.row = MssqlRow.toRow(codecs, this.rowToken, rowMetadata);
+        }
+
+        @Override
+        public Row row() {
+            return this.row;
+        }
+
+        @Override
+        public ReferenceCounted touch(Object hint) {
+            return this;
+        }
+
+        @Override
+        protected void deallocate() {
+            this.rowToken.release();
+        }
+
+    }
+
+    private static class MsqlOutSegment extends AbstractReferenceCounted implements OutSegment {
+
+        private final MssqlReturnValues returnValues;
+
+        public MsqlOutSegment(Codecs codecs, List<ReturnValue> returnValues) {
+            this.returnValues = MssqlReturnValues.toReturnValues(codecs, returnValues);
+        }
+
+        @Override
+        public OutParameters outParameters() {
+            return this.returnValues;
+        }
+
+        @Override
+        public ReferenceCounted touch(Object hint) {
+            return this;
+        }
+
+        @Override
+        protected void deallocate() {
+            this.returnValues.release();
+        }
+
     }
 
 }

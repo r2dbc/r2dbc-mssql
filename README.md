@@ -15,15 +15,16 @@ This driver provides the following features:
 * Simple execution of SQL batches (direct and cursored execution)
 * Execution of parametrized statements (direct and cursored execution)
 * Extensive type support (including `TEXT`, `VARCHAR(MAX)`, `IMAGE`, `VARBINARY(MAX)` and national variants, see below for exceptions)
+* Execution of stored procedures
 
 Next steps:
 
-* Execution of stored procedures 
 * Add support for TVP and UDTs
 
 ## Code of Conduct
 
-This project is governed by the [R2DBC Code of Conduct](https://github.com/r2dbc/.github/blob/main/CODE_OF_CONDUCT.adoc). By participating, you are expected to uphold this code of conduct. Please report unacceptable behavior to [info@r2dbc.io](mailto:info@r2dbc.io).
+This project is governed by the [R2DBC Code of Conduct](https://github.com/r2dbc/.github/blob/main/CODE_OF_CONDUCT.adoc). By participating, you are expected to uphold this code of conduct. Please
+report unacceptable behavior to [info@r2dbc.io](mailto:info@r2dbc.io).
 
 ## Getting Started
 

@@ -27,6 +27,7 @@ import io.r2dbc.mssql.util.Types;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -56,20 +57,20 @@ class MssqlReturnValuesUnitTests {
 
         MssqlReturnValuesMetadata metadata = this.returnValues.getMetadata();
         assertThat(metadata).containsExactly("@First", "@Second");
-        assertThat(metadata.getColumnNames()).containsExactly("@First", "@Second");
+        assertThat(metadata.getParameterMetadatas().stream().map(MssqlColumnMetadata::getName).collect(Collectors.toList())).containsExactly("@First", "@Second");
     }
 
     @Test
     void metadataShouldReportCorrectType() {
 
         MssqlReturnValuesMetadata metadata = this.returnValues.getMetadata();
-        assertThat(metadata.getColumnMetadata(0).getName()).isEqualTo("@First");
-        assertThat(metadata.getColumnMetadata(0).getType()).isEqualTo(SqlServerType.INTEGER);
-        assertThat(metadata.getColumnMetadata("first").getName()).isEqualTo("@First");
-        assertThat(metadata.getColumnMetadata("@FIRST").getName()).isEqualTo("@First");
+        assertThat(metadata.getParameterMetadata(0).getName()).isEqualTo("@First");
+        assertThat(metadata.getParameterMetadata(0).getType()).isEqualTo(SqlServerType.INTEGER);
+        assertThat(metadata.getParameterMetadata("first").getName()).isEqualTo("@First");
+        assertThat(metadata.getParameterMetadata("@FIRST").getName()).isEqualTo("@First");
 
-        assertThat(metadata.getColumnMetadata(1).getName()).isEqualTo("@Second");
-        assertThat(metadata.getColumnMetadata(1).getType()).isEqualTo(SqlServerType.INTEGER);
+        assertThat(metadata.getParameterMetadata(1).getName()).isEqualTo("@Second");
+        assertThat(metadata.getParameterMetadata(1).getType()).isEqualTo(SqlServerType.INTEGER);
     }
 
     @Test

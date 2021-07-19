@@ -44,13 +44,13 @@ public interface MssqlResult extends Result {
      * {@inheritDoc}
      */
     @Override
-    <T> Flux<T> map(BiFunction<Row, RowMetadata, ? extends T> f);
+    <T> Flux<T> map(BiFunction<Row, RowMetadata, ? extends T> mappingFunction);
 
     /**
      * {@inheritDoc}
      */
     @Override
-    Result filter(Predicate<Segment> filter);
+    MssqlResult filter(Predicate<Segment> filter);
 
     /**
      * {@inheritDoc}

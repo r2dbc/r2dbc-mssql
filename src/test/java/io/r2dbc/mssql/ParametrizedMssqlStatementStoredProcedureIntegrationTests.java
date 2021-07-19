@@ -55,8 +55,8 @@ class ParametrizedMssqlStatementStoredProcedureIntegrationTests extends Integrat
             .bind("@P0", "Walter")
             .bind("@Greeting", Parameters.out(R2dbcType.VARCHAR))
             .execute()
-            .flatMap(it -> it.map((row, metadata) -> {
-                return row.get(0);
+            .flatMap(it -> it.map((readable) -> {
+                return readable.get(0);
             }))
             .as(StepVerifier::create)
             .expectNext("Hello Walter")
@@ -71,8 +71,39 @@ class ParametrizedMssqlStatementStoredProcedureIntegrationTests extends Integrat
             .bind("@P0", "Walter")
             .bind("@Greeting", Parameters.out(R2dbcType.VARCHAR))
             .execute()
-            .flatMap(it -> it.map((row, metadata) -> {
-                return row.get(0);
+            .flatMap(it -> it.map((readable) -> {
+                return readable.get(0);
+            }))
+            .as(StepVerifier::create)
+            .expectNext("Hello Walter")
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldCallProcedureAsSegment() {
+
+        connection.createStatement("EXEC test_proc @P0, @Greeting OUTPUT")
+            .bind("@P0", "Walter")
+            .bind("@Greeting", Parameters.out(R2dbcType.VARCHAR))
+            .execute()
+            .flatMap(it -> it.filter(s -> true).map((readable) -> {
+                return readable.get(0);
+            }))
+            .as(StepVerifier::create)
+            .expectNext("Hello Walter")
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldCallProcedureWithFetchSizeAsSegment() {
+
+        connection.createStatement("EXEC test_proc @P0, @Greeting OUTPUT")
+            .fetchSize(256)
+            .bind("@P0", "Walter")
+            .bind("@Greeting", Parameters.out(R2dbcType.VARCHAR))
+            .execute()
+            .flatMap(it -> it.filter(s -> true).map((readable) -> {
+                return readable.get(0);
             }))
             .as(StepVerifier::create)
             .expectNext("Hello Walter")

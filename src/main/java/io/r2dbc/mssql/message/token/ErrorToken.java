@@ -28,6 +28,10 @@ public final class ErrorToken extends AbstractInfoToken {
 
     public static final byte TYPE = (byte) 0xAA;
 
+    public ErrorToken(long length, long number, int state, int infoClass, String message, String serverName, String procName, long lineNumber) {
+        super(TYPE, length, number, (byte) state, (byte) infoClass, message, serverName, procName, lineNumber);
+    }
+
     public ErrorToken(long length, long number, byte state, byte infoClass, String message, String serverName, String procName, long lineNumber) {
         super(TYPE, length, number, state, infoClass, message, serverName, procName, lineNumber);
     }

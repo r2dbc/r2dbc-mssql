@@ -170,13 +170,13 @@ class SimpleMssqlStatementUnitTests {
         SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo").fetchSize(0);
 
         statement.execute()
-            .flatMap(result -> result.filter(Result.Data.class::isInstance).flatMap(segment -> {
+            .flatMap(result -> result.filter(Result.RowSegment.class::isInstance).flatMap(segment -> {
 
-                Result.Data data = (Result.Data) segment;
+                Result.RowSegment data = (Result.RowSegment) segment;
 
                 Map<String, Object> rowData = new HashMap<>();
-                for (ColumnMetadata column : data.metadata().getColumnMetadatas()) {
-                    rowData.put(column.getName(), data.get(column.getName()));
+                for (ColumnMetadata column : data.row().getMetadata().getColumnMetadatas()) {
+                    rowData.put(column.getName(), data.row().get(column.getName()));
                 }
 
                 return Mono.just(rowData);
@@ -198,7 +198,7 @@ class SimpleMssqlStatementUnitTests {
         SimpleMssqlStatement statement = new SimpleMssqlStatement(client, OPTIONS, "SELECT * FROM foo").fetchSize(0);
 
         statement.execute()
-            .flatMap(result -> result.filter(Result.Data.class::isInstance).getRowsUpdated())
+            .flatMap(result -> result.filter(Result.RowSegment.class::isInstance).getRowsUpdated())
             .as(StepVerifier::create)
             .verifyComplete();
     }
@@ -222,7 +222,6 @@ class SimpleMssqlStatementUnitTests {
                 assertThat(actual.errorCode()).isEqualTo(10);
                 assertThat(actual.message()).isEqualTo("foo");
                 assertThat(actual.sqlState()).isEqualTo("S0001");
-                assertThat(actual.severity()).isEqualTo(Result.Message.Severity.ERROR);
                 assertThat(actual.exception()).isInstanceOf(R2dbcNonTransientResourceException.class);
 
             })

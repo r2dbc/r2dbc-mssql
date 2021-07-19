@@ -128,7 +128,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
             if (this.bindings.bindings.isEmpty()) {
 
                 Flux<Message> exchange = QueryMessageFlow.exchange(this.client, sql).transform(Operators::discardOnCancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release);
-                return exchange.windowUntil(AbstractDoneToken.class::isInstance).map(it -> MssqlSegmentResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it, false));
+                return exchange.windowUntil(AbstractDoneToken.class::isInstance).map(it -> DefaultMssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it, false));
             }
 
             if (this.bindings.bindings.size() == 1) {
@@ -136,7 +136,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
                 Binding binding = this.bindings.bindings.get(0);
                 Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, binding);
 
-                return exchange.windowUntil(or(DoneInProcToken.class::isInstance)).map(it -> MssqlSegmentResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it,
+                return exchange.windowUntil(or(DoneInProcToken.class::isInstance)).map(it -> DefaultMssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it,
                     binding.hasOutParameters()));
             }
 
@@ -151,7 +151,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
                 return exchange.doOnComplete(() -> {
                     tryNextBinding(iterator, sink, cancelled);
-                }).windowUntil(or(DoneInProcToken.class::isInstance)).map(it -> MssqlSegmentResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it, binding.hasOutParameters()));
+                }).windowUntil(or(DoneInProcToken.class::isInstance)).map(it -> DefaultMssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it, binding.hasOutParameters()));
             }).doOnSubscribe(it -> {
 
                 Binding initial = iterator.next();

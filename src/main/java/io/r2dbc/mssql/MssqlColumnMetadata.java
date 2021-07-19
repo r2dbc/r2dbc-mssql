@@ -22,6 +22,7 @@ import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.ColumnMetadata;
 import io.r2dbc.spi.Nullability;
+import io.r2dbc.spi.OutParameterMetadata;
 import io.r2dbc.spi.Type;
 
 import javax.annotation.Nonnull;
@@ -31,7 +32,7 @@ import javax.annotation.Nonnull;
  *
  * @author Mark Paluch
  */
-public final class MssqlColumnMetadata implements ColumnMetadata {
+public final class MssqlColumnMetadata implements ColumnMetadata, OutParameterMetadata {
 
     private final Decodable decodable;
 

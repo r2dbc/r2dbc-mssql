@@ -19,6 +19,7 @@ package io.r2dbc.mssql;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.message.token.ReturnValue;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.spi.OutParametersMetadata;
 import io.r2dbc.spi.RowMetadata;
 import reactor.util.annotation.Nullable;
 
@@ -33,7 +34,7 @@ import java.util.Map;
  *
  * @author Mark Paluch
  */
-final class MssqlReturnValuesMetadata extends NamedCollectionSupport<ReturnValue> implements RowMetadata, Collection<String> {
+final class MssqlReturnValuesMetadata extends NamedCollectionSupport<ReturnValue> implements OutParametersMetadata, Collection<String> {
 
     private final Codecs codecs;
 
@@ -65,7 +66,7 @@ final class MssqlReturnValuesMetadata extends NamedCollectionSupport<ReturnValue
     }
 
     @Override
-    public MssqlColumnMetadata getColumnMetadata(int index) {
+    public MssqlColumnMetadata getParameterMetadata(int index) {
         if (this.metadataCache == null) {
             this.metadataCache = new HashMap<>();
         }
@@ -73,7 +74,7 @@ final class MssqlReturnValuesMetadata extends NamedCollectionSupport<ReturnValue
     }
 
     @Override
-    public MssqlColumnMetadata getColumnMetadata(String identifier) {
+    public MssqlColumnMetadata getParameterMetadata(String identifier) {
         if (this.metadataCache == null) {
             this.metadataCache = new HashMap<>();
         }
@@ -81,7 +82,7 @@ final class MssqlReturnValuesMetadata extends NamedCollectionSupport<ReturnValue
     }
 
     @Override
-    public List<MssqlColumnMetadata> getColumnMetadatas() {
+    public List<MssqlColumnMetadata> getParameterMetadatas() {
 
         if (this.metadataCache == null) {
             this.metadataCache = new HashMap<>();
@@ -96,11 +97,6 @@ final class MssqlReturnValuesMetadata extends NamedCollectionSupport<ReturnValue
         }
 
         return metadatas;
-    }
-
-    @Override
-    public Collection<String> getColumnNames() {
-        return this;
     }
 
     @Override
