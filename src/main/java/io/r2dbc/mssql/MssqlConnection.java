@@ -314,6 +314,16 @@ public final class MssqlConnection implements Connection {
     }
 
     @Override
+    public Publisher<Void> setLockWaitTimeout(Duration timeout) {
+        throw new UnsupportedOperationException("https://github.com/r2dbc/r2dbc-mssql/issues/214");
+    }
+
+    @Override
+    public Publisher<Void> setStatementTimeout(Duration timeout) {
+        throw new UnsupportedOperationException("https://github.com/r2dbc/r2dbc-mssql/issues/213");
+    }
+
+    @Override
     public MssqlConnectionMetadata getMetadata() {
         return this.metadata;
     }

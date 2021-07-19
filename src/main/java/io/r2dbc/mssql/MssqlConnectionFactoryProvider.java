@@ -153,16 +153,16 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
 
         OptionMapper mapper = OptionMapper.create(connectionFactoryOptions);
 
-        mapper.from(APPLICATION_NAME).to(builder::applicationName);
+        mapper.fromTyped(APPLICATION_NAME).to(builder::applicationName);
         mapper.from(CONNECTION_ID).map(OptionMapper::toUuid).to(builder::connectionId);
         mapper.from(CONNECT_TIMEOUT).map(OptionMapper::toDuration).to(builder::connectTimeout);
-        mapper.from(DATABASE).to(builder::database);
-        mapper.from(HOSTNAME_IN_CERTIFICATE).to(builder::hostNameInCertificate);
+        mapper.fromTyped(DATABASE).to(builder::database);
+        mapper.fromTyped(HOSTNAME_IN_CERTIFICATE).to(builder::hostNameInCertificate);
         mapper.from(PORT).map(OptionMapper::toInteger).to(builder::port);
         mapper.from(PREFER_CURSORED_EXECUTION).map(OptionMapper::toStringPredicate).to(builder::preferCursoredExecution);
         mapper.from(SEND_STRING_PARAMETERS_AS_UNICODE).map(OptionMapper::toBoolean).to(builder::sendStringParametersAsUnicode);
         mapper.from(SSL).to(builder::enableSsl);
-        mapper.from(SSL_CONTEXT_BUILDER_CUSTOMIZER).to(builder::sslContextBuilderCustomizer);
+        mapper.fromTyped(SSL_CONTEXT_BUILDER_CUSTOMIZER).to(builder::sslContextBuilderCustomizer);
         mapper.from(SSL_TUNNEL).map(it -> {
 
             if (it instanceof Boolean) {
@@ -185,12 +185,12 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         mapper.from(TCP_NODELAY).map(OptionMapper::toBoolean).to(builder::tcpNoDelay);
         mapper.from(TRUST_SERVER_CERTIFICATE).map(OptionMapper::toBoolean).to((Consumer<Boolean>) builder::trustServerCertificate);
         mapper.from(TRUST_STORE).map(OptionMapper::toFile).to(builder::trustStore);
-        mapper.from(TRUST_STORE_TYPE).to(builder::trustStoreType);
+        mapper.fromTyped(TRUST_STORE_TYPE).to(builder::trustStoreType);
         mapper.from(TRUST_STORE_PASSWORD).map(it -> it instanceof String ? ((String) it).toCharArray() : (char[]) it).to(builder::trustStorePassword);
 
-        builder.host(connectionFactoryOptions.getRequiredValue(HOST));
-        builder.password(connectionFactoryOptions.getRequiredValue(PASSWORD));
-        builder.username(connectionFactoryOptions.getRequiredValue(USER));
+        builder.host(connectionFactoryOptions.getRequiredValue(HOST).toString());
+        builder.password((CharSequence) connectionFactoryOptions.getRequiredValue(PASSWORD));
+        builder.username(connectionFactoryOptions.getRequiredValue(USER).toString());
 
         MssqlConnectionConfiguration configuration = builder.build();
         if (this.logger.isDebugEnabled()) {
@@ -204,7 +204,7 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
 
         Assert.requireNonNull(connectionFactoryOptions, "connectionFactoryOptions must not be null");
 
-        String driver = connectionFactoryOptions.getValue(DRIVER);
+        Object driver = connectionFactoryOptions.getValue(DRIVER);
         if (driver == null || !(driver.equals(MSSQL_DRIVER) || driver.equals(ALTERNATE_MSSQL_DRIVER))) {
             return false;
         }
