@@ -32,6 +32,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import reactor.test.StepVerifier;
 
+import java.time.Duration;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -263,6 +264,40 @@ class MssqlConnectionUnitTests {
         MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
 
         connection.setTransactionIsolationLevel(isolationLevel)
+            .as(StepVerifier::create)
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldSetLockWaitTimeout() {
+
+        TestClient client =
+            TestClient.builder().withTransactionStatus(TransactionStatus.EXPLICIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(),
+                "SET LOCK_TIMEOUT 10000")).thenRespond(DoneToken.create(0)).build();
+
+        MssqlConnection connection = new MssqlConnection(client, metadata, conectionOptions);
+
+        connection.setLockWaitTimeout(Duration.ofSeconds(10))
+            .as(StepVerifier::create)
+            .verifyComplete();
+
+        client =
+            TestClient.builder().withTransactionStatus(TransactionStatus.EXPLICIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(),
+                "SET LOCK_TIMEOUT -1")).thenRespond(DoneToken.create(0)).build();
+
+        connection = new MssqlConnection(client, metadata, conectionOptions);
+
+        connection.setLockWaitTimeout(Duration.ofSeconds(-10))
+            .as(StepVerifier::create)
+            .verifyComplete();
+
+        client =
+            TestClient.builder().withTransactionStatus(TransactionStatus.EXPLICIT).expectRequest(SqlBatch.create(1, TransactionDescriptor.empty(),
+                "SET LOCK_TIMEOUT 0")).thenRespond(DoneToken.create(0)).build();
+
+        connection = new MssqlConnection(client, metadata, conectionOptions);
+
+        connection.setLockWaitTimeout(Duration.ZERO)
             .as(StepVerifier::create)
             .verifyComplete();
     }

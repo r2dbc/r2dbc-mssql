@@ -18,7 +18,11 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.util.IntegrationTestSupport;
 import io.r2dbc.spi.ColumnMetadata;
+import io.r2dbc.spi.ConnectionFactories;
+import io.r2dbc.spi.ConnectionFactoryOptions;
+import io.r2dbc.spi.IsolationLevel;
 import io.r2dbc.spi.R2dbcPermissionDeniedException;
+import io.r2dbc.spi.R2dbcTimeoutException;
 import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -37,10 +41,12 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import static io.r2dbc.spi.ConnectionFactoryOptions.LOCK_WAIT_TIMEOUT;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -284,6 +290,51 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
 
         insertRecord(connection, 1);
         insertRecord(connection, 2);
+    }
+
+    @Test
+    void shouldApplyLockWaitTimeout() {
+
+        ConnectionFactoryOptions options = builder().option(LOCK_WAIT_TIMEOUT, Duration.ofMillis(100)).build();
+
+        MssqlConnectionFactory factory = (MssqlConnectionFactory) ConnectionFactories.get(options);
+        MssqlConnection connection1 = factory.create().block();
+        MssqlConnection connection2 = factory.create().block();
+
+        connection1.createStatement("SELECT @@LOCK_TIMEOUT AS [Lock Timeout]").execute()
+            .flatMap(it -> it.map(row -> row.get("Lock Timeout")))
+            .as(StepVerifier::create)
+            .expectNext(100)
+            .verifyComplete();
+
+        createTable(connection);
+
+        connection1.createStatement("INSERT INTO r2dbc_example VALUES (1, 'fn', 'ln')")
+            .execute()
+            .flatMap(Result::getRowsUpdated)
+            .then()
+            .as(StepVerifier::create)
+            .verifyComplete();
+
+        connection1.beginTransaction(IsolationLevel.READ_COMMITTED).as(StepVerifier::create).verifyComplete();
+        connection2.beginTransaction(IsolationLevel.READ_COMMITTED).as(StepVerifier::create).verifyComplete();
+
+        connection1.createStatement("SELECT * FROM r2dbc_example WITH (UPDLOCK) WHERE id = 1")
+            .execute()
+            .flatMap(Result::getRowsUpdated)
+            .then()
+            .as(StepVerifier::create)
+            .verifyComplete();
+
+        connection2.createStatement("UPDATE r2dbc_example SET first_name = 'updated' WHERE id = 1")
+            .execute()
+            .flatMap(Result::getRowsUpdated)
+            .then()
+            .as(StepVerifier::create)
+            .verifyError(R2dbcTimeoutException.class);
+
+        connection1.close().block();
+        connection2.close().block();
     }
 
     @Test

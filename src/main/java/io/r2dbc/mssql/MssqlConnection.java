@@ -313,13 +313,23 @@ public final class MssqlConnection implements Connection {
         });
     }
 
+    /**
+     * Configure the lock wait timeout via {@code SET LOCK_TIMEOUT}. {@link Duration#isNegative() Negative values} are translated to {@code -1} meaning infinite wait.
+     *
+     * @param timeout
+     * @return
+     * @since 0.9
+     */
     @Override
-    public Publisher<Void> setLockWaitTimeout(Duration timeout) {
-        throw new UnsupportedOperationException("https://github.com/r2dbc/r2dbc-mssql/issues/214");
+    public Mono<Void> setLockWaitTimeout(Duration timeout) {
+
+        Assert.requireNonNull(timeout, "Timeout must not be null");
+
+        return exchange("SET LOCK_TIMEOUT " + (timeout.isNegative() ? "-1" : "" + timeout.toMillis()));
     }
 
     @Override
-    public Publisher<Void> setStatementTimeout(Duration timeout) {
+    public Mono<Void> setStatementTimeout(Duration timeout) {
         throw new UnsupportedOperationException("https://github.com/r2dbc/r2dbc-mssql/issues/213");
     }
 

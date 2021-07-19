@@ -86,6 +86,9 @@ public final class MssqlConnectionConfiguration {
 
     private final Predicate<String> preferCursoredExecution;
 
+    @Nullable
+    private final Duration lockWaitTimeout;
+
     private final int port;
 
     private final boolean sendStringParametersAsUnicode;
@@ -115,7 +118,8 @@ public final class MssqlConnectionConfiguration {
     private final String username;
 
     private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, Duration connectTimeout, @Nullable String database, String host, String hostNameInCertificate,
-                                         CharSequence password, Predicate<String> preferCursoredExecution, int port, boolean sendStringParametersAsUnicode, boolean ssl,
+                                         @Nullable Duration lockWaitTimeout, CharSequence password, Predicate<String> preferCursoredExecution, int port, boolean sendStringParametersAsUnicode,
+                                         boolean ssl,
                                          Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer,
                                          @Nullable Function<SslContextBuilder, SslContextBuilder> sslTunnelSslContextBuilderCustomizer, boolean tcpKeepAlive, boolean tcpNoDelay,
                                          boolean trustServerCertificate, @Nullable File trustStore, @Nullable String trustStoreType,
@@ -127,6 +131,7 @@ public final class MssqlConnectionConfiguration {
         this.database = database;
         this.host = Assert.requireNonNull(host, "host must not be null");
         this.hostNameInCertificate = Assert.requireNonNull(hostNameInCertificate, "hostNameInCertificate must not be null");
+        this.lockWaitTimeout = lockWaitTimeout;
         this.password = Assert.requireNonNull(password, "password must not be null");
         this.preferCursoredExecution = Assert.requireNonNull(preferCursoredExecution, "preferCursoredExecution must not be null");
         this.port = port;
@@ -175,7 +180,8 @@ public final class MssqlConnectionConfiguration {
             }
         }
 
-        return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, redirectServerName, hostNameInCertificate, this.password,
+        return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, redirectServerName, hostNameInCertificate, this.lockWaitTimeout,
+            this.password,
             this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer,
             this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustServerCertificate, this.trustStore, this.trustStoreType, this.trustStorePassword, this.username);
     }
@@ -199,6 +205,7 @@ public final class MssqlConnectionConfiguration {
         sb.append(", database=\"").append(this.database).append('\"');
         sb.append(", host=\"").append(this.host).append('\"');
         sb.append(", hostNameInCertificate=\"").append(this.hostNameInCertificate).append('\"');
+        sb.append(", lockWaitTimeout=\"").append(this.lockWaitTimeout).append('\"');
         sb.append(", password=\"").append(repeat(this.password.length(), "*")).append('\"');
         sb.append(", preferCursoredExecution=\"").append(this.preferCursoredExecution).append('\"');
         sb.append(", port=").append(this.port);
@@ -241,6 +248,11 @@ public final class MssqlConnectionConfiguration {
 
     String getHostNameInCertificate() {
         return this.hostNameInCertificate;
+    }
+
+    @Nullable
+    Duration getLockWaitTimeout() {
+        return this.lockWaitTimeout;
     }
 
     CharSequence getPassword() {
@@ -337,6 +349,9 @@ public final class MssqlConnectionConfiguration {
         private String host;
 
         private String hostNameInCertificate;
+
+        @Nullable
+        private Duration lockWaitTimeout;
 
         private Predicate<String> preferCursoredExecution = sql -> false;
 
@@ -482,6 +497,21 @@ public final class MssqlConnectionConfiguration {
          */
         public Builder hostNameInCertificate(String hostNameInCertificate) {
             this.hostNameInCertificate = Assert.requireNonNull(hostNameInCertificate, "hostNameInCertificate must not be null");
+            return this;
+        }
+
+        /**
+         * Configure the lock wait timeout via {@code SET LOCK_TIMEOUT}. {@link Duration#isNegative() Negative values} are translated to {@code -1} meaning infinite wait.
+         *
+         * @param timeout the lock wait timeout
+         * @return this {@link Builder}
+         * @since 0.9
+         */
+        public Builder lockWaitTimeout(Duration timeout) {
+
+            Assert.requireNonNull(timeout, "lock wait timeout must not be null");
+
+            this.lockWaitTimeout = timeout;
             return this;
         }
 
@@ -682,7 +712,8 @@ public final class MssqlConnectionConfiguration {
                 this.hostNameInCertificate = this.host;
             }
 
-            return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, this.host, this.hostNameInCertificate, this.password,
+            return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, this.host, this.hostNameInCertificate, this.lockWaitTimeout,
+                this.password,
                 this.preferCursoredExecution, this.port, this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer,
                 this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive,
                 this.tcpNoDelay, this.trustServerCertificate, this.trustStore,

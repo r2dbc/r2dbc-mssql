@@ -34,6 +34,7 @@ import static io.r2dbc.spi.ConnectionFactoryOptions.CONNECT_TIMEOUT;
 import static io.r2dbc.spi.ConnectionFactoryOptions.DATABASE;
 import static io.r2dbc.spi.ConnectionFactoryOptions.DRIVER;
 import static io.r2dbc.spi.ConnectionFactoryOptions.HOST;
+import static io.r2dbc.spi.ConnectionFactoryOptions.LOCK_WAIT_TIMEOUT;
 import static io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD;
 import static io.r2dbc.spi.ConnectionFactoryOptions.PORT;
 import static io.r2dbc.spi.ConnectionFactoryOptions.SSL;
@@ -158,6 +159,7 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         mapper.from(CONNECT_TIMEOUT).map(OptionMapper::toDuration).to(builder::connectTimeout);
         mapper.fromTyped(DATABASE).to(builder::database);
         mapper.fromTyped(HOSTNAME_IN_CERTIFICATE).to(builder::hostNameInCertificate);
+        mapper.from(LOCK_WAIT_TIMEOUT).map(OptionMapper::toDuration).to(builder::lockWaitTimeout);
         mapper.from(PORT).map(OptionMapper::toInteger).to(builder::port);
         mapper.from(PREFER_CURSORED_EXECUTION).map(OptionMapper::toStringPredicate).to(builder::preferCursoredExecution);
         mapper.from(SEND_STRING_PARAMETERS_AS_UNICODE).map(OptionMapper::toBoolean).to(builder::sendStringParametersAsUnicode);

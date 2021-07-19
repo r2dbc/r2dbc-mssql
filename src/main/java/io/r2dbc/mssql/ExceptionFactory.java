@@ -99,8 +99,10 @@ final class ExceptionFactory {
             case 8115:  // Arithmetic overflow error converting %ls to data type %ls.
                 return new MssqlDataIntegrityViolationException(createErrorDetails(token));
 
-            case 701: // Maximum number of databases used for each query has been exceeded. The maximum allowed is %d.
             case 1222: // Lock request time out period exceeded.
+                return new MssqlTimeoutException(createErrorDetails(token));
+
+            case 701: // Maximum number of databases used for each query has been exceeded. The maximum allowed is %d.
             case 1204: // The instance of the SQL Server Database Engine cannot obtain a LOCK resource at this time. Rerun your statement when there are fewer active users. Ask the database
                 // administrator to check the lock and memory configuration for this instance, or to check for
                 return new MssqlTransientException(createErrorDetails(token));
@@ -199,7 +201,7 @@ final class ExceptionFactory {
 
         @Override
         public ErrorDetails getErrorDetails() {
-            return errorDetails;
+            return this.errorDetails;
         }
 
     }
@@ -218,7 +220,7 @@ final class ExceptionFactory {
 
         @Override
         public ErrorDetails getErrorDetails() {
-            return errorDetails;
+            return this.errorDetails;
         }
 
     }
@@ -237,7 +239,7 @@ final class ExceptionFactory {
 
         @Override
         public ErrorDetails getErrorDetails() {
-            return errorDetails;
+            return this.errorDetails;
         }
 
     }
@@ -256,7 +258,7 @@ final class ExceptionFactory {
 
         @Override
         public ErrorDetails getErrorDetails() {
-            return errorDetails;
+            return this.errorDetails;
         }
 
     }
@@ -275,7 +277,7 @@ final class ExceptionFactory {
 
         @Override
         public ErrorDetails getErrorDetails() {
-            return errorDetails;
+            return this.errorDetails;
         }
 
     }
@@ -294,7 +296,7 @@ final class ExceptionFactory {
 
         @Override
         public ErrorDetails getErrorDetails() {
-            return errorDetails;
+            return this.errorDetails;
         }
 
     }
@@ -313,7 +315,7 @@ final class ExceptionFactory {
 
         @Override
         public ErrorDetails getErrorDetails() {
-            return errorDetails;
+            return this.errorDetails;
         }
 
     }
@@ -332,7 +334,7 @@ final class ExceptionFactory {
 
         @Override
         public ErrorDetails getErrorDetails() {
-            return errorDetails;
+            return this.errorDetails;
         }
 
     }
@@ -351,7 +353,7 @@ final class ExceptionFactory {
 
         @Override
         public ErrorDetails getErrorDetails() {
-            return errorDetails;
+            return this.errorDetails;
         }
 
     }

@@ -24,7 +24,6 @@ import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.ConnectionFactory;
 import io.r2dbc.spi.R2dbcNonTransientResourceException;
 import io.r2dbc.spi.Row;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.function.Function;
@@ -114,13 +113,17 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         return initializeClient(this.configuration, true)
             .flatMap(it -> {
 
-                Flux<MssqlConnection> connectionFlux =
+                Mono<MssqlConnection> connectionMono =
                     new SimpleMssqlStatement(it, this.connectionOptions, METADATA_QUERY).execute()
                         .flatMap(result -> result.map((row, rowMetadata) -> toConnectionMetadata(it.getDatabaseVersion().orElse("unknown"), row))).map(metadata -> {
                         return new MssqlConnection(it, metadata, this.connectionOptions);
-                    });
+                    }).last();
 
-                return connectionFlux.last().onErrorResume(throwable -> {
+                if (this.configuration.getLockWaitTimeout() != null) {
+                    connectionMono = connectionMono.flatMap(connection -> connection.setLockWaitTimeout(this.configuration.getLockWaitTimeout()).thenReturn(connection));
+                }
+
+                return connectionMono.onErrorResume(throwable -> {
                     return it.close().then(Mono.error(new R2dbcNonTransientResourceException("Cannot connect to " + this.configuration.getHost() + ":" + this.configuration.getPort(), throwable)));
                 });
             });
@@ -128,6 +131,10 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
 
     private static MssqlConnectionMetadata toConnectionMetadata(String version, Row row) {
         return MssqlConnectionMetadata.from(row.get("Edition", String.class), version, row.get("VersionString", String.class));
+    }
+
+    MssqlConnectionConfiguration getConfiguration() {
+        return this.configuration;
     }
 
     ClientConfiguration getClientConfiguration() {

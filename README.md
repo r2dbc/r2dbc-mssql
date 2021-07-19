@@ -77,7 +77,9 @@ Mono<Connection> connectionMono = Mono.from(connectionFactory.create());
 | `connectionId`    | Connection Id for tracing purposes. Defaults to a random Id. _(Optional)_
 | `connectTimeout`  | Connection Id for tracing purposes. Defaults to 30 seconds. _(Optional)_
 | `hostNameInCertificate` | Expected hostname in SSL certificate. Supports wildcards (e.g. `*.database.windows.net`). _(Optional)_
-| `preferCursoredExecution` | Whether to prefer cursors  or direct execution for queries. Uses by default direct. Cursors require more round-trips but are more backpressure-friendly. Defaults to direct execution. Can be `boolean` or a `Predicate<String>` accepting the SQL query. _(Optional)_
+| `lockWaitTimeout` | Lock wait timeout using `SET LOCK_TIMEOUT …`. _(Optional)_
+| `preferCursoredExecution` | Whether to prefer cursors  or direct execution for queries. Uses by default direct. Cursors require more round-trips but are more backpressure-friendly. Defaults to direct execution. Can be `boolean` or a `Predicate<String>` accepting the SQL query. _(
+Optional)_
 | `sendStringParametersAsUnicode` | Configure whether to send character data as unicode (NVARCHAR, NCHAR, NTEXT) or whether to use the database encoding, defaults to `true`. If disabled, `CharSequence` data is sent using the database-specific collation such as ASCII/MBCS instead of Unicode.
 | `sslTunnel`       | Enables SSL tunnel usage when using a SSL tunnel or SSL terminator in front of SQL Server. Accepts `Function<SslContextBuilder, SslContextBuilder>` to customize the SSL tunnel settings. SSL tunneling is not related to SQL Server's built-in SSL support. _(Optional)_
 | `sslContextBuilderCustomizer`  | SSL Context customizer to configure SQL Server's built-in SSL support (`Function<SslContextBuilder, SslContextBuilder>`) _(Optional)_

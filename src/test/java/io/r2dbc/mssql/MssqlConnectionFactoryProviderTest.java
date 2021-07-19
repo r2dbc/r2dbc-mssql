@@ -22,6 +22,7 @@ import io.r2dbc.spi.Option;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -37,6 +38,7 @@ import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE_PASSWORD
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE_TYPE;
 import static io.r2dbc.spi.ConnectionFactoryOptions.DRIVER;
 import static io.r2dbc.spi.ConnectionFactoryOptions.HOST;
+import static io.r2dbc.spi.ConnectionFactoryOptions.LOCK_WAIT_TIMEOUT;
 import static io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD;
 import static io.r2dbc.spi.ConnectionFactoryOptions.PORT;
 import static io.r2dbc.spi.ConnectionFactoryOptions.SSL;
@@ -139,6 +141,22 @@ final class MssqlConnectionFactoryProviderTest {
         ConnectionOptions options = factory.getConnectionOptions();
 
         assertThat(options.prefersCursors("foo")).isTrue();
+    }
+
+    @Test
+    void shouldConfigureWithLockWaitTimeout() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(LOCK_WAIT_TIMEOUT, Duration.ofSeconds(10))
+            .build());
+
+        MssqlConnectionConfiguration configuration = factory.getConfiguration();
+
+        assertThat(configuration.getLockWaitTimeout()).isEqualTo(Duration.ofSeconds(10));
     }
 
     @Test
