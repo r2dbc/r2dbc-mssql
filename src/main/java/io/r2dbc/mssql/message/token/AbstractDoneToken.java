@@ -65,7 +65,7 @@ public abstract class AbstractDoneToken extends AbstractDataToken implements Res
     /**
      * The DONE message is a server acknowledgement of a client ATTENTION message.
      */
-    static final int DONE_ATTN = 0x10;
+    static final int DONE_ATTN = 0x20;
 
     /**
      * This DONEPROC message is associated with an RPC within a set of batched RPCs. This flag is not set on the last RPC in the RPC batch.
@@ -106,6 +106,22 @@ public abstract class AbstractDoneToken extends AbstractDataToken implements Res
         this.status = status;
         this.currentCommand = currentCommand;
         this.rowCount = rowCount;
+    }
+
+    /**
+     * Check whether the {@link Message} represents a attention acknowledgement.
+     *
+     * @param message the message to inspect.
+     * @return {@literal true} if the {@link Message} represents a attention acknowledgement.
+     * @since 0.9
+     */
+    public static boolean isAttentionAck(Message message) {
+
+        if (message instanceof AbstractDoneToken) {
+            return ((AbstractDoneToken) message).isAttentionAck();
+        }
+
+        return false;
     }
 
     /**
@@ -171,6 +187,13 @@ public abstract class AbstractDoneToken extends AbstractDataToken implements Res
 
     public int getStatus() {
         return this.status;
+    }
+
+    /**
+     * @return {@code true} if this token indicates the response is acknowledging the attention request.
+     */
+    public boolean isAttentionAck() {
+        return (getStatus() & DONE_ATTN) != 0;
     }
 
     /**
@@ -242,6 +265,7 @@ public abstract class AbstractDoneToken extends AbstractDataToken implements Res
         sb.append(", hasCount=").append(hasCount());
         sb.append(", rowCount=").append(getRowCount());
         sb.append(", hasMore=").append(hasMore());
+        sb.append(", attnAck=").append(isAttentionAck());
         sb.append(", currentCommand=").append(getCurrentCommand());
         sb.append(']');
         return sb.toString();

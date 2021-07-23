@@ -149,6 +149,15 @@ public final class MssqlConnection implements Connection {
         });
     }
 
+    /**
+     * Cancel an ongoing request.
+     *
+     * @return
+     */
+    Mono<Void> cancel() {
+        return this.client.attention();
+    }
+
     @Override
     public Mono<Void> close() {
         return this.client.close();

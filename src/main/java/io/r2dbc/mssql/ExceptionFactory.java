@@ -340,6 +340,17 @@ final class ExceptionFactory {
     }
 
     /**
+     * SQL Server-specific {@link R2dbcTransientException} upon statement cancellation due to an attention acknowledgement.
+     */
+    static final class MssqlStatementCancelled extends R2dbcTransientException {
+
+        public MssqlStatementCancelled() {
+            super("Statement cancelled");
+        }
+
+    }
+
+    /**
      * SQL Server-specific {@link R2dbcTransientResourceException}.
      */
     private static final class MssqlTransientResourceException extends R2dbcTransientResourceException implements MssqlException {

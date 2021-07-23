@@ -70,7 +70,8 @@ final class RpcQueryMessageFlow {
         DoneInProcToken.class::isInstance,
         IntermediateCount.class::isInstance,
         AbstractInfoToken.class::isInstance,
-        Completion.class::isInstance);
+        Completion.class::isInstance,
+        AbstractDoneToken::isAttentionAck);
 
     private static final Logger logger = Loggers.getLogger(RpcQueryMessageFlow.class);
 
@@ -345,6 +346,14 @@ final class RpcQueryMessageFlow {
             }
 
             sink.next(doneToken);
+            return;
+        }
+
+        if (AbstractDoneToken.isAttentionAck(message)) {
+
+            state.phase = Phase.CLOSED;
+            sink.next(message);
+            onCursorComplete.run();
             return;
         }
 

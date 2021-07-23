@@ -58,4 +58,20 @@ public final class PredicateUtils {
         return Arrays.stream(ts).reduce(Predicate::or).orElseThrow(() -> new IllegalStateException("Unable to combine predicates together via logical OR"));
     }
 
+    /**
+     * Logical AND a collection of {@link Predicate}s.  Exists primarily to enable the logical AND of method references that are {@link Predicate}s.
+     *
+     * @param ts  the predicates to logical AND
+     * @param <T> the type of element being tested
+     * @return a local ANDd collection of predicates
+     * @throws IllegalArgumentException when {@link Predicate predicates} is {@code null}.
+     */
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <T> Predicate<T> and(Predicate<T>... ts) {
+        Assert.requireNonNull(ts, "ts must not be null");
+
+        return Arrays.stream(ts).reduce(Predicate::and).orElseThrow(() -> new IllegalStateException("Unable to combine predicates together via logical AND"));
+    }
+
 }

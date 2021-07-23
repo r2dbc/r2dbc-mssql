@@ -48,8 +48,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static io.r2dbc.mssql.util.PredicateUtils.or;
-
 /**
  * Parametrized {@link Statement} with parameter markers executed against a Microsoft SQL Server database.
  * <p>
@@ -136,7 +134,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
                 Binding binding = this.bindings.bindings.get(0);
                 Flux<Message> exchange = exchange(effectiveFetchSize, useGeneratedKeysClause, sql, binding);
 
-                return exchange.windowUntil(or(DoneInProcToken.class::isInstance)).map(it -> DefaultMssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it,
+                return exchange.windowUntil(DoneInProcToken.class::isInstance).map(it -> DefaultMssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it,
                     binding.hasOutParameters()));
             }
 
@@ -151,7 +149,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
                 return exchange.doOnComplete(() -> {
                     tryNextBinding(iterator, sink, cancelled);
-                }).windowUntil(or(DoneInProcToken.class::isInstance)).map(it -> DefaultMssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it, binding.hasOutParameters()));
+                }).windowUntil(DoneInProcToken.class::isInstance).map(it -> DefaultMssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it, binding.hasOutParameters()));
             }).doOnSubscribe(it -> {
 
                 Binding initial = iterator.next();

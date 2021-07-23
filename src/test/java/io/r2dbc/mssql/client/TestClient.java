@@ -98,6 +98,11 @@ public final class TestClient implements Client {
     }
 
     @Override
+    public Mono<Void> attention() {
+        return Mono.empty();
+    }
+
+    @Override
     public Mono<Void> close() {
         return this.expectClose ? Mono.fromRunnable(() -> {
             this.closed = true;

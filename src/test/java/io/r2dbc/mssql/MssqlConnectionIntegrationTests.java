@@ -23,6 +23,7 @@ import io.r2dbc.spi.ConnectionFactoryOptions;
 import io.r2dbc.spi.IsolationLevel;
 import io.r2dbc.spi.R2dbcPermissionDeniedException;
 import io.r2dbc.spi.R2dbcTimeoutException;
+import io.r2dbc.spi.R2dbcTransientException;
 import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -45,6 +46,9 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import static io.r2dbc.spi.ConnectionFactoryOptions.LOCK_WAIT_TIMEOUT;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -335,6 +339,59 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
 
         connection1.close().block();
         connection2.close().block();
+    }
+
+    @Test
+    void queryAfterCancelShouldCompleteSuccessfully() {
+
+        connection.cancel().as(StepVerifier::create).verifyComplete();
+
+        connection.createStatement("SELECT 1").execute().flatMap(it -> it.map(row -> row.get(0))).as(StepVerifier::create).expectNext(1).verifyComplete();
+    }
+
+    @Test
+    void cancelShouldTerminateOngoingDirectQuery() throws Exception {
+
+        CompletableFuture<Void> future = connection.createStatement("WAITFOR DELAY '10:00'").fetchSize(0).execute().flatMap(Result::getRowsUpdated).then().toFuture();
+        connection.cancel().as(StepVerifier::create).verifyComplete();
+
+        try {
+            future.get(2, TimeUnit.SECONDS);
+        } catch (ExecutionException e) {
+            assertThat(e.getCause()).isInstanceOf(R2dbcTransientException.class).hasMessageContaining("cancelled");
+        }
+
+        assertThat(future).isCompletedExceptionally();
+    }
+
+    @Test
+    void cancelShouldTerminateOngoingCursoredQuery() throws Exception {
+
+        CompletableFuture<Void> future = connection.createStatement("WAITFOR DELAY '10:00'").fetchSize(10).execute().flatMap(Result::getRowsUpdated).then().toFuture();
+        connection.cancel().as(StepVerifier::create).verifyComplete();
+
+        try {
+            future.get(2, TimeUnit.SECONDS);
+        } catch (ExecutionException e) {
+            assertThat(e.getCause()).isInstanceOf(R2dbcTransientException.class).hasMessageContaining("cancelled");
+        }
+
+        assertThat(future).isCompletedExceptionally();
+    }
+
+    @Test
+    void shouldResumeOperationsAfterCancellationOfPendingRequest() throws Exception {
+
+        CompletableFuture<Void> future = connection.createStatement("WAITFOR DELAY '10:00'").execute().flatMap(Result::getRowsUpdated).then().toFuture();
+        connection.cancel().as(StepVerifier::create).verifyComplete();
+
+        try {
+            future.get(2, TimeUnit.SECONDS);
+        } catch (ExecutionException e) {
+            assertThat(e.getCause()).isInstanceOf(R2dbcTransientException.class).hasMessageContaining("cancelled");
+        }
+
+        connection.createStatement("SELECT 1").execute().flatMap(it -> it.map(row -> row.get(0))).as(StepVerifier::create).expectNext(1).verifyComplete();
     }
 
     @Test

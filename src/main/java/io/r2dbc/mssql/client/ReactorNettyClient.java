@@ -36,7 +36,9 @@ import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.tds.Redirect;
+import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.AbstractInfoToken;
+import io.r2dbc.mssql.message.token.Attention;
 import io.r2dbc.mssql.message.token.EnvChangeToken;
 import io.r2dbc.mssql.message.token.FeatureExtAckToken;
 import io.r2dbc.mssql.message.token.LoginAckToken;
@@ -54,6 +56,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.SynchronousSink;
 import reactor.netty.Connection;
+import reactor.netty.NettyOutbound;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
@@ -70,6 +73,7 @@ import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -115,6 +119,10 @@ public final class ReactorNettyClient implements Client {
     };
 
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
+
+    private final AtomicLong attentionPropagation = new AtomicLong();
+
+    private final AtomicLong outstandingRequests = new AtomicLong();
 
     private final EmitterProcessor<ClientMessage> requestProcessor = EmitterProcessor.create(false);
 
@@ -241,6 +249,31 @@ public final class ReactorNettyClient implements Client {
                     ReactorNettyClient.this.featureAckChange.accept((FeatureExtAckToken) message);
                 }
 
+                if (AbstractDoneToken.isAttentionAck(message)) {
+
+                    long current;
+                    do {
+                        current = ReactorNettyClient.this.attentionPropagation.get();
+
+                        if (current == 0) {
+                            if (DEBUG_ENABLED) {
+                                logger.debug(ReactorNettyClient.this.context.getMessage("Swallowing attention acknowledged, no pending requests: {}. "), message);
+                            }
+                            return;
+                        }
+
+                    } while (!ReactorNettyClient.this.attentionPropagation.compareAndSet(current, current - 1));
+                }
+
+                long attentionPropagation = ReactorNettyClient.this.attentionPropagation.get();
+
+                if (attentionPropagation > 0 && !AbstractDoneToken.isAttentionAck(message)) {
+                    if (DEBUG_ENABLED) {
+                        logger.debug(ReactorNettyClient.this.context.getMessage("Discard message {}. Draining frames until attention acknowledgement."), message);
+                    }
+                    return;
+                }
+
                 ReactorNettyClient.this.responseProcessor.onNext(message);
             }
         };
@@ -294,11 +327,7 @@ public final class ReactorNettyClient implements Client {
             .concatMap(
                 message -> {
 
-                    if (DEBUG_ENABLED) {
-                        logger.debug(this.context.getMessage("Request: {}"), message);
-                    }
-
-                    Object encoded = message.encode(connection.outbound().alloc(), this.tdsEncoder.getPacketSize());
+                    Object encoded = encodeForSend(message);
 
                     if (encoded instanceof Publisher) {
                         return connection.outbound().sendObject((Publisher) encoded);
@@ -309,6 +338,15 @@ public final class ReactorNettyClient implements Client {
             .onErrorResume(this::resumeError)
             .doAfterTerminate(this::handleClose)
             .subscribe();
+    }
+
+    private Object encodeForSend(ClientMessage message) {
+
+        if (DEBUG_ENABLED) {
+            logger.debug(this.context.getMessage("Request: {}"), message);
+        }
+
+        return message.encode(this.connection.outbound().alloc(), this.tdsEncoder.getPacketSize());
     }
 
     @SuppressWarnings("unchecked")
@@ -470,6 +508,11 @@ public final class ReactorNettyClient implements Client {
     }
 
     @Override
+    public Mono<Void> attention() {
+        return Mono.defer(() -> Mono.fromFuture(send(Mono.just(Attention.create(1, getTransactionDescriptor()))).toFuture()));
+    }
+
+    @Override
     public Mono<Void> close() {
 
         logger.debug(this.context.getMessage("close()"));
@@ -566,6 +609,7 @@ public final class ReactorNettyClient implements Client {
 
             Flux<Message> requestMessages = this.responseProcessor
                 .doOnSubscribe(s -> {
+                    this.outstandingRequests.incrementAndGet();
                     Flux.from(requests).subscribe(t -> {
 
                         if (!isConnected()) {
@@ -598,12 +642,24 @@ public final class ReactorNettyClient implements Client {
             }
         });
 
-        return handle.doAfterTerminate(this.requestQueue).doOnCancel(() -> {
+        return handle.doAfterTerminate(this.requestQueue).doFinally(it -> this.outstandingRequests.decrementAndGet()).doOnCancel(() -> {
 
             if (!exchangeRequest.isComplete()) {
                 logger.error("Exchange cancelled while exchange is active. This is likely a bug leading to unpredictable outcome.");
             }
         });
+    }
+
+    private Mono<Void> send(Publisher<? extends ClientMessage> requests) {
+        return Flux.from(requests).concatMap(message -> {
+            NettyOutbound nettyOutbound = this.connection.outbound().sendObject(encodeForSend(message));
+
+            if (message instanceof Attention && this.outstandingRequests.longValue() != 0) {
+                return Mono.from(nettyOutbound).doOnSuccess(v -> this.attentionPropagation.incrementAndGet());
+            }
+
+            return nettyOutbound;
+        }).then();
     }
 
     private void handleClose() {

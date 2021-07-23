@@ -128,6 +128,15 @@ final class MssqlSegmentResult implements MssqlResult {
         AtomicReference<MssqlRowMetadata> metadataRef = new AtomicReference<>();
         Flux<Segment> segments = messageStream.handle((message, sink) -> {
 
+            if (message instanceof AbstractDoneToken) {
+
+                AbstractDoneToken doneToken = (AbstractDoneToken) message;
+                if (doneToken.isAttentionAck()) {
+                    sink.error(new ExceptionFactory.MssqlStatementCancelled());
+                    return;
+                }
+            }
+
             if (message.getClass() == ColumnMetadataToken.class) {
 
                 ColumnMetadataToken token = (ColumnMetadataToken) message;

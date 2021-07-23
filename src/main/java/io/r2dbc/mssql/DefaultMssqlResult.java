@@ -115,6 +115,11 @@ final class DefaultMssqlResult implements MssqlResult {
 
                         sink.next(doneToken.getRowCount());
                     }
+
+                    if (doneToken.isAttentionAck()) {
+                        sink.error(new ExceptionFactory.MssqlStatementCancelled());
+                        return;
+                    }
                 }
 
                 if (message instanceof ErrorToken) {
@@ -190,6 +195,15 @@ final class DefaultMssqlResult implements MssqlResult {
 
         Flux<T> mapped = messages
             .handle((message, sink) -> {
+
+                if (message instanceof AbstractDoneToken) {
+
+                    AbstractDoneToken doneToken = (AbstractDoneToken) message;
+                    if (doneToken.isAttentionAck()) {
+                        sink.error(new ExceptionFactory.MssqlStatementCancelled());
+                        return;
+                    }
+                }
 
                 if (message.getClass() == ColumnMetadataToken.class) {
 

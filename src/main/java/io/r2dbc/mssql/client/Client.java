@@ -39,6 +39,14 @@ import java.util.function.Predicate;
 public interface Client {
 
     /**
+     * Send an attention token to interrupt an active statement.
+     *
+     * @return
+     * @since 0.9
+     */
+    Mono<Void> attention();
+
+    /**
      * Release any resources held by the {@link Client}.
      *
      * @return a {@link Mono} that indicates that a client has been closed
