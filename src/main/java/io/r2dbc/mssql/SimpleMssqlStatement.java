@@ -16,8 +16,6 @@
 
 package io.r2dbc.mssql;
 
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.codec.Codecs;
@@ -26,7 +24,6 @@ import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.Assert;
-import io.r2dbc.mssql.util.Operators;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.util.Logger;
@@ -48,6 +45,8 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
 
     private final Codecs codecs;
 
+    private final ConnectionOptions connectionOptions;
+
     private final ConnectionContext context;
 
     private final String sql;
@@ -63,6 +62,7 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
     SimpleMssqlStatement(Client client, ConnectionOptions connectionOptions, String sql) {
 
         super(connectionOptions.prefersCursors(sql) || prefersCursors(sql));
+        this.connectionOptions = connectionOptions;
 
         Assert.requireNonNull(client, "Client must not be null");
         Assert.requireNonNull(connectionOptions, "ConnectionOptions must not be null");
@@ -123,7 +123,7 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
                     logger.debug(this.context.getMessage("Start cursored exchange for {} with fetch size {}"), sql, effectiveFetchSize);
                 }
 
-                exchange = RpcQueryMessageFlow.exchange(this.client, this.codecs, this.sql, effectiveFetchSize);
+                exchange = potentiallyAttachTimeout(RpcQueryMessageFlow.exchange(this.client, this.codecs, this.sql, effectiveFetchSize), this.connectionOptions, this.client, this.sql);
 
                 return createResultStream(useGeneratedKeysClause, exchange, DoneInProcToken.class::isInstance);
             } else {
@@ -132,7 +132,7 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
                     logger.debug(this.context.getMessage("Start direct exchange for {}"), sql);
                 }
 
-                exchange = QueryMessageFlow.exchange(this.client, sql).transform(Operators::discardOnCancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release);
+                exchange = potentiallyAttachTimeout(QueryMessageFlow.exchange(this.client, sql), this.connectionOptions, this.client, this.sql);
 
                 return createResultStream(useGeneratedKeysClause, exchange, AbstractDoneToken.class::isInstance);
             }

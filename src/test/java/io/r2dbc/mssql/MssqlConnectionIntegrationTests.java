@@ -297,7 +297,7 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
     }
 
     @Test
-    void shouldApplyLockWaitTimeout() {
+    void shouldApplyLockWaitwaot() {
 
         ConnectionFactoryOptions options = builder().option(LOCK_WAIT_TIMEOUT, Duration.ofMillis(100)).build();
 

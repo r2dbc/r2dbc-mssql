@@ -16,10 +16,17 @@
 
 package io.r2dbc.mssql;
 
+import io.r2dbc.mssql.client.Client;
+import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.annotation.Nullable;
 
 import java.sql.Statement;
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Base class for {@link Statement} implementations.
@@ -83,6 +90,20 @@ abstract class MssqlStatementSupport implements MssqlStatement {
 
         this.fetchSize = fetchSize;
         return this;
+    }
+
+    Flux<Message> potentiallyAttachTimeout(Flux<Message> exchange, ConnectionOptions connectionOptions, Client client, String sql) {
+
+        Duration statementTimeout = connectionOptions.getStatementTimeout();
+
+        if (statementTimeout.isZero()) {
+            return exchange;
+        }
+
+        Mono<Long> timeout = Mono.delay(statementTimeout, Schedulers.parallel()).onErrorReturn(0L);
+        return exchange.timeout(timeout).onErrorResume(TimeoutException.class, e -> client.attention().then(Mono.error(new ExceptionFactory.MssqlStatementTimeoutException(String.format("Statement " +
+            "did not yield a result within %dms", statementTimeout.toMillis()),
+            sql))));
     }
 
 }

@@ -16,8 +16,6 @@
 
 package io.r2dbc.mssql;
 
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.codec.Codecs;
@@ -28,7 +26,6 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.util.Assert;
-import io.r2dbc.mssql.util.Operators;
 import io.r2dbc.spi.Clob;
 import io.r2dbc.spi.Parameter;
 import io.r2dbc.spi.Statement;
@@ -74,6 +71,8 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
     private final Client client;
 
+    private final ConnectionOptions connectionOptions;
+
     private final ConnectionContext context;
 
     private final Codecs codecs;
@@ -89,6 +88,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
     ParametrizedMssqlStatement(Client client, ConnectionOptions connectionOptions, String sql) {
 
         super(connectionOptions.prefersCursors(sql));
+        this.connectionOptions = connectionOptions;
 
         Assert.requireNonNull(client, "Client must not be null");
         Assert.requireNonNull(connectionOptions, "ConnectionOptions must not be null");
@@ -125,7 +125,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
             if (this.bindings.bindings.isEmpty()) {
 
-                Flux<Message> exchange = QueryMessageFlow.exchange(this.client, sql).transform(Operators::discardOnCancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release);
+                Flux<Message> exchange = potentiallyAttachTimeout(QueryMessageFlow.exchange(this.client, sql), this.connectionOptions, this.client, sql);
                 return exchange.windowUntil(AbstractDoneToken.class::isInstance).map(it -> DefaultMssqlResult.toResult(this.parsedQuery.getSql(), this.context, this.codecs, it, false));
             }
 
@@ -186,7 +186,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         if (useGeneratedKeysClause) {
             exchange = exchange.transform(GeneratedValues::reduceToSingleCountDoneToken);
         }
-        return exchange;
+        return potentiallyAttachTimeout(exchange, this.connectionOptions, this.client, sql);
     }
 
     private void clearBindings(Iterator<Binding> iterator) {

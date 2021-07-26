@@ -18,7 +18,9 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.DefaultCodecs;
+import reactor.util.annotation.Nullable;
 
+import java.time.Duration;
 import java.util.function.Predicate;
 
 /**
@@ -33,6 +35,8 @@ class ConnectionOptions {
     private final PreparedStatementCache preparedStatementCache;
 
     private final boolean sendStringParametersAsUnicode;
+
+    private volatile Duration statementTimeout = Duration.ZERO;
 
     ConnectionOptions() {
         this(sql -> false, new DefaultCodecs(), new IndefinitePreparedStatementCache(), true);
@@ -61,6 +65,14 @@ class ConnectionOptions {
         return this.sendStringParametersAsUnicode;
     }
 
+    public Duration getStatementTimeout() {
+        return this.statementTimeout;
+    }
+
+    public void setStatementTimeout(@Nullable Duration statementTimeout) {
+        this.statementTimeout = statementTimeout;
+    }
+
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer();
@@ -69,6 +81,7 @@ class ConnectionOptions {
         sb.append(", codecs=").append(this.codecs);
         sb.append(", preparedStatementCache=").append(this.preparedStatementCache);
         sb.append(", sendStringParametersAsUnicode=").append(this.sendStringParametersAsUnicode);
+        sb.append(", statementTimeout=").append(this.statementTimeout);
         sb.append(']');
         return sb.toString();
     }

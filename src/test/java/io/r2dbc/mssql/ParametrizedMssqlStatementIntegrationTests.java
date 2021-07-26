@@ -17,6 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.util.IntegrationTestSupport;
+import io.r2dbc.spi.R2dbcTimeoutException;
 import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -24,6 +25,7 @@ import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -219,6 +221,24 @@ class ParametrizedMssqlStatementIntegrationTests extends IntegrationTestSupport 
         assertThat(firstUpdateCount).hasValue(3);
         assertThat(secondUpdateCount).hasValue(3);
         assertThat(rowCount).hasValue(6);
+    }
+
+    @Test
+    void shouldTimeoutSqlBatch() {
+
+        connection.setStatementTimeout(Duration.ofMillis(100)).as(StepVerifier::create).verifyComplete();
+
+        connection.createStatement("WAITFOR DELAY @P0").fetchSize(0).bind("P0", "10:00").execute().flatMap(Result::getRowsUpdated).as(StepVerifier::create).verifyError(R2dbcTimeoutException.class);
+        connection.createStatement("SELECT 1").execute().flatMap(it -> it.map(row -> row.get(0))).as(StepVerifier::create).expectNext(1).verifyComplete();
+    }
+
+    @Test
+    void shouldTimeoutCursored() {
+
+        connection.setStatementTimeout(Duration.ofMillis(100)).as(StepVerifier::create).verifyComplete();
+
+        connection.createStatement("WAITFOR DELAY @P0").fetchSize(1).bind("P0", "10:00").execute().flatMap(Result::getRowsUpdated).as(StepVerifier::create).verifyError(R2dbcTimeoutException.class);
+        connection.createStatement("SELECT 1").execute().flatMap(it -> it.map(row -> row.get(0))).as(StepVerifier::create).expectNext(1).verifyComplete();
     }
 
 }

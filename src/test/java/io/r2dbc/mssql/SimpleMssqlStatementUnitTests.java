@@ -66,7 +66,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for {@link DefaultMssqlResult}.
+ * Unit tests for {@link SimpleMssqlStatement}.
  *
  * @author Mark Paluch
  */

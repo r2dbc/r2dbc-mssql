@@ -321,6 +321,24 @@ final class ExceptionFactory {
     }
 
     /**
+     * SQL Server-specific {@link R2dbcTimeoutException}.
+     */
+    static final class MssqlStatementTimeoutException extends R2dbcTimeoutException {
+
+        private final String sql;
+
+        public MssqlStatementTimeoutException(String reason, String sql) {
+            super(reason);
+            this.sql = sql;
+        }
+
+        public String getSql() {
+            return this.sql;
+        }
+
+    }
+
+    /**
      * SQL Server-specific {@link R2dbcTransientException}.
      */
     static final class MssqlTransientException extends R2dbcTransientException implements MssqlException {

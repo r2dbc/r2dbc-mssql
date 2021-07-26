@@ -16,14 +16,11 @@
 
 package io.r2dbc.mssql;
 
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.api.MssqlTransactionDefinition;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.client.TransactionStatus;
 import io.r2dbc.mssql.util.Assert;
-import io.r2dbc.mssql.util.Operators;
 import io.r2dbc.spi.Connection;
 import io.r2dbc.spi.IsolationLevel;
 import io.r2dbc.spi.Option;
@@ -339,7 +336,10 @@ public final class MssqlConnection implements Connection {
 
     @Override
     public Mono<Void> setStatementTimeout(Duration timeout) {
-        throw new UnsupportedOperationException("https://github.com/r2dbc/r2dbc-mssql/issues/213");
+
+        Assert.requireNonNull(timeout, "Timeout must not be null");
+
+        return Mono.fromRunnable(() -> this.connectionOptions.setStatementTimeout(timeout));
     }
 
     @Override
@@ -411,8 +411,6 @@ public final class MssqlConnection implements Connection {
 
         ExceptionFactory factory = ExceptionFactory.withSql(sql);
         return QueryMessageFlow.exchange(this.client, sql)
-            .transform(Operators::discardOnCancel)
-            .doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release)
             .handle(factory::handleErrorResponse)
             .then();
     }
