@@ -116,7 +116,7 @@ final class StreamDecoder {
         if (state.header == null) {
 
             if (!Header.canDecode(state.remainder)) {
-                return retain(state);
+                return retain(state, sink);
             }
 
             state = state.readHeader();
@@ -127,7 +127,7 @@ final class StreamDecoder {
             Header header = state.getRequiredHeader();
 
             if (!state.canReadChunk()) {
-                return retain(state);
+                return retain(state, sink);
             }
 
             state = state.readChunk();
@@ -143,11 +143,11 @@ final class StreamDecoder {
                 }
 
                 if (state.hasAggregatedBodyRemainder()) {
-                    return retain(state);
+                    return retain(state, sink);
                 }
             } else {
                 state.aggregatedBodyReaderIndex(readerIndex);
-                return retain(state);
+                return retain(state, sink);
             }
 
             state.release();
@@ -160,14 +160,24 @@ final class StreamDecoder {
     }
 
     @Nullable
-    private DecoderState retain(DecoderState state) {
+    private DecoderState retain(DecoderState state, SynchronousSink<Message> sink) {
         this.state = state;
+        sink.next(IncompleteMessage.INSTANCE);
         return null;
     }
 
     @Nullable
     DecoderState getDecoderState() {
         return this.state;
+    }
+
+    /**
+     * A NOOP implementation of the {@link Message} to notify
+     * downstream that the message cannot be decoded and force
+     * the request of a new element from the upstream subscription.
+     */
+    private static final class IncompleteMessage implements Message {
+        private static final IncompleteMessage INSTANCE = new IncompleteMessage();
     }
 
     /**
