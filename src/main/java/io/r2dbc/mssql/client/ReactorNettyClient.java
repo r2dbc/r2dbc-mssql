@@ -65,6 +65,7 @@ import reactor.util.context.Context;
 import javax.annotation.Nullable;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.UUID;
@@ -246,24 +247,22 @@ public final class ReactorNettyClient implements Client {
         };
 
         connection.inbound().receiveObject() //
-            .doOnNext(it -> {
+            .concatMapIterable(it -> {
 
                 if (it instanceof ByteBuf) {
 
                     ByteBuf buffer = (ByteBuf) it;
-                    decoder.decode(buffer, this.decodeFunction, sink);
-                    return;
+                    return decoder.decode(buffer, this.decodeFunction);
                 }
 
                 if (it instanceof Message) {
-                    sink.next((Message) it);
-                    return;
+                    return Collections.singleton((Message) it);
                 }
 
                 throw ProtocolException.unsupported(String.format("Unexpected protocol message: [%s]", it));
             })
             .onErrorResume(this::resumeError)
-            .subscribe(new CoreSubscriber<Object>() {
+            .subscribe(new CoreSubscriber<Message>() {
 
                 @Override
                 public Context currentContext() {
@@ -276,7 +275,8 @@ public final class ReactorNettyClient implements Client {
                 }
 
                 @Override
-                public void onNext(Object message) {
+                public void onNext(Message message) {
+                    sink.next(message);
                 }
 
                 @Override
