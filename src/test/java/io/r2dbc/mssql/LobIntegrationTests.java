@@ -28,8 +28,10 @@ import reactor.test.StepVerifier;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -113,6 +115,36 @@ class LobIntegrationTests extends IntegrationTestSupport {
             .collect(Collectors.summingInt(value -> value))
             .as(StepVerifier::create)
             .expectNext(count * ALL_BYTES.length)
+            .verifyComplete();
+    }
+
+    @Test
+    void testBigBlobs() {
+
+        int count = 512000;
+        createTable(connection, "NVARCHAR(MAX)");
+
+        CharBuffer chars = CharBuffer.allocate(count);
+        IntStream.range(0, count).forEach(i -> chars.put((char) ((i % 26) + 'a')));
+        chars.flip();
+        String data = chars.toString();
+
+        for (int i = 0; i < 30; i++) {
+            Flux.from(connection.createStatement("INSERT INTO lob_test values(@P0)")
+                .bind("P0", data)
+                .execute())
+                .flatMap(Result::getRowsUpdated)
+                .as(StepVerifier::create)
+                .expectNext(1)
+                .verifyComplete();
+
+        }
+
+        connection.createStatement("SELECT my_col FROM lob_test")
+            .execute()
+            .concatMap(it -> it.map((row, rowMetadata) -> row.get("my_col")))
+            .as(StepVerifier::create)
+            .expectNextCount(30)
             .verifyComplete();
     }
 

@@ -34,7 +34,7 @@ import java.util.List;
  * <p/>
  * TDS messages consist of a header ({@link Header#LENGTH 8 byte length}) and a body. Messages can be either self-contained ({@link Status.StatusBit#EOM}) or chunked.  This decoder attempts to
  * decode messages from a {@link ByteBuf stream} by emitting zero, one or many {@link Message}s. Data buffers are aggregated and de-chunked until reaching a message boundary, then adaptive decoding
- * attempts to decode the aggregated and de-chunked body as far as possible. Remaining (undecoded) data buffers are aggregated until the next attempt.
+ * attempts to decode the aggregated and de-chunked body as far as possible. Remaining (non-decodable) data buffers are aggregated until the next attempt.
  * <p/>
  * This decoder is stateful and should be used in a try-to-decode fashion.
  *
@@ -59,30 +59,9 @@ final class StreamDecoder {
         Assert.requireNonNull(in, "in must not be null");
         Assert.requireNonNull(messageDecoder, "MessageDecoder must not be null");
 
-        List<Message> result = new ArrayList<>();
+        ListSink<Message> result = new ListSink<>();
 
-        decode(in, messageDecoder, new SynchronousSink<Message>() {
-
-            @Override
-            public void complete() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public Context currentContext() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void error(Throwable e) {
-                throw new RuntimeException(e);
-            }
-
-            @Override
-            public void next(Message message) {
-                result.add(message);
-            }
-        });
+        decode(in, messageDecoder, result);
 
         return result;
     }
@@ -346,6 +325,34 @@ final class StreamDecoder {
 
         int getChunkLength() {
             return getRequiredHeader().getLength() - Header.LENGTH;
+        }
+
+    }
+
+    static class ListSink<T> extends ArrayList<T> implements SynchronousSink<T> {
+
+        public ListSink() {
+            super(2);
+        }
+
+        @Override
+        public void complete() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Context currentContext() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void error(Throwable e) {
+            throw new RuntimeException(e);
+        }
+
+        @Override
+        public void next(T message) {
+            add(message);
         }
 
     }
