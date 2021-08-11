@@ -143,6 +143,7 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     @Test
     void shouldEncodeZonedDateTimeAsDatetimeoffset() {
         testType(connection, "DATETIMEOFFSET", ZonedDateTime.parse("2018-08-27T17:41:14.890+00:45"), ZonedDateTime.class, OffsetDateTime.parse("2018-08-27T17:41:14.890+00:45"));
+        testType(connection, "DATETIMEOFFSET", ZonedDateTime.parse("2018-08-27T17:41:14.890-01:45"), ZonedDateTime.class, OffsetDateTime.parse("2018-08-27T17:41:14.890-01:45"));
     }
 
     @Test
