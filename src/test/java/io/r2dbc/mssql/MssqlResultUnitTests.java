@@ -21,14 +21,13 @@ import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
-import java.util.Iterator;
-import java.util.stream.Stream;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Unit tests for {@link DefaultMssqlResult}.
@@ -37,20 +36,59 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class MssqlResultUnitTests {
 
-    @Test
-    void shouldDeferErrorSignal() {
+    @ParameterizedTest
+    @MethodSource("factories")
+    void shouldEmitErrorSignalInOrder(ResultFactory factory) {
 
         ErrorToken error = new ErrorToken(0, 0, Byte.MIN_VALUE, Byte.MIN_VALUE, "foo", "", "", 0);
         DoneToken done = DoneToken.create(0);
-        Iterator<Message> iterator = Stream.of(error, done).map(Message.class::cast).iterator();
 
-        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), new DefaultCodecs(), Flux.fromIterable(() -> iterator), false);
+        MssqlResult countThenError = factory.create(Flux.just(done, error));
 
-        result.getRowsUpdated()
+        countThenError.getRowsUpdated()
             .as(StepVerifier::create)
             .expectError()
             .verify();
 
-        assertThat(iterator.hasNext()).isFalse();
+        MssqlResult errorThenCount = factory.create(Flux.just(error, done));
+
+        errorThenCount.getRowsUpdated()
+            .as(StepVerifier::create)
+            .expectError()
+            .verify();
     }
+
+    static List<ResultFactory> factories() {
+
+        return Arrays.asList(new ResultFactory() {
+
+            @Override
+            MssqlResult create(Flux<Message> messages) {
+                return DefaultMssqlResult.toResult("", new ConnectionContext(), new DefaultCodecs(), messages, false);
+            }
+
+            @Override
+            public String toString() {
+                return "DefaultMssqlResult";
+            }
+        }, new ResultFactory() {
+
+            @Override
+            MssqlResult create(Flux<Message> messages) {
+                return MssqlSegmentResult.toResult("", new ConnectionContext(), new DefaultCodecs(), messages, false);
+            }
+
+            @Override
+            public String toString() {
+                return "MssqlSegmentResult";
+            }
+        });
+    }
+
+    static abstract class ResultFactory {
+
+        abstract MssqlResult create(Flux<Message> messages);
+
+    }
+
 }

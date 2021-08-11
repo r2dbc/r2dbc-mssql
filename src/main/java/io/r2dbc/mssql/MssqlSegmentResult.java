@@ -68,8 +68,6 @@ final class MssqlSegmentResult implements MssqlResult {
 
     private final Flux<Segment> segments;
 
-    private volatile RuntimeException throwable;
-
     private MssqlSegmentResult(String sql, ConnectionContext context, Codecs codecs, Flux<Segment> segments) {
 
         this.sql = sql;
@@ -200,16 +198,11 @@ final class MssqlSegmentResult implements MssqlResult {
                 }
 
                 if (isError(segment)) {
-                    handleError((Message) segment);
+                    sink.error(((Message) segment).exception());
                     return;
                 }
 
                 ReferenceCountUtil.release(segment);
-            }).doOnComplete(() -> {
-                RuntimeException exception = this.throwable;
-                if (exception != null) {
-                    throw exception;
-                }
             }).reduce(Long::sum).map(Long::intValue);
     }
 
@@ -235,7 +228,7 @@ final class MssqlSegmentResult implements MssqlResult {
     private <T> Flux<T> doMap(boolean rows, boolean outparameters, Function<? super Readable, ? extends T> mappingFunction) {
 
         return this.segments
-            .<T>handle((segment, sink) -> {
+            .handle((segment, sink) -> {
 
                 if (rows && segment instanceof RowSegment) {
 
@@ -264,16 +257,11 @@ final class MssqlSegmentResult implements MssqlResult {
                 }
 
                 if (isError(segment)) {
-                    handleError((Message) segment);
+                    sink.error(((Message) segment).exception());
                     return;
                 }
 
                 ReferenceCountUtil.release(segment);
-            }).doOnComplete(() -> {
-                RuntimeException exception = this.throwable;
-                if (exception != null) {
-                    throw exception;
-                }
             });
     }
 
@@ -317,17 +305,6 @@ final class MssqlSegmentResult implements MssqlResult {
 
                 return Flux.from(result).doAfterTerminate(() -> ReferenceCountUtil.release(segment));
             });
-    }
-
-    private void handleError(Message segment) {
-        R2dbcException mssqlException = segment.exception();
-
-        Throwable exception = this.throwable;
-        if (exception != null) {
-            exception.addSuppressed(mssqlException);
-        } else {
-            this.throwable = mssqlException;
-        }
     }
 
     private boolean isError(Segment segment) {

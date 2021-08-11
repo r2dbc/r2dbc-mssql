@@ -26,7 +26,6 @@ import io.r2dbc.mssql.message.token.NbcRowToken;
 import io.r2dbc.mssql.message.token.ReturnValue;
 import io.r2dbc.mssql.message.token.RowToken;
 import io.r2dbc.mssql.util.Assert;
-import io.r2dbc.spi.R2dbcException;
 import io.r2dbc.spi.Readable;
 import io.r2dbc.spi.Result;
 import io.r2dbc.spi.Row;
@@ -65,8 +64,6 @@ final class DefaultMssqlResult implements MssqlResult {
     private final boolean expectReturnValues;
 
     private volatile MssqlRowMetadata rowMetadata;
-
-    private volatile RuntimeException throwable;
 
     private DefaultMssqlResult(String sql, ConnectionContext context, Codecs codecs, Flux<io.r2dbc.mssql.message.Message> messages, boolean expectReturnValues) {
 
@@ -124,24 +121,11 @@ final class DefaultMssqlResult implements MssqlResult {
 
                 if (message instanceof ErrorToken) {
 
-                    R2dbcException mssqlException = ExceptionFactory.createException((ErrorToken) message, this.sql);
-
-                    Throwable exception = this.throwable;
-                    if (exception != null) {
-                        exception.addSuppressed(mssqlException);
-                    } else {
-                        this.throwable = mssqlException;
-                    }
-
+                    sink.error(ExceptionFactory.createException((ErrorToken) message, this.sql));
                     return;
                 }
 
                 ReferenceCountUtil.release(message);
-            }).doOnComplete(() -> {
-                RuntimeException exception = this.throwable;
-                if (exception != null) {
-                    throw exception;
-                }
             }).reduce(Long::sum).map(Long::intValue);
     }
 
@@ -242,16 +226,7 @@ final class DefaultMssqlResult implements MssqlResult {
                 }
 
                 if (message instanceof ErrorToken) {
-
-                    R2dbcException mssqlException = ExceptionFactory.createException((ErrorToken) message, this.sql);
-
-                    Throwable exception = this.throwable;
-                    if (exception != null) {
-                        exception.addSuppressed(mssqlException);
-                    } else {
-                        this.throwable = mssqlException;
-                    }
-
+                    sink.error(ExceptionFactory.createException((ErrorToken) message, this.sql));
                     return;
                 }
 
@@ -266,12 +241,7 @@ final class DefaultMssqlResult implements MssqlResult {
             mapped = mapped.concatWith(mappedReturnValues);
         }
 
-        return mapped.doOnComplete(() -> {
-            RuntimeException exception = this.throwable;
-            if (exception != null) {
-                throw exception;
-            }
-        });
+        return mapped;
     }
 
     @Override
