@@ -50,6 +50,17 @@ class OffsetDateTimeCodecUnitTests {
     }
 
     @Test
+    void shouldEncodeDatetimeOffsetNegativeTz() {
+
+        OffsetDateTime value = OffsetDateTime.parse("2018-08-27T17:41:14.890-00:45");
+
+        Encoded encoded = OffsetDateTimeCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.out(), value);
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("07 0a a0 74 84 8a 9a a4 3e 0b d3 ff");
+        assertThat(encoded.getFormalType()).isEqualTo("datetimeoffset");
+    }
+
+    @Test
     void shouldEncodeNull() {
 
         Encoded encoded = OffsetDateTimeCodec.INSTANCE.encodeNull(TestByteBufAllocator.TEST);
@@ -67,4 +78,15 @@ class OffsetDateTimeCodecUnitTests {
 
         assertThat(decoded).isEqualTo("2018-08-27T17:41:14.890+00:45");
     }
+
+    @Test
+    void shouldDecodeDateTimeOffsetNegativeTz() {
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("0a a0 74 84 8a 9a a4 3e 0b d3 ff");
+
+        OffsetDateTime decoded = OffsetDateTimeCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(DATETIMEOFFSET), OffsetDateTime.class);
+
+        assertThat(decoded).isEqualTo("2018-08-27T17:41:14.890-00:45");
+    }
+
 }

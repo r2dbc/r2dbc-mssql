@@ -88,7 +88,7 @@ final class OffsetDateTimeCodec extends AbstractCodec<OffsetDateTime> {
         LocalTime localTime = LocalTimeCodec.INSTANCE.doDecode(buffer, length, type, LocalTime.class);
         LocalDate localDate = LocalDateCodec.INSTANCE.doDecode(buffer, length, type, LocalDate.class);
 
-        int localMinutesOffset = Decode.uShort(buffer);
+        int localMinutesOffset = Decode.smallInt(buffer);
         ZoneOffset offset = ZoneOffset.ofTotalSeconds(localMinutesOffset * 60);
 
         return OffsetDateTime.of(localTime.atDate(localDate), offset).plusMinutes(localMinutesOffset);
@@ -101,7 +101,7 @@ final class OffsetDateTimeCodec extends AbstractCodec<OffsetDateTime> {
 
         int localMinutesOffset = value.getOffset().getTotalSeconds() / 60;
 
-        Encode.uShort(buffer, localMinutesOffset);
+        Encode.smallInt(buffer, localMinutesOffset);
     }
 
 }

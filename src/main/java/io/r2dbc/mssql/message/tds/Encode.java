@@ -152,6 +152,16 @@ public final class Encode {
     }
 
     /**
+     * Encode short number. SQL server type {@code SMALLINT}.
+     *
+     * @param buffer the data buffer.
+     * @param value  the value to encode.
+     */
+    public static void smallInt(ByteBuf buffer, int value) {
+        buffer.writeShortLE(value);
+    }
+
+    /**
      * Encode integer number. SQL server type {@code INT}.
      *
      * @param buffer the data buffer.
