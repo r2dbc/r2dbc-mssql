@@ -1,6 +1,25 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.9.0.M2
+------------------
+* Statements hang up on reading `nvarchar(max)` columns #216
+* Add support for Attention token (cancelling running queries) #215
+* Add support for lock wait timeout #214
+* Add support for statement timeout #213
+* Upgrade to R2DBC SPI 0.9 M2 #212
+* The FOR XML clause is not allowed in a CURSOR statement #209
+* `OffsetDateTimeCodec` does not properly decode negative timezone offsets #208
+* Upgrade to Testcontainers 1.15.3 #203
+* ClassCastException when calling RowMetadata.getColumnNames().toArray(T[]) #200
+* Add support to consume return values from stored procedures #199
+* Exclude transitive SLF4J pulled from HikariCP #198
+* Can't combine bind variables with T-SQL local variables #197
+* Statement batch doesn't produce the correct number of update counts #196
+* Eager buffer allocation in `TdsEncoder.writeChunkedMessage(…)` can lead to memory leaks #195
+* Add support for trustServerCertificate flag #184
+* Exception is not thrown when do SQL insert through ReactiveCrudRepository's save method. #180
+
 0.9.0.M1
 ------------------
 * Upgrade to Reactor 2020.0.4 #193
