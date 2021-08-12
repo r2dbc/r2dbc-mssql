@@ -75,6 +75,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -210,6 +211,7 @@ public final class ReactorNettyClient implements Client {
                 }
             };
 
+        AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
         SynchronousSink<Message> sink = new SynchronousSink<Message>() {
 
             @Override
@@ -250,6 +252,7 @@ public final class ReactorNettyClient implements Client {
                     ReactorNettyClient.this.featureAckChange.accept((FeatureExtAckToken) message);
                 }
 
+                Subscription subscription = subscriptionRef.get();
                 if (AbstractDoneToken.isAttentionAck(message)) {
 
                     long current;
@@ -259,6 +262,11 @@ public final class ReactorNettyClient implements Client {
                         if (current == 0) {
                             if (DEBUG_ENABLED) {
                                 logger.debug(ReactorNettyClient.this.context.getMessage("Swallowing attention acknowledged, no pending requests: {}. "), message);
+                            }
+
+                            // update demand for dropped next signal
+                            if (subscription != null) {
+                                subscription.request(1);
                             }
                             return;
                         }
@@ -271,6 +279,10 @@ public final class ReactorNettyClient implements Client {
                 if (attentionPropagation > 0 && !AbstractDoneToken.isAttentionAck(message)) {
                     if (DEBUG_ENABLED) {
                         logger.debug(ReactorNettyClient.this.context.getMessage("Discard message {}. Draining frames until attention acknowledgement."), message);
+                    }
+                    // update demand for dropped next signal
+                    if (subscription != null) {
+                        subscription.request(1);
                     }
                     return;
                 }
@@ -304,6 +316,7 @@ public final class ReactorNettyClient implements Client {
 
                 @Override
                 public void onSubscribe(Subscription s) {
+                    subscriptionRef.set(s);
                     ReactorNettyClient.this.responseProcessor.onSubscribe(s);
                 }
 
