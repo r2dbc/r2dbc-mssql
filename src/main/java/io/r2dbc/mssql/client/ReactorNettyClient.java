@@ -51,9 +51,9 @@ import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.core.publisher.Sinks;
 import reactor.core.publisher.SynchronousSink;
 import reactor.netty.Connection;
 import reactor.netty.NettyOutbound;
@@ -126,9 +126,7 @@ public final class ReactorNettyClient implements Client {
 
     private final AtomicLong outstandingRequests = new AtomicLong();
 
-    private final EmitterProcessor<ClientMessage> requestProcessor = EmitterProcessor.create(false);
-
-    private final FluxSink<ClientMessage> requests = this.requestProcessor.sink();
+    private final Sinks.Many<ClientMessage> requestSink = Sinks.many().unicast().onBackpressureBuffer();
 
     private final EmitterProcessor<Message> responseProcessor = EmitterProcessor.create(false);
 
@@ -221,7 +219,7 @@ public final class ReactorNettyClient implements Client {
 
             @Override
             public Context currentContext() {
-                return ReactorNettyClient.this.requestProcessor.currentContext();
+                return Context.empty();
             }
 
             @Override
@@ -336,7 +334,8 @@ public final class ReactorNettyClient implements Client {
                 }
             });
 
-        this.requestProcessor
+        this.requestSink
+            .asFlux()
             .concatMap(
                 message -> {
 
@@ -366,7 +365,14 @@ public final class ReactorNettyClient implements Client {
     private <T> Mono<T> resumeError(Throwable throwable) {
 
         handleConnectionError(throwable);
-        this.requestProcessor.onComplete();
+        this.requestSink.emitComplete((signalType, emitResult) -> {
+
+            if (emitResult.isFailure()) {
+                logger.error(this.context.getMessage("Error: {}"), emitResult);
+            }
+
+            return false;
+        });
 
         logger.error(this.context.getMessage("Error: {}"), throwable.getMessage(), throwable);
 
@@ -590,10 +596,6 @@ public final class ReactorNettyClient implements Client {
             return false;
         }
 
-        if (this.requestProcessor.isDisposed()) {
-            return false;
-        }
-
         Channel channel = this.connection.channel();
         return channel.isOpen();
     }
@@ -630,8 +632,8 @@ public final class ReactorNettyClient implements Client {
                             return;
                         }
 
-                        this.requests.next(t);
-                    }, this.requests::error, () -> {
+                        this.requestSink.emitNext(t, Sinks.EmitFailureHandler.FAIL_FAST);
+                    }, e -> this.requestSink.emitError(e, Sinks.EmitFailureHandler.FAIL_FAST), () -> {
 
                         if (!isConnected()) {
                             sink.error(CLOSED.get());

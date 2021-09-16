@@ -37,9 +37,7 @@ import io.r2dbc.mssql.message.token.RpcRequest;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.Operators;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
-import reactor.core.publisher.EmitterProcessor;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -48,7 +46,8 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import javax.annotation.processing.Completion;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static io.r2dbc.mssql.util.PredicateUtils.or;
@@ -127,29 +126,27 @@ final class RpcQueryMessageFlow {
         Assert.requireNonNull(client, "Client must not be null");
         Assert.requireNonNull(query, "Query must not be null");
 
-        EmitterProcessor<Message> inbound = EmitterProcessor.create(false);
 
         CursorState state = new CursorState();
         state.directMode = true;
 
         Flux<Message> exchange = client.exchange(Mono.fromSupplier(() -> spExecuteSql(query, binding, client.getRequiredCollation(), client.getTransactionDescriptor())), DoneProcToken::isDone);
-        OnCursorComplete cursorComplete = new OnCursorComplete(inbound, state);
+        OnCursorComplete cursorComplete = new OnCursorComplete();
 
-        Flux<Message> messages = inbound //
+        Flux<Message> messages = exchange //
             .<Message>handle((message, sink) -> {
 
                 state.update(message);
 
-                handleMessage(client, 0, null, state, message, sink, cursorComplete, true);
+                handleMessage(client, 0, state, message, sink, cursorComplete, true);
             })
             .filter(FILTER_PREDICATE)
             .doOnCancel(cursorComplete);
 
-        return messages.doOnSubscribe(ignore -> {
+        return messages.doOnSubscribe(subscription -> {
             QueryLogger.logQuery(client.getContext(), query);
-            exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound);
         })
-            .transform(it -> Operators.discardOnCancel(it, state::cancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release));
+            .transform(it -> Operators.discardOnCancel(it, state::cancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release)).takeUntilOther(cursorComplete.takeUntil());
     }
 
     /**
@@ -167,7 +164,6 @@ final class RpcQueryMessageFlow {
         Assert.requireNonNull(query, "Query must not be null");
 
         Sinks.Many<ClientMessage> outbound = Sinks.many().unicast().onBackpressureBuffer();
-        EmitterProcessor<Message> inbound = EmitterProcessor.create(false);
 
         CursorState state = new CursorState();
 
@@ -176,9 +172,9 @@ final class RpcQueryMessageFlow {
             return outbound.asFlux();
         }), isFinalToken(state));
 
-        OnCursorComplete cursorComplete = new OnCursorComplete(inbound, state);
+        OnCursorComplete cursorComplete = new OnCursorComplete();
 
-        Flux<Message> messages = inbound //
+        Flux<Message> messages = exchange //
             .<Message>handle((message, sink) -> {
 
                 boolean emit = true;
@@ -204,11 +200,10 @@ final class RpcQueryMessageFlow {
             })
             .filter(FILTER_PREDICATE);
 
-        return messages.doOnSubscribe(ignore -> {
+        return messages.doOnSubscribe(subscription -> {
             QueryLogger.logQuery(client.getContext(), query);
-            exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound);
         })
-            .transform(it -> Operators.discardOnCancel(it, state::cancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release));
+            .transform(it -> Operators.discardOnCancel(it, state::cancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release)).takeUntilOther(cursorComplete.takeUntil());
     }
 
     /**
@@ -229,7 +224,6 @@ final class RpcQueryMessageFlow {
         Assert.requireNonNull(query, "Query must not be null");
 
         Sinks.Many<ClientMessage> outbound = Sinks.many().unicast().onBackpressureBuffer();
-        EmitterProcessor<Message> inbound = EmitterProcessor.create(false);
         CursorState state = new CursorState();
 
         int handle = statementCache.getHandle(query, binding);
@@ -254,9 +248,9 @@ final class RpcQueryMessageFlow {
         }
 
         Flux<Message> exchange = client.exchange(messageProducer, isFinalToken(state));
-        OnCursorComplete cursorComplete = new OnCursorComplete(inbound, state);
+        OnCursorComplete cursorComplete = new OnCursorComplete();
 
-        Flux<Message> messages = inbound //
+        Flux<Message> messages = exchange //
             .<Message>handle((message, sink) -> {
 
                 boolean emit = true;
@@ -277,11 +271,10 @@ final class RpcQueryMessageFlow {
             })
             .filter(FILTER_PREDICATE);
 
-        return messages.doOnSubscribe(ignore -> {
+        return messages.doOnSubscribe(subscription -> {
             QueryLogger.logQuery(client.getContext(), query);
-            exchange.doOnSubscribe(cursorComplete::set).subscribe(inbound);
         })
-            .transform(it -> Operators.discardOnCancel(it, state::cancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release));
+            .transform(it -> Operators.discardOnCancel(it, state::cancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release)).takeUntilOther(cursorComplete.takeUntil());
     }
 
     private static boolean handleSpCursorReturnValue(PreparedStatementCache statementCache, Codecs codecs, String query, Binding binding, CursorState state, boolean needsPrepare,
@@ -317,7 +310,19 @@ final class RpcQueryMessageFlow {
         return cursorId;
     }
 
+    private static void handleMessage(Client client, int fetchSize, CursorState state, Message message, SynchronousSink<Message> sink,
+                                      Runnable onCursorComplete, boolean emit) {
+        handleMessage(client, fetchSize, it -> {
+            throw new UnsupportedOperationException("Cannot accept subsequent messages");
+        }, state, message, sink, onCursorComplete, emit);
+    }
+
     private static void handleMessage(Client client, int fetchSize, Sinks.Many<ClientMessage> requests, CursorState state, Message message, SynchronousSink<Message> sink,
+                                      Runnable onCursorComplete, boolean emit) {
+        handleMessage(client, fetchSize, t -> requests.emitNext(t, Sinks.EmitFailureHandler.FAIL_FAST), state, message, sink, onCursorComplete, emit);
+    }
+
+    private static void handleMessage(Client client, int fetchSize, Consumer<ClientMessage> requests, CursorState state, Message message, SynchronousSink<Message> sink,
                                       Runnable onCursorComplete, boolean emit) {
 
         if (message instanceof ColumnMetadataToken && !((ColumnMetadataToken) message).hasColumns()) {
@@ -353,7 +358,6 @@ final class RpcQueryMessageFlow {
 
             state.phase = Phase.CLOSED;
             sink.next(message);
-            onCursorComplete.run();
             return;
         }
 
@@ -374,7 +378,7 @@ final class RpcQueryMessageFlow {
         }
     }
 
-    static void onDone(Client client, int fetchSize, Sinks.Many<ClientMessage> requests, CursorState state, Runnable completion) {
+    static void onDone(Client client, int fetchSize, Consumer<ClientMessage> requests, CursorState state, Runnable completion) {
 
         Phase phase = state.phase;
 
@@ -392,11 +396,11 @@ final class RpcQueryMessageFlow {
                 if (phase == Phase.NONE) {
                     state.phase = Phase.FETCHING;
                 }
-                requests.emitNext(spCursorFetch(state.cursorId, FETCH_NEXT, fetchSize, client.getTransactionDescriptor()), Sinks.EmitFailureHandler.FAIL_FAST);
+                requests.accept(spCursorFetch(state.cursorId, FETCH_NEXT, fetchSize, client.getTransactionDescriptor()));
             } else {
                 state.phase = Phase.CLOSING;
                 // TODO: spCursorClose should happen also if a subscriber cancels its subscription.
-                requests.emitNext(spCursorClose(state.cursorId, client.getTransactionDescriptor()), Sinks.EmitFailureHandler.FAIL_FAST);
+                requests.accept(spCursorClose(state.cursorId, client.getTransactionDescriptor()));
             }
 
             state.hasSeenRows = false;
@@ -426,11 +430,7 @@ final class RpcQueryMessageFlow {
             }
         }
 
-        if (phase == Phase.ERROR || phase == Phase.CLOSING || phase == Phase.CLOSED) {
-            return true;
-        }
-
-        return false;
+        return phase == Phase.ERROR || phase == Phase.CLOSING || phase == Phase.CLOSED;
     }
 
     /**
@@ -667,27 +667,28 @@ final class RpcQueryMessageFlow {
 
     }
 
-    static class OnCursorComplete extends AtomicReference<Subscription> implements Runnable {
+    static class OnCursorComplete implements Runnable {
 
-        private final Subscriber<?> downstream;
+        private static final int STATE_ACTIVE = 0;
 
-        private final CursorState state;
+        private static final int STATE_CANCELLED = 1;
 
-        OnCursorComplete(Subscriber<?> downstream, CursorState state) {
-            this.downstream = downstream;
-            this.state = state;
-        }
+        private static final AtomicIntegerFieldUpdater<OnCursorComplete> STATE_UPDATER = AtomicIntegerFieldUpdater.newUpdater(OnCursorComplete.class, "state");
+
+        private final Sinks.Empty<Void> trigger = Sinks.empty();
+
+        private volatile int state = STATE_ACTIVE;
 
         @Override
         public void run() {
 
-            this.downstream.onComplete();
-
-            Subscription subscription = get();
-
-            if (subscription != null) {
-                subscription.cancel();
+            if (STATE_UPDATER.compareAndSet(this, STATE_ACTIVE, STATE_CANCELLED)) {
+                this.trigger.tryEmitEmpty();
             }
+        }
+
+        public Publisher<Void> takeUntil() {
+            return this.trigger.asMono();
         }
 
     }

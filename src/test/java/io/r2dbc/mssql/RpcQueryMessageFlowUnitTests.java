@@ -225,10 +225,10 @@ class RpcQueryMessageFlowUnitTests {
         state.cursorId = 42;
         state.hasMore = true;
 
-        RpcQueryMessageFlow.onDone(this.client, 128, this.requests, state, this.completion);
+        RpcQueryMessageFlow.onDone(this.client, 128, this.requests::tryEmitNext, state, this.completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.FETCHING);
-        verify(this.requests).emitNext(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()), Sinks.EmitFailureHandler.FAIL_FAST);
+        verify(this.requests).tryEmitNext(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
         verifyNoInteractions(this.completion);
     }
 
@@ -240,10 +240,10 @@ class RpcQueryMessageFlowUnitTests {
         state.phase = CursorState.Phase.FETCHING;
         state.hasSeenRows = true;
 
-        RpcQueryMessageFlow.onDone(this.client, 128, this.requests, state, this.completion);
+        RpcQueryMessageFlow.onDone(this.client, 128, this.requests::tryEmitNext, state, this.completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.FETCHING);
-        verify(this.requests).emitNext(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()), Sinks.EmitFailureHandler.FAIL_FAST);
+        verify(this.requests).tryEmitNext(RpcQueryMessageFlow.spCursorFetch(state.cursorId, RpcQueryMessageFlow.FETCH_NEXT, 128, TransactionDescriptor.empty()));
         verifyNoInteractions(this.completion);
     }
 
@@ -254,10 +254,10 @@ class RpcQueryMessageFlowUnitTests {
         state.cursorId = 42;
         state.phase = CursorState.Phase.FETCHING;
 
-        RpcQueryMessageFlow.onDone(this.client, 128, this.requests, state, this.completion);
+        RpcQueryMessageFlow.onDone(this.client, 128, this.requests::tryEmitNext, state, this.completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSING);
-        verify(this.requests).emitNext(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()), Sinks.EmitFailureHandler.FAIL_FAST);
+        verify(this.requests).tryEmitNext(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
         verifyNoInteractions(this.sink);
     }
 
@@ -267,10 +267,10 @@ class RpcQueryMessageFlowUnitTests {
         CursorState state = new CursorState();
         state.cursorId = 42;
 
-        RpcQueryMessageFlow.onDone(this.client, 128, this.requests, state, this.completion);
+        RpcQueryMessageFlow.onDone(this.client, 128, this.requests::tryEmitNext, state, this.completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSING);
-        verify(this.requests).emitNext(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()), Sinks.EmitFailureHandler.FAIL_FAST);
+        verify(this.requests).tryEmitNext(RpcQueryMessageFlow.spCursorClose(state.cursorId, TransactionDescriptor.empty()));
         verifyNoInteractions(this.completion);
     }
 
@@ -281,7 +281,7 @@ class RpcQueryMessageFlowUnitTests {
         state.cursorId = 42;
         state.phase = CursorState.Phase.CLOSING;
 
-        RpcQueryMessageFlow.onDone(this.client, 128, this.requests, state, this.completion);
+        RpcQueryMessageFlow.onDone(this.client, 128, this.requests::tryEmitNext, state, this.completion);
 
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSED);
         verifyNoInteractions(this.requests);
