@@ -1,6 +1,13 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.8.7.RELEASE
+------------------
+* Upgrade dependencies #221
+* Statements hang up on reading `nvarchar(max)` columns #216
+* The FOR XML clause is not allowed in a CURSOR statement #209
+* `OffsetDateTimeCodec` does not properly decode negative timezone offsets #208
+
 0.8.6.RELEASE
 ------------------
 * Upgrade to SPI 0.8.5.RELEASE #205
