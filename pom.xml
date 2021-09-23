@@ -45,7 +45,7 @@
         <mssql-jdbc.version>9.3.1.jre8-preview</mssql-jdbc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <r2dbc-spi.version>0.8.5.RELEASE</r2dbc-spi.version>
+        <r2dbc-spi.version>0.8.6.RELEASE</r2dbc-spi.version>
         <r2dbc-pool.version>0.8.7.RELEASE</r2dbc-pool.version>
         <reactor.version>Dysprosium-SR23</reactor.version>
         <spring-framework.version>5.3.10</spring-framework.version>
