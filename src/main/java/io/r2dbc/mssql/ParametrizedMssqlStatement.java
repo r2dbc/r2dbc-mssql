@@ -40,6 +40,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
@@ -497,7 +498,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
             }
 
             if (parsedParameter == null) {
-                throw new IllegalArgumentException(String.format("Parameter [%s] does not exist in query [%s]", name, this.sql));
+                throw new NoSuchElementException(String.format("Parameter [%s] does not exist in query [%s]", name, this.sql));
             }
 
             return parsedParameter.getName();

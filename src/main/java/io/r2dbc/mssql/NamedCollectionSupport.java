@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -117,7 +118,7 @@ abstract class NamedCollectionSupport<N> implements Collection<String> {
             return this.items[index];
         }
 
-        throw new IllegalArgumentException(String.format("Index [%d] is larger than the number of %ss [%d]", index, this.itemName, this.items.length));
+        throw new IndexOutOfBoundsException(String.format("Index [%d] is larger than the number of %ss [%d]", index, this.itemName, this.items.length));
     }
 
     /**
@@ -131,7 +132,7 @@ abstract class NamedCollectionSupport<N> implements Collection<String> {
         N item = find(name);
 
         if (item == null) {
-            throw new IllegalArgumentException(String.format("[%s] does not exist in %s names %s", name, this.itemName, this.nameKeyed.keySet()));
+            throw new NoSuchElementException(String.format("[%s] does not exist in %s names %s", name, this.itemName, this.nameKeyed.keySet()));
         }
 
         return item;

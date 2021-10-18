@@ -30,11 +30,12 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 import static io.r2dbc.mssql.message.type.TypeInformation.builder;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * Unit tests for {@link MssqlRowMetadata}.
@@ -76,14 +77,14 @@ class MssqlRowMetadataUnitTests {
 
         assertThat(rowMetadata1.getColumnNames()).containsOnly("foo");
         assertThat(rowMetadata1.getCount()).isOne();
-        assertThatIllegalArgumentException().isThrownBy(() -> rowMetadata1.getColumnMetadata("ROWSTAT"));
+        assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(() -> rowMetadata1.getColumnMetadata("ROWSTAT"));
         assertThat(rowMetadata1.getColumnNames()).containsOnly("foo");
 
         MssqlRowMetadata rowMetadata2 = new MssqlRowMetadata(this.codecs, new Column[]{rowstat}, new HashMap<>());
 
         assertThat(rowMetadata2.getColumnNames()).isEmpty();
         assertThat(rowMetadata2.getCount()).isZero();
-        assertThatIllegalArgumentException().isThrownBy(() -> rowMetadata2.getColumnMetadata("ROWSTAT"));
+        assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(() -> rowMetadata2.getColumnMetadata("ROWSTAT"));
         assertThat(rowMetadata2.getColumnNames()).isEmpty();
     }
 
@@ -137,7 +138,7 @@ class MssqlRowMetadataUnitTests {
         assertThat(rowMetadata.getColumnNames().contains("One")).isTrue();
         assertThat(rowMetadata.getColumnNames().contains("óne")).isFalse();
         assertThat(rowMetadata.getColumnNames().toArray()).contains("one", "two");
-        assertThat((String[]) rowMetadata.getColumnNames().toArray(new String[0])).contains("one", "two");
+        assertThat(rowMetadata.getColumnNames().toArray(new String[0])).contains("one", "two");
     }
 
     @Test

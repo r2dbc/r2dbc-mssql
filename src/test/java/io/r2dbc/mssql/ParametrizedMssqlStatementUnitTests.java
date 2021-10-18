@@ -31,10 +31,11 @@ import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import static io.r2dbc.mssql.ParametrizedMssqlStatement.ParsedQuery;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * Unit tests for {@link ParametrizedMssqlStatement}.
@@ -45,7 +46,7 @@ class ParametrizedMssqlStatementUnitTests {
 
     PreparedStatementCache statementCache = new IndefinitePreparedStatementCache();
 
-    ConnectionOptions connectionOptions = new ConnectionOptions(sql -> true, new DefaultCodecs(), statementCache, true);
+    ConnectionOptions connectionOptions = new ConnectionOptions(sql -> true, new DefaultCodecs(), this.statementCache, true);
 
     @Test
     void shouldSupportSql() {
@@ -94,8 +95,8 @@ class ParametrizedMssqlStatementUnitTests {
 
         ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
 
-        assertThatThrownBy(() -> statement.bind(-1, "name")).isInstanceOf(IndexOutOfBoundsException.class);
-        assertThatThrownBy(() -> statement.bind(1, "name")).isInstanceOf(IndexOutOfBoundsException.class);
+        assertThatExceptionOfType(IndexOutOfBoundsException.class).isThrownBy(() -> statement.bind(-1, "name"));
+        assertThatExceptionOfType(IndexOutOfBoundsException.class).isThrownBy(() -> statement.bind(1, "name"));
     }
 
     @Test
@@ -121,7 +122,7 @@ class ParametrizedMssqlStatementUnitTests {
 
         ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where firstname = @firstname");
 
-        assertThatThrownBy(() -> statement.bind("foo", "name")).isInstanceOf(IllegalArgumentException.class);
+        assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(() -> statement.bind("foo", "name"));
     }
 
     @Test

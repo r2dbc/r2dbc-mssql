@@ -66,14 +66,14 @@ class ParametrizedMssqlStatementStoredProcedureIntegrationTests extends Integrat
     @Test
     void shouldCallProcedureWithFetchSize() {
 
-        connection.createStatement("EXEC test_proc @P0, @Greeting OUTPUT")
-            .fetchSize(256)
-            .bind("@P0", "Walter")
-            .bind("@Greeting", Parameters.out(R2dbcType.VARCHAR))
-            .execute()
-            .flatMap(it -> it.map((readable) -> {
-                return readable.get(0);
-            }))
+connection.createStatement("EXEC test_proc @P0, @Greeting OUTPUT")
+    .fetchSize(256)
+    .bind("@P0", "Walter")
+    .bind("@Greeting", Parameters.out(R2dbcType.VARCHAR))
+    .execute()
+    .flatMap(it -> it.map((readable) -> {
+        return readable.get(0);
+    }))
             .as(StepVerifier::create)
             .expectNext("Hello Walter")
             .verifyComplete();
