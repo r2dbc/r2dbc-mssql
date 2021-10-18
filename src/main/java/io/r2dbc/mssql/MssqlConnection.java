@@ -322,7 +322,7 @@ public final class MssqlConnection implements Connection {
     /**
      * Configure the lock wait timeout via {@code SET LOCK_TIMEOUT}. {@link Duration#isNegative() Negative values} are translated to {@code -1} meaning infinite wait.
      *
-     * @param timeout
+     * @param timeout the timeout to apply.
      * @return
      * @since 0.9
      */
@@ -334,6 +334,13 @@ public final class MssqlConnection implements Connection {
         return exchange("SET LOCK_TIMEOUT " + (timeout.isNegative() ? "-1" : "" + timeout.toMillis()));
     }
 
+    /**
+     * Configure the statement wait timeout. Statements exceeding the timeout are being cancelled.
+     *
+     * @param timeout the timeout to apply.
+     * @return
+     * @since 0.9
+     */
     @Override
     public Mono<Void> setStatementTimeout(Duration timeout) {
 

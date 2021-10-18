@@ -233,7 +233,9 @@ public class ClobCodec extends AbstractCodec<Clob> {
 
             })
                 .doFinally(s -> {
-                    ReferenceCountUtil.safeRelease(this.remainder);
+                    if (this.remainder.refCnt() > 0) {
+                        ReferenceCountUtil.safeRelease(this.remainder);
+                    }
                 });
         }
 
@@ -271,7 +273,9 @@ public class ClobCodec extends AbstractCodec<Clob> {
                 }
             })
                 .doFinally(s -> {
-                    ReferenceCountUtil.safeRelease(plpStream);
+                    if (plpStream.refCnt() > 0) {
+                        ReferenceCountUtil.safeRelease(plpStream);
+                    }
                 });
         }
 
