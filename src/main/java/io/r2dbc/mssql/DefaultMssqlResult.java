@@ -114,7 +114,7 @@ final class DefaultMssqlResult implements MssqlResult {
                     }
 
                     if (doneToken.isAttentionAck()) {
-                        sink.error(new ExceptionFactory.MssqlStatementCancelled());
+                        sink.error(new ExceptionFactory.MssqlStatementCancelled(this.sql));
                         return;
                     }
                 }
@@ -184,7 +184,7 @@ final class DefaultMssqlResult implements MssqlResult {
 
                     AbstractDoneToken doneToken = (AbstractDoneToken) message;
                     if (doneToken.isAttentionAck()) {
-                        sink.error(new ExceptionFactory.MssqlStatementCancelled());
+                        sink.error(new ExceptionFactory.MssqlStatementCancelled(this.sql));
                         return;
                     }
                 }

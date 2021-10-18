@@ -130,7 +130,7 @@ final class MssqlSegmentResult implements MssqlResult {
 
                 AbstractDoneToken doneToken = (AbstractDoneToken) message;
                 if (doneToken.isAttentionAck()) {
-                    sink.error(new ExceptionFactory.MssqlStatementCancelled());
+                    sink.error(new ExceptionFactory.MssqlStatementCancelled(sql));
                     return;
                 }
             }
