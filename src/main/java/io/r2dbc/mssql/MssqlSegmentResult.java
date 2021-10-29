@@ -290,7 +290,7 @@ final class MssqlSegmentResult implements MssqlResult {
         Assert.requireNonNull(mappingFunction, "mappingFunction must not be null");
 
         return this.segments
-            .flatMap(segment -> {
+            .concatMap(segment -> {
 
                 Publisher<? extends T> result = mappingFunction.apply(segment);
 
@@ -300,10 +300,10 @@ final class MssqlSegmentResult implements MssqlResult {
 
                 // doAfterTerminate to not release resources before they had a chance to get emitted
                 if (result instanceof Mono) {
-                    return ((Mono<T>) result).doAfterTerminate(() -> ReferenceCountUtil.release(segment));
+                    return ((Mono<T>) result).doFinally(s -> ReferenceCountUtil.release(segment));
                 }
 
-                return Flux.from(result).doAfterTerminate(() -> ReferenceCountUtil.release(segment));
+                return Flux.from(result).doFinally(s -> ReferenceCountUtil.release(segment));
             });
     }
 
