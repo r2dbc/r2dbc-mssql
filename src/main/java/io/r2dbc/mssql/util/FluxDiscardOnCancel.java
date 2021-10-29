@@ -79,6 +79,11 @@ class FluxDiscardOnCancel<T> extends FluxOperator<T, T> {
         }
 
         @Override
+        public Context currentContext() {
+            return this.ctx;
+        }
+
+        @Override
         public void onNext(T t) {
 
             if (this.get()) {
