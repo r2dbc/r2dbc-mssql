@@ -69,6 +69,15 @@ class DecimalCodecUnitTests {
     }
 
     @Test
+    void shouldEncodeNumeric10x3() {
+
+        Encoded encoded = DecimalCodec.INSTANCE.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), new BigDecimal("9.5E+2"));
+
+        EncodedAssert.assertThat(encoded).isEqualToHex("11 26 00 03 01 B6 03");
+        assertThat(encoded.getFormalType()).isEqualTo("decimal(38,0)");
+    }
+
+    @Test
     void shouldDecodeNumeric5x2() {
 
         TypeInformation type = TypeInformation.builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withServerType(SqlServerType.NUMERIC).withScale(2).withPrecision(5).build();
