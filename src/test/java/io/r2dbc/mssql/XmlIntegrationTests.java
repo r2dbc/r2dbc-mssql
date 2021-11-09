@@ -30,7 +30,7 @@ class XmlIntegrationTests extends IntegrationTestSupport {
     @Test
     void shouldExecuteForXmlSimple() {
 
-        connection.createStatement("select 1 as a for xml path").fetchSize(0).execute()
+        connection.createStatement("select 1 as a for xml path").execute()
             .flatMap(result -> result.map((row, rowMetadata) -> row.get(0)))
             .as(StepVerifier::create)
             .expectNext("<row><a>1</a></row>")

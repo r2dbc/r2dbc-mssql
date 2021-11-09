@@ -174,9 +174,13 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
             return false;
         }
 
-        char c = sql.charAt(0);
+        String lc = sql.trim().toLowerCase(Locale.ENGLISH);
+        if (lc.contains("for xml") || lc.contains("for json")) {
+            return false;
+        }
 
-        return (c == 's' || c == 'S') && sql.toLowerCase(Locale.ENGLISH).startsWith("select");
+        char c = sql.charAt(0);
+        return (c == 's' || c == 'S') && lc.startsWith("select");
     }
 
 }

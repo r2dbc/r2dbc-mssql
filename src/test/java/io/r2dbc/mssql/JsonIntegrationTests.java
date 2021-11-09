@@ -30,7 +30,7 @@ class JsonIntegrationTests extends IntegrationTestSupport {
     @Test
     void shouldExecuteForJsonSimple() {
 
-        connection.createStatement("select 1 as a for json path").fetchSize(0).execute()
+        connection.createStatement("select 1 as a for json path").execute()
             .flatMap(result -> result.map((row, rowMetadata) -> row.get(0)))
             .as(StepVerifier::create)
             .expectNext("[{\"a\":1}]")
