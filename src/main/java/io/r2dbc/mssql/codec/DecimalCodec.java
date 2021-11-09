@@ -41,6 +41,8 @@ import java.math.BigInteger;
  */
 final class DecimalCodec extends AbstractNumericCodec<BigDecimal> {
 
+    private final static BigInteger MAX_VALUE = new BigInteger("99999999999999999999999999999999999999");
+
     static final DecimalCodec INSTANCE = new DecimalCodec();
 
     private static final int MAX_PRECISION = 38;
@@ -64,10 +66,21 @@ final class DecimalCodec extends AbstractNumericCodec<BigDecimal> {
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, BigDecimal value) {
 
+        BigDecimal valueToUse = value;
+
+        // Handle negative scale as a special case for Java 1.5 and later
+        if (valueToUse.scale() < 0) {
+            valueToUse = valueToUse.setScale(0);
+        }
+
+        if (exceedsMaxPrecisionOrScale(valueToUse)) {
+            throw new IllegalArgumentException("One or more values is out of range of values for the DECIMAL SQL type");
+        }
+
         ByteBuf buffer = RpcEncoding.prepareBuffer(allocator, TdsDataType.DECIMALN.getLengthStrategy(), 0x11, SqlServerType.DECIMAL.getMaxLength());
 
-        encodeBigDecimal(buffer, value);
-        return new DecimalEncoded(TdsDataType.DECIMALN, buffer, MAX_PRECISION, value.scale());
+        encodeBigDecimal(buffer, valueToUse);
+        return new DecimalEncoded(TdsDataType.DECIMALN, buffer, MAX_PRECISION, valueToUse.scale());
     }
 
     @Override
@@ -108,6 +121,22 @@ final class DecimalCodec extends AbstractNumericCodec<BigDecimal> {
         for (int i = unscaledBytes.length - 1; i >= 0; i--) {
             Encode.asByte(buffer, unscaledBytes[i]);
         }
+    }
+
+    private static boolean exceedsMaxPrecisionOrScale(BigDecimal value) {
+
+        // Maximum scale allowed is same as maximum precision allowed.
+        if (value.scale() > MAX_PRECISION) {
+            return true;
+        }
+
+        // Convert to unscaled integer value, then compare with maxRPCDecimalValue.
+        // NOTE: Handle negative scale as a special case for Java 1.5 and later
+        BigInteger bi = value.unscaledValue();
+        if (value.signum() < 0) {
+            bi = bi.negate();
+        }
+        return bi.compareTo(MAX_VALUE) > 0;
     }
 
     static class DecimalEncoded extends RpcEncoding.HintedEncoded {
