@@ -28,6 +28,7 @@ import java.util.function.Predicate;
 
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.ALTERNATE_MSSQL_DRIVER;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.MSSQL_DRIVER;
+import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.PREPARED_STATEMENT_CACHE;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.SSL_CONTEXT_BUILDER_CUSTOMIZER;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.SSL_TUNNEL;
 import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TCP_KEEPALIVE;
@@ -141,6 +142,22 @@ final class MssqlConnectionFactoryProviderTest {
         ConnectionOptions options = factory.getConnectionOptions();
 
         assertThat(options.prefersCursors("foo")).isTrue();
+    }
+
+    @Test
+    void shouldConfigureWithPreparedStatementCache() {
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(PREPARED_STATEMENT_CACHE, "10")
+            .build());
+
+        ConnectionOptions options = factory.getConnectionOptions();
+
+        PreparedStatementCache cache = options.getPreparedStatementCache();
+        assertThat(cache).isInstanceOf(LRUPreparedStatementCache.class);
     }
 
     @Test

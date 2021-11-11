@@ -56,7 +56,6 @@ final class OptionMapper {
      * Construct a new {@link Source} for a {@link Option}. Options without a value are not bound or mapped in the later stages of {@link Source}.
      *
      * @param option the option to apply.
-     * @param <T>    inferred option type.
      * @return the source object.
      */
     public Source<Object> from(Option<?> option) {
@@ -193,6 +192,25 @@ final class OptionMapper {
     }
 
     /**
+     * Parse an {@link Option} to a {@link PreparedStatementCache}.
+     */
+    static PreparedStatementCache toPreparedStatementCache(Object value) {
+        if (value instanceof PreparedStatementCache) {
+            return (PreparedStatementCache) value;
+        }
+
+        if (value instanceof Integer) {
+            return toPreparedStatementCache((Integer) value);
+        }
+
+        if (value instanceof String) {
+            return toPreparedStatementCache((String) value);
+        }
+
+        throw new IllegalArgumentException(String.format("Cannot convert value %s to PreparedStatementCache", value));
+    }
+
+    /**
      * Parse an {@link Option} to {@link UUID}.
      */
     static UUID toUuid(Object value) {
@@ -206,6 +224,35 @@ final class OptionMapper {
         }
 
         throw new IllegalArgumentException(String.format("Cannot convert value %s to UUID", value));
+    }
+
+    private static PreparedStatementCache toPreparedStatementCache(Integer value) {
+        if (value < 0) {
+            return new IndefinitePreparedStatementCache();
+        } else if (value == 0) {
+            return new NoPreparedStatementCache();
+        } else {
+            return new LRUPreparedStatementCache(value);
+        }
+    }
+
+    private static PreparedStatementCache toPreparedStatementCache(String value) {
+        try {
+            Integer number = Integer.parseInt(value);
+            return toPreparedStatementCache(number);
+        } catch (NumberFormatException ignore) {
+            // ignore - value is not a number
+        }
+
+        try {
+            Object cache = Class.forName(value).getDeclaredConstructor().newInstance();
+            if (cache instanceof PreparedStatementCache) {
+                return (PreparedStatementCache) cache;
+            }
+            throw new IllegalArgumentException("Value '" + value + "' must be an instance of PreparedStatementCache");
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalArgumentException("Cannot instantiate '" + value + "'", e);
+        }
     }
 
     public interface Source<T> {

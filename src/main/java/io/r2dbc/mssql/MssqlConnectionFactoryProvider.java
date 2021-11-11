@@ -72,6 +72,16 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
     public static final Option<Object> PREFER_CURSORED_EXECUTION = Option.valueOf("preferCursoredExecution");
 
     /**
+     * Configures the prepared statement cache to use.
+     * The value can be an {@link Integer}, a {@link PreparedStatementCache} or a {@link Class class name}.
+     * <p>
+     * A value of 0 disables the cache ({@link NoPreparedStatementCache}).<br/>
+     * A value of -1 (or any negative number) caches items indefinitely ({@link IndefinitePreparedStatementCache}) - this is the default value.<br/>
+     * Any other integer creates an LRU cache of that size ({@link LRUPreparedStatementCache}).<br/>
+     */
+    public static final Option<Object> PREPARED_STATEMENT_CACHE = Option.valueOf("preparedStatementCache");
+
+    /**
      * Configure whether to send character data as unicode (NVARCHAR, NCHAR, NTEXT) or whether to use the database encoding. Enabled by default.
      * If disabled, {@link CharSequence} data is sent using the database-specific collation such as ASCII/MBCS instead of Unicode.
      */
@@ -162,6 +172,7 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         mapper.from(LOCK_WAIT_TIMEOUT).map(OptionMapper::toDuration).to(builder::lockWaitTimeout);
         mapper.from(PORT).map(OptionMapper::toInteger).to(builder::port);
         mapper.from(PREFER_CURSORED_EXECUTION).map(OptionMapper::toStringPredicate).to(builder::preferCursoredExecution);
+        mapper.from(PREPARED_STATEMENT_CACHE).map(OptionMapper::toPreparedStatementCache).to(builder::preparedStatementCache);
         mapper.from(SEND_STRING_PARAMETERS_AS_UNICODE).map(OptionMapper::toBoolean).to(builder::sendStringParametersAsUnicode);
         mapper.from(SSL).to(builder::enableSsl);
         mapper.fromTyped(SSL_CONTEXT_BUILDER_CUSTOMIZER).to(builder::sslContextBuilderCustomizer);
