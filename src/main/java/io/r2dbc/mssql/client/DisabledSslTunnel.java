@@ -16,8 +16,8 @@
 
 package io.r2dbc.mssql.client;
 
+import io.netty.handler.ssl.SslContext;
 import io.r2dbc.mssql.client.ssl.SslConfiguration;
-import reactor.netty.tcp.SslProvider;
 
 enum DisabledSslTunnel implements SslConfiguration {
 
@@ -29,7 +29,7 @@ enum DisabledSslTunnel implements SslConfiguration {
     }
 
     @Override
-    public SslProvider getSslProvider() {
+    public SslContext getSslContext() {
         throw new IllegalStateException("SSL tunnel is disabled");
     }
 }

@@ -115,7 +115,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
      */
     private static SslHandler createSslHandler(SslConfiguration sslConfiguration, ByteBufAllocator allocator) throws GeneralSecurityException {
 
-        SSLEngine sslEngine = sslConfiguration.getSslProvider().getSslContext()
+        SSLEngine sslEngine = sslConfiguration.getSslContext()
             .newEngine(allocator);
 
         return new SslHandler(sslEngine);

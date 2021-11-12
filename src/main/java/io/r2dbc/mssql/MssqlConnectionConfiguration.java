@@ -16,6 +16,9 @@
 
 package io.r2dbc.mssql;
 
+import io.netty.handler.ssl.IdentityCipherSuiteFilter;
+import io.netty.handler.ssl.OpenSsl;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.mssql.client.ssl.ExpectedHostnameX509TrustManager;
@@ -26,9 +29,9 @@ import io.r2dbc.mssql.message.tds.Redirect;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.StringUtils;
 import reactor.netty.resources.ConnectionProvider;
-import reactor.netty.tcp.SslProvider;
 import reactor.util.annotation.Nullable;
 
+import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
@@ -46,8 +49,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Predicate;
-
-import static reactor.netty.tcp.SslProvider.DefaultConfigurationType.TCP;
 
 /**
  * Connection configuration information for connecting to a Microsoft SQL database.
@@ -810,9 +811,9 @@ public final class MssqlConnectionConfiguration {
         }
 
         @Override
-        public SslProvider getSslProvider() throws GeneralSecurityException {
+        public SslContext getSslContext() throws GeneralSecurityException {
 
-            SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
+            SslContextBuilder sslContextBuilder = createSslContextBuilder();
 
             TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
             KeyStore ks = loadCustomTrustStore();
@@ -829,10 +830,11 @@ public final class MssqlConnectionConfiguration {
 
             sslContextBuilder.trustManager(result);
 
-            return SslProvider.builder()
-                .sslContext(this.sslContextBuilderCustomizer.apply(sslContextBuilder))
-                .defaultConfiguration(TCP)
-                .build();
+            try {
+                return this.sslContextBuilderCustomizer.apply(sslContextBuilder).build();
+            } catch (SSLException e) {
+                throw new GeneralSecurityException(e);
+            }
         }
 
         @Nullable
@@ -867,18 +869,30 @@ public final class MssqlConnectionConfiguration {
                 }
 
                 @Override
-                public SslProvider getSslProvider() {
+                public SslContext getSslContext() throws GeneralSecurityException {
 
-                    SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
+                    SslContextBuilder sslContextBuilder = createSslContextBuilder();
 
-                    return SslProvider.builder()
-                        .sslContext(DefaultClientConfiguration.this.sslTunnelSslContextBuilderCustomizer.apply(sslContextBuilder))
-                        .defaultConfiguration(TCP)
-                        .build();
+                    try {
+                        return DefaultClientConfiguration.this.sslTunnelSslContextBuilderCustomizer.apply(sslContextBuilder).build();
+                    } catch (SSLException e) {
+                        throw new GeneralSecurityException(e);
+                    }
                 }
             };
         }
 
+    }
+
+    private static SslContextBuilder createSslContextBuilder() {
+        SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
+        sslContextBuilder.sslProvider(
+                OpenSsl.isAvailable() ?
+                    io.netty.handler.ssl.SslProvider.OPENSSL :
+                    io.netty.handler.ssl.SslProvider.JDK)
+            .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+            .applicationProtocolConfig(null);
+        return sslContextBuilder;
     }
 
 }

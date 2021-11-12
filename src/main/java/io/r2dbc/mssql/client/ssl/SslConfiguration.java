@@ -16,7 +16,7 @@
 
 package io.r2dbc.mssql.client.ssl;
 
-import reactor.netty.tcp.SslProvider;
+import io.netty.handler.ssl.SslContext;
 
 import java.security.GeneralSecurityException;
 
@@ -44,13 +44,13 @@ public interface SslConfiguration {
     boolean isSslEnabled();
 
     /**
-     * Return the {@link SslProvider} if {@link #isSslEnabled() SSL is enabled}.
+     * Return the {@link SslContext} if {@link #isSslEnabled() SSL is enabled}.
      *
-     * @return the {@link SslProvider}.
+     * @return the {@link SslContext}.
      * @throws GeneralSecurityException if setting up the SSL provider fails.
      * @throws IllegalStateException    if the SSL configuration is not enabled
      * @since 0.8.3
      */
-    SslProvider getSslProvider() throws GeneralSecurityException;
+    SslContext getSslContext() throws GeneralSecurityException;
 
 }

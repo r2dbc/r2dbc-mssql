@@ -24,7 +24,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -60,6 +60,7 @@ import reactor.netty.NettyOutbound;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
+import reactor.netty.tcp.TcpSslContextSpec;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.concurrent.Queues;
@@ -80,8 +81,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-
-import static reactor.netty.tcp.SslProvider.DefaultConfigurationType.TCP;
 
 /**
  * An implementation of a TDS client based on the Reactor Netty project.
@@ -457,11 +456,10 @@ public final class ReactorNettyClient implements Client {
             }
 
             @Override
-            public SslProvider getSslProvider() {
+            public SslContext getSslContext() {
                 return SslProvider.builder()
-                    .sslContext(SslContextBuilder.forClient())
-                    .defaultConfiguration(TCP)
-                    .build();
+                    .sslContext(TcpSslContextSpec.forClient())
+                    .build().getSslContext();
             }
         }, null, null);
     }
@@ -523,7 +521,7 @@ public final class ReactorNettyClient implements Client {
     }
 
     private static SslHandler createSslTunnelHandler(ByteBufAllocator allocator, SslConfiguration tunnel) throws GeneralSecurityException {
-        return new SslHandler(tunnel.getSslProvider().getSslContext().newEngine(allocator));
+        return new SslHandler(tunnel.getSslContext().newEngine(allocator));
     }
 
     @Override

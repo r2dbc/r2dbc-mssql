@@ -18,6 +18,7 @@ package io.r2dbc.mssql.client.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.message.header.Header;
@@ -28,7 +29,6 @@ import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import reactor.netty.tcp.SslProvider;
 
 import java.util.stream.IntStream;
 
@@ -52,7 +52,7 @@ class TdsSslHandlerUnitTests {
         }
 
         @Override
-        public SslProvider getSslProvider() {
+        public SslContext getSslContext() {
             return null;
         }
     }, new ConnectionContext());
@@ -65,8 +65,8 @@ class TdsSslHandlerUnitTests {
 
     @BeforeEach
     void setUp() {
-        handler.setSslHandler(sslHandler);
-        handler.setState(SslState.CONNECTION);
+        this.handler.setSslHandler(this.sslHandler);
+        this.handler.setState(SslState.CONNECTION);
     }
 
     @Test
@@ -79,11 +79,11 @@ class TdsSslHandlerUnitTests {
 
         IntStream.range(0, 92).forEach(buffer::writeByte);
 
-        handler.channelRead(ctx, buffer);
+        this.handler.channelRead(this.ctx, buffer);
 
-        verify(sslHandler).channelRead(any(), captor.capture());
+        verify(this.sslHandler).channelRead(any(), this.captor.capture());
 
-        ByteBuf value = captor.getValue();
+        ByteBuf value = this.captor.getValue();
         assertThat(value.readableBytes()).isEqualTo(92);
     }
 
@@ -100,13 +100,13 @@ class TdsSslHandlerUnitTests {
         IntStream.range(0, 92).forEach(expected::writeByte);
 
         while (buffer.isReadable()) {
-            handler.channelRead(ctx, buffer.readRetainedSlice(Math.min(10, buffer.readableBytes())));
+            this.handler.channelRead(this.ctx, buffer.readRetainedSlice(Math.min(10, buffer.readableBytes())));
         }
         buffer.release();
 
-        verify(sslHandler).channelRead(any(), captor.capture());
+        verify(this.sslHandler).channelRead(any(), this.captor.capture());
 
-        ByteBuf value = captor.getValue();
+        ByteBuf value = this.captor.getValue();
         assertThat(value.readableBytes()).isEqualTo(92);
         assertThat(value).isEqualTo(expected);
     }
@@ -128,14 +128,14 @@ class TdsSslHandlerUnitTests {
         IntStream.range(0, 92).forEach(expected::writeByte);
         IntStream.range(0, 42).forEach(expected::writeByte);
 
-        handler.channelRead(ctx, buffer.readRetainedSlice(Math.min(80, buffer.readableBytes())));
-        handler.channelRead(ctx, buffer.readRetainedSlice(Math.min(50, buffer.readableBytes())));
-        handler.channelRead(ctx, buffer.readRetainedSlice(Math.min(20, buffer.readableBytes())));
+        this.handler.channelRead(this.ctx, buffer.readRetainedSlice(Math.min(80, buffer.readableBytes())));
+        this.handler.channelRead(this.ctx, buffer.readRetainedSlice(Math.min(50, buffer.readableBytes())));
+        this.handler.channelRead(this.ctx, buffer.readRetainedSlice(Math.min(20, buffer.readableBytes())));
         buffer.release();
 
-        verify(sslHandler).channelRead(any(), captor.capture());
+        verify(this.sslHandler).channelRead(any(), this.captor.capture());
 
-        ByteBuf value = captor.getValue();
+        ByteBuf value = this.captor.getValue();
         assertThat(value.readableBytes()).isEqualTo(92 + 42);
     }
 
@@ -148,13 +148,13 @@ class TdsSslHandlerUnitTests {
 
         IntStream.range(0, 20).forEach(buffer::writeByte);
 
-        handler.channelRead(ctx, buffer.readRetainedSlice(Math.min(10, buffer.readableBytes())));
-        handler.channelRead(ctx, buffer.readRetainedSlice(Math.min(10, buffer.readableBytes())));
+        this.handler.channelRead(this.ctx, buffer.readRetainedSlice(Math.min(10, buffer.readableBytes())));
+        this.handler.channelRead(this.ctx, buffer.readRetainedSlice(Math.min(10, buffer.readableBytes())));
 
         buffer.release();
         assertThat(buffer.refCnt()).isNotZero();
 
-        handler.channelInactive(ctx);
+        this.handler.channelInactive(this.ctx);
         assertThat(buffer.refCnt()).isZero();
     }
 }

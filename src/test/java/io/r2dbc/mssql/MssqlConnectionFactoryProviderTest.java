@@ -217,7 +217,7 @@ final class MssqlConnectionFactoryProviderTest {
             })
             .build());
 
-        assertThatIllegalStateException().isThrownBy(() -> factory.getClientConfiguration().getSslProvider()).withMessageContaining("Works!");
+        assertThatIllegalStateException().isThrownBy(() -> factory.getClientConfiguration().getSslContext()).withMessageContaining("Works!");
     }
 
     @Test
