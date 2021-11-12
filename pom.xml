@@ -38,18 +38,18 @@
         <java.version>1.8</java.version>
         <jsr305.version>3.0.2</jsr305.version>
         <junit.version>5.8.1</junit.version>
-        <jmh.version>1.23</jmh.version>
+        <jmh.version>1.32</jmh.version>
         <mbr.version>0.2.0.RELEASE</mbr.version>
         <logback.version>1.2.3</logback.version>
-        <mockito.version>3.12.4</mockito.version>
-        <mssql-jdbc.version>9.3.1.jre8-preview</mssql-jdbc.version>
+        <mockito.version>4.0.0</mockito.version>
+        <mssql-jdbc.version>9.5.0.jre8-preview</mssql-jdbc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <r2dbc-spi.version>0.8.6.RELEASE</r2dbc-spi.version>
         <r2dbc-pool.version>0.8.7.RELEASE</r2dbc-pool.version>
-        <reactor.version>Dysprosium-SR23</reactor.version>
-        <spring-framework.version>5.3.10</spring-framework.version>
-        <testcontainers.version>1.16.0</testcontainers.version>
+        <reactor.version>Dysprosium-SR25</reactor.version>
+        <spring-framework.version>5.3.13</spring-framework.version>
+        <testcontainers.version>1.16.2</testcontainers.version>
     </properties>
 
     <licenses>
@@ -282,7 +282,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.3.1</version>
                 <configuration>
                     <excludePackageNames>
                         io.r2dbc.mssql.authentication,io.r2dbc.mssql.client,io.r2dbc.mssql.codec,io.r2dbc.mssql.message,io.r2dbc.mssql.util
@@ -354,7 +354,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
-                <version>1.2.1</version>
+                <version>1.2.7</version>
                 <executions>
                     <execution>
                         <id>flatten</id>
@@ -428,7 +428,7 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>build-helper-maven-plugin</artifactId>
-                        <version>3.1.0</version>
+                        <version>3.2.0</version>
                         <executions>
                             <execution>
                                 <id>add-source</id>
@@ -462,7 +462,7 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
-                        <version>1.6.0</version>
+                        <version>3.0.0</version>
                         <executions>
                             <execution>
                                 <id>run-benchmarks</id>
@@ -514,7 +514,7 @@
                         <plugin>
                             <groupId>org.apache.maven.plugins</groupId>
                             <artifactId>maven-gpg-plugin</artifactId>
-                            <version>1.6</version>
+                            <version>3.0.1</version>
                             <executions>
                                 <execution>
                                     <id>sign-artifacts</id>
