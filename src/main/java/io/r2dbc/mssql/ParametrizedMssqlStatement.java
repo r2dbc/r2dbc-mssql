@@ -108,6 +108,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
 
         assertNotExecuted();
         this.bindings.finish();
+        this.bindings.getCurrent();
         return this;
     }
 
@@ -625,7 +626,6 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         private final List<Binding> bindings = new ArrayList<>();
 
         private Binding current;
-
 
         private void finish() {
             this.current = null;
