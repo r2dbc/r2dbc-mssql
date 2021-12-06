@@ -1,6 +1,22 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.9.0.RC1
+------------------
+* Upgrade to R2DBC 0.9.0.RELEASE #237
+* Upgrade to R2DBC SPI 0.9 RC1 #223
+* Adopt renamed TCK column name #236
+* Move off deprecated Reactor Netty API #231
+* Let `Statement.add()` always create a new binding set #230
+* `BigDecimal` with negative scale incorrectly encoded #228
+* Use sequential processing in `Result.flatMap(…)` #225
+* Propagate offending SQL into R2DBC exceptions #224
+* Upgrade to R2DBC SPI 0.9 RC1 #223
+* Align `Statement.bind(…)` and `Readable.get(…)` exceptions with specification #222
+* Upgrade dependencies #221
+* Replace `EmitterProcessor` with `Sinks` API #219
+* The FOR XML clause is not allowed in a CURSOR statement #209
+
 0.9.0.M2
 ------------------
 * Statements hang up on reading `nvarchar(max)` columns #216
