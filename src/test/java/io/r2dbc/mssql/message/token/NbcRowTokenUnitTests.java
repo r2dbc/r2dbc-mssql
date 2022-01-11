@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 the original author or authors.
+ * Copyright 2018-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,13 +40,13 @@ class NbcRowTokenUnitTests {
 
     TypeInformation stringType = Types.varchar(255);
 
-    Column[] columns = Arrays.asList(new Column(0, "id", integerType),
-        new Column(1, "first_name", stringType),
-        new Column(2, "last_name", stringType),
-        new Column(3, "other", stringType),
-        new Column(4, "other2", stringType),
-        new Column(5, "other3", stringType),
-        new Column(6, "rowstat", integerType)).toArray(new Column[0]);
+    Column[] columns = Arrays.asList(new Column(0, "id", this.integerType),
+        new Column(1, "first_name", this.stringType),
+        new Column(2, "last_name", this.stringType),
+        new Column(3, "other", this.stringType),
+        new Column(4, "other2", this.stringType),
+        new Column(5, "other3", this.stringType),
+        new Column(6, "rowstat", this.integerType)).toArray(new Column[0]);
 
     @Test
     void shouldDecodeNbcRow() {
@@ -55,7 +55,7 @@ class NbcRowTokenUnitTests {
 
         assertThat(data.readByte()).isEqualTo(NbcRowToken.TYPE);
 
-        NbcRowToken rowToken = NbcRowToken.decode(data, columns);
+        NbcRowToken rowToken = NbcRowToken.decode(data, this.columns);
 
         assertThat(rowToken.getColumnData(0)).isNotNull();
         assertThat(rowToken.getColumnData(1)).isNotNull();
@@ -71,7 +71,7 @@ class NbcRowTokenUnitTests {
 
         String data = "1C 04 01 00 00 00 01 00 61 02 00 78 61 04 01 00 00 00";
 
-        CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), buffer -> NbcRowToken.canDecode(buffer, columns));
+        CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), buffer -> NbcRowToken.canDecode(buffer, this.columns));
     }
 
     @Test

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2021 the original author or authors.
+ * Copyright 2019-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ abstract class MssqlStatementSupport implements MssqlStatement {
      */
     int getEffectiveFetchSize() {
 
-        if (preferCursoredExecution) {
+        if (this.preferCursoredExecution) {
             return this.fetchSize == FETCH_UNCONFIGURED ? FETCH_SIZE : this.fetchSize;
         }
 
@@ -64,7 +64,7 @@ abstract class MssqlStatementSupport implements MssqlStatement {
 
     @Nullable
     String[] getGeneratedColumns() {
-        return generatedColumns;
+        return this.generatedColumns;
     }
 
     @Override

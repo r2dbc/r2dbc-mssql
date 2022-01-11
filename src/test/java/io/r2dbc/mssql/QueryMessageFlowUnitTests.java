@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2021 the original author or authors.
+ * Copyright 2019-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,16 +46,16 @@ class QueryMessageFlowUnitTests {
 
     @BeforeEach
     void setUp() {
-        when(client.getTransactionDescriptor()).thenReturn(TransactionDescriptor.empty());
-        when(client.getContext()).thenReturn(new ConnectionContext());
+        when(this.client.getTransactionDescriptor()).thenReturn(TransactionDescriptor.empty());
+        when(this.client.getContext()).thenReturn(new ConnectionContext());
     }
 
     @Test
     void shouldAwaitDoneProcTokenShouldNotCompleteFlow() {
 
-        when(client.exchange(any(Publisher.class), any(Predicate.class))).thenReturn(Flux.just(DoneToken.more(20), DoneProcToken.create(0), DoneInProcToken.create(0)));
+        when(this.client.exchange(any(Publisher.class), any(Predicate.class))).thenReturn(Flux.just(DoneToken.more(20), DoneProcToken.create(0), DoneInProcToken.create(0)));
 
-        QueryMessageFlow.exchange(client, "foo")
+        QueryMessageFlow.exchange(this.client, "foo")
             .as(StepVerifier::create)
             .expectNext(DoneToken.more(20), DoneProcToken.create(0), DoneInProcToken.create(0))
             .thenCancel()
@@ -65,9 +65,9 @@ class QueryMessageFlowUnitTests {
     @Test
     void shouldAwaitDoneToken() {
 
-        when(client.exchange(any(Publisher.class), any(Predicate.class))).thenReturn(Flux.just(DoneInProcToken.create(0), DoneToken.create(0)));
+        when(this.client.exchange(any(Publisher.class), any(Predicate.class))).thenReturn(Flux.just(DoneInProcToken.create(0), DoneToken.create(0)));
 
-        QueryMessageFlow.exchange(client, "foo")
+        QueryMessageFlow.exchange(this.client, "foo")
             .as(StepVerifier::create)
             .expectNext(DoneInProcToken.create(0), DoneToken.create(0))
             .verifyComplete();

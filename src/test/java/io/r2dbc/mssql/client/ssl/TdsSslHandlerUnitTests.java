@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2021 the original author or authors.
+ * Copyright 2019-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,8 +65,8 @@ class TdsSslHandlerUnitTests {
 
     @BeforeEach
     void setUp() {
-        handler.setSslHandler(sslHandler);
-        handler.setState(SslState.CONNECTION);
+        this.handler.setSslHandler(this.sslHandler);
+        this.handler.setState(SslState.CONNECTION);
     }
 
     @Test
@@ -79,11 +79,11 @@ class TdsSslHandlerUnitTests {
 
         IntStream.range(0, 92).forEach(buffer::writeByte);
 
-        handler.channelRead(ctx, buffer);
+        this.handler.channelRead(this.ctx, buffer);
 
-        verify(sslHandler).channelRead(any(), captor.capture());
+        verify(this.sslHandler).channelRead(any(), this.captor.capture());
 
-        ByteBuf value = captor.getValue();
+        ByteBuf value = this.captor.getValue();
         assertThat(value.readableBytes()).isEqualTo(92);
     }
 
@@ -100,13 +100,13 @@ class TdsSslHandlerUnitTests {
         IntStream.range(0, 92).forEach(expected::writeByte);
 
         while (buffer.isReadable()) {
-            handler.channelRead(ctx, buffer.readRetainedSlice(Math.min(10, buffer.readableBytes())));
+            this.handler.channelRead(this.ctx, buffer.readRetainedSlice(Math.min(10, buffer.readableBytes())));
         }
         buffer.release();
 
-        verify(sslHandler).channelRead(any(), captor.capture());
+        verify(this.sslHandler).channelRead(any(), this.captor.capture());
 
-        ByteBuf value = captor.getValue();
+        ByteBuf value = this.captor.getValue();
         assertThat(value.readableBytes()).isEqualTo(92);
         assertThat(value).isEqualTo(expected);
     }
@@ -128,14 +128,14 @@ class TdsSslHandlerUnitTests {
         IntStream.range(0, 92).forEach(expected::writeByte);
         IntStream.range(0, 42).forEach(expected::writeByte);
 
-        handler.channelRead(ctx, buffer.readRetainedSlice(Math.min(80, buffer.readableBytes())));
-        handler.channelRead(ctx, buffer.readRetainedSlice(Math.min(50, buffer.readableBytes())));
-        handler.channelRead(ctx, buffer.readRetainedSlice(Math.min(20, buffer.readableBytes())));
+        this.handler.channelRead(this.ctx, buffer.readRetainedSlice(Math.min(80, buffer.readableBytes())));
+        this.handler.channelRead(this.ctx, buffer.readRetainedSlice(Math.min(50, buffer.readableBytes())));
+        this.handler.channelRead(this.ctx, buffer.readRetainedSlice(Math.min(20, buffer.readableBytes())));
         buffer.release();
 
-        verify(sslHandler).channelRead(any(), captor.capture());
+        verify(this.sslHandler).channelRead(any(), this.captor.capture());
 
-        ByteBuf value = captor.getValue();
+        ByteBuf value = this.captor.getValue();
         assertThat(value.readableBytes()).isEqualTo(92 + 42);
     }
 
@@ -148,13 +148,13 @@ class TdsSslHandlerUnitTests {
 
         IntStream.range(0, 20).forEach(buffer::writeByte);
 
-        handler.channelRead(ctx, buffer.readRetainedSlice(Math.min(10, buffer.readableBytes())));
-        handler.channelRead(ctx, buffer.readRetainedSlice(Math.min(10, buffer.readableBytes())));
+        this.handler.channelRead(this.ctx, buffer.readRetainedSlice(Math.min(10, buffer.readableBytes())));
+        this.handler.channelRead(this.ctx, buffer.readRetainedSlice(Math.min(10, buffer.readableBytes())));
 
         buffer.release();
         assertThat(buffer.refCnt()).isNotZero();
 
-        handler.channelInactive(ctx);
+        this.handler.channelInactive(this.ctx);
         assertThat(buffer.refCnt()).isZero();
     }
 }

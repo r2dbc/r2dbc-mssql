@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2021 the original author or authors.
+ * Copyright 2019-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ public class PooledBenchmarks extends BenchmarkSettings {
             MsSqlServerExtension extension = new MsSqlServerExtension();
             extension.initialize();
 
-            jdbc = extension.getDataSource();
+            this.jdbc = extension.getDataSource();
 
             MssqlConnectionConfiguration configuration =
                 MssqlConnectionConfiguration.builder().host(extension.getHost()).username(extension.getUsername()).password(extension.getPassword()).build();
@@ -67,7 +67,7 @@ public class PooledBenchmarks extends BenchmarkSettings {
             MssqlConnectionFactory mssqlConnectionFactory = new MssqlConnectionFactory(configuration);
             ConnectionPoolConfiguration poolConfiguration = ConnectionPoolConfiguration.builder(mssqlConnectionFactory).maxSize(4).build();
 
-            r2dbc = new ConnectionPool(poolConfiguration);
+            this.r2dbc = new ConnectionPool(poolConfiguration);
         }
     }
 
