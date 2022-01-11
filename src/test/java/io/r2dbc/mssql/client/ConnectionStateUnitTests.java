@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 the original author or authors.
+ * Copyright 2018-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,8 +45,8 @@ class ConnectionStateUnitTests {
     @BeforeEach
     void setUp() {
 
-        when(nettyConnection.channel()).thenReturn(channel);
-        when(channel.pipeline()).thenReturn(pipeline);
+        when(this.nettyConnection.channel()).thenReturn(this.channel);
+        when(this.channel.pipeline()).thenReturn(this.pipeline);
     }
 
     @Test
@@ -54,9 +54,9 @@ class ConnectionStateUnitTests {
 
         Prelogin prelogin = Prelogin.builder().build();
 
-        ConnectionState.PRELOGIN.next(prelogin, nettyConnection);
+        ConnectionState.PRELOGIN.next(prelogin, this.nettyConnection);
 
-        verify(pipeline).fireUserEventTriggered(SslState.LOGIN_ONLY);
+        verify(this.pipeline).fireUserEventTriggered(SslState.LOGIN_ONLY);
     }
 
     @Test
@@ -64,9 +64,9 @@ class ConnectionStateUnitTests {
 
         Prelogin prelogin = Prelogin.builder().withEncryptionEnabled().build();
 
-        ConnectionState.PRELOGIN.next(prelogin, nettyConnection);
+        ConnectionState.PRELOGIN.next(prelogin, this.nettyConnection);
 
-        verify(pipeline).fireUserEventTriggered(SslState.CONNECTION);
+        verify(this.pipeline).fireUserEventTriggered(SslState.CONNECTION);
     }
 
     @Test
@@ -74,7 +74,7 @@ class ConnectionStateUnitTests {
 
         Prelogin prelogin = Prelogin.builder().withEncryptionEnabled().build();
 
-        ConnectionState next = ConnectionState.PRELOGIN.next(prelogin, nettyConnection);
+        ConnectionState next = ConnectionState.PRELOGIN.next(prelogin, this.nettyConnection);
 
         assertThat(next).isEqualTo(ConnectionState.PRELOGIN_SSL_NEGOTIATION);
     }
@@ -84,7 +84,7 @@ class ConnectionStateUnitTests {
 
         Prelogin prelogin = Prelogin.builder().withEncryptionNotSupported().build();
 
-        ConnectionState next = ConnectionState.PRELOGIN.next(prelogin, nettyConnection);
+        ConnectionState next = ConnectionState.PRELOGIN.next(prelogin, this.nettyConnection);
 
         assertThat(next).isEqualTo(ConnectionState.PRELOGIN);
     }

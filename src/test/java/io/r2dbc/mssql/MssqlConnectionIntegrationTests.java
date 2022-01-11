@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 the original author or authors.
+ * Copyright 2018-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -439,7 +439,7 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
     }
 
     private String writeKeyStoreToTempFile(Path tempDir, KeyStore keyStore, String password) {
-        final File file = new File(tempDir.toFile(), UUID.randomUUID().toString() + ".jks");
+        final File file = new File(tempDir.toFile(), UUID.randomUUID() + ".jks");
         try (OutputStream outputStream = new FileOutputStream(file)) {
             keyStore.store(outputStream, password.toCharArray());
             return file.getAbsolutePath();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2021 the original author or authors.
+ * Copyright 2019-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,9 +64,9 @@ public class StatementBenchmarks extends BenchmarkSettings {
                 MsSqlServerExtension extension = new MsSqlServerExtension();
                 extension.initialize();
 
-                jdbc = extension.getDataSource().getConnection();
+                this.jdbc = extension.getDataSource().getConnection();
 
-                Statement statement = jdbc.createStatement();
+                Statement statement = this.jdbc.createStatement();
 
                 try {
                     statement.execute("DROP TABLE simple_test");
@@ -81,7 +81,7 @@ public class StatementBenchmarks extends BenchmarkSettings {
 
                 MssqlConnectionConfiguration configuration =
                     extension.configBuilder().preferCursoredExecution(sql -> sql.contains(" /* cursored */")).build();
-                r2dbc = new MssqlConnectionFactory(configuration).create().block();
+                this.r2dbc = new MssqlConnectionFactory(configuration).create().block();
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }

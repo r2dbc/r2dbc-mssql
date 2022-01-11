@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 the original author or authors.
+ * Copyright 2018-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ final class MssqlConnectionFactoryUnitTests {
             }
 
             return Mono.just(redirect);
-        }, configuration);
+        }, this.configuration);
 
 
         connectionFactory.create().as(StepVerifier::create).expectNextCount(1).verifyComplete();
@@ -127,10 +127,9 @@ final class MssqlConnectionFactoryUnitTests {
 
             }).thenRespond(error).build();
 
-
         MssqlConnectionFactory connectionFactory = new MssqlConnectionFactory(config -> {
             return Mono.just(initial);
-        }, configuration);
+        }, this.configuration);
 
 
         connectionFactory.create().as(StepVerifier::create).verifyError(R2dbcNonTransientResourceException.class);
@@ -163,7 +162,7 @@ final class MssqlConnectionFactoryUnitTests {
             }
 
             return Mono.just(redirect);
-        }, configuration);
+        }, this.configuration);
 
 
         connectionFactory.create().as(StepVerifier::create).verifyError(MssqlConnectionFactory.MssqlRoutingException.class);

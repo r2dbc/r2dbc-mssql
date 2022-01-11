@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2021 the original author or authors.
+ * Copyright 2019-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,8 +60,8 @@ class ReactorNettyClientIntegrationTests extends IntegrationTestSupport {
 
     @BeforeEach
     void setUp() {
-        client = (ReactorNettyClient) ReflectionUtils.getField(CLIENT, IntegrationTestSupport.connection);
-        connection = (Connection) ReflectionUtils.getField(CONNECTION, this.client);
+        this.client = (ReactorNettyClient) ReflectionUtils.getField(CLIENT, IntegrationTestSupport.connection);
+        this.connection = (Connection) ReflectionUtils.getField(CONNECTION, this.client);
     }
 
     @Test
@@ -83,11 +83,11 @@ class ReactorNettyClientIntegrationTests extends IntegrationTestSupport {
         Flux<Message> query = this.client.exchange(messages, message -> true);
         CompletableFuture<List<Message>> future = query.collectList().toFuture();
 
-        connection.channel().eventLoop().execute(() -> {
+        this.connection.channel().eventLoop().execute(() -> {
 
-            connection.channel().close();
+            this.connection.channel().close();
 
-            SqlBatch batch = SqlBatch.create(0, client.getTransactionDescriptor(), "SELECT value FROM test");
+            SqlBatch batch = SqlBatch.create(0, this.client.getTransactionDescriptor(), "SELECT value FROM test");
             messages.onNext(batch);
         });
 
@@ -104,7 +104,7 @@ class ReactorNettyClientIntegrationTests extends IntegrationTestSupport {
 
         Connection connection = (Connection) ReflectionUtils.getField(CONNECTION, this.client);
 
-        SqlBatch batch = SqlBatch.create(0, client.getTransactionDescriptor(), "SELECT value FROM test");
+        SqlBatch batch = SqlBatch.create(0, this.client.getTransactionDescriptor(), "SELECT value FROM test");
 
         EmitterProcessor<ClientMessage> messages = EmitterProcessor.create();
         Flux<Message> query = this.client.exchange(messages, message -> true);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 the original author or authors.
+ * Copyright 2018-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,7 +95,7 @@ public final class ClientMessageAssert extends AbstractObjectAssert<ClientMessag
 
             isNotNull();
 
-            new EncodedAssert(actual.getByteBuf()).contains(expected, charset);
+            new EncodedAssert(this.actual.getByteBuf()).contains(expected, charset);
 
             return this;
         }
@@ -119,11 +119,11 @@ public final class ClientMessageAssert extends AbstractObjectAssert<ClientMessag
 
             isNotNull();
 
-            Assertions.assertThat(actual).isInstanceOfAny(ContextualTdsFragment.class, TdsPacket.class);
+            Assertions.assertThat(this.actual).isInstanceOfAny(ContextualTdsFragment.class, TdsPacket.class);
 
-            if (actual instanceof ContextualTdsFragment) {
+            if (this.actual instanceof ContextualTdsFragment) {
 
-                ContextualTdsFragment contextual = (ContextualTdsFragment) actual;
+                ContextualTdsFragment contextual = (ContextualTdsFragment) this.actual;
 
                 Assertions.assertThat(contextual.getHeaderOptions().getType()).isEqualTo(expected.getType());
                 Assertions.assertThat(contextual.getHeaderOptions().getStatus()).isEqualTo(expected.getStatus());
@@ -146,7 +146,7 @@ public final class ClientMessageAssert extends AbstractObjectAssert<ClientMessag
             ByteBuf expected = TestByteBufAllocator.TEST.buffer();
             encoded.accept(expected);
 
-            Assertions.assertThat(ByteBufUtil.prettyHexDump(actual.getByteBuf())).describedAs("ByteBuf")
+            Assertions.assertThat(ByteBufUtil.prettyHexDump(this.actual.getByteBuf())).describedAs("ByteBuf")
                 .isEqualTo(ByteBufUtil.prettyHexDump(expected));
 
             return this;

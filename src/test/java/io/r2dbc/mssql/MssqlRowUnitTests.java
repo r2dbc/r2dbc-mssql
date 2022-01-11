@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 the original author or authors.
+ * Copyright 2018-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,34 +42,34 @@ class MssqlRowUnitTests {
 
     TypeInformation integer = Types.integer();
 
-    Column column = new Column(0, "foo", integer, null);
+    Column column = new Column(0, "foo", this.integer, null);
 
     ByteBuf data = Unpooled.wrappedBuffer(new byte[]{(byte) 0x4, 0x42, 0, 0, 0});
 
-    RowToken rowToken = RowToken.decode(data, new Column[]{column});
+    RowToken rowToken = RowToken.decode(this.data, new Column[]{this.column});
 
-    MssqlRowMetadata rowMetadata = new MssqlRowMetadata(codecs, new Column[]{column}, Collections.singletonMap("foo", column));
+    MssqlRowMetadata rowMetadata = new MssqlRowMetadata(this.codecs, new Column[]{this.column}, Collections.singletonMap("foo", this.column));
 
-    MssqlRow row = new MssqlRow(codecs, rowToken, rowMetadata);
+    MssqlRow row = new MssqlRow(this.codecs, this.rowToken, this.rowMetadata);
 
     @Test
     void shouldReadRowByIndex() {
-        assertThat(row.get(0)).isEqualTo(66);
-        assertThat(row.get(0, Short.class)).isEqualTo((short) 66);
-        assertThat(row.get(0, Integer.class)).isEqualTo(66);
-        assertThat(row.get(0, Long.class)).isEqualTo(66L);
+        assertThat(this.row.get(0)).isEqualTo(66);
+        assertThat(this.row.get(0, Short.class)).isEqualTo((short) 66);
+        assertThat(this.row.get(0, Integer.class)).isEqualTo(66);
+        assertThat(this.row.get(0, Long.class)).isEqualTo(66L);
     }
 
     @Test
     void shouldReadRowByName() {
-        assertThat(row.get("foo")).isEqualTo(66);
-        assertThat(row.get("foo", Integer.class)).isEqualTo(66);
+        assertThat(this.row.get("foo")).isEqualTo(66);
+        assertThat(this.row.get("foo", Integer.class)).isEqualTo(66);
     }
 
     @Test
     void releaseShouldDeallocateResources() {
 
-        row.release();
-        assertThatThrownBy(() -> row.get("foo")).isInstanceOf(IllegalStateException.class).hasMessage("Value cannot be retrieved after row has been released");
+        this.row.release();
+        assertThatThrownBy(() -> this.row.get("foo")).isInstanceOf(IllegalStateException.class).hasMessage("Value cannot be retrieved after row has been released");
     }
 }

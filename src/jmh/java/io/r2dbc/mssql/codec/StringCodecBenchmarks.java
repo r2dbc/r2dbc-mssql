@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2021 the original author or authors.
+ * Copyright 2019-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,14 +43,14 @@ public class StringCodecBenchmarks extends CodecBenchmarkSupport {
 
     private static final DefaultCodecs codecs = new DefaultCodecs();
 
-    private static Collation cp1252 = Collation.from(13632521, 52);
+    private static final Collation cp1252 = Collation.from(13632521, 52);
 
     private static final Column varchar = new Column(0, "",
         TypeInformation.builder().withCharset(ServerCharset.CP1252.charset()).withLengthStrategy(LengthStrategy.USHORTLENTYPE).withServerType(SqlServerType.VARCHAR).build());
 
     private final ByteBuf varcharBuffer;
 
-    private static Collation unicode = Collation.from(0x0445, 0);
+    private static final Collation unicode = Collation.from(0x0445, 0);
 
     private static final Column nvarchar = new Column(0, "",
         TypeInformation.builder().withCharset(ServerCharset.UNICODE.charset()).withLengthStrategy(LengthStrategy.USHORTLENTYPE).withServerType(SqlServerType.NVARCHAR).build());

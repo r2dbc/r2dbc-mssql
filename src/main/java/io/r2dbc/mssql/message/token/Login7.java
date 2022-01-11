@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 the original author or authors.
+ * Copyright 2018-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -605,7 +605,7 @@ public final class Login7 implements TokenStream, ClientMessage {
             requestTokens.add(new LoginRequestToken(TokenType.IntName, this.clientLibraryName));
             requestTokens.add(new LoginRequestToken(TokenType.Database, this.databaseName));
 
-            byte interfaceLibVersion[] = new byte[4];
+            byte[] interfaceLibVersion = new byte[4];
 
             if (this.clientLibraryVersion != null) {
                 interfaceLibVersion = new byte[]{(byte) 0, (byte) this.clientLibraryVersion.getBugfix(),
@@ -1235,7 +1235,7 @@ public final class Login7 implements TokenStream, ClientMessage {
                 return new byte[0];
             }
             int l = s.length();
-            byte data[] = new byte[l * 2];
+            byte[] data = new byte[l * 2];
             int offset = 0;
             for (int i = 0; i < l; i++) {
                 int c = s.charAt(i);
@@ -1258,7 +1258,7 @@ public final class Login7 implements TokenStream, ClientMessage {
                 pwd = "";
             }
             int len = pwd.length();
-            byte data[] = new byte[len * 2];
+            byte[] data = new byte[len * 2];
             for (int i1 = 0; i1 < len; i1++) {
                 int j1 = pwd.charAt(i1) ^ 0x5a5a;
                 j1 = (j1 & 0xf) << 4 | (j1 & 0xf0) >> 4 | (j1 & 0xf00) << 4 | (j1 & 0xf000) >> 4;
@@ -1273,7 +1273,7 @@ public final class Login7 implements TokenStream, ClientMessage {
     }
 
     enum TokenType {
-        Hostname, Username, Password, AppName, Servername, IntName, Language, Database, Unknown;
+        Hostname, Username, Password, AppName, Servername, IntName, Language, Database, Unknown
     }
 
     /**

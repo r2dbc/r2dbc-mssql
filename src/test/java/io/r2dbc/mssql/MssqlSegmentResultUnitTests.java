@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 the original author or authors.
+ * Copyright 2021-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,24 +61,24 @@ class MssqlSegmentResultUnitTests {
 
     TypeInformation stringType = Types.varchar(255);
 
-    Column[] columns = Arrays.asList(new Column(0, "id", integerType),
-        new Column(1, "first_name", stringType),
-        new Column(2, "last_name", stringType),
-        new Column(3, "other", stringType),
-        new Column(4, "other2", stringType),
-        new Column(5, "other3", stringType),
-        new Column(6, "rowstat", integerType)).toArray(new Column[0]);
+    Column[] columns = Arrays.asList(new Column(0, "id", this.integerType),
+        new Column(1, "first_name", this.stringType),
+        new Column(2, "last_name", this.stringType),
+        new Column(3, "other", this.stringType),
+        new Column(4, "other2", this.stringType),
+        new Column(5, "other3", this.stringType),
+        new Column(6, "rowstat", this.integerType)).toArray(new Column[0]);
 
     DefaultCodecs codecs = new DefaultCodecs();
 
     private NbcRowToken getRowToken() {
-        return NbcRowToken.decode(HexUtils.decodeToByteBuf("D2 1C 04 01 00 00 00 01 00 61 02 00 78 61 04 01 00 00 00").skipBytes(1), columns);
+        return NbcRowToken.decode(HexUtils.decodeToByteBuf("D2 1C 04 01 00 00 00 01 00 61 02 00 78 61 04 01 00 00 00").skipBytes(1), this.columns);
     }
 
     @Test
     void shouldApplyRowMapping() {
 
-        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(ColumnMetadataToken.create(columns), getRowToken()), false);
+        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(ColumnMetadataToken.create(this.columns), getRowToken()), false);
 
         result.map((row, rowMetadata) -> row)
             .as(StepVerifier::create)
@@ -92,7 +92,7 @@ class MssqlSegmentResultUnitTests {
         ByteBuf buffer = HexUtils.decodeToByteBuf("AC0000000100000000000026" +
             "0404F3DEBC0A").skipBytes(1);
 
-        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(ReturnValue.decode(buffer, false)), true);
+        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(ReturnValue.decode(buffer, false)), true);
 
         result.map((readable) -> readable)
             .as(StepVerifier::create)
@@ -103,7 +103,7 @@ class MssqlSegmentResultUnitTests {
     @Test
     void mapShouldIgnoreNotice() {
 
-        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(infoToken), false);
+        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(this.infoToken), false);
 
         result.map((row, rowMetadata) -> row)
             .as(StepVerifier::create)
@@ -113,7 +113,7 @@ class MssqlSegmentResultUnitTests {
     @Test
     void mapShouldTerminateWithError() {
 
-        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(errorToken), false);
+        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(this.errorToken), false);
 
         result.map((row, rowMetadata) -> row)
             .as(StepVerifier::create)
@@ -123,7 +123,7 @@ class MssqlSegmentResultUnitTests {
     @Test
     void getRowsUpdatedShouldTerminateWithError() {
 
-        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(errorToken), false);
+        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(this.errorToken), false);
 
         result.getRowsUpdated()
             .as(StepVerifier::create)
@@ -133,7 +133,7 @@ class MssqlSegmentResultUnitTests {
     @Test
     void shouldConsumeRowsUpdated() {
 
-        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(DoneToken.count(42)), false);
+        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(DoneToken.count(42)), false);
 
         result.getRowsUpdated()
             .as(StepVerifier::create)
@@ -144,7 +144,7 @@ class MssqlSegmentResultUnitTests {
     @Test
     void filterShouldRetainUpdateCount() {
 
-        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(DoneToken.count(42)), false);
+        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(DoneToken.count(42)), false);
 
         result.filter(Result.UpdateCount.class::isInstance).getRowsUpdated()
             .as(StepVerifier::create)
@@ -155,7 +155,7 @@ class MssqlSegmentResultUnitTests {
     @Test
     void filterShouldSkipRowMapping() {
 
-        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(ColumnMetadataToken.create(columns), getRowToken()), false);
+        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(ColumnMetadataToken.create(this.columns), getRowToken()), false);
 
         result = result.filter(it -> false);
 
@@ -167,7 +167,7 @@ class MssqlSegmentResultUnitTests {
     @Test
     void filterShouldSkipErrorMessage() {
 
-        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(errorToken, ColumnMetadataToken.create(columns), getRowToken()), false);
+        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(this.errorToken, ColumnMetadataToken.create(this.columns), getRowToken()), false);
 
         result = result.filter(Result.RowSegment.class::isInstance);
 
@@ -189,7 +189,8 @@ class MssqlSegmentResultUnitTests {
 
         RowToken dataRow = getRowToken();
         assertThat(dataRow.refCnt()).isOne();
-        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(ColumnMetadataToken.create(columns), dataRow, returnValue), expectReturnValues);
+        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(ColumnMetadataToken.create(this.columns), dataRow, returnValue),
+            expectReturnValues);
 
         result.map((row, rowMetadata) -> row)
             .as(StepVerifier::create)
@@ -213,7 +214,7 @@ class MssqlSegmentResultUnitTests {
 
         RowToken dataRow = getRowToken();
         assertThat(dataRow.refCnt()).isOne();
-        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(ColumnMetadataToken.create(columns), dataRow, returnValue), expectReturnValues);
+        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(ColumnMetadataToken.create(this.columns), dataRow, returnValue), expectReturnValues);
 
         result.map(Function.identity())
             .as(StepVerifier::create)
@@ -237,7 +238,7 @@ class MssqlSegmentResultUnitTests {
 
         RowToken dataRow = getRowToken();
         assertThat(dataRow.refCnt()).isOne();
-        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(ColumnMetadataToken.create(columns), dataRow, returnValue), expectReturnValues);
+        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(ColumnMetadataToken.create(this.columns), dataRow, returnValue), expectReturnValues);
 
         result = result.filter(it -> false);
 
@@ -255,7 +256,7 @@ class MssqlSegmentResultUnitTests {
 
         RowToken dataRow = getRowToken();
         assertThat(dataRow.refCnt()).isOne();
-        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(ColumnMetadataToken.create(columns), dataRow), false);
+        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(ColumnMetadataToken.create(this.columns), dataRow), false);
 
         Flux.from(result.flatMap(Mono::just))
             .map(it -> {
@@ -272,7 +273,8 @@ class MssqlSegmentResultUnitTests {
     @Test
     void flatMapShouldNotTerminateWithError() {
 
-        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(errorToken, ColumnMetadataToken.create(columns), getRowToken(), DoneToken.create(42)), false);
+        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(this.errorToken, ColumnMetadataToken.create(this.columns), getRowToken(),
+            DoneToken.create(42)), false);
 
         Flux.from(result.flatMap(Mono::just))
             .as(StepVerifier::create)
@@ -285,7 +287,7 @@ class MssqlSegmentResultUnitTests {
 
         RowToken dataRow = getRowToken();
         assertThat(dataRow.refCnt()).isOne();
-        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(ColumnMetadataToken.create(columns), dataRow), false);
+        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(ColumnMetadataToken.create(this.columns), dataRow), false);
 
         Flux.from(result.flatMap(data -> Mono.empty()))
             .as(StepVerifier::create)
@@ -297,7 +299,7 @@ class MssqlSegmentResultUnitTests {
     @Test
     void flatMapShouldMapErrorResponse() {
 
-        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(errorToken), false);
+        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(this.errorToken), false);
 
         Flux.from(result.flatMap(data -> {
 
@@ -319,7 +321,7 @@ class MssqlSegmentResultUnitTests {
     @Test
     void flatMapShouldMapNoticeResponse() {
 
-        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), codecs, Flux.just(infoToken), false);
+        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(this.infoToken), false);
 
         Flux.from(result.flatMap(data -> {
 
