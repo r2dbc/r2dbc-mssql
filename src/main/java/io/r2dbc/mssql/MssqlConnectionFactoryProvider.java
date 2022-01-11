@@ -163,7 +163,12 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         mapper.from(PORT).map(OptionMapper::toInteger).to(builder::port);
         mapper.from(PREFER_CURSORED_EXECUTION).map(OptionMapper::toStringPredicate).to(builder::preferCursoredExecution);
         mapper.from(SEND_STRING_PARAMETERS_AS_UNICODE).map(OptionMapper::toBoolean).to(builder::sendStringParametersAsUnicode);
-        mapper.from(SSL).to(builder::enableSsl);
+        mapper.from(SSL).map(OptionMapper::toBoolean).to(ssl -> {
+
+            if (ssl) {
+                builder.enableSsl();
+            }
+        });
         mapper.fromTyped(SSL_CONTEXT_BUILDER_CUSTOMIZER).to(builder::sslContextBuilderCustomizer);
         mapper.from(SSL_TUNNEL).map(it -> {
 
