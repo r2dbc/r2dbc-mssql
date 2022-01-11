@@ -186,6 +186,22 @@ final class MssqlConnectionFactoryProviderTest {
     }
 
     @Test
+    void shouldConfigureWithoutSsl() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(SSL, false)
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .build());
+
+        ClientConfiguration configuration = factory.getClientConfiguration();
+
+        assertThat(configuration.isSslEnabled()).isFalse();
+    }
+
+    @Test
     void shouldConfigureWithSslCustomizer() {
 
         MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
