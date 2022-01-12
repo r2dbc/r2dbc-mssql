@@ -1,6 +1,11 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.9.0.RELEASE
+------------------
+* `SSL` configuration option enables SSL handshaking regardless of the configuration value #240
+* Extend license years in copyright header to 2022 #242
+
 0.9.0.RC1
 ------------------
 * Upgrade to R2DBC 0.9.0.RELEASE #237
