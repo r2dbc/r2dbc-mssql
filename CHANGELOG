@@ -1,6 +1,14 @@
 R2DBC MSSQL Changelog
 =============================
 
+0.8.8.RELEASE
+------------------
+* Strip ROWSTAT column from MssqlRowMetadata #188
+* The FOR XML clause is not allowed in a CURSOR statement #209
+* `BigDecimal` with negative scale incorrectly encoded #228
+* `SSL` configuration option enables SSL handshaking regardless of the configuration value #240
+* Extend license years in copyright header to 2022 #242
+
 0.8.7.RELEASE
 ------------------
 * Upgrade dependencies #221
