@@ -295,10 +295,12 @@ public final class MssqlConnection implements Connection {
         });
     }
 
+    @Override
     public boolean isAutoCommit() {
         return this.autoCommit && this.client.getTransactionStatus() != TransactionStatus.STARTED;
     }
 
+    @Override
     public Mono<Void> setAutoCommit(boolean autoCommit) {
 
         return Mono.defer(() -> {
@@ -354,6 +356,7 @@ public final class MssqlConnection implements Connection {
         return this.metadata;
     }
 
+    @Override
     public IsolationLevel getTransactionIsolationLevel() {
         return this.isolationLevel;
     }
