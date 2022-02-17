@@ -249,8 +249,9 @@ final class MssqlConnectionConfigurationUnitTests {
         keyStore.setEntry("dummy", entry, new KeyStore.PasswordProtection("key-password".toCharArray()));
 
         File file = new File(tempDir, getClass().getName() + ".jks");
-        keyStore.store(new FileOutputStream(file), "my-password".toCharArray());
-
+        try (FileOutputStream stream = new FileOutputStream(file)) {
+            keyStore.store(stream, "my-password".toCharArray());
+        }
 
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
             .database("test-database")
