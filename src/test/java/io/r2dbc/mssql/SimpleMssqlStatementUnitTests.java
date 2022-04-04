@@ -97,7 +97,7 @@ class SimpleMssqlStatementUnitTests {
         statement.execute()
             .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
-            .expectNext(1)
+            .expectNext(1L)
             .verifyComplete();
     }
 

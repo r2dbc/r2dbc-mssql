@@ -63,7 +63,7 @@ public final class MssqlConnection implements Connection {
 
     private final ConnectionOptions connectionOptions;
 
-    private final Flux<Integer> validationQuery;
+    private final Flux<Long> validationQuery;
 
     private volatile boolean autoCommit;
 
@@ -379,7 +379,7 @@ public final class MssqlConnection implements Connection {
                 return;
             }
 
-            this.validationQuery.subscribe(new CoreSubscriber<Integer>() {
+            this.validationQuery.subscribe(new CoreSubscriber<Long>() {
 
                 @Override
                 public void onSubscribe(Subscription s) {
@@ -387,7 +387,7 @@ public final class MssqlConnection implements Connection {
                 }
 
                 @Override
-                public void onNext(Integer integer) {
+                public void onNext(Long integer) {
 
                 }
 

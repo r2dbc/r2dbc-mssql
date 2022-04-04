@@ -101,8 +101,8 @@ final class MssqlRowMetadata extends NamedCollectionSupport<Column> implements R
     }
 
     @Override
-    public Collection<String> getColumnNames() {
-        return this;
+    public boolean contains(String columnName) {
+        return find(columnName) != null;
     }
 
 }

@@ -149,13 +149,13 @@ class MssqlCancelIntegrationTests extends IntegrationTestSupport {
     private void insertRecord(MssqlConnection connection, int id) {
 
         Flux.from(connection.createStatement("INSERT INTO r2dbc_example VALUES(@id, @firstname, @lastname)")
-            .bind("id", id)
-            .bind("firstname", "Walter")
-            .bind("lastname", "White")
-            .execute())
+                .bind("id", id)
+                .bind("firstname", "Walter")
+                .bind("lastname", "White")
+                .execute())
             .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
-            .expectNext(1)
+            .expectNext(1L)
             .verifyComplete();
     }
 }

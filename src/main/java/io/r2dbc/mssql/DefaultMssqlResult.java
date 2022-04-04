@@ -96,7 +96,7 @@ final class DefaultMssqlResult implements MssqlResult {
     }
 
     @Override
-    public Mono<Integer> getRowsUpdated() {
+    public Mono<Long> getRowsUpdated() {
 
         return this.messages
             .<Long>handle((message, sink) -> {
@@ -126,7 +126,7 @@ final class DefaultMssqlResult implements MssqlResult {
                 }
 
                 ReferenceCountUtil.release(message);
-            }).reduce(Long::sum).map(Long::intValue);
+            }).reduce(Long::sum);
     }
 
     @Override

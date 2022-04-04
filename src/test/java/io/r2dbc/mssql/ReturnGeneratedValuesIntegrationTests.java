@@ -87,10 +87,10 @@ class ReturnGeneratedValuesIntegrationTests extends IntegrationTestSupport {
         AtomicInteger resultCounter = new AtomicInteger();
 
         result.flatMap(it -> {
-            resultCounter.incrementAndGet();
-            return it.getRowsUpdated();
-        }).as(StepVerifier::create)
-            .expectNext(2)
+                resultCounter.incrementAndGet();
+                return it.getRowsUpdated();
+            }).as(StepVerifier::create)
+            .expectNext(2L)
             .verifyComplete();
 
         assertThat(resultCounter).hasValue(1);

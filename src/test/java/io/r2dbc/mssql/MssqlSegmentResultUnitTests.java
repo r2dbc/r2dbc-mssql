@@ -137,7 +137,7 @@ class MssqlSegmentResultUnitTests {
 
         result.getRowsUpdated()
             .as(StepVerifier::create)
-            .expectNext(42)
+            .expectNext(42L)
             .verifyComplete();
     }
 
@@ -148,7 +148,7 @@ class MssqlSegmentResultUnitTests {
 
         result.filter(Result.UpdateCount.class::isInstance).getRowsUpdated()
             .as(StepVerifier::create)
-            .expectNext(42)
+            .expectNext(42L)
             .verifyComplete();
     }
 

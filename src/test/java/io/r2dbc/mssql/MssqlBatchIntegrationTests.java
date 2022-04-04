@@ -22,7 +22,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
 import reactor.test.StepVerifier;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -40,9 +40,9 @@ class MssqlBatchIntegrationTests extends IntegrationTestSupport {
     @Test
     void shouldRunBatchWithMultipleResults() {
 
-        AtomicInteger resultCounter = new AtomicInteger();
-        AtomicInteger firstUpdateCount = new AtomicInteger();
-        AtomicInteger rowCount = new AtomicInteger();
+        AtomicLong resultCounter = new AtomicLong();
+        AtomicLong firstUpdateCount = new AtomicLong();
+        AtomicLong rowCount = new AtomicLong();
 
         Flux.from(connection.createBatch().add("DECLARE @t TABLE(i INT)").add("INSERT INTO @t VALUES (1),(2),(3)").add("SELECT * FROM @t")
             .execute()).flatMap(it -> {

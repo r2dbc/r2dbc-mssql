@@ -132,11 +132,11 @@ class ColumnMetadataIntegrationTests extends IntegrationTestSupport {
         createTable(connection, columnType);
 
         Flux.from(connection.createStatement("INSERT INTO metadata_test values(@P0, @P0)")
-            .bind("P0", value)
-            .execute())
+                .bind("P0", value)
+                .execute())
             .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
-            .expectNext(1)
+            .expectNext(1L)
             .verifyComplete();
 
         connection.createStatement("SELECT non_nullable_col FROM metadata_test")

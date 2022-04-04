@@ -45,8 +45,8 @@
         <mssql-jdbc.version>9.5.0.jre8-preview</mssql-jdbc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <r2dbc-spi.version>0.9.0.RELEASE</r2dbc-spi.version>
-        <r2dbc-pool.version>0.9.0.RELEASE</r2dbc-pool.version>
+        <r2dbc-spi.version>1.0.0.BUILD-SNAPSHOT</r2dbc-spi.version>
+        <r2dbc-pool.version>1.0.0.BUILD-SNAPSHOT</r2dbc-pool.version>
         <reactor.version>2020.0.15</reactor.version>
         <spring-framework.version>5.3.14</spring-framework.version>
         <testcontainers.version>1.16.2</testcontainers.version>
@@ -580,5 +580,15 @@
         </profile>
 
     </profiles>
+
+    <repositories>
+        <repository>
+            <id>oss-sonatype-snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 
 </project>

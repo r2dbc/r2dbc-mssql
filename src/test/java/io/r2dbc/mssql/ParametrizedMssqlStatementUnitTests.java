@@ -25,12 +25,17 @@ import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.ReturnValue;
 import io.r2dbc.mssql.message.token.RpcRequest;
+import io.r2dbc.mssql.message.type.SqlServerType;
+import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import io.r2dbc.mssql.util.Types;
+import io.r2dbc.spi.Parameters;
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import static io.r2dbc.mssql.ParametrizedMssqlStatement.ParsedQuery;
@@ -65,7 +70,6 @@ class ParametrizedMssqlStatementUnitTests {
 
         assertThat(variables).hasSize(1);
         assertThat(variables.get(0)).isEqualTo(new ParsedParameter("firstname", 37));
-
 
         variables = ParsedQuery.parse("SELECT * from FOO where @p1 = @foo_bar").getParameters();
 
@@ -115,6 +119,24 @@ class ParametrizedMssqlStatementUnitTests {
 
         statement.bind("@firstname", "firstname");
         assertThat(statement.getBindings().first().getParameters()).containsKeys("firstname");
+    }
+
+    @Test
+    void shouldBindParameter() {
+
+        ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(TestClient.NO_OP, this.connectionOptions, "SELECT * from FOO where amount1 = @amount1 and amount2 = @amount2");
+
+        statement.bind("amount1", Parameters.in(BigDecimal.valueOf(2.1f)));
+        statement.bind("amount2", Parameters.in(SqlServerType.MONEY));
+
+        Map<String, Binding.RpcParameter> parameters = statement.getBindings().first().getParameters();
+        assertThat(parameters).containsKeys("amount1", "amount2");
+
+        Binding.RpcParameter amount1 = parameters.get("amount1");
+        assertThat(amount1.encoded.getDataType()).isEqualTo(TdsDataType.DECIMALN);
+
+        Binding.RpcParameter amount2 = parameters.get("amount2");
+        assertThat(amount2.encoded.getDataType()).isEqualTo(TdsDataType.MONEYN);
     }
 
     @Test
@@ -202,4 +224,5 @@ class ParametrizedMssqlStatementUnitTests {
         statement.bind("firstname", "");
         statement.execute().flatMap(MssqlResult::getRowsUpdated).as(StepVerifier::create).verifyError(ProtocolException.class);
     }
+
 }

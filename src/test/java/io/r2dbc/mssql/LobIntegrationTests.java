@@ -56,11 +56,11 @@ class LobIntegrationTests extends IntegrationTestSupport {
         createTable(connection, "IMAGE");
 
         Flux.from(connection.createStatement("INSERT INTO lob_test values(@P0)")
-            .bindNull("P0", Blob.class)
-            .execute())
+                .bindNull("P0", Blob.class)
+                .execute())
             .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
-            .expectNext(1)
+            .expectNext(1L)
             .verifyComplete();
 
         connection.createStatement("SELECT my_col FROM lob_test")
@@ -77,11 +77,11 @@ class LobIntegrationTests extends IntegrationTestSupport {
         createTable(connection, "IMAGE");
 
         Flux.from(connection.createStatement("INSERT INTO lob_test values(@P0)")
-            .bind("P0", Blob.from(Mono.just("foo".getBytes()).map(ByteBuffer::wrap)))
-            .execute())
+                .bind("P0", Blob.from(Mono.just("foo".getBytes()).map(ByteBuffer::wrap)))
+                .execute())
             .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
-            .expectNext(1)
+            .expectNext(1L)
             .verifyComplete();
 
         connection.createStatement("SELECT my_col FROM lob_test")
@@ -100,11 +100,11 @@ class LobIntegrationTests extends IntegrationTestSupport {
         createTable(connection, "VARBINARY(MAX)");
 
         Flux.from(connection.createStatement("INSERT INTO lob_test values(@P0)")
-            .bind("P0", Blob.from(Flux.range(0, count).map(it -> ByteBuffer.wrap(ALL_BYTES))))
-            .execute())
+                .bind("P0", Blob.from(Flux.range(0, count).map(it -> ByteBuffer.wrap(ALL_BYTES))))
+                .execute())
             .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
-            .expectNext(1)
+            .expectNext(1L)
             .verifyComplete();
 
         connection.createStatement("SELECT my_col FROM lob_test")
@@ -131,11 +131,11 @@ class LobIntegrationTests extends IntegrationTestSupport {
 
         for (int i = 0; i < 30; i++) {
             Flux.from(connection.createStatement("INSERT INTO lob_test values(@P0)")
-                .bind("P0", data)
-                .execute())
+                    .bind("P0", data)
+                    .execute())
                 .flatMap(Result::getRowsUpdated)
                 .as(StepVerifier::create)
-                .expectNext(1)
+                .expectNext(1L)
                 .verifyComplete();
 
         }
@@ -161,11 +161,11 @@ class LobIntegrationTests extends IntegrationTestSupport {
         }
 
         Flux.from(connection.createStatement("INSERT INTO lob_test values(@P0)")
-            .bind("P0", bytes)
-            .execute())
+                .bind("P0", bytes)
+                .execute())
             .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
-            .expectNext(1)
+            .expectNext(1L)
             .verifyComplete();
 
         connection.createStatement("SELECT my_col FROM lob_test")
@@ -192,11 +192,11 @@ class LobIntegrationTests extends IntegrationTestSupport {
         createTable(connection, "NTEXT");
 
         Flux.from(connection.createStatement("INSERT INTO lob_test values(@P0)")
-            .bindNull("P0", Clob.class)
-            .execute())
+                .bindNull("P0", Clob.class)
+                .execute())
             .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
-            .expectNext(1)
+            .expectNext(1L)
             .verifyComplete();
 
         connection.createStatement("SELECT my_col FROM lob_test")
@@ -213,11 +213,11 @@ class LobIntegrationTests extends IntegrationTestSupport {
         createTable(connection, "NTEXT");
 
         Flux.from(connection.createStatement("INSERT INTO lob_test values(@P0)")
-            .bind("P0", Clob.from(Mono.just("foo")))
-            .execute())
+                .bind("P0", Clob.from(Mono.just("foo")))
+                .execute())
             .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
-            .expectNext(1)
+            .expectNext(1L)
             .verifyComplete();
 
         connection.createStatement("SELECT my_col FROM lob_test")

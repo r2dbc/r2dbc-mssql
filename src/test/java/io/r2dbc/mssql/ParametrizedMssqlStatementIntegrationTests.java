@@ -29,6 +29,7 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -61,10 +62,10 @@ class ParametrizedMssqlStatementIntegrationTests extends IntegrationTestSupport 
                 .bind("fn", "Walter").bind("ln", "White").add()
                 .bind("fn", "Hank").bind("@ln", "Schrader").add()
                 .bind("fn", "Skyler").bind("@ln", "White")
-            .execute())
+                .execute())
             .flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
-            .expectNext(1, 1, 1)
+            .expectNext(1L, 1L, 1L)
             .verifyComplete();
     }
 
@@ -146,8 +147,8 @@ class ParametrizedMssqlStatementIntegrationTests extends IntegrationTestSupport 
     @Test
     void shouldRunStatementWithMultipleResults() {
 
-        AtomicInteger resultCounter = new AtomicInteger();
-        AtomicInteger firstUpdateCount = new AtomicInteger();
+        AtomicLong resultCounter = new AtomicLong();
+        AtomicLong firstUpdateCount = new AtomicLong();
         AtomicInteger rowCount = new AtomicInteger();
 
         Flux.from(connection.createStatement("DECLARE @t TABLE(i INT);INSERT INTO @t VALUES (@P1),(2),(3);SELECT * FROM @t;\n")
@@ -182,8 +183,8 @@ class ParametrizedMssqlStatementIntegrationTests extends IntegrationTestSupport 
         AtomicBoolean thirdGurard = new AtomicBoolean();
         AtomicBoolean fourthGurard = new AtomicBoolean();
 
-        AtomicInteger firstUpdateCount = new AtomicInteger();
-        AtomicInteger secondUpdateCount = new AtomicInteger();
+        AtomicLong firstUpdateCount = new AtomicLong();
+        AtomicLong secondUpdateCount = new AtomicLong();
         AtomicInteger rowCount = new AtomicInteger();
 
         Flux.from(connection.createStatement("DECLARE @t TABLE(i INT);INSERT INTO @t VALUES (@P1),(2),(3);SELECT * FROM @t;\n")

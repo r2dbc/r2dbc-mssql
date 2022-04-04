@@ -40,9 +40,9 @@ class ConcurrentAccessIntegrationTests extends IntegrationTestSupport {
         createTable(connection);
         connection.beginTransaction().as(StepVerifier::create).verifyComplete();
 
-        Flux<Integer> insertOne = insertRecord(connection, 1);
-        Flux<Integer> insertTwo = insertRecord(connection, 2);
-        Flux<Integer> insertThree = insertRecord(connection, 3);
+        Flux<Long> insertOne = insertRecord(connection, 1);
+        Flux<Long> insertTwo = insertRecord(connection, 2);
+        Flux<Long> insertThree = insertRecord(connection, 3);
 
         Flux.merge(insertOne, insertTwo, insertThree).as(StepVerifier::create).expectNextCount(3).verifyComplete();
 
@@ -79,7 +79,7 @@ class ConcurrentAccessIntegrationTests extends IntegrationTestSupport {
             .verifyComplete();
     }
 
-    private Flux<Integer> insertRecord(MssqlConnection connection, int id) {
+    private Flux<Long> insertRecord(MssqlConnection connection, int id) {
 
         return connection.createStatement("INSERT INTO r2dbc_example VALUES(@id, @firstname, @lastname)")
             .bind("id", id)

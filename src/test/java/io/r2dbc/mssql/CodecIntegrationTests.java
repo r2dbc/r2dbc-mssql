@@ -341,19 +341,19 @@ class CodecIntegrationTests extends IntegrationTestSupport {
 
         if (parameterValueType == null) {
             Flux.from(connection.createStatement("INSERT INTO codec_test values(@P0)")
-                .bind("P0", value)
-                .execute())
+                    .bind("P0", value)
+                    .execute())
                 .flatMap(Result::getRowsUpdated)
                 .as(StepVerifier::create)
-                .expectNext(1)
+                .expectNext(1L)
                 .verifyComplete();
         } else {
             Flux.from(connection.createStatement("INSERT INTO codec_test values(@P0)")
-                .bind("P0", Parameters.in(parameterValueType, value))
-                .execute())
+                    .bind("P0", Parameters.in(parameterValueType, value))
+                    .execute())
                 .flatMap(Result::getRowsUpdated)
                 .as(StepVerifier::create)
-                .expectNext(1)
+                .expectNext(1L)
                 .verifyComplete();
         }
 
@@ -377,11 +377,11 @@ class CodecIntegrationTests extends IntegrationTestSupport {
 
         if (parameterValueType == null) {
             Flux.from(connection.createStatement("UPDATE codec_test SET my_col = @P0")
-                .bindNull("P0", value.getClass())
-                .execute())
+                    .bindNull("P0", value.getClass())
+                    .execute())
                 .flatMap(Result::getRowsUpdated)
                 .as(StepVerifier::create)
-                .expectNext(1)
+                .expectNext(1L)
                 .verifyComplete();
 
             connection.createStatement("SELECT my_col FROM codec_test")
@@ -392,11 +392,11 @@ class CodecIntegrationTests extends IntegrationTestSupport {
                 .verifyComplete();
 
             Flux.from(connection.createStatement("UPDATE codec_test SET my_col = @P0")
-                .bind("P0", Parameters.in(value.getClass()))
-                .execute())
+                    .bind("P0", Parameters.in(value.getClass()))
+                    .execute())
                 .flatMap(Result::getRowsUpdated)
                 .as(StepVerifier::create)
-                .expectNext(1)
+                .expectNext(1L)
                 .verifyComplete();
 
             connection.createStatement("SELECT my_col FROM codec_test")
@@ -408,11 +408,11 @@ class CodecIntegrationTests extends IntegrationTestSupport {
         } else {
 
             Flux.from(connection.createStatement("UPDATE codec_test SET my_col = @P0")
-                .bind("P0", Parameters.in(parameterValueType))
-                .execute())
+                    .bind("P0", Parameters.in(parameterValueType))
+                    .execute())
                 .flatMap(Result::getRowsUpdated)
                 .as(StepVerifier::create)
-                .expectNext(1)
+                .expectNext(1L)
                 .verifyComplete();
 
             connection.createStatement("SELECT my_col FROM codec_test")

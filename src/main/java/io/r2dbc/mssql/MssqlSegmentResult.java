@@ -181,7 +181,7 @@ final class MssqlSegmentResult implements MssqlResult {
     }
 
     @Override
-    public Mono<Integer> getRowsUpdated() {
+    public Mono<Long> getRowsUpdated() {
 
         return this.segments
             .<Long>handle((segment, sink) -> {
@@ -203,7 +203,7 @@ final class MssqlSegmentResult implements MssqlResult {
                 }
 
                 ReferenceCountUtil.release(segment);
-            }).reduce(Long::sum).map(Long::intValue);
+            }).reduce(Long::sum);
     }
 
     @Override

@@ -143,7 +143,12 @@ public final class DefaultCodecs implements Codecs {
         throw new IllegalArgumentException(String.format("Cannot encode [%s] parameter of type [%s]", parameterValue, value.getClass().getName()));
     }
 
+    @Nullable
     private SqlServerType getServerType(Parameter parameter) {
+
+        if (parameter.getType() instanceof Type.InferredType) {
+            return null;
+        }
 
         if (parameter.getType() instanceof R2dbcType) {
             return SqlServerType.of((R2dbcType) parameter.getType());

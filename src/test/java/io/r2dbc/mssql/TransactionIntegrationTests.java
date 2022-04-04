@@ -111,15 +111,15 @@ class TransactionIntegrationTests extends IntegrationTestSupport {
                 .flatMap(Result::getRowsUpdated))
             .concatWith(connection.rollbackTransactionToSavepoint("savepoint.1"))
             .concatWith(Flux.from(connection.createStatement("SELECT COUNT(*) FROM r2dbc_example /* in-tx */")
-                .execute())
+                    .execute())
                 .flatMap(result -> result.map((row, rowMetadata) -> row.get(0, Integer.class))))
             .concatWith(connection.commitTransaction())
             .concatWith(Flux.from(connection.createStatement("SELECT COUNT(*) FROM r2dbc_example /* after-tx */")
-                .execute())
+                    .execute())
                 .flatMap(result -> result.map((row, rowMetadata) -> row.get(0, Integer.class))))
             .as(StepVerifier::create)
-            .expectNext(1).as("Affected Rows Count from first INSERT")
-            .expectNext(1).as("Affected Rows Count from second INSERT")
+            .expectNext(1L).as("Affected Rows Count from first INSERT")
+            .expectNext(1L).as("Affected Rows Count from second INSERT")
             .expectNext(1).as("SELECT COUNT(*) after ROLLBACK TO SAVEPOINT")
             .expectNext(1).as("SELECT COUNT(*) after COMMIT")
             .verifyComplete();
@@ -142,7 +142,7 @@ class TransactionIntegrationTests extends IntegrationTestSupport {
             .<Object>flatMap(Result::getRowsUpdated)
             .concatWith(connection.rollbackTransaction())
             .as(StepVerifier::create)
-            .expectNext(1).as("Affected Rows Count from first INSERT")
+            .expectNext(1L).as("Affected Rows Count from first INSERT")
             .verifyComplete();
 
         connectionFactory.create().flatMapMany(c -> c.createStatement("SELECT * FROM r2dbc_example")
@@ -159,7 +159,7 @@ class TransactionIntegrationTests extends IntegrationTestSupport {
         connection.createStatement("INSERT INTO r2dbc_example VALUES(1, 'Jesse', 'Pinkman')")
             .execute().flatMap(Result::getRowsUpdated)
             .as(StepVerifier::create)
-            .expectNext(1)
+            .expectNext(1L)
             .verifyComplete();
 
         connection.createSavepoint("s1")
@@ -168,7 +168,7 @@ class TransactionIntegrationTests extends IntegrationTestSupport {
             .concatWith(Mono.fromSupplier(() -> connection.isAutoCommit()))
             .concatWith(connection.rollbackTransaction())
             .as(StepVerifier::create)
-            .expectNext(1).as("Affected Rows Count from first INSERT")
+            .expectNext(1L).as("Affected Rows Count from first INSERT")
             .expectNext(false).as("Auto-commit disabled by createSavepoint")
             .verifyComplete();
 
@@ -176,7 +176,7 @@ class TransactionIntegrationTests extends IntegrationTestSupport {
             .<Object>flatMap(Result::getRowsUpdated)
             .concatWith(connection.rollbackTransaction())
             .as(StepVerifier::create)
-            .expectNext(1).as("Affected Rows Count from second INSERT")
+            .expectNext(1L).as("Affected Rows Count from second INSERT")
             .verifyComplete();
 
         connectionFactory.create().flatMapMany(c -> c.createStatement("SELECT * FROM r2dbc_example")

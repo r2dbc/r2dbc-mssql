@@ -38,7 +38,7 @@ public interface MssqlResult extends Result {
      * {@inheritDoc}
      */
     @Override
-    Mono<Integer> getRowsUpdated();
+    Mono<Long> getRowsUpdated();
 
     /**
      * {@inheritDoc}
