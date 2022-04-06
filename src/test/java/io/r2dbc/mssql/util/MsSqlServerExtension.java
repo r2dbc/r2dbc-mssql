@@ -34,7 +34,7 @@ import java.util.function.Supplier;
 /**
  * Test container extension for Microsoft SQL Server.
  */
-@SuppressWarnings({"unchecked", "rawtypes", "deprecation"})
+@SuppressWarnings({"rawtypes"})
 public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCallback {
 
     private volatile MSSQLServerContainer<?> containerInstance = null;
@@ -165,8 +165,6 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
 
         /**
          * Returns whether this container is available.
-         *
-         * @return
          */
         @SuppressWarnings("try")
         boolean isAvailable() {

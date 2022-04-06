@@ -25,6 +25,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.SynchronousSink;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
+import reactor.util.context.ContextView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -340,8 +341,14 @@ final class StreamDecoder {
             throw new UnsupportedOperationException();
         }
 
+        @Deprecated
         @Override
         public Context currentContext() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ContextView contextView() {
             throw new UnsupportedOperationException();
         }
 

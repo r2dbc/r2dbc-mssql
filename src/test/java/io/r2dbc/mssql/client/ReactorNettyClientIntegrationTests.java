@@ -25,9 +25,9 @@ import io.r2dbc.spi.R2dbcNonTransientResourceException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.util.ReflectionUtils;
-import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.netty.Connection;
 import reactor.test.StepVerifier;
 
@@ -79,8 +79,8 @@ class ReactorNettyClientIntegrationTests extends IntegrationTestSupport {
     @Test
     void shouldCancelExchangeOnCloseFirstMessage() throws Exception {
 
-        EmitterProcessor<ClientMessage> messages = EmitterProcessor.create();
-        Flux<Message> query = this.client.exchange(messages, message -> true);
+        Sinks.Many<ClientMessage> messages = Sinks.many().unicast().onBackpressureBuffer();
+        Flux<Message> query = this.client.exchange(messages.asFlux(), message -> true);
         CompletableFuture<List<Message>> future = query.collectList().toFuture();
 
         this.connection.channel().eventLoop().execute(() -> {
@@ -88,7 +88,7 @@ class ReactorNettyClientIntegrationTests extends IntegrationTestSupport {
             this.connection.channel().close();
 
             SqlBatch batch = SqlBatch.create(0, this.client.getTransactionDescriptor(), "SELECT value FROM test");
-            messages.onNext(batch);
+            messages.tryEmitNext(batch);
         });
 
         try {
@@ -106,15 +106,15 @@ class ReactorNettyClientIntegrationTests extends IntegrationTestSupport {
 
         SqlBatch batch = SqlBatch.create(0, this.client.getTransactionDescriptor(), "SELECT value FROM test");
 
-        EmitterProcessor<ClientMessage> messages = EmitterProcessor.create();
-        Flux<Message> query = this.client.exchange(messages, message -> true);
+        Sinks.Many<ClientMessage> messages = Sinks.many().unicast().onBackpressureBuffer();
+        Flux<Message> query = this.client.exchange(messages.asFlux(), message -> true);
         CompletableFuture<List<Message>> future = query.doOnNext(ignore -> {
             connection.channel().close();
-            messages.onNext(batch);
+            messages.tryEmitNext(batch);
 
         }).collectList().toFuture();
 
-        messages.onNext(batch);
+        messages.tryEmitNext(batch);
 
         try {
             future.get(5, TimeUnit.SECONDS);
@@ -123,4 +123,5 @@ class ReactorNettyClientIntegrationTests extends IntegrationTestSupport {
             assertThat(e).hasCauseInstanceOf(ReactorNettyClient.MssqlConnectionClosedException.class).hasMessageContaining("closed");
         }
     }
+
 }

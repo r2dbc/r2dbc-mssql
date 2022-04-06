@@ -26,10 +26,9 @@ import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.assertj.core.api.Assertions;
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,11 +53,9 @@ public final class TestClient implements Client {
 
     private boolean closed;
 
-    private final EmitterProcessor<Message> requestProcessor = EmitterProcessor.create(false);
+    private final Sinks.Many<Message> requestProcessor = Sinks.many().multicast().onBackpressureBuffer();
 
-    private final FluxSink<Message> requests = this.requestProcessor.sink();
-
-    private final EmitterProcessor<Flux<Message>> responseProcessor = EmitterProcessor.create(false);
+    private final Sinks.Many<Flux<Message>> responseProcessor = Sinks.many().multicast().onBackpressureBuffer(256, false);
 
     private final TransactionStatus transactionStatus;
 
@@ -71,14 +68,13 @@ public final class TestClient implements Client {
         this.redirect = redirect;
         this.transactionStatus = transactionStatus;
 
-        FluxSink<Flux<Message>> responses = this.responseProcessor.sink();
 
         Assert.requireNonNull(windows, "Windows must not be null")
             .map(window -> window.exchanges)
             .map(exchanges -> exchanges
                 .concatMap(exchange ->
 
-                    this.requestProcessor.zipWith(exchange.requests)
+                    this.requestProcessor.asFlux().zipWith(exchange.requests)
                         .handle((tuple, sink) -> {
                             Message actual = tuple.getT1();
                             Consumer<Message> expected = (Consumer) tuple.getT2();
@@ -90,7 +86,7 @@ public final class TestClient implements Client {
                             }
                         })
                         .thenMany(exchange.responses)))
-            .subscribe(responses::next, responses::error, responses::complete);
+            .subscribe(this.responseProcessor::tryEmitNext, this.responseProcessor::tryEmitError, this.responseProcessor::tryEmitComplete);
     }
 
     public static Builder builder() {
@@ -117,10 +113,10 @@ public final class TestClient implements Client {
 
         Assert.requireNonNull(requests, "requests must not be null");
 
-        return this.responseProcessor
+        return this.responseProcessor.asFlux()
             .doOnSubscribe(s ->
                 Flux.from(requests)
-                    .subscribe(this.requests::next, this.requests::error))
+                    .subscribe(this.requestProcessor::tryEmitNext, this.requestProcessor::tryEmitError))
             .next()
             .flatMapMany(Function.identity());
     }

@@ -47,9 +47,9 @@ import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.R2dbcException;
 import io.r2dbc.spi.R2dbcNonTransientResourceException;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
-import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
@@ -65,6 +65,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
+import reactor.util.context.ContextView;
 
 import javax.annotation.Nullable;
 import java.security.GeneralSecurityException;
@@ -127,7 +128,7 @@ public final class ReactorNettyClient implements Client {
 
     private final Sinks.Many<ClientMessage> requestSink = Sinks.many().unicast().onBackpressureBuffer();
 
-    private final EmitterProcessor<Message> responseProcessor = EmitterProcessor.create(false);
+    private final Sinks.Many<Message> responseProcessor = Sinks.many().multicast().onBackpressureBuffer(512, false);
 
     private final TransactionListener transactionListener = new TransactionListener();
 
@@ -165,6 +166,7 @@ public final class ReactorNettyClient implements Client {
      */
     private ReactorNettyClient(Connection connection, TdsEncoder tdsEncoder, ConnectionContext connectionContext) {
         Assert.requireNonNull(connection, "Connection must not be null");
+        Assert.state(this.responseProcessor.asFlux() instanceof Subscriber, () -> "Response processor " + this.responseProcessor + " is not a Subscriber. Cannot proceed.");
 
         this.context = connectionContext;
 
@@ -216,8 +218,14 @@ public final class ReactorNettyClient implements Client {
                 throw new UnsupportedOperationException();
             }
 
+            @Deprecated
             @Override
             public Context currentContext() {
+                return Context.empty();
+            }
+
+            @Override
+            public ContextView contextView() {
                 return Context.empty();
             }
 
@@ -229,7 +237,7 @@ public final class ReactorNettyClient implements Client {
                     errorToUse = new MssqlConnectionException(errorToUse);
                 }
 
-                ReactorNettyClient.this.responseProcessor.onError(errorToUse);
+                ReactorNettyClient.this.responseProcessor.emitError(errorToUse, Sinks.EmitFailureHandler.FAIL_FAST);
             }
 
             @Override
@@ -284,7 +292,7 @@ public final class ReactorNettyClient implements Client {
                     return;
                 }
 
-                ReactorNettyClient.this.responseProcessor.onNext(message);
+                ReactorNettyClient.this.responseProcessor.emitNext(message, Sinks.EmitFailureHandler.FAIL_FAST);
             }
         };
 
@@ -307,14 +315,10 @@ public final class ReactorNettyClient implements Client {
             .subscribe(new CoreSubscriber<Message>() {
 
                 @Override
-                public Context currentContext() {
-                    return ReactorNettyClient.this.responseProcessor.currentContext();
-                }
-
-                @Override
                 public void onSubscribe(Subscription s) {
                     subscriptionRef.set(s);
-                    ReactorNettyClient.this.responseProcessor.onSubscribe(s);
+
+                    ((Subscriber<?>) ReactorNettyClient.this.responseProcessor.asFlux()).onSubscribe(s);
                 }
 
                 @Override
@@ -620,8 +624,8 @@ public final class ReactorNettyClient implements Client {
                 sink.error(CLOSED.get());
             }
 
-            Flux<Message> requestMessages = this.responseProcessor
-                .doOnSubscribe(s -> {
+            Flux<Message> requestMessages = this.responseProcessor.asFlux()
+                .doOnSubscribe(ignore -> {
                     this.outstandingRequests.incrementAndGet();
                     Flux.from(requests).subscribe(t -> {
 
@@ -695,7 +699,7 @@ public final class ReactorNettyClient implements Client {
             receiver.onError(supplier.get());
         }
 
-        this.responseProcessor.onError(supplier.get());
+        this.responseProcessor.emitError(supplier.get(), Sinks.EmitFailureHandler.FAIL_FAST);
     }
 
     /**
