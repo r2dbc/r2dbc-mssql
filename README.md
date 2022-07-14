@@ -8,7 +8,7 @@ This project contains the [Microsoft SQL Server][m] implementation of the [R2DBC
 
 This driver provides the following features:
 
-* Complies with R2DBC 0.9
+* Complies with R2DBC 1.0
 * Login with username/password with temporary SSL encryption
 * Full SSL encryption support (for e.g. Azure usage).
 * Transaction Control
@@ -78,8 +78,7 @@ Mono<Connection> connectionMono = Mono.from(connectionFactory.create());
 | `connectTimeout`  | Connection Id for tracing purposes. Defaults to 30 seconds. _(Optional)_
 | `hostNameInCertificate` | Expected hostname in SSL certificate. Supports wildcards (e.g. `*.database.windows.net`). _(Optional)_
 | `lockWaitTimeout` | Lock wait timeout using `SET LOCK_TIMEOUT …`. _(Optional)_
-| `preferCursoredExecution` | Whether to prefer cursors  or direct execution for queries. Uses by default direct. Cursors require more round-trips but are more backpressure-friendly. Defaults to direct execution. Can be `boolean` or a `Predicate<String>` accepting the SQL query. _(
-Optional)_
+| `preferCursoredExecution` | Whether to prefer cursors  or direct execution for queries. Uses by default direct. Cursors require more round-trips but are more backpressure-friendly. Defaults to direct execution. Can be `boolean` or a `Predicate<String>` accepting the SQL query. _(Optional)_
 | `sendStringParametersAsUnicode` | Configure whether to send character data as unicode (NVARCHAR, NCHAR, NTEXT) or whether to use the database encoding, defaults to `true`. If disabled, `CharSequence` data is sent using the database-specific collation such as ASCII/MBCS instead of Unicode.
 | `sslTunnel`       | Enables SSL tunnel usage when using a SSL tunnel or SSL terminator in front of SQL Server. Accepts `Function<SslContextBuilder, SslContextBuilder>` to customize the SSL tunnel settings. SSL tunneling is not related to SQL Server's built-in SSL support. _(Optional)_
 | `sslContextBuilderCustomizer`  | SSL Context customizer to configure SQL Server's built-in SSL support (`Function<SslContextBuilder, SslContextBuilder>`) _(Optional)_
@@ -254,9 +253,9 @@ values are fully materialized in the client before decoding. Make sure to accoun
 
 [sql-geography-ref]: https://docs.microsoft.com/en-us/sql/t-sql/spatial-geography/spatial-types-geography?view=sql-server-2017
 
-[r2dbc-blob-ref]: https://r2dbc.io/spec/0.9.0.M1/api/io/r2dbc/spi/Blob.html
+[r2dbc-blob-ref]: https://r2dbc.io/spec/1.0.0.RELEASE/api/io/r2dbc/spi/Blob.html
 
-[r2dbc-clob-ref]: https://r2dbc.io/spec/0.9.0.M1/api/io/r2dbc/spi/Clob.html
+[r2dbc-clob-ref]: https://r2dbc.io/spec/1.0.0.RELEASE/api/io/r2dbc/spi/Clob.html
 
 [java-bigdecimal-ref]: https://docs.oracle.com/javase/8/docs/api/java/math/BigDecimal.html
 
@@ -300,8 +299,8 @@ Logging facilities:
 
 Having trouble with R2DBC? We'd love to help!
 
-* Check the [spec documentation](https://r2dbc.io/spec/0.9.0.M1/spec/html/), and [Javadoc](https://r2dbc.io/spec/0.9.0.M1/api/).
-* If you are upgrading, check out the [changelog](https://r2dbc.io/spec/0.9.0.M1/CHANGELOG.txt) for "new and noteworthy" features.
+* Check the [spec documentation](https://r2dbc.io/spec/1.0.0.RELEASE/spec/html/), and [Javadoc](https://r2dbc.io/spec/1.0.0.RELEASE/api/).
+* If you are upgrading, check out the [changelog](https://r2dbc.io/spec/1.0.0.RELEASE/CHANGELOG.txt) for "new and noteworthy" features.
 * Ask a question - we monitor [stackoverflow.com](https://stackoverflow.com) for questions tagged with [`r2dbc`](https://stackoverflow.com/tags/r2dbc). You can also chat with the community
   on [Gitter](https://gitter.im/r2dbc/r2dbc).
 * Report bugs with R2DBC MSSQL at [github.com/r2dbc/r2dbc-mssql/issues](https://github.com/r2dbc/r2dbc-mssql/issues).
@@ -327,7 +326,7 @@ You don't need to build from source to use R2DBC MSSQL (binaries in Maven Centra
  $ ./mvnw clean install
 ```
 
-If you want to build with the regular `mvn` command, you will need [Maven v3.5.0 or above](https://maven.apache.org/run-maven/index.html).
+If you want to build with the regular `mvn` command, you will need [Maven v3.6.0 or above](https://maven.apache.org/run-maven/index.html).
 
 _Also see [CONTRIBUTING.adoc](https://github.com/r2dbc/.github/blob/main/CONTRIBUTING.adoc) if you wish to submit pull requests. Commits require `Signed-off-by` (`git commit -s`) to ensure [Developer Certificate of Origin](https://developercertificate.org/)._
 
