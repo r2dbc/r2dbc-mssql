@@ -1,6 +1,11 @@
 R2DBC MSSQL Changelog
 =============================
 
+1.0.0.RELEASE
+------------------
+* Upgrade to Project Reactor 2022.0.0 #260
+* Upgrade to R2DBC Pool 1.0.0.RELEASE #261
+
 1.0.0.RC1
 ------------------
 * Expand CI testing to other platforms. #250
