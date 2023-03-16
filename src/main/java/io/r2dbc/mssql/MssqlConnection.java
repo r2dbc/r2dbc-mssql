@@ -110,15 +110,14 @@ public final class MssqlConnection implements Connection {
 
             builder.append("BEGIN TRANSACTION");
             if (name != null) {
-                String nameToUse = sanitize(name);
+                String nameToUse = sanitize(name, 32);
                 Assert.isTrue(IDENTIFIER_PATTERN.matcher(nameToUse).matches(), "Transaction names must contain only characters and numbers and must not exceed 32 characters");
                 builder.append(" ").append(nameToUse);
 
                 if (mark != null) {
-                    String markToUse = sanitize(mark);
+                    String markToUse = sanitize(mark, 128);
                     Assert.isTrue(IDENTIFIER128_PATTERN.matcher(markToUse.substring(0, Math.min(128, markToUse.length()))).matches(), "Transaction names must contain only characters and numbers and" +
-                        " must not " +
-                        "exceed 128 characters");
+                        " must not exceed 128 characters");
                     builder.append(' ').append("WITH MARK '").append(markToUse).append("'");
                 }
             }
@@ -208,7 +207,7 @@ public final class MssqlConnection implements Connection {
 
         Assert.requireNonNull(name, "Savepoint name must not be null");
 
-        String nameToUse = sanitize(name);
+        String nameToUse = sanitize(name, 32);
         Assert.isTrue(IDENTIFIER_PATTERN.matcher(nameToUse).matches(), "Save point names must contain only characters and numbers and must not exceed 32 characters");
 
         return useTransactionStatus(tx -> {
@@ -279,7 +278,7 @@ public final class MssqlConnection implements Connection {
     public Mono<Void> rollbackTransactionToSavepoint(String name) {
 
         Assert.requireNonNull(name, "Savepoint name must not be null");
-        String nameToUse = sanitize(name);
+        String nameToUse = sanitize(name, 32);
         Assert.isTrue(IDENTIFIER_PATTERN.matcher(nameToUse).matches(), "Save point names must contain only characters and numbers and must not exceed 32 characters");
 
         return useTransactionStatus(tx -> {
@@ -413,8 +412,16 @@ public final class MssqlConnection implements Connection {
         return "SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql();
     }
 
-    private static String sanitize(String identifier) {
-        return identifier.replace('-', '_').replace('.', '_');
+    static String sanitize(final String identifier, final int maxLength) {
+        String sanitized = identifier
+            .replace('-', '_')
+            .replace('.', '_')
+            .substring(Math.max(0, identifier.length() - maxLength));
+
+        if (!Character.isLetterOrDigit(sanitized.charAt(0))) {
+            sanitized = sanitized.substring(1);
+        }
+        return sanitized;
     }
 
     private Mono<Void> exchange(String sql) {
