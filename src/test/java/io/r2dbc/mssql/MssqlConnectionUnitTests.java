@@ -26,6 +26,7 @@ import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.spi.IsolationLevel;
 import io.r2dbc.spi.ValidationDepth;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -354,6 +355,30 @@ class MssqlConnectionUnitTests {
             .as(StepVerifier::create)
             .expectNext(false)
             .verifyComplete();
+
+    }
+
+    @Nested
+    class SanitizeTests {
+        @Test
+        void shorterThanMax() {
+            assertThat(MssqlConnection.sanitize("12345", 10)).isEqualTo("12345");
+        }
+
+        @Test
+        void exactlyMax() {
+            assertThat(MssqlConnection.sanitize("1234567", 7)).isEqualTo("1234567");
+        }
+
+        @Test
+        void greaterThanMax() {
+            assertThat(MssqlConnection.sanitize("1234567", 3)).isEqualTo("567");
+        }
+
+        @Test
+        void dropStartingPunctuation() {
+            assertThat(MssqlConnection.sanitize("1_23_4", 5)).isEqualTo("23_4");
+        }
 
     }
 
