@@ -43,6 +43,7 @@ import java.util.regex.Pattern;
  *
  * @author Mark Paluch
  * @author Hebert Coelho
+ * @author Nayan Hajratwala
  * @see MssqlConnection
  * @see DefaultMssqlResult
  * @see ErrorDetails
@@ -117,7 +118,7 @@ public final class MssqlConnection implements Connection {
                 if (mark != null) {
                     String markToUse = sanitize(mark, 128);
                     Assert.isTrue(IDENTIFIER128_PATTERN.matcher(markToUse.substring(0, Math.min(128, markToUse.length()))).matches(), "Transaction names must contain only characters and numbers and" +
-                        " must not exceed 128 characters");
+                            " must not exceed 128 characters");
                     builder.append(' ').append("WITH MARK '").append(markToUse).append("'");
                 }
             }
@@ -412,29 +413,25 @@ public final class MssqlConnection implements Connection {
         return "SET TRANSACTION ISOLATION LEVEL " + isolationLevel.asSql();
     }
 
-    static String sanitize(final String identifier, final int maxLength) {
-        String sanitized = identifier
-            .replace('-', '_')
-            .replace('.', '_')
-            .substring(Math.max(0, identifier.length() - maxLength));
+    static String sanitize(String identifier, int maxLength) {
 
-        if (!Character.isLetterOrDigit(sanitized.charAt(0))) {
-            sanitized = sanitized.substring(1);
-        }
-        return sanitized;
+        return identifier
+                .replace('-', '_')
+                .replace('.', '_')
+                .substring(0, Math.min(identifier.length(), maxLength));
     }
 
     private Mono<Void> exchange(String sql) {
 
         ExceptionFactory factory = ExceptionFactory.withSql(sql);
         return QueryMessageFlow.exchange(this.client, sql)
-            .handle(factory::handleErrorResponse)
-            .then();
+                .handle(factory::handleErrorResponse)
+                .then();
     }
 
     private Mono<Void> useTransactionStatus(Function<TransactionStatus, Publisher<?>> function) {
         return Flux.defer(() -> function.apply(this.client.getTransactionStatus()))
-            .then();
+                .then();
     }
 
     enum EmptyTransactionDefinition implements TransactionDefinition {
