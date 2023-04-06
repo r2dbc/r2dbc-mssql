@@ -20,10 +20,13 @@ import java.util.function.Function;
 
 /**
  * Cache for prepared statements.
+ * <p>
+ * Implementations will need a default no-arg constructor for the {@link OptionMapper}
+ * to instantiate them from a discovery option.
  *
  * @author Mark Paluch
  */
-interface PreparedStatementCache {
+public interface PreparedStatementCache {
 
     /**
      * Marker for no prepared statement found/no prepared statement.

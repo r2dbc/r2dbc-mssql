@@ -87,6 +87,8 @@ public final class MssqlConnectionConfiguration {
 
     private final Predicate<String> preferCursoredExecution;
 
+    private final PreparedStatementCache preparedStatementCache;
+
     @Nullable
     private final Duration lockWaitTimeout;
 
@@ -119,8 +121,8 @@ public final class MssqlConnectionConfiguration {
     private final String username;
 
     private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, Duration connectTimeout, @Nullable String database, String host, String hostNameInCertificate,
-                                         @Nullable Duration lockWaitTimeout, CharSequence password, Predicate<String> preferCursoredExecution, int port, boolean sendStringParametersAsUnicode,
-                                         boolean ssl,
+                                         @Nullable Duration lockWaitTimeout, CharSequence password, Predicate<String> preferCursoredExecution, PreparedStatementCache preparedStatementCache,
+                                         int port, boolean sendStringParametersAsUnicode, boolean ssl,
                                          Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer,
                                          @Nullable Function<SslContextBuilder, SslContextBuilder> sslTunnelSslContextBuilderCustomizer, boolean tcpKeepAlive, boolean tcpNoDelay,
                                          boolean trustServerCertificate, @Nullable File trustStore, @Nullable String trustStoreType,
@@ -135,6 +137,7 @@ public final class MssqlConnectionConfiguration {
         this.lockWaitTimeout = lockWaitTimeout;
         this.password = Assert.requireNonNull(password, "password must not be null");
         this.preferCursoredExecution = Assert.requireNonNull(preferCursoredExecution, "preferCursoredExecution must not be null");
+        this.preparedStatementCache = Assert.requireNonNull(preparedStatementCache, "preparedStatementCache must not be null");
         this.port = port;
         this.sendStringParametersAsUnicode = sendStringParametersAsUnicode;
         this.ssl = ssl;
@@ -183,7 +186,7 @@ public final class MssqlConnectionConfiguration {
 
         return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, redirectServerName, hostNameInCertificate, this.lockWaitTimeout,
             this.password,
-            this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer,
+            this.preferCursoredExecution, this.preparedStatementCache, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer,
             this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustServerCertificate, this.trustStore, this.trustStoreType, this.trustStorePassword, this.username);
     }
 
@@ -193,7 +196,7 @@ public final class MssqlConnectionConfiguration {
     }
 
     ConnectionOptions toConnectionOptions() {
-        return new ConnectionOptions(this.preferCursoredExecution, new DefaultCodecs(), new IndefinitePreparedStatementCache(), this.sendStringParametersAsUnicode);
+        return new ConnectionOptions(this.preferCursoredExecution, new DefaultCodecs(), this.preparedStatementCache, this.sendStringParametersAsUnicode);
     }
 
     @Override
@@ -355,6 +358,8 @@ public final class MssqlConnectionConfiguration {
         private Duration lockWaitTimeout;
 
         private Predicate<String> preferCursoredExecution = sql -> false;
+
+        private PreparedStatementCache preparedStatementCache = new IndefinitePreparedStatementCache();
 
         private CharSequence password;
 
@@ -553,6 +558,17 @@ public final class MssqlConnectionConfiguration {
         }
 
         /**
+         * Configures the {@link PreparedStatementCache}. By default, uses {@link IndefinitePreparedStatementCache}.
+         *
+         * @param cache the cache implementation to use (must not be null).
+         * @return this {@link Builder}
+         */
+        public Builder preparedStatementCache(PreparedStatementCache cache) {
+            this.preparedStatementCache = Assert.requireNonNull(cache, "Prepared statement cache must not be null");
+            return this;
+        }
+
+        /**
          * Configure the port. Defaults to {@code 5432}.
          *
          * @param port the port
@@ -715,7 +731,7 @@ public final class MssqlConnectionConfiguration {
 
             return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, this.host, this.hostNameInCertificate, this.lockWaitTimeout,
                 this.password,
-                this.preferCursoredExecution, this.port, this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer,
+                this.preferCursoredExecution, this.preparedStatementCache, this.port, this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer,
                 this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive,
                 this.tcpNoDelay, this.trustServerCertificate, this.trustStore,
                 this.trustStoreType, this.trustStorePassword, this.username);

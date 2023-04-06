@@ -84,12 +84,15 @@ final class MssqlConnectionConfigurationUnitTests {
     void configuration() {
         UUID connectionId = UUID.randomUUID();
         Predicate<String> TRUE = s -> true;
+        NoPreparedStatementCache noCache = new NoPreparedStatementCache();
+
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
             .connectionId(connectionId)
             .database("test-database")
             .host("test-host")
             .password("test-password")
             .preferCursoredExecution(TRUE)
+            .preparedStatementCache(noCache)
             .port(100)
             .username("test-username")
             .sendStringParametersAsUnicode(false)
@@ -101,6 +104,7 @@ final class MssqlConnectionConfigurationUnitTests {
             .hasFieldOrPropertyWithValue("host", "test-host")
             .hasFieldOrPropertyWithValue("password", "test-password")
             .hasFieldOrPropertyWithValue("preferCursoredExecution", TRUE)
+            .hasFieldOrPropertyWithValue("preparedStatementCache", noCache)
             .hasFieldOrPropertyWithValue("port", 100)
             .hasFieldOrPropertyWithValue("username", "test-username")
             .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", false);
