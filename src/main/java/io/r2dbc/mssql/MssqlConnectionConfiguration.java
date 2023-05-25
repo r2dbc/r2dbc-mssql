@@ -45,6 +45,7 @@ import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
@@ -182,14 +183,14 @@ public final class MssqlConnectionConfiguration {
         }
 
         return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, redirectServerName, hostNameInCertificate, this.lockWaitTimeout,
-            this.password,
-            this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer,
-            this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustServerCertificate, this.trustStore, this.trustStoreType, this.trustStorePassword, this.username);
+                this.password,
+                this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer,
+                this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustServerCertificate, this.trustStore, this.trustStoreType, this.trustStorePassword, this.username);
     }
 
     ClientConfiguration toClientConfiguration() {
         return new DefaultClientConfiguration(this.connectTimeout, this.host, this.hostNameInCertificate, this.port, this.ssl, this.sslContextBuilderCustomizer,
-            this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustServerCertificate, this.trustStore, this.trustStoreType, this.trustStorePassword);
+                this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustServerCertificate, this.trustStore, this.trustStoreType, this.trustStorePassword);
     }
 
     ConnectionOptions toConnectionOptions() {
@@ -354,7 +355,7 @@ public final class MssqlConnectionConfiguration {
         @Nullable
         private Duration lockWaitTimeout;
 
-        private Predicate<String> preferCursoredExecution = sql -> false;
+        private Predicate<String> preferCursoredExecution = DefaultCursorPreference.INSTANCE;
 
         private CharSequence password;
 
@@ -714,11 +715,11 @@ public final class MssqlConnectionConfiguration {
             }
 
             return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, this.host, this.hostNameInCertificate, this.lockWaitTimeout,
-                this.password,
-                this.preferCursoredExecution, this.port, this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer,
-                this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive,
-                this.tcpNoDelay, this.trustServerCertificate, this.trustStore,
-                this.trustStoreType, this.trustStorePassword, this.username);
+                    this.password,
+                    this.preferCursoredExecution, this.port, this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer,
+                    this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive,
+                    this.tcpNoDelay, this.trustServerCertificate, this.trustStore,
+                    this.trustStoreType, this.trustStorePassword, this.username);
         }
 
     }
@@ -887,12 +888,35 @@ public final class MssqlConnectionConfiguration {
     private static SslContextBuilder createSslContextBuilder() {
         SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
         sslContextBuilder.sslProvider(
-                OpenSsl.isAvailable() ?
-                    io.netty.handler.ssl.SslProvider.OPENSSL :
-                    io.netty.handler.ssl.SslProvider.JDK)
-            .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-            .applicationProtocolConfig(null);
+                        OpenSsl.isAvailable() ?
+                                io.netty.handler.ssl.SslProvider.OPENSSL :
+                                io.netty.handler.ssl.SslProvider.JDK)
+                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                .applicationProtocolConfig(null);
         return sslContextBuilder;
+    }
+
+
+    static class DefaultCursorPreference implements Predicate<String> {
+
+        static final DefaultCursorPreference INSTANCE = new DefaultCursorPreference();
+
+        @Override
+        public boolean test(String sql) {
+
+            if (sql.isEmpty()) {
+                return false;
+            }
+
+            String lc = sql.trim().toLowerCase(Locale.ENGLISH);
+            if (lc.contains("for xml") || lc.contains("for json")) {
+                return false;
+            }
+
+            char c = sql.charAt(0);
+
+            return (c == 's' || c == 'S') && lc.startsWith("select");
+        }
     }
 
 }

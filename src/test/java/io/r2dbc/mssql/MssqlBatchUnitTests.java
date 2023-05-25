@@ -39,7 +39,7 @@ class MssqlBatchUnitTests {
             .thenRespond(DoneToken.create(1))
             .build();
 
-        new MssqlBatch(client, new ConnectionOptions())
+        new MssqlBatch(client, new TestConnectionOptions())
             .add("foo")
             .execute()
             .as(StepVerifier::create)
@@ -55,7 +55,7 @@ class MssqlBatchUnitTests {
             .thenRespond(DoneToken.create(1), DoneToken.create(1))
             .build();
 
-        new MssqlBatch(client, new ConnectionOptions())
+        new MssqlBatch(client, new TestConnectionOptions())
             .add("foo")
             .add("bar")
             .execute()
@@ -73,7 +73,7 @@ class MssqlBatchUnitTests {
                 "proc", 0))
             .build();
 
-        new MssqlBatch(client, new ConnectionOptions())
+        new MssqlBatch(client, new TestConnectionOptions())
             .add("foo")
             .execute()
             .as(StepVerifier::create)

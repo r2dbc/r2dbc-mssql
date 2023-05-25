@@ -17,7 +17,6 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.codec.Codecs;
-import io.r2dbc.mssql.codec.DefaultCodecs;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
@@ -37,10 +36,6 @@ class ConnectionOptions {
     private final boolean sendStringParametersAsUnicode;
 
     private volatile Duration statementTimeout = Duration.ZERO;
-
-    ConnectionOptions() {
-        this(sql -> false, new DefaultCodecs(), new IndefinitePreparedStatementCache(), true);
-    }
 
     ConnectionOptions(Predicate<String> preferCursoredExecution, Codecs codecs, PreparedStatementCache preparedStatementCache, boolean sendStringParametersAsUnicode) {
         this.preferCursoredExecution = preferCursoredExecution;

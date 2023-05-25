@@ -19,6 +19,8 @@ package io.r2dbc.mssql;
 import io.r2dbc.mssql.message.tds.Redirect;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.testcontainers.shaded.org.bouncycastle.asn1.x500.X500Name;
 import org.testcontainers.shaded.org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.testcontainers.shaded.org.bouncycastle.cert.X509CertificateHolder;
@@ -53,31 +55,31 @@ final class MssqlConnectionConfigurationUnitTests {
     @Test
     void builderNoApplicationName() {
         assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder().applicationName(null))
-            .withMessage("applicationName must not be null");
+                .withMessage("applicationName must not be null");
     }
 
     @Test
     void builderNoConnectionId() {
         assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder().connectionId(null))
-            .withMessage("connectionId must not be null");
+                .withMessage("connectionId must not be null");
     }
 
     @Test
     void builderNoHost() {
         assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder().host(null))
-            .withMessage("host must not be null");
+                .withMessage("host must not be null");
     }
 
     @Test
     void builderNoPassword() {
         assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder().password(null))
-            .withMessage("password must not be null");
+                .withMessage("password must not be null");
     }
 
     @Test
     void builderNoUsername() {
         assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder().username(null))
-            .withMessage("username must not be null");
+                .withMessage("username must not be null");
     }
 
     @Test
@@ -85,150 +87,150 @@ final class MssqlConnectionConfigurationUnitTests {
         UUID connectionId = UUID.randomUUID();
         Predicate<String> TRUE = s -> true;
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
-            .connectionId(connectionId)
-            .database("test-database")
-            .host("test-host")
-            .password("test-password")
-            .preferCursoredExecution(TRUE)
-            .port(100)
-            .username("test-username")
-            .sendStringParametersAsUnicode(false)
-            .build();
+                .connectionId(connectionId)
+                .database("test-database")
+                .host("test-host")
+                .password("test-password")
+                .preferCursoredExecution(TRUE)
+                .port(100)
+                .username("test-username")
+                .sendStringParametersAsUnicode(false)
+                .build();
 
         assertThat(configuration)
-            .hasFieldOrPropertyWithValue("connectionId", connectionId)
-            .hasFieldOrPropertyWithValue("database", "test-database")
-            .hasFieldOrPropertyWithValue("host", "test-host")
-            .hasFieldOrPropertyWithValue("password", "test-password")
-            .hasFieldOrPropertyWithValue("preferCursoredExecution", TRUE)
-            .hasFieldOrPropertyWithValue("port", 100)
-            .hasFieldOrPropertyWithValue("username", "test-username")
-            .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", false);
+                .hasFieldOrPropertyWithValue("connectionId", connectionId)
+                .hasFieldOrPropertyWithValue("database", "test-database")
+                .hasFieldOrPropertyWithValue("host", "test-host")
+                .hasFieldOrPropertyWithValue("password", "test-password")
+                .hasFieldOrPropertyWithValue("preferCursoredExecution", TRUE)
+                .hasFieldOrPropertyWithValue("port", 100)
+                .hasFieldOrPropertyWithValue("username", "test-username")
+                .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", false);
     }
 
     @Test
     void configurationDefaults() {
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
-            .applicationName("r2dbc")
-            .database("test-database")
-            .host("test-host")
-            .password("test-password")
-            .username("test-username")
-            .build();
+                .applicationName("r2dbc")
+                .database("test-database")
+                .host("test-host")
+                .password("test-password")
+                .username("test-username")
+                .build();
 
         assertThat(configuration)
-            .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
-            .hasFieldOrPropertyWithValue("database", "test-database")
-            .hasFieldOrPropertyWithValue("host", "test-host")
-            .hasFieldOrPropertyWithValue("password", "test-password")
-            .hasFieldOrPropertyWithValue("port", 1433)
-            .hasFieldOrPropertyWithValue("username", "test-username")
-            .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true);
+                .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
+                .hasFieldOrPropertyWithValue("database", "test-database")
+                .hasFieldOrPropertyWithValue("host", "test-host")
+                .hasFieldOrPropertyWithValue("password", "test-password")
+                .hasFieldOrPropertyWithValue("port", 1433)
+                .hasFieldOrPropertyWithValue("username", "test-username")
+                .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true);
     }
 
     @Test
     void constructorNoNoHost() {
         assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder()
-            .password("test-password")
-            .username("test-username")
-            .build())
-            .withMessage("host must not be null");
+                        .password("test-password")
+                        .username("test-username")
+                        .build())
+                .withMessage("host must not be null");
     }
 
     @Test
     void constructorNoPassword() {
         assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder()
-            .host("test-host")
-            .username("test-username")
-            .build())
-            .withMessage("password must not be null");
+                        .host("test-host")
+                        .username("test-username")
+                        .build())
+                .withMessage("password must not be null");
     }
 
     @Test
     void constructorNoUsername() {
         assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder()
-            .host("test-host")
-            .password("test-password")
-            .build())
-            .withMessage("username must not be null");
+                        .host("test-host")
+                        .password("test-password")
+                        .build())
+                .withMessage("username must not be null");
     }
 
     @Test
     void constructorNoSslCustomizer() {
         assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder()
-            .sslContextBuilderCustomizer(null)
-            .build())
-            .withMessage("sslContextBuilderCustomizer must not be null");
+                        .sslContextBuilderCustomizer(null)
+                        .build())
+                .withMessage("sslContextBuilderCustomizer must not be null");
     }
 
     @Test
     void redirect() {
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
-            .applicationName("r2dbc")
-            .database("test-database")
-            .host("test-host")
-            .password("test-password")
-            .username("test-username")
-            .build();
+                .applicationName("r2dbc")
+                .database("test-database")
+                .host("test-host")
+                .password("test-password")
+                .username("test-username")
+                .build();
 
         MssqlConnectionConfiguration target = configuration.withRedirect(Redirect.create("target", 1234));
 
         assertThat(target)
-            .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
-            .hasFieldOrPropertyWithValue("database", "test-database")
-            .hasFieldOrPropertyWithValue("host", "target")
-            .hasFieldOrPropertyWithValue("password", "test-password")
-            .hasFieldOrPropertyWithValue("port", 1234)
-            .hasFieldOrPropertyWithValue("username", "test-username")
-            .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true)
-            .hasFieldOrPropertyWithValue("hostNameInCertificate", "test-host");
+                .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
+                .hasFieldOrPropertyWithValue("database", "test-database")
+                .hasFieldOrPropertyWithValue("host", "target")
+                .hasFieldOrPropertyWithValue("password", "test-password")
+                .hasFieldOrPropertyWithValue("port", 1234)
+                .hasFieldOrPropertyWithValue("username", "test-username")
+                .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true)
+                .hasFieldOrPropertyWithValue("hostNameInCertificate", "test-host");
     }
 
     @Test
     void redirectOtherDomain() {
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
-            .applicationName("r2dbc")
-            .database("test-database")
-            .host("test-host.windows.net")
-            .password("test-password")
-            .username("test-username")
-            .build();
+                .applicationName("r2dbc")
+                .database("test-database")
+                .host("test-host.windows.net")
+                .password("test-password")
+                .username("test-username")
+                .build();
 
         MssqlConnectionConfiguration target = configuration.withRedirect(Redirect.create("target.other.domain", 1234));
 
         assertThat(target)
-            .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
-            .hasFieldOrPropertyWithValue("database", "test-database")
-            .hasFieldOrPropertyWithValue("host", "target.other.domain")
-            .hasFieldOrPropertyWithValue("password", "test-password")
-            .hasFieldOrPropertyWithValue("port", 1234)
-            .hasFieldOrPropertyWithValue("username", "test-username")
-            .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true)
-            .hasFieldOrPropertyWithValue("hostNameInCertificate", "test-host.windows.net");
+                .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
+                .hasFieldOrPropertyWithValue("database", "test-database")
+                .hasFieldOrPropertyWithValue("host", "target.other.domain")
+                .hasFieldOrPropertyWithValue("password", "test-password")
+                .hasFieldOrPropertyWithValue("port", 1234)
+                .hasFieldOrPropertyWithValue("username", "test-username")
+                .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true)
+                .hasFieldOrPropertyWithValue("hostNameInCertificate", "test-host.windows.net");
     }
 
     @Test
     void redirectInDomain() {
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
-            .applicationName("r2dbc")
-            .database("test-database")
-            .host("test-host.windows.net")
-            .password("test-password")
-            .username("test-username")
-            .hostNameInCertificate("*.windows.net")
-            .build();
+                .applicationName("r2dbc")
+                .database("test-database")
+                .host("test-host.windows.net")
+                .password("test-password")
+                .username("test-username")
+                .hostNameInCertificate("*.windows.net")
+                .build();
 
         MssqlConnectionConfiguration target = configuration.withRedirect(Redirect.create("worker.target.windows.net", 1234));
 
         assertThat(target)
-            .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
-            .hasFieldOrPropertyWithValue("database", "test-database")
-            .hasFieldOrPropertyWithValue("host", "worker.target.windows.net")
-            .hasFieldOrPropertyWithValue("password", "test-password")
-            .hasFieldOrPropertyWithValue("port", 1234)
-            .hasFieldOrPropertyWithValue("username", "test-username")
-            .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true)
-            .hasFieldOrPropertyWithValue("hostNameInCertificate", "*.target.windows.net");
+                .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
+                .hasFieldOrPropertyWithValue("database", "test-database")
+                .hasFieldOrPropertyWithValue("host", "worker.target.windows.net")
+                .hasFieldOrPropertyWithValue("password", "test-password")
+                .hasFieldOrPropertyWithValue("port", 1234)
+                .hasFieldOrPropertyWithValue("username", "test-username")
+                .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true)
+                .hasFieldOrPropertyWithValue("hostNameInCertificate", "*.target.windows.net");
     }
 
     @Test
@@ -244,7 +246,7 @@ final class MssqlConnectionConfigurationUnitTests {
         Certificate selfSignedCertificate = selfSign(keypair, "CN=dummy");
 
         KeyStore.Entry entry = new KeyStore.PrivateKeyEntry(keypair.getPrivate(),
-            new Certificate[]{selfSignedCertificate});
+                new Certificate[]{selfSignedCertificate});
 
         keyStore.setEntry("dummy", entry, new KeyStore.PasswordProtection("key-password".toCharArray()));
 
@@ -254,13 +256,13 @@ final class MssqlConnectionConfigurationUnitTests {
         }
 
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
-            .database("test-database")
-            .host("test-host.windows.net")
-            .password("test-password")
-            .username("test-username")
-            .trustStore(file)
-            .trustStorePassword("my-password".toCharArray())
-            .build();
+                .database("test-database")
+                .host("test-host.windows.net")
+                .password("test-password")
+                .username("test-username")
+                .trustStore(file)
+                .trustStorePassword("my-password".toCharArray())
+                .build();
 
         MssqlConnectionConfiguration.DefaultClientConfiguration clientConfiguration = (MssqlConnectionConfiguration.DefaultClientConfiguration) configuration.toClientConfiguration();
 
@@ -271,7 +273,7 @@ final class MssqlConnectionConfigurationUnitTests {
     }
 
     private static Certificate selfSign(KeyPair keyPair, String subjectDN)
-        throws Exception {
+            throws Exception {
 
         Date startDate = new Date();
         X500Name dnName = new X500Name(subjectDN);
@@ -283,16 +285,28 @@ final class MssqlConnectionConfigurationUnitTests {
 
 
         SubjectPublicKeyInfo subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(keyPair
-            .getPublic().getEncoded());
+                .getPublic().getEncoded());
 
         X509v3CertificateBuilder certificateBuilder = new X509v3CertificateBuilder(dnName,
-            BigInteger.valueOf(1), startDate, endDate, dnName, subjectPublicKeyInfo);
+                BigInteger.valueOf(1), startDate, endDate, dnName, subjectPublicKeyInfo);
 
         ContentSigner contentSigner = new JcaContentSignerBuilder("SHA256WithRSA").build(keyPair.getPrivate());
 
         X509CertificateHolder certificateHolder = certificateBuilder.build(contentSigner);
 
         return new JcaX509CertificateConverter()
-            .getCertificate(certificateHolder);
+                .getCertificate(certificateHolder);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"select", "SELECT", "sElEcT"})
+    void shouldAcceptQueries(String query) {
+        assertThat(MssqlConnectionConfiguration.DefaultCursorPreference.INSTANCE).accepts(query);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {" select", "sp_cursor", "INSERT"})
+    void shouldRejectQueries(String query) {
+        assertThat(MssqlConnectionConfiguration.DefaultCursorPreference.INSTANCE).rejects(query);
     }
 }
