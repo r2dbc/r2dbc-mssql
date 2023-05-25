@@ -32,8 +32,8 @@
     <url>https://github.com/r2dbc/r2dbc-mssql</url>
 
     <properties>
-        <assertj.version>3.23.1</assertj.version>
-        <blockhound.version>1.0.6.RELEASE</blockhound.version>
+        <assertj.version>3.24.2</assertj.version>
+        <blockhound.version>1.0.8.RELEASE</blockhound.version>
         <hikari-cp.version>4.0.3</hikari-cp.version>
         <java.version>1.8</java.version>
         <jsr305.version>3.0.2</jsr305.version>
@@ -47,9 +47,9 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <r2dbc-spi.version>1.0.0.RELEASE</r2dbc-spi.version>
         <r2dbc-pool.version>1.0.0.RELEASE</r2dbc-pool.version>
-        <reactor.version>2022.0.0</reactor.version>
+        <reactor.version>2022.0.7</reactor.version>
         <spring-framework.version>5.3.23</spring-framework.version>
-        <testcontainers.version>1.17.5</testcontainers.version>
+        <testcontainers.version>1.18.1</testcontainers.version>
     </properties>
 
     <licenses>
