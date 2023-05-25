@@ -1,6 +1,11 @@
 R2DBC MSSQL Changelog
 =============================
 
+1.0.1.RELEASE
+------------------
+* Transaction Names should be truncated when too long. #264
+* Ensure that`PreferredCursorExecution` is the only configuration flag to control cursor preference #267
+
 1.0.0.RELEASE
 ------------------
 * Upgrade to Project Reactor 2022.0.0 #260
