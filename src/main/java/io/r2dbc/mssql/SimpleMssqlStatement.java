@@ -29,7 +29,6 @@ import reactor.core.publisher.Flux;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
-import java.util.Locale;
 import java.util.function.Predicate;
 
 /**
@@ -61,7 +60,7 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
      */
     SimpleMssqlStatement(Client client, ConnectionOptions connectionOptions, String sql) {
 
-        super(connectionOptions.prefersCursors(sql) || prefersCursors(sql));
+        super(connectionOptions.prefersCursors(sql));
         this.connectionOptions = connectionOptions;
 
         Assert.requireNonNull(client, "Client must not be null");
@@ -160,28 +159,6 @@ final class SimpleMssqlStatement extends MssqlStatementSupport implements MssqlS
 
         super.fetchSize(fetchSize);
         return this;
-    }
-
-    /**
-     * Returns {@code true} if the query is supported by this {@link MssqlStatement}. Cursored execution is supported for {@literal SELECT} queries.
-     *
-     * @param sql the query to inspect.
-     * @return {@code true} if the {@code sql} query is supported.
-     */
-    static boolean prefersCursors(String sql) {
-
-        if (sql.isEmpty()) {
-            return false;
-        }
-
-        String lc = sql.trim().toLowerCase(Locale.ENGLISH);
-        if (lc.contains("for xml") || lc.contains("for json")) {
-            return false;
-        }
-
-        char c = sql.charAt(0);
-
-        return (c == 's' || c == 'S') && lc.startsWith("select");
     }
 
 }

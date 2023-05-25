@@ -54,7 +54,7 @@ class MssqlConnectionUnitTests {
 
     static MssqlConnectionMetadata metadata = new MssqlConnectionMetadata("SQL Server", "1.0");
 
-    static ConnectionOptions conectionOptions = new ConnectionOptions();
+    static ConnectionOptions conectionOptions = new TestConnectionOptions();
 
     @Test
     void shouldBeginTransactionFromInitialState() {
