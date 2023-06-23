@@ -30,11 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link PlpEncoded}.
@@ -125,7 +121,7 @@ class PlpEncodedUnitTests {
         PlpEncoded encoded = new PlpEncoded(SqlServerType.VARBINARYMAX, TestByteBufAllocator.TEST, Flux.empty(),
             () -> dispose.set(true));
 
-        encoded.release();
+        encoded.dispose();
 
         assertThat(dispose).isTrue();
     }

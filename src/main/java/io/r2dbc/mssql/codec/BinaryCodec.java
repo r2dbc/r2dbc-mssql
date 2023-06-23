@@ -20,13 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.message.tds.Encode;
-import io.r2dbc.mssql.message.type.Length;
-import io.r2dbc.mssql.message.type.LengthStrategy;
-import io.r2dbc.mssql.message.type.PlpLength;
-import io.r2dbc.mssql.message.type.SqlServerType;
-import io.r2dbc.mssql.message.type.TdsDataType;
-import io.r2dbc.mssql.message.type.TypeInformation;
-import io.r2dbc.mssql.message.type.TypeUtils;
+import io.r2dbc.mssql.message.type.*;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Blob;
 import reactor.core.publisher.Mono;
@@ -35,6 +29,8 @@ import reactor.util.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.function.IntFunction;
+import java.util.function.Supplier;
 
 /**
  * Codec for binary values that are represented as {@code byte[]} or {@link ByteBuffer}.
@@ -64,7 +60,7 @@ class BinaryCodec implements Codec<Object> {
     });
 
     private static final Set<SqlServerType> SUPPORTED_TYPES = EnumSet.of(SqlServerType.BINARY, SqlServerType.VARBINARY,
-        SqlServerType.VARBINARYMAX, SqlServerType.IMAGE);
+            SqlServerType.VARBINARYMAX, SqlServerType.IMAGE);
 
     private BinaryCodec() {
     }
@@ -84,8 +80,7 @@ class BinaryCodec implements Codec<Object> {
         Assert.requireNonNull(context, "RpcParameterContext must not be null");
         Assert.requireNonNull(value, "Value must not be null");
 
-        ByteBuf buffer;
-
+        int length;
         if (value instanceof byte[]) {
 
             byte[] bytes = (byte[]) value;
@@ -93,9 +88,7 @@ class BinaryCodec implements Codec<Object> {
             if (exceedsBigVarbinary(bytes.length)) {
                 return BlobCodec.INSTANCE.encode(allocator, context, Blob.from(Mono.just(ByteBuffer.wrap(bytes))));
             }
-
-            buffer = RpcEncoding.prepareBuffer(allocator, TdsDataType.BIGVARBINARY.getLengthStrategy(), SqlServerType.VARBINARY.getMaxLength(), bytes.length);
-            buffer.writeBytes(bytes);
+            length = bytes.length;
         } else {
 
             ByteBuffer bytes = (ByteBuffer) value;
@@ -104,11 +97,30 @@ class BinaryCodec implements Codec<Object> {
                 return BlobCodec.INSTANCE.encode(allocator, context, Blob.from(Mono.just(bytes)));
             }
 
-            buffer = RpcEncoding.prepareBuffer(allocator, TdsDataType.BIGVARBINARY.getLengthStrategy(), SqlServerType.VARBINARY.getMaxLength(), bytes.remaining());
-            buffer.writeBytes(bytes);
+            length = bytes.remaining();
         }
 
-        return new VarbinaryEncoded(TdsDataType.BIGVARBINARY, buffer);
+
+        IntFunction<ByteBuf> encoder = actualLength -> {
+            ByteBuf buffer;
+
+            if (value instanceof byte[]) {
+
+                byte[] bytes = (byte[]) value;
+
+                buffer = RpcEncoding.prepareBuffer(allocator, TdsDataType.BIGVARBINARY.getLengthStrategy(), SqlServerType.VARBINARY.getMaxLength(), actualLength);
+                buffer.writeBytes(bytes);
+            } else {
+
+                ByteBuffer bytes = (ByteBuffer) value;
+
+                buffer = RpcEncoding.prepareBuffer(allocator, TdsDataType.BIGVARBINARY.getLengthStrategy(), SqlServerType.VARBINARY.getMaxLength(), actualLength);
+                buffer.writeBytes(bytes.asReadOnlyBuffer());
+            }
+            return buffer;
+        };
+
+        return new VarbinaryEncoded(TdsDataType.BIGVARBINARY, Encoded.ofLengthAware(length, encoder));
     }
 
     @Override
@@ -133,12 +145,12 @@ class BinaryCodec implements Codec<Object> {
 
     @Override
     public Encoded encodeNull(ByteBufAllocator allocator) {
-        return new VarbinaryEncoded(TdsDataType.BIGVARBINARY, Unpooled.wrappedBuffer(NULL));
+        return new VarbinaryEncoded(TdsDataType.BIGVARBINARY, () -> Unpooled.wrappedBuffer(NULL));
     }
 
     @Override
     public Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
-        return new VarbinaryEncoded(TdsDataType.BIGVARBINARY, Unpooled.wrappedBuffer(NULL));
+        return new VarbinaryEncoded(TdsDataType.BIGVARBINARY, () -> Unpooled.wrappedBuffer(NULL));
     }
 
     @Override
@@ -206,7 +218,7 @@ class BinaryCodec implements Codec<Object> {
 
         private static final String FORMAL_TYPE = SqlServerType.VARBINARY + "(" + TypeUtils.SHORT_VARTYPE_MAX_BYTES + ")";
 
-        VarbinaryEncoded(TdsDataType dataType, ByteBuf value) {
+        VarbinaryEncoded(TdsDataType dataType, Supplier<ByteBuf> value) {
             super(dataType, SqlServerType.VARBINARY, value);
         }
 

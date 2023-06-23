@@ -35,13 +35,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -245,7 +239,6 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         }
 
         Encoded encoded = this.codecs.encode(this.client.getByteBufAllocator(), parameterContext, value);
-        encoded.touch("ParametrizedMssqlStatement.bind(…)");
 
         addBinding(getParameterName(identifier), isIn ? RpcDirection.IN : RpcDirection.OUT, encoded);
 
@@ -272,7 +265,6 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
         }
 
         Encoded encoded = this.codecs.encodeNull(this.client.getByteBufAllocator(), type);
-        encoded.touch("ParametrizedMssqlStatement.bindNull(…)");
         addBinding(getParameterName(identifier), RpcDirection.IN, encoded);
         return this;
     }

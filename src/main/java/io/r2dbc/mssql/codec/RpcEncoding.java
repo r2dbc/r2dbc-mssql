@@ -30,6 +30,7 @@ import reactor.util.annotation.Nullable;
 
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 /**
  * Utility methods to encode RPC parameters.
@@ -127,11 +128,15 @@ public final class RpcEncoding {
 
         Assert.notNull(serverType.getNullableType(), "Server type provides no nullable type");
         LengthStrategy lengthStrategy = serverType.getNullableType().getLengthStrategy();
-        ByteBuf buffer = prepareBuffer(allocator, lengthStrategy, serverType.getMaxLength(), serverType.getMaxLength());
 
-        valueEncoder.accept(buffer, value);
+        return new HintedEncoded(serverType.getNullableType(), serverType, () -> {
 
-        return new HintedEncoded(serverType.getNullableType(), serverType, buffer);
+            ByteBuf buffer = prepareBuffer(allocator, lengthStrategy, serverType.getMaxLength(), serverType.getMaxLength());
+
+            valueEncoder.accept(buffer, value);
+
+            return buffer;
+        });
     }
 
     /**
@@ -150,11 +155,16 @@ public final class RpcEncoding {
         Assert.notNull(serverType.getNullableType(), "Server type provides no nullable type");
 
         TdsDataType dataType = serverType.getNullableType();
-        ByteBuf buffer = prepareBuffer(allocator, dataType.getLengthStrategy(), serverType.getMaxLength(), length);
 
-        valueEncoder.accept(buffer, value);
 
-        return new HintedEncoded(dataType, serverType, buffer);
+        return new HintedEncoded(dataType, serverType, () -> {
+
+            ByteBuf buffer = prepareBuffer(allocator, dataType.getLengthStrategy(), serverType.getMaxLength(), length);
+
+            valueEncoder.accept(buffer, value);
+
+            return buffer;
+        });
     }
 
     /**
@@ -167,9 +177,8 @@ public final class RpcEncoding {
     public static Encoded encodeNull(ByteBufAllocator allocator, SqlServerType serverType) {
 
         Assert.notNull(serverType.getNullableType(), "Server type does not declare a nullable type");
-        ByteBuf buffer = prepareBuffer(allocator, serverType.getNullableType().getLengthStrategy(), serverType.getMaxLength(), 0);
 
-        return new HintedEncoded(serverType.getNullableType(), serverType, buffer);
+        return new HintedEncoded(serverType.getNullableType(), serverType, () -> prepareBuffer(allocator, serverType.getNullableType().getLengthStrategy(), serverType.getMaxLength(), 0));
     }
 
     /**
@@ -184,7 +193,7 @@ public final class RpcEncoding {
         Assert.isTrue(serverType.getMaxLength() > 0, "Server type does not declare a max length");
         Assert.notNull(serverType.getNullableType(), "Server type does not declare a nullable type");
 
-        return new HintedEncoded(serverType.getNullableType(), serverType, Unpooled.wrappedBuffer(buffer));
+        return new HintedEncoded(serverType.getNullableType(), serverType, () -> Unpooled.wrappedBuffer(buffer));
     }
 
     /**
@@ -197,11 +206,16 @@ public final class RpcEncoding {
     public static Encoded encodeTemporalNull(ByteBufAllocator allocator, SqlServerType serverType) {
 
         Assert.notNull(serverType.getNullableType(), "Server type does not declare a nullable type");
-        ByteBuf buffer = allocator.buffer(1);
 
-        Encode.asByte(buffer, 0);
 
-        return new HintedEncoded(serverType.getNullableType(), serverType, buffer);
+        return new HintedEncoded(serverType.getNullableType(), serverType, () -> {
+
+            ByteBuf buffer = allocator.buffer(1);
+
+            Encode.asByte(buffer, 0);
+
+            return buffer;
+        });
     }
 
     /**
@@ -215,12 +229,17 @@ public final class RpcEncoding {
     public static Encoded encodeTemporalNull(ByteBufAllocator allocator, SqlServerType serverType, int scale) {
 
         Assert.notNull(serverType.getNullableType(), "Server type does not declare a nullable type");
-        ByteBuf buffer = allocator.buffer(1);
 
-        Encode.asByte(buffer, scale);
-        Encode.asByte(buffer, 0); // value length
 
-        return new HintedEncoded(serverType.getNullableType(), serverType, buffer);
+        return new HintedEncoded(serverType.getNullableType(), serverType, () -> {
+
+            ByteBuf buffer = allocator.buffer(1);
+
+            Encode.asByte(buffer, scale);
+            Encode.asByte(buffer, 0); // value length
+
+            return buffer;
+        });
     }
 
     static ByteBuf prepareBuffer(ByteBufAllocator allocator, LengthStrategy lengthStrategy, int maxLength, int length) {
@@ -265,7 +284,7 @@ public final class RpcEncoding {
 
         private final SqlServerType sqlServerType;
 
-        public HintedEncoded(TdsDataType dataType, SqlServerType sqlServerType, ByteBuf value) {
+        public HintedEncoded(TdsDataType dataType, SqlServerType sqlServerType, Supplier<ByteBuf> value) {
             super(dataType, value);
             this.sqlServerType = sqlServerType;
         }

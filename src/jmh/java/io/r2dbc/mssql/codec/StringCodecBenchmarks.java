@@ -122,13 +122,13 @@ public class StringCodecBenchmarks extends CodecBenchmarkSupport {
     @Benchmark
     public Encoded encodeNull() {
         Encoded encoded = codecs.encodeNull(TestByteBufAllocator.TEST, String.class);
-        encoded.release();
+        encoded.dispose();
         return encoded;
     }
 
     private Encoded doEncode(Collation collation, Object value) {
         Encoded encoded = codecs.encode(TestByteBufAllocator.TEST, RpcParameterContext.in(ValueContext.character(collation, true)), value);
-        encoded.release();
+        encoded.dispose();
         return encoded;
     }
 }

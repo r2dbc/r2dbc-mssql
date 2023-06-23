@@ -27,6 +27,7 @@ import io.r2dbc.mssql.message.type.TypeInformation;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.function.Supplier;
 
 /**
  * Codec for fixed floating-point values that are represented as {@link BigDecimal}.
@@ -66,26 +67,31 @@ final class DecimalCodec extends AbstractNumericCodec<BigDecimal> {
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, BigDecimal value) {
 
-        BigDecimal valueToUse = value;
+        BigDecimal valueToUse;
 
         // Handle negative scale as a special case for Java 1.5 and later
-        if (valueToUse.scale() < 0) {
-            valueToUse = valueToUse.setScale(0);
+        if (value.scale() < 0) {
+            valueToUse = value.setScale(0);
+        } else {
+            valueToUse = value;
         }
 
         if (exceedsMaxPrecisionOrScale(valueToUse)) {
             throw new IllegalArgumentException("One or more values is out of range of values for the DECIMAL SQL type");
         }
 
-        ByteBuf buffer = RpcEncoding.prepareBuffer(allocator, TdsDataType.DECIMALN.getLengthStrategy(), 0x11, SqlServerType.DECIMAL.getMaxLength());
+        return new DecimalEncoded(TdsDataType.DECIMALN, () -> {
 
-        encodeBigDecimal(buffer, valueToUse);
-        return new DecimalEncoded(TdsDataType.DECIMALN, buffer, MAX_PRECISION, valueToUse.scale());
+            ByteBuf buffer = RpcEncoding.prepareBuffer(allocator, TdsDataType.DECIMALN.getLengthStrategy(), 0x11, SqlServerType.DECIMAL.getMaxLength());
+
+            encodeBigDecimal(buffer, valueToUse);
+            return buffer;
+        }, MAX_PRECISION, valueToUse.scale());
     }
 
     @Override
     Encoded doEncodeNull(ByteBufAllocator allocator) {
-        return new DecimalEncoded(TdsDataType.DECIMALN, Unpooled.wrappedBuffer(NULL), MAX_PRECISION, 0);
+        return new DecimalEncoded(TdsDataType.DECIMALN, () -> Unpooled.wrappedBuffer(NULL), MAX_PRECISION, 0);
     }
 
     @Override
@@ -145,7 +151,7 @@ final class DecimalCodec extends AbstractNumericCodec<BigDecimal> {
 
         private final int scale;
 
-        DecimalEncoded(TdsDataType dataType, ByteBuf value, int length, int scale) {
+        DecimalEncoded(TdsDataType dataType, Supplier<ByteBuf> value, int length, int scale) {
             super(dataType, SqlServerType.DECIMAL, value);
             this.length = length;
             this.scale = scale;

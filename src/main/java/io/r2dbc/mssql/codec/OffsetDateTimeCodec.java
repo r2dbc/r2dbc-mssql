@@ -20,11 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
-import io.r2dbc.mssql.message.type.Length;
-import io.r2dbc.mssql.message.type.SqlServerType;
-import io.r2dbc.mssql.message.type.TdsDataType;
-import io.r2dbc.mssql.message.type.TypeInformation;
-import io.r2dbc.mssql.message.type.TypeUtils;
+import io.r2dbc.mssql.message.type.*;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -58,14 +54,18 @@ final class OffsetDateTimeCodec extends AbstractCodec<OffsetDateTime> {
     @Override
     Encoded doEncode(ByteBufAllocator allocator, RpcParameterContext context, OffsetDateTime value) {
 
-        ByteBuf buffer = allocator.buffer(12);
 
-        Encode.asByte(buffer, 7); // scale
-        Encode.asByte(buffer, 0x0a); // length
+        return new RpcEncoding.HintedEncoded(TdsDataType.DATETIMEOFFSETN, SqlServerType.DATETIMEOFFSET, () -> {
 
-        doEncode(buffer, value.minusSeconds(value.getOffset().getTotalSeconds()));
+            ByteBuf buffer = allocator.buffer(12);
 
-        return new RpcEncoding.HintedEncoded(TdsDataType.DATETIMEOFFSETN, SqlServerType.DATETIMEOFFSET, buffer);
+            Encode.asByte(buffer, 7); // scale
+            Encode.asByte(buffer, 0x0a); // length
+
+            doEncode(buffer, value.minusSeconds(value.getOffset().getTotalSeconds()));
+
+            return buffer;
+        });
     }
 
     @Override
