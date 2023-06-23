@@ -145,6 +145,48 @@ class ParametrizedMssqlStatementIntegrationTests extends IntegrationTestSupport 
     }
 
     @Test
+    void shouldRepreparePreparedStatement() {
+
+        shouldExecuteBatch();
+
+        connection.createStatement("SET ANSI_NULLS ON")
+            .execute()
+            .flatMap(MssqlResult::getRowsUpdated)
+            .as(StepVerifier::create)
+            .verifyComplete();
+
+        Flux.from(connection.createStatement("SELECT first_name FROM r2dbc_example where id != @P0")
+            .fetchSize(2)
+            .bind("P0", 99)
+            .execute())
+            .flatMap(result -> {
+
+                return result.map((row, rowMetadata) -> new Object());
+            })
+            .as(StepVerifier::create)
+            .expectNextCount(3)
+            .verifyComplete();
+
+        connection.createStatement("SET ANSI_NULLS OFF")
+            .execute()
+            .flatMap(MssqlResult::getRowsUpdated)
+            .as(StepVerifier::create)
+            .verifyComplete();
+
+        Flux.from(connection.createStatement("SELECT first_name FROM r2dbc_example where id != @P0")
+            .fetchSize(2)
+            .bind("P0", 99)
+            .execute())
+            .flatMap(result -> {
+
+                return result.map((row, rowMetadata) -> new Object());
+            })
+            .as(StepVerifier::create)
+                .expectNextCount(3)
+            .verifyComplete();
+    }
+
+    @Test
     void shouldRunStatementWithMultipleResults() {
 
         AtomicLong resultCounter = new AtomicLong();

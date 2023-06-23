@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 the original author or authors.
+ * Copyright 2018-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,15 +25,7 @@ import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
-import io.r2dbc.mssql.message.token.AbstractDoneToken;
-import io.r2dbc.mssql.message.token.AbstractInfoToken;
-import io.r2dbc.mssql.message.token.ColumnMetadataToken;
-import io.r2dbc.mssql.message.token.DoneInProcToken;
-import io.r2dbc.mssql.message.token.DoneProcToken;
-import io.r2dbc.mssql.message.token.ErrorToken;
-import io.r2dbc.mssql.message.token.ReturnValue;
-import io.r2dbc.mssql.message.token.RowToken;
-import io.r2dbc.mssql.message.token.RpcRequest;
+import io.r2dbc.mssql.message.token.*;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.mssql.util.Operators;
@@ -46,6 +38,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import javax.annotation.processing.Completion;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -224,29 +217,30 @@ final class RpcQueryMessageFlow {
         Assert.requireNonNull(query, "Query must not be null");
 
         Sinks.Many<ClientMessage> outbound = Sinks.many().unicast().onBackpressureBuffer();
-        CursorState state = new CursorState();
-
         int handle = statementCache.getHandle(query, binding);
 
-        boolean needsPrepare;
+        AtomicBoolean retryReprepare = new AtomicBoolean(true);
+        AtomicBoolean needsPrepare = new AtomicBoolean(false);
+
         Flux<ClientMessage> messageProducer;
 
         if (handle == PreparedStatementCache.UNPREPARED) {
             messageProducer = Flux.defer(() -> {
                 outbound.emitNext(spCursorPrepExec(PreparedStatementCache.UNPREPARED, query, binding, client.getRequiredCollation(),
-                    client.getTransactionDescriptor()), Sinks.EmitFailureHandler.FAIL_FAST);
+                        client.getTransactionDescriptor()), Sinks.EmitFailureHandler.FAIL_FAST);
                 return outbound.asFlux();
             });
 
-            needsPrepare = true;
+            needsPrepare.set(true);
         } else {
             messageProducer = Flux.defer(() -> {
                 outbound.emitNext(spCursorExec(handle, binding, client.getTransactionDescriptor()), Sinks.EmitFailureHandler.FAIL_FAST);
                 return outbound.asFlux();
             });
-            needsPrepare = false;
+            needsPrepare.set(false);
         }
 
+        CursorState state = new CursorState();
         Flux<Message> exchange = client.exchange(messageProducer, isFinalToken(state));
         OnCursorComplete cursorComplete = new OnCursorComplete();
 
@@ -258,7 +252,7 @@ final class RpcQueryMessageFlow {
 
                     ReturnValue returnValue = (ReturnValue) message;
 
-                    emit = handleSpCursorReturnValue(statementCache, codecs, query, binding, state, needsPrepare, returnValue);
+                    emit = handleSpCursorReturnValue(statementCache, codecs, query, binding, state, needsPrepare.get(), returnValue);
 
                     if (!emit) {
                         returnValue.release();
@@ -266,6 +260,27 @@ final class RpcQueryMessageFlow {
                 }
 
                 state.update(message);
+
+                if (message instanceof ErrorToken) {
+                    if (isPreparedStatementNotFound(((ErrorToken) message).getNumber()) && retryReprepare.compareAndSet(true, false)) {
+                        logger.debug("Prepared statement no longer valid: {}", handle);
+                        state.update(Phase.PREPARE_RETRY);
+                    }
+                }
+
+                if (state.phase == Phase.PREPARE_RETRY) {
+                    emit = false;
+                }
+
+                if (DoneProcToken.isDone(message) && state.phase == Phase.PREPARE_RETRY) {
+
+                    logger.debug("Attempting to re-prepare statement: {}", query);
+                    needsPrepare.set(true);
+                    state.update(Phase.NONE);
+                    outbound.emitNext(spCursorPrepExec(PreparedStatementCache.UNPREPARED, query, binding, client.getRequiredCollation(),
+                            client.getTransactionDescriptor()), Sinks.EmitFailureHandler.FAIL_FAST);
+                    return;
+                }
 
                 handleMessage(client, fetchSize, outbound, state, message, sink, cursorComplete, emit);
             })
@@ -275,6 +290,21 @@ final class RpcQueryMessageFlow {
             QueryLogger.logQuery(client.getContext(), query);
         })
             .transform(it -> Operators.discardOnCancel(it, state::cancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release)).takeUntilOther(cursorComplete.takeUntil());
+    }
+
+    /**
+     * Check whether the error indicates a prepared statement requiring reprepare.
+     * <p>
+     * <ul><li>586: The prepared statement handle %d is not valid in this context. Please verify that current database, user
+     * default schema ANSI_NULLS and QUOTED_IDENTIFIER set options are not changed since the handle is prepared.</li>
+     * <li>8179: Could not find prepared statement with handle %d.</li>
+     * </ul>
+     *
+     * @param errorNumber
+     * @return
+     */
+    private static boolean isPreparedStatementNotFound(long errorNumber) {
+        return errorNumber == 8179 || errorNumber == 586;
     }
 
     private static boolean handleSpCursorReturnValue(PreparedStatementCache statementCache, Codecs codecs, String query, Binding binding, CursorState state, boolean needsPrepare,
@@ -356,7 +386,7 @@ final class RpcQueryMessageFlow {
 
         if (AbstractDoneToken.isAttentionAck(message)) {
 
-            state.phase = Phase.CLOSED;
+            state.update(Phase.CLOSED);
             sink.next(message);
             return;
         }
@@ -370,7 +400,7 @@ final class RpcQueryMessageFlow {
         }
 
         if (state.hasSeenError) {
-            state.phase = Phase.ERROR;
+            state.update(Phase.ERROR);
         }
 
         if (DoneProcToken.isDone(message)) {
@@ -386,7 +416,7 @@ final class RpcQueryMessageFlow {
 
             completion.run();
 
-            state.phase = Phase.CLOSED;
+            state.update(Phase.CLOSED);
             return;
         }
 
@@ -394,11 +424,11 @@ final class RpcQueryMessageFlow {
 
             if (((state.hasMore && phase == Phase.NONE) || state.hasSeenRows) && state.wantsMore()) {
                 if (phase == Phase.NONE) {
-                    state.phase = Phase.FETCHING;
+                    state.update(Phase.FETCHING);
                 }
                 requests.accept(spCursorFetch(state.cursorId, FETCH_NEXT, fetchSize, client.getTransactionDescriptor()));
             } else {
-                state.phase = Phase.CLOSING;
+                state.update(Phase.CLOSING);
                 // TODO: spCursorClose should happen also if a subscriber cancels its subscription.
                 requests.accept(spCursorClose(state.cursorId, client.getTransactionDescriptor()));
             }
@@ -628,6 +658,8 @@ final class RpcQueryMessageFlow {
 
         volatile boolean cancelRequested;
 
+        volatile ErrorToken errorToken;
+
         Phase phase = Phase.NONE;
 
         boolean wantsMore() {
@@ -644,12 +676,23 @@ final class RpcQueryMessageFlow {
             }
 
             if (it instanceof ErrorToken) {
+                this.errorToken = (ErrorToken) it;
                 this.hasSeenError = true;
             }
         }
 
+        public void update(Phase newPhase) {
+
+            this.phase = newPhase;
+
+            if (newPhase == Phase.PREPARE_RETRY) {
+                errorToken = null;
+                hasSeenError = false;
+            }
+        }
+
         enum Phase {
-            NONE, FETCHING, CLOSING, CLOSED, ERROR
+            NONE, FETCHING, PREPARE_RETRY, CLOSING, CLOSED, ERROR
         }
 
     }
