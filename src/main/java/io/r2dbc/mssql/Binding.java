@@ -79,8 +79,8 @@ class Binding {
     void clear() {
 
         this.parameters.forEach((s, parameter) -> {
-            while (parameter.encoded.refCnt() > 0) {
-                parameter.encoded.release();
+            if (!parameter.encoded.isDisposed()) {
+                parameter.encoded.dispose();
             }
         });
 

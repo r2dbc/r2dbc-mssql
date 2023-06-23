@@ -57,13 +57,13 @@ public class LongCodecBenchmarks extends CodecBenchmarkSupport {
     @Benchmark
     public Encoded encodeNull() {
         Encoded encoded = codecs.encodeNull(alloc, Long.class);
-        encoded.release();
+        encoded.dispose();
         return encoded;
     }
 
     private Encoded doEncode(Object value) {
         Encoded encoded = codecs.encode(alloc, RpcParameterContext.in(), value);
-        encoded.release();
+        encoded.dispose();
         return encoded;
     }
 }

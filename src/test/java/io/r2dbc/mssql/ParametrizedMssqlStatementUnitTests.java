@@ -16,6 +16,7 @@
 
 package io.r2dbc.mssql;
 
+import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.ParametrizedMssqlStatement.ParsedParameter;
 import io.r2dbc.mssql.client.TestClient;
 import io.r2dbc.mssql.codec.DefaultCodecs;
@@ -151,17 +152,18 @@ class ParametrizedMssqlStatementUnitTests {
     void shouldCachePreparedStatementHandle() {
 
         Encoded encodedPreparedStatementHandle = new DefaultCodecs().encode(TestByteBufAllocator.TEST, RpcParameterContext.in(), 1);
-        encodedPreparedStatementHandle.getValue().skipBytes(1); // skip maxlen byte
+        ByteBuf value = encodedPreparedStatementHandle.getValue();
+        value.skipBytes(1); // skip maxlen byte
 
         TestClient testClient = TestClient.builder()
-            .assertNextRequestWith(it -> {
-                assertThat(it).isInstanceOf(RpcRequest.class);
-                RpcRequest request = (RpcRequest) it;
-                assertThat(request.getProcId()).isEqualTo(RpcRequest.Sp_CursorPrepExec);
-            })
-            .thenRespond(new ReturnValue(0, null, (byte) 0, Types.integer(),
-                encodedPreparedStatementHandle.getValue()))
-            .build();
+                .assertNextRequestWith(it -> {
+                    assertThat(it).isInstanceOf(RpcRequest.class);
+                    RpcRequest request = (RpcRequest) it;
+                    assertThat(request.getProcId()).isEqualTo(RpcRequest.Sp_CursorPrepExec);
+                })
+                .thenRespond(new ReturnValue(0, null, (byte) 0, Types.integer(),
+                        value))
+                .build();
 
         String sql = "SELECT * from FOO where firstname = @firstname";
         ParametrizedMssqlStatement statement = new ParametrizedMssqlStatement(testClient, this.connectionOptions, sql);

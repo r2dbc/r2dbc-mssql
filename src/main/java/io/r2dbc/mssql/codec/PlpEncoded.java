@@ -57,7 +57,7 @@ public class PlpEncoded extends Encoded {
 
     public PlpEncoded(SqlServerType dataType, ByteBufAllocator allocator, Publisher<ByteBuf> dataStream, Disposable disposable) {
 
-        super(dataType.getNullableType(), Unpooled.EMPTY_BUFFER);
+        super(dataType.getNullableType(), () -> Unpooled.EMPTY_BUFFER);
 
         this.serverType = dataType;
         this.allocator = allocator;
@@ -72,12 +72,12 @@ public class PlpEncoded extends Encoded {
     }
 
     @Override
-    public PlpEncoded touch(Object hint) {
-        return this;
+    public boolean isDisposed() {
+        return this.disposable.isDisposed();
     }
 
     @Override
-    protected void deallocate() {
+    public void dispose() {
         this.disposable.dispose();
     }
 

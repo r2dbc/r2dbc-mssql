@@ -45,7 +45,7 @@ abstract class ByteArray {
         try {
             return ByteBufUtil.getBytes(encoded.getValue());
         } finally {
-            encoded.release();
+            encoded.dispose();
         }
     }
 

@@ -23,17 +23,15 @@ import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.codec.RpcParameterContext.CharacterValueContext;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ServerCharset;
-import io.r2dbc.mssql.message.type.Collation;
-import io.r2dbc.mssql.message.type.Length;
-import io.r2dbc.mssql.message.type.SqlServerType;
-import io.r2dbc.mssql.message.type.TdsDataType;
-import io.r2dbc.mssql.message.type.TypeUtils;
+import io.r2dbc.mssql.message.type.*;
 import io.r2dbc.spi.Clob;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.nio.CharBuffer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static io.r2dbc.mssql.message.type.SqlServerType.Category.NCHARACTER;
 
@@ -63,10 +61,10 @@ class CharacterEncoder {
     static Encoded encodeNull(SqlServerType serverType) {
 
         if (isNational(serverType)) {
-            return new VarcharEncoded(TdsDataType.NVARCHAR, Unpooled.wrappedBuffer(NULL));
+            return new VarcharEncoded(TdsDataType.NVARCHAR, () -> Unpooled.wrappedBuffer(NULL));
         }
 
-        return new NvarcharEncoded(TdsDataType.NVARCHAR, Unpooled.wrappedBuffer(NULL));
+        return new NvarcharEncoded(TdsDataType.NVARCHAR, () -> Unpooled.wrappedBuffer(NULL));
     }
 
     /**
@@ -77,16 +75,20 @@ class CharacterEncoder {
     static Encoded encodeBigVarchar(ByteBufAllocator allocator, RpcDirection direction, @Nullable SqlServerType serverType, Collation collation, boolean sendStringParametersAsUnicode,
                                     @Nullable CharSequence value) {
 
-        ByteBuf buffer = allocator.buffer((value != null ? value.length() * 2 : 0) + 7);
+        int initialCapacity = (value != null ? value.length() * 2 : 0) + 7;
+        Function<Boolean, ByteBuf> encoder = unicode -> {
+
+
+            ByteBuf buffer = allocator.buffer(initialCapacity);
+            encodeBigVarchar(buffer, direction, collation, unicode, value);
+            return buffer;
+        };
 
         if (isNational(serverType) || sendStringParametersAsUnicode) {
-
-            encodeBigVarchar(buffer, direction, collation, true, value);
-            return new NvarcharEncoded(TdsDataType.NVARCHAR, buffer);
+            return new NvarcharEncoded(TdsDataType.NVARCHAR, () -> encoder.apply(true));
         }
 
-        encodeBigVarchar(buffer, direction, collation, false, value);
-        return new VarcharEncoded(TdsDataType.BIGVARCHAR, buffer);
+        return new VarcharEncoded(TdsDataType.BIGVARCHAR, Encoded.ofLengthAware(initialCapacity, i -> encoder.apply(false)));
     }
 
     /**
@@ -205,14 +207,14 @@ class CharacterEncoder {
 
     private static ByteBuf encodeCharSequence(ByteBufAllocator allocator, boolean isNational, CharacterValueContext valueContext, CharSequence it) {
         return ByteBufUtil.encodeString(allocator, CharBuffer.wrap(it), isNational || valueContext.isSendStringParametersAsUnicode() ? ServerCharset.UNICODE.charset() :
-            valueContext.getCollation().getCharset());
+                valueContext.getCollation().getCharset());
     }
 
     private static class NvarcharEncoded extends RpcEncoding.HintedEncoded {
 
         private static final String FORMAL_TYPE = SqlServerType.NVARCHAR + "(" + (TypeUtils.SHORT_VARTYPE_MAX_BYTES / 2) + ")";
 
-        NvarcharEncoded(TdsDataType dataType, ByteBuf value) {
+        NvarcharEncoded(TdsDataType dataType, Supplier<ByteBuf> value) {
             super(dataType, SqlServerType.NVARCHAR, value);
         }
 
@@ -227,7 +229,7 @@ class CharacterEncoder {
 
         private static final String FORMAL_TYPE = SqlServerType.VARCHAR + "(" + TypeUtils.SHORT_VARTYPE_MAX_BYTES + ")";
 
-        VarcharEncoded(TdsDataType dataType, ByteBuf value) {
+        VarcharEncoded(TdsDataType dataType, Supplier<ByteBuf> value) {
             super(dataType, SqlServerType.NVARCHAR, value);
         }
 

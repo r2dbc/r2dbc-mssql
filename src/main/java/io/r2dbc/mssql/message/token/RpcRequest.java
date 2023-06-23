@@ -777,8 +777,9 @@ public final class RpcRequest implements ClientMessage, TokenStream {
         @Override
         void encode(ByteBuf buffer) {
             encodeHeader(buffer);
-            buffer.writeBytes(this.value.getValue());
-            this.value.release();
+            ByteBuf value = this.value.getValue();
+            buffer.writeBytes(value);
+            value.release();
         }
 
         void encodeHeader(ByteBuf buffer) {
@@ -789,7 +790,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
         int estimateLength() {
 
             int estimate = 2 + (getName() != null ? (getName().length() + 1) * 2 : 0);
-            estimate += this.value.getValue().readableBytes();
+            estimate += this.value.estimateLength();
 
             return estimate;
         }
