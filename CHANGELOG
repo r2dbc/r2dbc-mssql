@@ -1,6 +1,12 @@
 R2DBC MSSQL Changelog
 =============================
 
+1.0.2.RELEASE
+------------------
+* Could not find prepared statement with handle error #271
+* Capture encoder in `Encoded` instead of the plain value #272
+* Upgrade to Reactor 2022.0.9 #275
+
 1.0.1.RELEASE
 ------------------
 * Transaction Names should be truncated when too long. #264
