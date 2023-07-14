@@ -119,7 +119,7 @@ class FluxDiscardOnCancelUnitTests {
             .thenCancel()
             .verify();
 
-        assertThat(items).toIterable().containsSequence(2, 3);
+        assertThat(items).toIterable().containsOnly(3);
     }
 
     @Test
