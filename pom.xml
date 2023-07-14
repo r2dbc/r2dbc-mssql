@@ -46,7 +46,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <r2dbc-spi.version>1.0.0.RELEASE</r2dbc-spi.version>
         <r2dbc-pool.version>1.0.0.RELEASE</r2dbc-pool.version>
-        <reactor.version>2022.0.0</reactor.version>
+        <reactor.version>2022.0.9</reactor.version>
         <spring-framework.version>5.3.23</spring-framework.version>
         <testcontainers.version>1.17.5</testcontainers.version>
     </properties>
