@@ -36,12 +36,7 @@ import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.header.PacketIdProvider;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.tds.Redirect;
-import io.r2dbc.mssql.message.token.AbstractDoneToken;
-import io.r2dbc.mssql.message.token.AbstractInfoToken;
-import io.r2dbc.mssql.message.token.Attention;
-import io.r2dbc.mssql.message.token.EnvChangeToken;
-import io.r2dbc.mssql.message.token.FeatureExtAckToken;
-import io.r2dbc.mssql.message.token.LoginAckToken;
+import io.r2dbc.mssql.message.token.*;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.R2dbcException;
@@ -49,12 +44,7 @@ import io.r2dbc.spi.R2dbcNonTransientResourceException;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
-import reactor.core.publisher.EmitterProcessor;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSink;
-import reactor.core.publisher.Sinks;
-import reactor.core.publisher.SynchronousSink;
+import reactor.core.publisher.*;
 import reactor.netty.Connection;
 import reactor.netty.NettyOutbound;
 import reactor.netty.resources.ConnectionProvider;
@@ -363,7 +353,8 @@ public final class ReactorNettyClient implements Client {
     @SuppressWarnings("unchecked")
     private <T> Mono<T> resumeError(Throwable throwable) {
 
-        handleConnectionError(throwable);
+        logger.error(this.context.getMessage("Error: {}"), throwable.getMessage(), throwable);
+
         this.requestSink.emitComplete((signalType, emitResult) -> {
 
             if (emitResult.isFailure()) {
@@ -373,8 +364,7 @@ public final class ReactorNettyClient implements Client {
             return false;
         });
 
-        logger.error(this.context.getMessage("Error: {}"), throwable.getMessage(), throwable);
-
+        handleConnectionError(throwable);
         return (Mono<T>) close();
     }
 
