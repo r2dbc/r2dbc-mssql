@@ -28,6 +28,7 @@ import org.testcontainers.shaded.org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.testcontainers.shaded.org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.testcontainers.shaded.org.bouncycastle.operator.ContentSigner;
 import org.testcontainers.shaded.org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import reactor.netty.resources.ConnectionProvider;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -86,6 +87,7 @@ final class MssqlConnectionConfigurationUnitTests {
     void configuration() {
         UUID connectionId = UUID.randomUUID();
         Predicate<String> TRUE = s -> true;
+        ConnectionProvider connectionProvider = ConnectionProvider.create("test");
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
                 .connectionId(connectionId)
                 .database("test-database")
@@ -95,6 +97,7 @@ final class MssqlConnectionConfigurationUnitTests {
                 .port(100)
                 .username("test-username")
                 .sendStringParametersAsUnicode(false)
+                .connectionProvider(connectionProvider)
                 .build();
 
         assertThat(configuration)
@@ -105,7 +108,8 @@ final class MssqlConnectionConfigurationUnitTests {
                 .hasFieldOrPropertyWithValue("preferCursoredExecution", TRUE)
                 .hasFieldOrPropertyWithValue("port", 100)
                 .hasFieldOrPropertyWithValue("username", "test-username")
-                .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", false);
+                .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", false)
+                .hasFieldOrPropertyWithValue("connectionProvider", connectionProvider);
     }
 
     @Test
