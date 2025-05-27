@@ -90,7 +90,7 @@ public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCa
     }
 
     public MssqlConnectionConfiguration.Builder configBuilder() {
-        return MssqlConnectionConfiguration.builder().host(getHost()).username(getUsername()).password(getPassword());
+        return MssqlConnectionConfiguration.builder().host(getHost()).port(getPort()).username(getUsername()).password(getPassword());
     }
 
     public MssqlConnectionConfiguration getConnectionConfiguration() {
