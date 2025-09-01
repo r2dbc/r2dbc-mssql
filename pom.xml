@@ -212,8 +212,7 @@
                 <version>3.11.0</version>
                 <configuration>
                     <showWarnings>true</showWarnings>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <release>8</release>
                 </configuration>
             </plugin>
             <plugin>
@@ -272,6 +271,8 @@
                         <link>https://projectreactor.io/docs/core/release/api/</link>
                         <link>https://www.reactive-streams.org/reactive-streams-1.0.4-javadoc/</link>
                     </links>
+                    <doclint>-missing</doclint>
+                    <javadocVersion>1.8</javadocVersion>
                 </configuration>
                 <executions>
                     <execution>
@@ -361,6 +362,15 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.8.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                </configuration>
             </plugin>
         </plugins>
         <resources>
@@ -475,12 +485,14 @@
 
         <profile>
             <id>snapshot</id>
-            <distributionManagement>
-                <snapshotRepository>
-                    <id>sonatype</id>
-                    <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-                </snapshotRepository>
-            </distributionManagement>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
 
         <profile>
@@ -512,19 +524,9 @@
                             </executions>
                         </plugin>
 
-                        <!-- Deploy to Sonatype OSS Nexus -->
-
                         <plugin>
-                            <groupId>org.sonatype.plugins</groupId>
-                            <artifactId>nexus-staging-maven-plugin</artifactId>
-                            <version>1.6.13</version>
-                            <extensions>true</extensions>
-                            <configuration>
-                                <serverId>sonatype</serverId>
-                                <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                                <autoReleaseAfterClose>false</autoReleaseAfterClose>
-                                <keepStagingRepositoryOnFailure>true</keepStagingRepositoryOnFailure>
-                            </configuration>
+                                                        <groupId>org.sonatype.central</groupId>
+                            <artifactId>central-publishing-maven-plugin</artifactId>
                         </plugin>
                     </plugins>
 

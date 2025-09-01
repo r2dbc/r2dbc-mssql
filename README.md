@@ -1,4 +1,4 @@
-# Reactive Relational Database Connectivity Microsoft SQL Server Implementation [![Java CI with Maven](https://github.com/r2dbc/r2dbc-mssql/workflows/Java%20CI%20with%20Maven/badge.svg?branch=main)](https://github.com/r2dbc/r2dbc-mssql/actions?query=workflow%3A%22Java+CI+with+Maven%22+branch%3Amain) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.r2dbc/r2dbc-mssql/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.r2dbc/r2dbc-mssql)
+# Reactive Relational Database Connectivity Microsoft SQL Server Implementation [![Java CI with Maven](https://github.com/r2dbc/r2dbc-mssql/actions/workflows/ci.yml/badge.svg)](https://github.com/r2dbc/r2dbc-mssql/actions/workflows/ci.yml) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.r2dbc/r2dbc-mssql/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.r2dbc/r2dbc-mssql)
  
 
 This project contains the [Microsoft SQL Server][m] implementation of the [R2DBC SPI][r]. This implementation is not intended to be used directly, but rather to be used as the backing implementation for a humane client library to delegate to
@@ -126,7 +126,7 @@ Binding also allows positional index (zero-based) references. The parameter inde
 
 ### Maven configuration
 
-Artifacts can be found on [Maven Central](https://search.maven.org/search?q=r2dbc-mssql).
+Artifacts can be found on [Maven Central](https://central.sonatype.com/search?q=r2dbc-mssql).
 
 ```xml
 <dependency>
@@ -146,9 +146,9 @@ If you'd rather like the latest snapshots of the upcoming major version, use our
 </dependency>
 
 <repository>
-<id>sonatype-nexus-snapshots</id>
-<name>Sonatype OSS Snapshot Repository</name>
-<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+  <id>central-portal-snapshots</id>
+  <name>Central Portal Snapshots</name>
+  <url>https://central.sonatype.com/repository/maven-snapshots/</url>
 </repository>
 ``` 
 
