@@ -166,9 +166,14 @@ public class BlobCodec extends AbstractCodec<Blob> {
                 result.flip();
                 return result;
             })
-                .doOnDiscard(ByteBuf.class, ByteBuf::release)
+                .doOnDiscard(ByteBuf.class, buffer ->
+                    {
+                        if (buffer.refCnt() > 0) {
+                            buffer.release();
+                        }
+                    }
+                )
                 .doOnCancel(() -> {
-
                     for (ByteBuf buffer : this.buffers) {
                         if (buffer.refCnt() > 0) {
                             buffer.release();

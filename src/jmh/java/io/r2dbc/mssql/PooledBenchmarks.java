@@ -61,8 +61,7 @@ public class PooledBenchmarks extends BenchmarkSettings {
 
             this.jdbc = extension.getDataSource();
 
-            MssqlConnectionConfiguration configuration =
-                MssqlConnectionConfiguration.builder().host(extension.getHost()).username(extension.getUsername()).password(extension.getPassword()).build();
+            MssqlConnectionConfiguration configuration = extension.configBuilder().build();
 
             MssqlConnectionFactory mssqlConnectionFactory = new MssqlConnectionFactory(configuration);
             ConnectionPoolConfiguration poolConfiguration = ConnectionPoolConfiguration.builder(mssqlConnectionFactory).maxSize(4).build();
@@ -90,6 +89,7 @@ public class PooledBenchmarks extends BenchmarkSettings {
     }
 
     @Benchmark
+    @Testable
     public void simpleDirectR2dbc(ConnectionHolder connectionHolder, Blackhole voodoo) {
 
         String optname = Mono.usingWhen(connectionHolder.r2dbc.create(), connection -> {

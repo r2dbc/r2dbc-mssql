@@ -67,6 +67,7 @@ class RowTokenUnitTests {
         assertThat(rowToken.getColumnData(1)).isNotNull();
         assertThat(rowToken.getColumnData(2)).isNotNull();
         assertThat(rowToken.getColumnData(3)).isNotNull();
+        buffer.release();
     }
 
     @Test
@@ -111,6 +112,9 @@ class RowTokenUnitTests {
 
         assertThat(row.getColumnData(0).readableBytes()).isEqualTo(5);
         assertThat(row.getColumnData(1).readableBytes()).isEqualTo(10016);
+
+        rowData.release();
+        row.release();
     }
 
     @Test
@@ -129,6 +133,9 @@ class RowTokenUnitTests {
 
         assertThat(row.getColumnData(0).readableBytes()).isEqualTo(5);
         assertThat(row.getColumnData(1)).isNull();
+
+        rowData.release();
+        row.release();
     }
 
     @Test
@@ -143,6 +150,7 @@ class RowTokenUnitTests {
 
         ByteBuf rowData = loadRowData("int-varcharmax-data.txt");
         CanDecodeTestSupport.testCanDecode(rowData, buffer -> RowToken.canDecode(buffer, columns.getColumns()));
+        rowData.release();
     }
 
     @Test

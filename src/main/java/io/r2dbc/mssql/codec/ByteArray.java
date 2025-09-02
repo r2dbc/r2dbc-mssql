@@ -42,10 +42,14 @@ abstract class ByteArray {
 
         Encoded encoded = encodeFunction.apply(ByteBufAllocator.DEFAULT);
 
+        ByteBuf buffer = null;
         try {
-            return ByteBufUtil.getBytes(encoded.getValue());
+            buffer = encoded.getValue();
+            return ByteBufUtil.getBytes(buffer);
         } finally {
-            encoded.dispose();
+            if (buffer != null && buffer.refCnt() > 0) {
+                buffer.release();
+            }
         }
     }
 
