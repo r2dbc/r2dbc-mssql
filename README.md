@@ -88,6 +88,7 @@ Mono<Connection> connectionMono = Mono.from(connectionFactory.create());
 | `trustStoreType`  | Type of the TrustStore. Defaults to `KeyStore.getDefaultType()`. _(Optional)_
 | `trustStore`      | Path to the certificate TrustStore file. _(Optional)_
 | `trustStorePassword` | Password used to check the integrity of the TrustStore data. _(Optional)_
+| `connectionProvider` | Set the `reactor.netty.resources.ConnectionProvider` to be used when creating the connection. Defaults to `ConnectionProvider.newConnection()`. _(Optional)_                                                                                                              |
 
 
 **Programmatic Configuration**

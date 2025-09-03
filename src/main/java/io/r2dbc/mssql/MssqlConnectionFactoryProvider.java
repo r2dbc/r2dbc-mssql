@@ -21,6 +21,7 @@ import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.ConnectionFactoryOptions;
 import io.r2dbc.spi.ConnectionFactoryProvider;
 import io.r2dbc.spi.Option;
+import reactor.netty.resources.ConnectionProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -135,6 +136,13 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
     public static final Option<char[]> TRUST_STORE_PASSWORD = Option.valueOf("trustStorePassword");
 
     /**
+     * Optional {@link reactor.netty.resources.ConnectionProvider} to control Netty configuration directly
+     *
+     * @since 1.1.0
+     */
+    public static final Option<ConnectionProvider> CONNECTION_PROVIDER = Option.valueOf("connectionProvider");
+
+    /**
      * Driver option value.
      */
     public static final String MSSQL_DRIVER = "sqlserver";
@@ -194,6 +202,7 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         mapper.from(TRUST_STORE).map(OptionMapper::toFile).to(builder::trustStore);
         mapper.fromTyped(TRUST_STORE_TYPE).to(builder::trustStoreType);
         mapper.from(TRUST_STORE_PASSWORD).map(it -> it instanceof String ? ((String) it).toCharArray() : (char[]) it).to(builder::trustStorePassword);
+        mapper.fromTyped(CONNECTION_PROVIDER).to(builder::connectionProvider);
 
         builder.host(connectionFactoryOptions.getRequiredValue(HOST).toString());
         builder.password((CharSequence) connectionFactoryOptions.getRequiredValue(PASSWORD));
