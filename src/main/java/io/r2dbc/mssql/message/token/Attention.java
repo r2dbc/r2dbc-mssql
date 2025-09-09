@@ -27,6 +27,7 @@ import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.tds.TdsFragment;
 import io.r2dbc.mssql.message.tds.TdsPackets;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.mssql.util.ReferenceCountUtil;
 
 import java.util.Objects;
 
@@ -34,6 +35,7 @@ import java.util.Objects;
  * Attention signal to cancel a running operation.
  *
  * @author Mark Paluch
+ * @author Tomasz Marciniak
  * @since 0.9
  */
 public final class Attention implements ClientMessage, TokenStream {
@@ -79,9 +81,7 @@ public final class Attention implements ClientMessage, TokenStream {
         ByteBuf buffer = allocator.buffer(length);
         encode(buffer);
 
-        if(buffer.refCnt() > 0) {
-            buffer.release();
-        }
+        ReferenceCountUtil.maybeRelease(buffer);
 
         return TdsPackets.create(header, Unpooled.EMPTY_BUFFER);
     }

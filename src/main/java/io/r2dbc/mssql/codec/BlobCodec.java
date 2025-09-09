@@ -19,12 +19,9 @@ package io.r2dbc.mssql.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.r2dbc.mssql.message.type.Length;
-import io.r2dbc.mssql.message.type.LengthStrategy;
-import io.r2dbc.mssql.message.type.PlpLength;
-import io.r2dbc.mssql.message.type.SqlServerType;
-import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.message.type.*;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.mssql.util.ReferenceCountUtil;
 import io.r2dbc.spi.Blob;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -32,11 +29,7 @@ import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Codec for binary values that are represented as {@link Blob}.
@@ -48,6 +41,7 @@ import java.util.Set;
  * </ul>
  *
  * @author Mark Paluch
+ * @author Tomasz Marciniak
  */
 public class BlobCodec extends AbstractCodec<Blob> {
 
@@ -56,8 +50,7 @@ public class BlobCodec extends AbstractCodec<Blob> {
      */
     public static final BlobCodec INSTANCE = new BlobCodec();
 
-    private static final Set<SqlServerType> SUPPORTED_TYPES = EnumSet.of(SqlServerType.BINARY, SqlServerType.VARBINARY,
-        SqlServerType.VARBINARYMAX, SqlServerType.IMAGE);
+    private static final Set<SqlServerType> SUPPORTED_TYPES = EnumSet.of(SqlServerType.BINARY, SqlServerType.VARBINARY, SqlServerType.VARBINARYMAX, SqlServerType.IMAGE);
 
     private BlobCodec() {
         super(Blob.class);
@@ -165,21 +158,11 @@ public class BlobCodec extends AbstractCodec<Blob> {
 
                 result.flip();
                 return result;
-            })
-                .doOnDiscard(ByteBuf.class, buffer ->
-                    {
-                        if (buffer.refCnt() > 0) {
-                            buffer.release();
-                        }
-                    }
-                )
-                .doOnCancel(() -> {
-                    for (ByteBuf buffer : this.buffers) {
-                        if (buffer.refCnt() > 0) {
-                            buffer.release();
-                        }
-                    }
-                });
+            }).doOnDiscard(ByteBuf.class, ReferenceCountUtil::maybeRelease).doOnCancel(() -> {
+                for (ByteBuf buffer : this.buffers) {
+                    ReferenceCountUtil.maybeRelease(buffer);
+                }
+            });
         }
 
         @Override
@@ -188,9 +171,7 @@ public class BlobCodec extends AbstractCodec<Blob> {
             return Mono.fromRunnable(() -> {
 
                 for (ByteBuf buffer : this.buffers) {
-                    if (buffer.refCnt() > 0) {
-                        buffer.release();
-                    }
+                    ReferenceCountUtil.maybeRelease(buffer);
                 }
             });
         }

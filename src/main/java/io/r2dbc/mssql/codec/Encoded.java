@@ -19,6 +19,7 @@ package io.r2dbc.mssql.codec;
 import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TdsDataType;
+import io.r2dbc.mssql.util.ReferenceCountUtil;
 import reactor.core.Disposable;
 
 import java.util.function.IntFunction;
@@ -115,20 +116,17 @@ public class Encoded implements Disposable {
 
         @Override
         public ByteBuf get() {
-            return buf.asReadOnly();
+            return this.buf.asReadOnly();
         }
 
         @Override
         public void dispose() {
-
-            if (!isDisposed()) {
-                buf.release();
-            }
+            ReferenceCountUtil.maybeSafeRelease(this.buf);
         }
 
         @Override
         public boolean isDisposed() {
-            return buf.refCnt() == 0;
+            return this.buf.refCnt() == 0;
         }
     }
 
@@ -146,11 +144,11 @@ public class Encoded implements Disposable {
 
         @Override
         public ByteBuf get() {
-            return delegate.apply(length);
+            return this.delegate.apply(this.length);
         }
 
         public int getLength() {
-            return length;
+            return this.length;
         }
     }
 }
