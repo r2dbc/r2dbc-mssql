@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.mssql.util.ReferenceCountUtil;
 
 import java.util.function.Function;
 
@@ -27,6 +28,7 @@ import java.util.function.Function;
  * Utility to create byte arrays.
  *
  * @author Mark Paluch
+ * @author Tomasz Marciniak
  */
 abstract class ByteArray {
 
@@ -42,14 +44,12 @@ abstract class ByteArray {
 
         Encoded encoded = encodeFunction.apply(ByteBufAllocator.DEFAULT);
 
-        ByteBuf buffer = null;
+        ByteBuf buffer = encoded.getValue();
         try {
-            buffer = encoded.getValue();
             return ByteBufUtil.getBytes(buffer);
         } finally {
-            if (buffer != null && buffer.refCnt() > 0) {
-                buffer.release();
-            }
+            encoded.dispose();
+            ReferenceCountUtil.maybeRelease(buffer);
         }
     }
 

@@ -119,9 +119,7 @@ public final class EncodedAssert extends AbstractObjectAssert<EncodedAssert, Byt
         Assertions.assertThat(ByteBufUtil.prettyHexDump(this.actual)).describedAs("ByteBuf")
             .isEqualTo(ByteBufUtil.prettyHexDump(expected));
 
-        if(this.actual.refCnt()>0){
-            this.actual.release();
-        }
+        ReferenceCountUtil.maybeSafeRelease(this.actual);
 
         return this;
     }

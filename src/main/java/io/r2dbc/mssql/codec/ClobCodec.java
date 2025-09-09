@@ -20,14 +20,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.util.ReferenceCountUtil;
 import io.r2dbc.mssql.codec.RpcParameterContext.CharacterValueContext;
-import io.r2dbc.mssql.message.type.Length;
-import io.r2dbc.mssql.message.type.LengthStrategy;
-import io.r2dbc.mssql.message.type.PlpLength;
-import io.r2dbc.mssql.message.type.SqlServerType;
-import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.message.type.*;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.mssql.util.ReferenceCountUtil;
 import io.r2dbc.spi.Clob;
 import io.r2dbc.spi.R2dbcNonTransientException;
 import org.reactivestreams.Publisher;
@@ -232,11 +228,7 @@ public class ClobCodec extends AbstractCodec<Clob> {
                 }
 
             })
-                .doFinally(s -> {
-                    if (this.remainder.refCnt() > 0) {
-                        ReferenceCountUtil.safeRelease(this.remainder);
-                    }
-                });
+                    .doFinally(s -> ReferenceCountUtil.maybeRelease(this.remainder));
         }
 
         @Override
@@ -246,8 +238,8 @@ public class ClobCodec extends AbstractCodec<Clob> {
 
         private void releaseBuffers() {
 
-            ReferenceCountUtil.safeRelease(this.remainder);
-            ReferenceCountUtil.safeRelease(this.buffer);
+            ReferenceCountUtil.maybeSafeRelease(this.remainder);
+            ReferenceCountUtil.maybeSafeRelease(this.buffer);
         }
 
         private static Flux<ByteBuf> createBufferStream(ByteBuf plpStream, Length valueLength, TypeInformation type) {
@@ -273,9 +265,7 @@ public class ClobCodec extends AbstractCodec<Clob> {
                 }
             })
                 .doFinally(s -> {
-                    if (plpStream.refCnt() > 0) {
-                        ReferenceCountUtil.safeRelease(plpStream);
-                    }
+                    ReferenceCountUtil.maybeSafeRelease(plpStream);
                 });
         }
 
