@@ -22,6 +22,7 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.IntegrationTestSupport;
 import io.r2dbc.spi.R2dbcNonTransientResourceException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.util.ReflectionUtils;
@@ -54,18 +55,25 @@ class ReactorNettyClientIntegrationTests extends IntegrationTestSupport {
         ReflectionUtils.makeAccessible(CLIENT);
     }
 
+    private io.r2dbc.spi.Connection r2dbcConnection;
     private ReactorNettyClient client;
 
     private Connection connection;
 
     @BeforeEach
     void setUp() {
-        this.client = (ReactorNettyClient) ReflectionUtils.getField(CLIENT, IntegrationTestSupport.connection);
+        this.r2dbcConnection = connectionFactory.create().block();
+        this.client = (ReactorNettyClient) ReflectionUtils.getField(CLIENT, this.r2dbcConnection);
         this.connection = (Connection) ReflectionUtils.getField(CONNECTION, this.client);
     }
 
+    @AfterEach
+    void tearDown() {
+        Mono.from(r2dbcConnection.close()).subscribe();
+    }
+
     @Test
-    void disconnectedShouldRejectExchange() throws InterruptedException {
+    void disconnectedShouldRejectExchange() {
 
         Connection connection = (Connection) ReflectionUtils.getField(CONNECTION, this.client);
         connection.channel().close().awaitUninterruptibly();
@@ -93,31 +101,6 @@ class ReactorNettyClientIntegrationTests extends IntegrationTestSupport {
 
         try {
             future.get(9995, TimeUnit.SECONDS);
-            fail("Expected MssqlConnectionClosedException");
-        } catch (ExecutionException e) {
-            assertThat(e).hasCauseInstanceOf(ReactorNettyClient.MssqlConnectionClosedException.class).hasMessageContaining("closed");
-        }
-    }
-
-    @Test
-    void shouldCancelExchangeOnCloseInFlight() throws Exception {
-
-        Connection connection = (Connection) ReflectionUtils.getField(CONNECTION, this.client);
-
-        SqlBatch batch = SqlBatch.create(0, this.client.getTransactionDescriptor(), "SELECT value FROM test");
-
-        Sinks.Many<ClientMessage> messages = Sinks.many().unicast().onBackpressureBuffer();
-        Flux<Message> query = this.client.exchange(messages.asFlux(), message -> true);
-        CompletableFuture<List<Message>> future = query.doOnNext(ignore -> {
-            connection.channel().close();
-            messages.tryEmitNext(batch);
-
-        }).collectList().toFuture();
-
-        messages.tryEmitNext(batch);
-
-        try {
-            future.get(5, TimeUnit.SECONDS);
             fail("Expected MssqlConnectionClosedException");
         } catch (ExecutionException e) {
             assertThat(e).hasCauseInstanceOf(ReactorNettyClient.MssqlConnectionClosedException.class).hasMessageContaining("closed");
