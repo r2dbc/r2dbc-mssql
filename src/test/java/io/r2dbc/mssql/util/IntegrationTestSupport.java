@@ -29,11 +29,7 @@ import reactor.test.StepVerifier;
 
 import java.util.function.Predicate;
 
-import static io.r2dbc.spi.ConnectionFactoryOptions.DRIVER;
-import static io.r2dbc.spi.ConnectionFactoryOptions.HOST;
-import static io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD;
-import static io.r2dbc.spi.ConnectionFactoryOptions.PORT;
-import static io.r2dbc.spi.ConnectionFactoryOptions.USER;
+import static io.r2dbc.spi.ConnectionFactoryOptions.*;
 
 /**
  * Support class for integration tests.
@@ -79,6 +75,7 @@ public abstract class IntegrationTestSupport {
     @AfterAll
     static void afterAll() {
 
+        System.out.println("close");
         if (connection != null) {
             connection.close().subscribe();
         }
