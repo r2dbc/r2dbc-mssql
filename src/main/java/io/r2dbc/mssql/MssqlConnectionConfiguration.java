@@ -57,6 +57,7 @@ import java.util.function.Predicate;
  *
  * @author Mark Paluch
  * @author Alex Stockinger
+ * @author Paul Johe
  */
 public final class MssqlConnectionConfiguration {
 
@@ -72,6 +73,8 @@ public final class MssqlConnectionConfiguration {
 
     @Nullable
     private final String applicationName;
+
+    private final ConnectionProvider connectionProvider;
 
     @Nullable
     private final UUID connectionId;
@@ -119,19 +122,17 @@ public final class MssqlConnectionConfiguration {
 
     private final String username;
 
-    @Nullable
-    private final ConnectionProvider connectionProvider;
-
-    private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, Duration connectTimeout, @Nullable String database, String host, String hostNameInCertificate,
+    private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, ConnectionProvider connectionProvider, Duration connectTimeout, @Nullable String database, String host, String hostNameInCertificate,
                                          @Nullable Duration lockWaitTimeout, CharSequence password, Predicate<String> preferCursoredExecution, int port, boolean sendStringParametersAsUnicode,
                                          boolean ssl,
                                          Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer,
                                          @Nullable Function<SslContextBuilder, SslContextBuilder> sslTunnelSslContextBuilderCustomizer, boolean tcpKeepAlive, boolean tcpNoDelay,
                                          boolean trustServerCertificate, @Nullable File trustStore, @Nullable String trustStoreType,
-                                         @Nullable char[] trustStorePassword, String username, @Nullable ConnectionProvider connectionProvider) {
+                                         @Nullable char[] trustStorePassword, String username) {
 
         this.applicationName = applicationName;
         this.connectionId = connectionId;
+        this.connectionProvider = connectionProvider;
         this.connectTimeout = Assert.requireNonNull(connectTimeout, "connect timeout must not be null");
         this.database = database;
         this.host = Assert.requireNonNull(host, "host must not be null");
@@ -151,7 +152,6 @@ public final class MssqlConnectionConfiguration {
         this.trustStoreType = trustStoreType;
         this.trustStorePassword = trustStorePassword;
         this.username = Assert.requireNonNull(username, "username must not be null");
-        this.connectionProvider = connectionProvider;
     }
 
     /**
@@ -186,17 +186,17 @@ public final class MssqlConnectionConfiguration {
             }
         }
 
-        return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, redirectServerName, hostNameInCertificate, this.lockWaitTimeout,
+        return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectionProvider, this.connectTimeout, this.database, redirectServerName, hostNameInCertificate, this.lockWaitTimeout,
                 this.password,
                 this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer,
-                this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustServerCertificate, this.trustStore, this.trustStoreType, this.trustStorePassword, this.username,
-                this.connectionProvider);
+                this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustServerCertificate, this.trustStore, this.trustStoreType, this.trustStorePassword, this.username
+        );
     }
 
     ClientConfiguration toClientConfiguration() {
-        return new DefaultClientConfiguration(this.connectTimeout, this.host, this.hostNameInCertificate, this.port, this.ssl, this.sslContextBuilderCustomizer,
-                this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustServerCertificate, this.trustStore, this.trustStoreType, this.trustStorePassword,
-                this.connectionProvider);
+        return new DefaultClientConfiguration(this.connectionProvider, this.connectTimeout, this.host, this.hostNameInCertificate, this.port, this.ssl, this.sslContextBuilderCustomizer,
+                this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustServerCertificate, this.trustStore, this.trustStoreType, this.trustStorePassword
+        );
     }
 
     ConnectionOptions toConnectionOptions() {
@@ -348,6 +348,8 @@ public final class MssqlConnectionConfiguration {
         @Nullable
         private String applicationName;
 
+        private ConnectionProvider connectionProvider = ConnectionProvider.newConnection();
+
         private UUID connectionId = UUID.randomUUID();
 
         private Duration connectTimeout = DEFAULT_CONNECT_TIMEOUT;
@@ -393,9 +395,6 @@ public final class MssqlConnectionConfiguration {
         @Nullable
         private char[] trustStorePassword;
 
-        @Nullable
-        private ConnectionProvider connectionProvider;
-
         private Builder() {
         }
 
@@ -420,6 +419,19 @@ public final class MssqlConnectionConfiguration {
          */
         public Builder connectionId(UUID connectionId) {
             this.connectionId = Assert.requireNonNull(connectionId, "connectionId must not be null");
+            return this;
+        }
+
+        /**
+         * Configure the {@link ConnectionProvider} to be used with Reactor Netty.
+         * Defaults to {@link ConnectionProvider#newConnection()}.
+         *
+         * @param connectionProvider the connection provider
+         * @return this {@link Builder}
+         * @since 1.0.3
+         */
+        public Builder connectionProvider(ConnectionProvider connectionProvider) {
+            this.connectionProvider = Assert.requireNonNull(connectionProvider, "connectionProvider must not be null");
             return this;
         }
 
@@ -713,18 +725,6 @@ public final class MssqlConnectionConfiguration {
         }
 
         /**
-         * Configure the {@link ConnectionProvider} to be used with Netty
-         *
-         * @param connectionProvider the connection provider
-         * @return this {@link Builder}
-         * @since 1.1.0
-         */
-        public Builder connectionProvider(ConnectionProvider connectionProvider) {
-            this.connectionProvider = connectionProvider;
-            return this;
-        }
-
-        /**
          * Returns a configured {@link MssqlConnectionConfiguration}.
          *
          * @return a configured {@link MssqlConnectionConfiguration}.
@@ -735,17 +735,19 @@ public final class MssqlConnectionConfiguration {
                 this.hostNameInCertificate = this.host;
             }
 
-            return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectTimeout, this.database, this.host, this.hostNameInCertificate, this.lockWaitTimeout,
+            return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectionProvider, this.connectTimeout, this.database, this.host, this.hostNameInCertificate, this.lockWaitTimeout,
                     this.password,
                     this.preferCursoredExecution, this.port, this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer,
                     this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive,
                     this.tcpNoDelay, this.trustServerCertificate, this.trustStore,
-                    this.trustStoreType, this.trustStorePassword, this.username, this.connectionProvider);
+                    this.trustStoreType, this.trustStorePassword, this.username);
         }
 
     }
 
     static class DefaultClientConfiguration implements ClientConfiguration {
+
+        private final ConnectionProvider connectionProvider;
 
         private final Duration connectTimeout;
 
@@ -777,14 +779,10 @@ public final class MssqlConnectionConfiguration {
         @Nullable
         private final char[] trustStorePassword;
 
-        @Nullable
-        private final ConnectionProvider connectionProvider;
-
-        DefaultClientConfiguration(Duration connectTimeout, String host, String hostNameInCertificate, int port, boolean ssl,
+        DefaultClientConfiguration(ConnectionProvider connectionProvider, Duration connectTimeout, String host, String hostNameInCertificate, int port, boolean ssl,
                                    Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer,
                                    @Nullable Function<SslContextBuilder, SslContextBuilder> sslTunnelSslContextBuilderCustomizer, boolean tcpKeepAlive, boolean tcpNoDelay,
-                                   boolean trustServerCertificate, @Nullable File trustStore, @Nullable String trustStoreType, @Nullable char[] trustStorePassword,
-                                   ConnectionProvider connectionProvider) {
+                                   boolean trustServerCertificate, @Nullable File trustStore, @Nullable String trustStoreType, @Nullable char[] trustStorePassword) {
 
             this.connectTimeout = connectTimeout;
             this.host = host;
@@ -829,8 +827,7 @@ public final class MssqlConnectionConfiguration {
 
         @Override
         public ConnectionProvider getConnectionProvider() {
-            return Optional.ofNullable(connectionProvider)
-                    .orElseGet(ConnectionProvider::newConnection);
+            return this.connectionProvider;
         }
 
         @Override

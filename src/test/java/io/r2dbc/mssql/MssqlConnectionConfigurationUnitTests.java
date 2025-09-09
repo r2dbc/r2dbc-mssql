@@ -50,6 +50,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  * Unit tests for {@link  MssqlConnectionConfiguration}.
  *
  * @author Mark Paluch
+ * @author Paul Johe
  */
 final class MssqlConnectionConfigurationUnitTests {
 
@@ -102,14 +103,15 @@ final class MssqlConnectionConfigurationUnitTests {
 
         assertThat(configuration)
                 .hasFieldOrPropertyWithValue("connectionId", connectionId)
+                .hasFieldOrPropertyWithValue("connectionProvider", connectionProvider)
                 .hasFieldOrPropertyWithValue("database", "test-database")
                 .hasFieldOrPropertyWithValue("host", "test-host")
                 .hasFieldOrPropertyWithValue("password", "test-password")
                 .hasFieldOrPropertyWithValue("preferCursoredExecution", TRUE)
                 .hasFieldOrPropertyWithValue("port", 100)
                 .hasFieldOrPropertyWithValue("username", "test-username")
-                .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", false)
-                .hasFieldOrPropertyWithValue("connectionProvider", connectionProvider);
+                .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", false);
+
     }
 
     @Test

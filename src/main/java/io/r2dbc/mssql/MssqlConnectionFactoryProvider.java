@@ -31,20 +31,13 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static io.r2dbc.spi.ConnectionFactoryOptions.CONNECT_TIMEOUT;
-import static io.r2dbc.spi.ConnectionFactoryOptions.DATABASE;
-import static io.r2dbc.spi.ConnectionFactoryOptions.DRIVER;
-import static io.r2dbc.spi.ConnectionFactoryOptions.HOST;
-import static io.r2dbc.spi.ConnectionFactoryOptions.LOCK_WAIT_TIMEOUT;
-import static io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD;
-import static io.r2dbc.spi.ConnectionFactoryOptions.PORT;
-import static io.r2dbc.spi.ConnectionFactoryOptions.SSL;
-import static io.r2dbc.spi.ConnectionFactoryOptions.USER;
+import static io.r2dbc.spi.ConnectionFactoryOptions.*;
 
 /**
  * An implementation of {@link ConnectionFactoryProvider} for creating {@link MssqlConnectionFactory}s.
  *
  * @author Mark Paluch
+ * @author Paul Johe
  */
 public final class MssqlConnectionFactoryProvider implements ConnectionFactoryProvider {
 
@@ -59,6 +52,13 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
      * Connection Id
      */
     public static final Option<UUID> CONNECTION_ID = Option.valueOf("connectionId");
+
+    /**
+     * Optional {@link reactor.netty.resources.ConnectionProvider} to control Netty configuration directly. Defaults to {@link ConnectionProvider#newConnection()}.
+     *
+     * @since 1.0.3
+     */
+    public static final Option<ConnectionProvider> CONNECTION_PROVIDER = Option.valueOf("connectionProvider");
 
     /**
      * Expected Hostname in SSL certificate. Supports wildcards.
@@ -136,13 +136,6 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
     public static final Option<char[]> TRUST_STORE_PASSWORD = Option.valueOf("trustStorePassword");
 
     /**
-     * Optional {@link reactor.netty.resources.ConnectionProvider} to control Netty configuration directly
-     *
-     * @since 1.1.0
-     */
-    public static final Option<ConnectionProvider> CONNECTION_PROVIDER = Option.valueOf("connectionProvider");
-
-    /**
      * Driver option value.
      */
     public static final String MSSQL_DRIVER = "sqlserver";
@@ -164,6 +157,7 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
 
         mapper.fromTyped(APPLICATION_NAME).to(builder::applicationName);
         mapper.from(CONNECTION_ID).map(OptionMapper::toUuid).to(builder::connectionId);
+        mapper.fromTyped(CONNECTION_PROVIDER).to(builder::connectionProvider);
         mapper.from(CONNECT_TIMEOUT).map(OptionMapper::toDuration).to(builder::connectTimeout);
         mapper.fromTyped(DATABASE).to(builder::database);
         mapper.fromTyped(HOSTNAME_IN_CERTIFICATE).to(builder::hostNameInCertificate);
@@ -202,7 +196,6 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         mapper.from(TRUST_STORE).map(OptionMapper::toFile).to(builder::trustStore);
         mapper.fromTyped(TRUST_STORE_TYPE).to(builder::trustStoreType);
         mapper.from(TRUST_STORE_PASSWORD).map(it -> it instanceof String ? ((String) it).toCharArray() : (char[]) it).to(builder::trustStorePassword);
-        mapper.fromTyped(CONNECTION_PROVIDER).to(builder::connectionProvider);
 
         builder.host(connectionFactoryOptions.getRequiredValue(HOST).toString());
         builder.password((CharSequence) connectionFactoryOptions.getRequiredValue(PASSWORD));
