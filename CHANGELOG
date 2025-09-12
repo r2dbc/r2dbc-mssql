@@ -1,6 +1,15 @@
 R2DBC MSSQL Changelog
 =============================
 
+1.0.3.RELEASE
+------------------
+* Random `IllegalReferenceCountException: refCnt: 0` #245
+* Release 1.0.2.RELEASE #274
+* Memory leak detected while using r2dbc-mssql 1.0.2 #279
+* Add Option to set Netty ConnectionProvider directly #291
+* Switch to Sonatype Central Publishing #299
+* Release 1.0.3.RELEASE #300
+
 1.0.2.RELEASE
 ------------------
 * Could not find prepared statement with handle error #271
