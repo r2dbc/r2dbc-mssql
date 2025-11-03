@@ -41,7 +41,7 @@
         <mbr.version>0.6.0.RELEASE</mbr.version>
         <logback.version>1.5.18</logback.version>
         <mockito.version>4.11.0</mockito.version>
-        <mssql-jdbc.version>12.2.0.jre8</mssql-jdbc.version>
+        <mssql-jdbc.version>12.2.1.jre8</mssql-jdbc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <r2dbc-spi.version>1.0.0.RELEASE</r2dbc-spi.version>
