@@ -34,21 +34,23 @@ class IndefinitePreparedStatementCache implements PreparedStatementCache {
     private final Map<String, Object> parsedSql = new ConcurrentHashMap<>();
 
     @Override
-    public int getHandle(String sql, Binding binding) {
+    public int getHandle(Object connectionKey, String sql, Binding binding) {
 
+        Assert.requireNonNull(connectionKey, "Connection key must not be null");
         Assert.requireNonNull(sql, "SQL query must not be null");
         Assert.requireNonNull(binding, "Binding query must not be null");
 
-        return this.preparedStatements.getOrDefault(createKey(sql, binding), UNPREPARED);
+        return this.preparedStatements.getOrDefault(createKey(connectionKey, sql, binding), UNPREPARED);
     }
 
     @Override
-    public void putHandle(int handle, String sql, Binding binding) {
+    public void putHandle(Object connectionKey, int handle, String sql, Binding binding) {
 
+        Assert.requireNonNull(connectionKey, "Connection key must not be null");
         Assert.requireNonNull(sql, "SQL query must not be null");
         Assert.requireNonNull(binding, "Binding query must not be null");
 
-        this.preparedStatements.put(createKey(sql, binding), handle);
+        this.preparedStatements.put(createKey(connectionKey, sql, binding), handle);
     }
 
     @SuppressWarnings("unchecked")
@@ -62,8 +64,8 @@ class IndefinitePreparedStatementCache implements PreparedStatementCache {
         return this.preparedStatements.size();
     }
 
-    private static String createKey(String sql, Binding binding) {
-        return sql + "-" + binding.getFormalParameters();
+    private static String createKey(Object connectionKey, String sql, Binding binding) {
+        return System.identityHashCode(connectionKey) + "-" + sql + "-" + binding.getFormalParameters();
     }
 
     @Override

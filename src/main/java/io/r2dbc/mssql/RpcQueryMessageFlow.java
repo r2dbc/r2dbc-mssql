@@ -217,7 +217,7 @@ final class RpcQueryMessageFlow {
         Assert.requireNonNull(query, "Query must not be null");
 
         Sinks.Many<ClientMessage> outbound = Sinks.many().unicast().onBackpressureBuffer();
-        int handle = statementCache.getHandle(query, binding);
+        int handle = statementCache.getHandle(client, query, binding);
 
         AtomicBoolean retryReprepare = new AtomicBoolean(true);
         AtomicBoolean needsPrepare = new AtomicBoolean(false);
@@ -252,7 +252,7 @@ final class RpcQueryMessageFlow {
 
                     ReturnValue returnValue = (ReturnValue) message;
 
-                    emit = handleSpCursorReturnValue(statementCache, codecs, query, binding, state, needsPrepare.get(), returnValue);
+                    emit = handleSpCursorReturnValue(statementCache, client, codecs, query, binding, state, needsPrepare.get(), returnValue);
 
                     if (!emit) {
                         returnValue.release();
@@ -307,7 +307,7 @@ final class RpcQueryMessageFlow {
         return errorNumber == 8179 || errorNumber == 586;
     }
 
-    private static boolean handleSpCursorReturnValue(PreparedStatementCache statementCache, Codecs codecs, String query, Binding binding, CursorState state, boolean needsPrepare,
+    private static boolean handleSpCursorReturnValue(PreparedStatementCache statementCache, Client client, Codecs codecs, String query, Binding binding, CursorState state, boolean needsPrepare,
                                                      ReturnValue returnValue) {
 
         // cursor Id
@@ -322,7 +322,7 @@ final class RpcQueryMessageFlow {
 
                 int preparedStatementHandle = codecs.decode(returnValue.getValue(), returnValue.asDecodable(), Integer.class);
                 logger.debug("Prepared statement with handle: {}", preparedStatementHandle);
-                statementCache.putHandle(preparedStatementHandle, query, binding);
+                statementCache.putHandle(client, preparedStatementHandle, query, binding);
             }
 
             // skip spCursorPrepExec OUT

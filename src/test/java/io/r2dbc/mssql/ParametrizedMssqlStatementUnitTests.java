@@ -174,7 +174,7 @@ class ParametrizedMssqlStatementUnitTests {
 
         statement.execute().flatMap(MssqlResult::getRowsUpdated).subscribe();
 
-        assertThat(this.statementCache.getHandle(sql, binding)).isEqualTo(1);
+        assertThat(this.statementCache.getHandle(testClient, sql, binding)).isEqualTo(1);
     }
 
     @Test
@@ -200,11 +200,11 @@ class ParametrizedMssqlStatementUnitTests {
 
         Binding binding = statement.getBindings().getCurrent();
 
-        this.statementCache.putHandle(1, sql, binding);
+        this.statementCache.putHandle(testClient, 1, sql, binding);
 
         statement.execute().subscribe();
 
-        assertThat(this.statementCache.getHandle(sql, binding)).isEqualTo(1);
+        assertThat(this.statementCache.getHandle(testClient, sql, binding)).isEqualTo(1);
         assertThat(this.statementCache.size()).isEqualTo(1);
     }
 

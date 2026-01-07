@@ -33,21 +33,23 @@ interface PreparedStatementCache {
     /**
      * Returns a prepared statement handle for the given {@code sql} query and the {@link Binding}.
      *
-     * @param sql     the SQL query.
-     * @param binding bound parameters. Parameter types impact the prepared query.
+     * @param connectionKey the connection key.
+     * @param sql           the SQL query.
+     * @param binding       bound parameters. Parameter types impact the prepared query.
      * @return the prepared statement handle. {@value 0} has a specific meaning as it indicates that no cached SQL statement was found.
      * @see #UNPREPARED
      */
-    int getHandle(String sql, Binding binding);
+    int getHandle(Object connectionKey, String sql, Binding binding);
 
     /**
      * Returns a prepared statement {@code handle} for the given {@code sql} query and the {@link Binding}.
      *
-     * @param handle  the prepared statement handle.
-     * @param sql     the SQL query.
-     * @param binding bound parameters. Parameter types impact the prepared query.
+     * @param connectionKey the connection key.
+     * @param handle        the prepared statement handle.
+     * @param sql           the SQL query.
+     * @param binding       bound parameters. Parameter types impact the prepared query.
      */
-    void putHandle(int handle, String sql, Binding binding);
+    void putHandle(Object connectionKey, int handle, String sql, Binding binding);
 
     /**
      * Returns the parsed and potentially cached representation of the {@code sql} statement.

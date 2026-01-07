@@ -37,12 +37,12 @@ public class ParametrizedMssqlStatementBenchmarks extends BenchmarkSettings {
     private static final ConnectionOptions uncached = new ConnectionOptions(s -> false, new DefaultCodecs(), new PreparedStatementCache() {
 
         @Override
-        public int getHandle(String sql, Binding binding) {
+        public int getHandle(Object connectionKey, String sql, Binding binding) {
             return 0;
         }
 
         @Override
-        public void putHandle(int handle, String sql, Binding binding) {
+        public void putHandle(Object connectionKey, int handle, String sql, Binding binding) {
         }
 
         @Override
