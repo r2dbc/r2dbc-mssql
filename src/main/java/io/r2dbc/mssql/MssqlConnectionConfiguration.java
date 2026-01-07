@@ -24,6 +24,7 @@ import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.mssql.client.ssl.ExpectedHostnameX509TrustManager;
 import io.r2dbc.mssql.client.ssl.SslConfiguration;
 import io.r2dbc.mssql.client.ssl.TrustAllTrustManager;
+import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.tds.Redirect;
 import io.r2dbc.mssql.util.Assert;
@@ -199,8 +200,8 @@ public final class MssqlConnectionConfiguration {
         );
     }
 
-    ConnectionOptions toConnectionOptions() {
-        return new ConnectionOptions(this.preferCursoredExecution, new DefaultCodecs(), new IndefinitePreparedStatementCache(), this.sendStringParametersAsUnicode);
+    ConnectionOptions toConnectionOptions(Codecs codecs) {
+        return new ConnectionOptions(this.preferCursoredExecution, codecs, new IndefinitePreparedStatementCache(), this.sendStringParametersAsUnicode);
     }
 
     @Override

@@ -19,6 +19,7 @@ package io.r2dbc.mssql;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.mssql.client.ReactorNettyClient;
+import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.tds.Redirect;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.ConnectionFactory;
@@ -44,7 +45,7 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
 
     private final MssqlConnectionConfiguration configuration;
 
-    private final ConnectionOptions connectionOptions;
+    private final DefaultCodecs codecs = new DefaultCodecs();
 
     /**
      * Creates a new connection factory.
@@ -61,7 +62,6 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
 
         this.clientFactory = Assert.requireNonNull(clientFactory, "clientFactory must not be null");
         this.configuration = Assert.requireNonNull(configuration, "configuration must not be null");
-        this.connectionOptions = configuration.toConnectionOptions();
     }
 
     private static Mono<Client> connect(MssqlConnectionConfiguration configuration) {
@@ -113,10 +113,11 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         return initializeClient(this.configuration, true)
             .flatMap(it -> {
 
+                ConnectionOptions connectionOptions = this.configuration.toConnectionOptions(this.codecs);
                 Mono<MssqlConnection> connectionMono =
-                    new SimpleMssqlStatement(it, this.connectionOptions, this.METADATA_QUERY).execute()
+                    new SimpleMssqlStatement(it, connectionOptions, this.METADATA_QUERY).execute()
                         .flatMap(result -> result.map((row, rowMetadata) -> toConnectionMetadata(it.getDatabaseVersion().orElse("unknown"), row))).map(metadata -> {
-                        return new MssqlConnection(it, metadata, this.connectionOptions);
+                        return new MssqlConnection(it, metadata, connectionOptions);
                     }).last();
 
                 if (this.configuration.getLockWaitTimeout() != null) {
@@ -142,7 +143,7 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
     }
 
     ConnectionOptions getConnectionOptions() {
-        return this.connectionOptions;
+        return this.configuration.toConnectionOptions(this.codecs);
     }
 
     @Override
