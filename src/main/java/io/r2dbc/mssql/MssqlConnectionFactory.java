@@ -113,7 +113,7 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         return initializeClient(this.configuration, true)
             .flatMap(it -> {
 
-                ConnectionOptions connectionOptions = this.configuration.toConnectionOptions(this.codecs);
+                ConnectionOptions connectionOptions = getConnectionOptions();
                 Mono<MssqlConnection> connectionMono =
                     new SimpleMssqlStatement(it, connectionOptions, this.METADATA_QUERY).execute()
                         .flatMap(result -> result.map((row, rowMetadata) -> toConnectionMetadata(it.getDatabaseVersion().orElse("unknown"), row))).map(metadata -> {
