@@ -20,14 +20,7 @@ import io.r2dbc.mssql.client.TestClient;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.Redirect;
 import io.r2dbc.mssql.message.tds.ServerCharset;
-import io.r2dbc.mssql.message.token.Column;
-import io.r2dbc.mssql.message.token.ColumnMetadataToken;
-import io.r2dbc.mssql.message.token.DoneToken;
-import io.r2dbc.mssql.message.token.ErrorToken;
-import io.r2dbc.mssql.message.token.Prelogin;
-import io.r2dbc.mssql.message.token.RowToken;
-import io.r2dbc.mssql.message.token.RowTokenFactory;
-import io.r2dbc.mssql.message.token.SqlBatch;
+import io.r2dbc.mssql.message.token.*;
 import io.r2dbc.mssql.message.type.LengthStrategy;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
@@ -169,6 +162,19 @@ final class MssqlConnectionFactoryUnitTests {
 
         assertThat(initial.isClosed()).isTrue();
         assertThat(redirect.isClosed()).isTrue();
+    }
+
+    @Test
+    void shouldCreateNewPreparedStatement() {
+
+        MssqlConnectionFactory connectionFactory = new MssqlConnectionFactory(config -> Mono.empty(), this.configuration);
+        ConnectionOptions options = connectionFactory.getConnectionOptions();
+        ConnectionOptions other = connectionFactory.getConnectionOptions();
+
+        options.getPreparedStatementCache().putHandle(1, "foo", new Binding());
+
+        assertThat(options.getPreparedStatementCache().getHandle("foo", new Binding())).isEqualTo(1);
+        assertThat(other.getPreparedStatementCache().getHandle("foo", new Binding())).isEqualTo(0);
     }
 
     private static Column createColumn(int index, String name, SqlServerType serverType, int length, LengthStrategy lengthStrategy, @Nullable Charset charset) {
