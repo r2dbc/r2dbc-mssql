@@ -341,7 +341,10 @@ Running the JMH benchmarks builds and runs the benchmarks without running tests.
 
 ## Staging to Maven Central
 
-To stage a release to Maven Central, you need to create a release tag (release version) that contains the desired state and version numbers (`mvn versions:set versions:commit -q -o -DgenerateBackupPoms=false -DnewVersion=x.y.z.(RELEASE|Mnnn|RCnnn`) and force-push it to the `release-0.x` branch. This push will trigger a Maven staging build (see `build-and-deploy-to-maven-central.sh`).
+To stage a release to Maven Central, you need to create a release tag (release version) that contains the desired state
+and version numbers (
+`mvn versions:set versions:commit -q -o -DgenerateBackupPoms=false -DnewVersion=x.y.z.(RELEASE|Mnnn|RCnnn`) and
+force-push it to the `release` branch. This push will trigger a Maven staging build.
 
 ## License
 
