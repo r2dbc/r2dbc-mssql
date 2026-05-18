@@ -18,7 +18,6 @@ package io.r2dbc.mssql.client.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.message.header.Header;
@@ -35,6 +34,7 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -44,18 +44,9 @@ import static org.mockito.Mockito.verify;
  */
 class TdsSslHandlerUnitTests {
 
-    TdsSslHandler handler = new TdsSslHandler(PacketIdProvider.just(0), new SslConfiguration() {
+    SslConfiguration sslConfiguration = mock(SslConfiguration.class);
 
-        @Override
-        public boolean isSslEnabled() {
-            return false;
-        }
-
-        @Override
-        public SslContext getSslContext() {
-            return null;
-        }
-    }, new ConnectionContext());
+    TdsSslHandler handler;
 
     SslHandler sslHandler = mock(SslHandler.class);
 
@@ -65,6 +56,10 @@ class TdsSslHandlerUnitTests {
 
     @BeforeEach
     void setUp() {
+
+        when(this.sslConfiguration.isSslEnabled()).thenReturn(false);
+
+        this.handler = new TdsSslHandler(PacketIdProvider.just(0), this.sslConfiguration, new ConnectionContext());
         this.handler.setSslHandler(this.sslHandler);
         this.handler.setState(SslState.CONNECTION);
     }
@@ -156,5 +151,24 @@ class TdsSslHandlerUnitTests {
 
         this.handler.channelInactive(this.ctx);
         assertThat(buffer.refCnt()).isZero();
+    }
+
+    @Test
+    void incompleteHandshakeBufferIsReleasedAfterDefragmentation() throws Exception {
+
+        ByteBuf buffer = TestByteBufAllocator.TEST.buffer();
+        Header header = new Header(Type.PRE_LOGIN, Status.empty(), 100, 1);
+        header.encode(buffer);
+
+        IntStream.range(0, 20).forEach(buffer::writeByte);
+
+        ByteBuf retained = buffer.readRetainedSlice(buffer.readableBytes());
+        buffer.release();
+
+        assertThat(retained.refCnt()).isEqualTo(1);
+
+        this.handler.channelRead(this.ctx, retained);
+
+        assertThat(retained.refCnt()).isZero();
     }
 }
