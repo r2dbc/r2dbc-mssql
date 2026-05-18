@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
+import io.r2dbc.mssql.MssqlConnectionConfiguration;
 import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.message.header.Header;
@@ -38,6 +39,7 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -45,20 +47,18 @@ import static org.mockito.Mockito.when;
  * Unit tests for {@link TdsSslHandler}.
  *
  * @author Mark Paluch
+ * @author Omer Kissos
  */
 class TdsSslHandlerUnitTests {
 
-    TdsSslHandler handler = new TdsSslHandler(PacketIdProvider.just(0), mock(ClientConfiguration.class), new ConnectionContext());
+     MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+                .host("foo").port(1234).enableSsl()
+                .username("sa").password("sa")
+                .build();
 
-    private static ClientConfiguration clientConfiguration(SslContext sslContext) throws GeneralSecurityException {
+     ClientConfiguration clientConfiguration = this.configuration.toClientConfiguration();
 
-        ClientConfiguration configuration = mock(ClientConfiguration.class);
-        when(configuration.getHost()).thenReturn("localhost");
-        when(configuration.getPort()).thenReturn(1433);
-        when(configuration.getSslContext()).thenReturn(sslContext);
-
-        return configuration;
-    }
+    TdsSslHandler handler;
 
     SslHandler sslHandler = mock(SslHandler.class);
 
@@ -68,6 +68,8 @@ class TdsSslHandlerUnitTests {
 
     @BeforeEach
     void setUp() {
+
+        this.handler = new TdsSslHandler(PacketIdProvider.just(0), this.clientConfiguration, new ConnectionContext());
         this.handler.setSslHandler(this.sslHandler);
         this.handler.setState(SslState.CONNECTION);
     }
@@ -159,5 +161,24 @@ class TdsSslHandlerUnitTests {
 
         this.handler.channelInactive(this.ctx);
         assertThat(buffer.refCnt()).isZero();
+    }
+
+    @Test
+    void incompleteHandshakeBufferIsReleasedAfterDefragmentation() throws Exception {
+
+        ByteBuf buffer = TestByteBufAllocator.TEST.buffer();
+        Header header = new Header(Type.PRE_LOGIN, Status.empty(), 100, 1);
+        header.encode(buffer);
+
+        IntStream.range(0, 20).forEach(buffer::writeByte);
+
+        ByteBuf retained = buffer.readRetainedSlice(buffer.readableBytes());
+        buffer.release();
+
+        assertThat(retained.refCnt()).isEqualTo(1);
+
+        this.handler.channelRead(this.ctx, retained);
+
+        assertThat(retained.refCnt()).isZero();
     }
 }
