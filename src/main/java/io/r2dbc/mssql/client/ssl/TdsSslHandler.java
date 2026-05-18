@@ -339,11 +339,16 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
                     // sub-chunk read
                     if (!Chunk.isCompletePacketAvailable(header, buffer)) {
 
-                        ByteBuf defragmented = buffer.alloc().buffer(header.getLength());
-                        defragmented.writeBytes(buffer);
-                        buffer.release();
+                        ByteBufAllocator allocator = buffer.alloc();
+                        ByteBuf defragmented = allocator.buffer(header.getLength() - Header.LENGTH);
 
-                        this.chunk = new Chunk(header, defragmented, buffer.alloc().compositeBuffer());
+                        try {
+                            defragmented.writeBytes(buffer);
+                        } finally {
+                            buffer.release();
+                        }
+
+                        this.chunk = new Chunk(header, defragmented, allocator.compositeBuffer());
                         ctx.read();
                         return;
                     }
