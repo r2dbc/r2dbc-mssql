@@ -23,6 +23,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.mssql.client.ConnectionContext;
@@ -114,9 +115,12 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
      * @return the configured {@link SslHandler}.
      * @throws GeneralSecurityException thrown on security API errors.
      */
+    // Visible for testing.
     static SslHandler createSslHandler(ClientConfiguration clientConfiguration, ByteBufAllocator allocator) throws GeneralSecurityException {
 
-        SSLEngine sslEngine = clientConfiguration.getSslContext()
+        SslContext sslContext = Assert.requireNonNull(clientConfiguration.getSslContext(),
+            "SslContext must not be null");
+        SSLEngine sslEngine = sslContext
             .newEngine(allocator, clientConfiguration.getHost(), clientConfiguration.getPort());
 
         return new SslHandler(sslEngine);

@@ -516,8 +516,11 @@ public final class ReactorNettyClient implements Client {
         return connection.map(it -> new ReactorNettyClient(it, tdsEncoder, connectionContext.withChannelId(it.channel().toString())));
     }
 
-    static SslHandler createSslTunnelHandler(ByteBufAllocator allocator, SslConfiguration tunnel, String host, int port) throws GeneralSecurityException {
-        return new SslHandler(tunnel.getSslContext().newEngine(allocator, host, port));
+    // Visible for testing.
+    static SslHandler createSslTunnelHandler(ByteBufAllocator allocator, SslConfiguration tunnel, String host, int port)
+        throws GeneralSecurityException {
+        SslContext sslContext = Assert.requireNonNull(tunnel.getSslContext(), "SslContext must not be null");
+        return new SslHandler(sslContext.newEngine(allocator, host, port));
     }
 
     @Override

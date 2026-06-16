@@ -31,15 +31,15 @@ import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import reactor.netty.resources.ConnectionProvider;
 
-import java.time.Duration;
+import java.security.GeneralSecurityException;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link TdsSslHandler}.
@@ -48,52 +48,16 @@ import static org.mockito.Mockito.verify;
  */
 class TdsSslHandlerUnitTests {
 
-    TdsSslHandler handler = new TdsSslHandler(PacketIdProvider.just(0), clientConfiguration(null), new ConnectionContext());
+    TdsSslHandler handler = new TdsSslHandler(PacketIdProvider.just(0), mock(ClientConfiguration.class), new ConnectionContext());
 
-    private static ClientConfiguration clientConfiguration(SslContext sslContext) {
+    private static ClientConfiguration clientConfiguration(SslContext sslContext) throws GeneralSecurityException {
 
-        return new ClientConfiguration() {
+        ClientConfiguration configuration = mock(ClientConfiguration.class);
+        when(configuration.getHost()).thenReturn("localhost");
+        when(configuration.getPort()).thenReturn(1433);
+        when(configuration.getSslContext()).thenReturn(sslContext);
 
-            @Override
-            public String getHost() {
-                return "localhost";
-            }
-
-            @Override
-            public int getPort() {
-                return 1433;
-            }
-
-            @Override
-            public Duration getConnectTimeout() {
-                return Duration.ZERO;
-            }
-
-            @Override
-            public boolean isTcpKeepAlive() {
-                return false;
-            }
-
-            @Override
-            public boolean isTcpNoDelay() {
-                return true;
-            }
-
-            @Override
-            public ConnectionProvider getConnectionProvider() {
-                return ConnectionProvider.newConnection();
-            }
-
-            @Override
-            public boolean isSslEnabled() {
-                return sslContext != null;
-            }
-
-            @Override
-            public SslContext getSslContext() {
-                return sslContext;
-            }
-        };
+        return configuration;
     }
 
     SslHandler sslHandler = mock(SslHandler.class);
@@ -111,7 +75,8 @@ class TdsSslHandlerUnitTests {
     @Test
     void createSslHandlerConfiguresPeerHostAndPort() throws Exception {
 
-        SslHandler sslHandler = TdsSslHandler.createSslHandler(clientConfiguration(SslContextBuilder.forClient().build()), TestByteBufAllocator.TEST);
+        SslHandler sslHandler = TdsSslHandler.createSslHandler(clientConfiguration(SslContextBuilder.forClient().build()),
+            TestByteBufAllocator.TEST);
 
         assertThat(sslHandler.engine().getPeerHost()).isEqualTo("localhost");
         assertThat(sslHandler.engine().getPeerPort()).isEqualTo(1433);
