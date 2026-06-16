@@ -23,7 +23,9 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
+import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.client.ConnectionState;
 import io.r2dbc.mssql.client.TdsEncoder;
@@ -65,7 +67,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
 
     private final PacketIdProvider packetIdProvider;
 
-    private final SslConfiguration sslConfiguration;
+    private final ClientConfiguration clientConfiguration;
 
     private volatile SslHandler sslHandler;
 
@@ -84,17 +86,17 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
      * Creates a new {@link TdsSslHandler}.
      *
      * @param packetIdProvider the {@link PacketIdProvider} to create {@link Header}s to wrap the SSL handshake.
-     * @param sslConfiguration SSL config.
+     * @param clientConfiguration client config.
      * @param context          Value object capturing diagnostic connection context.
      */
-    public TdsSslHandler(PacketIdProvider packetIdProvider, SslConfiguration sslConfiguration, ConnectionContext context) {
+    public TdsSslHandler(PacketIdProvider packetIdProvider, ClientConfiguration clientConfiguration, ConnectionContext context) {
 
         Assert.requireNonNull(packetIdProvider, "PacketIdProvider must not be null");
-        Assert.requireNonNull(sslConfiguration, "SslConfiguration must not be null");
+        Assert.requireNonNull(clientConfiguration, "ClientConfiguration must not be null");
         Assert.requireNonNull(context, "ConnectionContext must not be null");
 
         this.packetIdProvider = packetIdProvider;
-        this.sslConfiguration = sslConfiguration;
+        this.clientConfiguration = clientConfiguration;
         this.connectionContext = context;
     }
 
@@ -109,14 +111,17 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
     /**
      * Create the {@link SslHandler}.
      *
-     * @param sslConfiguration the SSL configuration.
+     * @param clientConfiguration the client configuration.
      * @return the configured {@link SslHandler}.
      * @throws GeneralSecurityException thrown on security API errors.
      */
-    private static SslHandler createSslHandler(SslConfiguration sslConfiguration, ByteBufAllocator allocator) throws GeneralSecurityException {
+    // Visible for testing.
+    static SslHandler createSslHandler(ClientConfiguration clientConfiguration, ByteBufAllocator allocator) throws GeneralSecurityException {
 
-        SSLEngine sslEngine = sslConfiguration.getSslContext()
-            .newEngine(allocator);
+        SslContext sslContext = Assert.requireNonNull(clientConfiguration.getSslContext(),
+            "SslContext must not be null");
+        SSLEngine sslEngine = sslContext
+            .newEngine(allocator, clientConfiguration.getHost(), clientConfiguration.getPort());
 
         return new SslHandler(sslEngine);
     }
@@ -134,7 +139,7 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
         if (evt == SslState.LOGIN_ONLY || evt == SslState.CONNECTION) {
 
             this.state = (SslState) evt;
-            this.sslHandler = createSslHandler(this.sslConfiguration, ctx.alloc());
+            this.sslHandler = createSslHandler(this.clientConfiguration, ctx.alloc());
 
             LOGGER.debug(this.connectionContext.getMessage("Registering Context Proxy and SSL Event Handlers to propagate SSL events to channelRead()"));
             ctx.pipeline().addAfter(getClass().getName(), ContextProxy.class.getName(), new ContextProxy());
