@@ -133,10 +133,11 @@ final class StreamDecoder {
             state.release();
             return null;
         } catch (Exception e) {
+            state.release();
+            this.state = null;
             sink.error(e);
+            return null;
         }
-
-        return state;
     }
 
     @Nullable
