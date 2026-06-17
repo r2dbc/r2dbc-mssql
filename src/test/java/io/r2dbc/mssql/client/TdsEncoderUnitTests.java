@@ -27,13 +27,13 @@ import io.r2dbc.mssql.message.tds.ContextualTdsFragment;
 import io.r2dbc.mssql.message.tds.TdsFragment;
 import io.r2dbc.mssql.message.tds.TdsPacket;
 import io.r2dbc.mssql.message.tds.TdsPackets;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static io.r2dbc.mssql.message.header.Status.StatusBit;
 import static io.r2dbc.mssql.message.header.Status.empty;
 import static io.r2dbc.mssql.message.header.Status.of;
 import static io.r2dbc.mssql.util.EmbeddedChannelAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
@@ -299,13 +299,33 @@ class TdsEncoderUnitTests {
     }
 
     @Test
+    void shouldNotExceedSpecLimitBeforePacketSizeNegotiation() {
+
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.pipeline().addFirst(new TdsEncoder(PacketIdProvider.just(42)));
+
+        ContextualTdsFragment fragment = TdsPackets.create(HeaderOptions.create(Type.PRE_LOGIN, empty()),
+            Unpooled.wrappedBuffer(new byte[5000]));
+
+        channel.writeOutbound(fragment);
+
+        ByteBuf first = channel.readOutbound();
+        try {
+            assertThat(first.readableBytes()).isLessThanOrEqualTo(4096);
+        } finally {
+            first.release();
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
     void shouldEstimateTdsPacketSize() {
 
         TdsEncoder encoder = new TdsEncoder(PacketIdProvider.just(42), 12);
 
-        Assertions.assertThat(encoder.estimateChunkSize(1)).isEqualTo(9);
-        Assertions.assertThat(encoder.estimateChunkSize(4)).isEqualTo(12);
-        Assertions.assertThat(encoder.estimateChunkSize(5)).isEqualTo(12);
+        assertThat(encoder.estimateChunkSize(1)).isEqualTo(9);
+        assertThat(encoder.estimateChunkSize(4)).isEqualTo(12);
+        assertThat(encoder.estimateChunkSize(5)).isEqualTo(12);
     }
 
     private static void encodeExpectation(ByteBuf buffer, StatusBit bit, int length, String content) {

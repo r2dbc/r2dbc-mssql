@@ -56,9 +56,11 @@ import io.r2dbc.mssql.util.Assert;
 public final class TdsEncoder extends ChannelOutboundHandlerAdapter implements EnvironmentChangeListener {
 
     /**
-     * Initial (default) packet size for TDS packets.
+     * Initial (default) packet size for TDS packets. Per the TDS specification the packet size must not exceed
+     * 4096 bytes until a larger size has been negotiated (LOGIN7 packet size request acknowledged through an
+     * {@code ENVCHANGE} packet size token). The negotiated size is applied through {@link #setPacketSize(int)}.
      */
-    public static final int INITIAL_PACKET_SIZE = 8000;
+    public static final int INITIAL_PACKET_SIZE = 4096;
 
     private CompositeByteBuf lastChunkRemainder;
 
