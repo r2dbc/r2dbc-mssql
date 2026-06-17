@@ -68,6 +68,18 @@ final class EnvChangeTokenUnitTests {
     }
 
     @Test
+    void shouldSkipUnknownEnvChangeType() {
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("0500630A0B0C0DAA");
+
+        EnvChangeToken token = EnvChangeToken.decode(buffer);
+
+        assertThat(token.getChangeType()).isEqualTo(EnvChangeToken.EnvChangeType.Unknown);
+        assertThat(buffer.readableBytes()).isEqualTo(1);
+        assertThat(buffer.readByte()).isEqualTo((byte) 0xAA);
+    }
+
+    @Test
     void shouldDecodeRoute() {
 
         ByteBuf buffer = HexUtils.decodeToByteBuf("e316001413000039300700740065007300740069006e006700");
