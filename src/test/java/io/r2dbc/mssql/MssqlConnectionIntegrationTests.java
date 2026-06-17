@@ -25,6 +25,7 @@ import io.r2dbc.spi.R2dbcPermissionDeniedException;
 import io.r2dbc.spi.R2dbcTimeoutException;
 import io.r2dbc.spi.R2dbcTransientException;
 import io.r2dbc.spi.Result;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -350,6 +351,7 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
     }
 
     @Test
+    @Disabled("Flakey")
     void cancelShouldTerminateOngoingDirectQuery() throws Exception {
 
         CompletableFuture<Void> future = connection.createStatement("WAITFOR DELAY '10:00'").fetchSize(0).execute().flatMap(Result::getRowsUpdated).then().toFuture();

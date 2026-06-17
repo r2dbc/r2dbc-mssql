@@ -24,7 +24,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.containers.JdbcDatabaseContainer;
-import org.testcontainers.containers.MSSQLServerContainer;
+import org.testcontainers.mssqlserver.MSSQLServerContainer;
 import reactor.util.annotation.Nullable;
 
 import java.io.IOException;
@@ -37,19 +37,19 @@ import java.util.function.Supplier;
 @SuppressWarnings({"rawtypes"})
 public final class MsSqlServerExtension implements BeforeAllCallback, AfterAllCallback {
 
-    private volatile MSSQLServerContainer<?> containerInstance = null;
+    private volatile MSSQLServerContainer containerInstance = null;
 
-    private final Supplier<MSSQLServerContainer<?>> container = () -> {
+    private final Supplier<MSSQLServerContainer> container = () -> {
 
         if (this.containerInstance != null) {
             return this.containerInstance;
         }
-        return this.containerInstance = new MSSQLServerContainer("mcr.microsoft.com/mssql/server:2022-latest") {
+        return this.containerInstance = new MSSQLServerContainer("mcr.microsoft.com/mssql/server:2025-latest") {
 
             protected void configure() {
                 this.addExposedPort(MS_SQL_SERVER_PORT);
                 this.addEnv("ACCEPT_EULA", "Y");
-                this.addEnv("SA_PASSWORD", getPassword());
+                this.addEnv("MSSQL_SA_PASSWORD", getPassword());
                 this.withReuse(true);
             }
         };
