@@ -87,6 +87,8 @@ public final class ReactorNettyClient implements Client {
 
     private static final boolean DEBUG_ENABLED = logger.isDebugEnabled();
 
+    private static final Sinks.EmitFailureHandler EMIT_BUSY_LOOP = Sinks.EmitFailureHandler.busyLooping(Duration.ofSeconds(5));
+
     private static final Supplier<MssqlConnectionClosedException> UNEXPECTED = () -> new MssqlConnectionClosedException("Connection unexpectedly closed");
 
     private static final Supplier<MssqlConnectionClosedException> EXPECTED = () -> new MssqlConnectionClosedException("Connection closed");
@@ -339,11 +341,20 @@ public final class ReactorNettyClient implements Client {
 
                     Object encoded = encodeForSend(message);
 
-                    if (encoded instanceof Publisher) {
-                        return connection.outbound().sendObject((Publisher) encoded);
+                    NettyOutbound nettyOutbound = encoded instanceof Publisher
+                        ? connection.outbound().sendObject((Publisher) encoded)
+                        : connection.outbound().sendObject(encoded);
+
+                    // An Attention travels through the same writer as the request it cancels. concatMap subscribes
+                    // to the next write only after the previous one has been flushed, guaranteeing the Attention
+                    // reaches the wire after the request rather than racing it through a second outbound path.
+                    // attentionPropagation is incremented once the Attention has been flushed so that the
+                    // acknowledgement (and any frames preceding it) are discarded.
+                    if (message instanceof Attention && this.outstandingRequests.longValue() != 0) {
+                        return Mono.from(nettyOutbound).doOnSuccess(v -> this.attentionPropagation.incrementAndGet());
                     }
 
-                    return connection.outbound().sendObject(encoded);
+                    return nettyOutbound;
                 })
             .onErrorResume(this::resumeError)
             .doAfterTerminate(this::handleClose)
@@ -521,7 +532,9 @@ public final class ReactorNettyClient implements Client {
 
     @Override
     public Mono<Void> attention() {
-        return Mono.defer(() -> Mono.fromFuture(send(Mono.just(Attention.create(1, getTransactionDescriptor()))).toFuture()));
+        // Route the Attention through the same serialized writer as regular requests so it cannot overtake the
+        // in-flight request on the wire.
+        return Mono.fromRunnable(() -> this.requestSink.emitNext(Attention.create(1, getTransactionDescriptor()), EMIT_BUSY_LOOP));
     }
 
     @Override
@@ -625,7 +638,7 @@ public final class ReactorNettyClient implements Client {
                             return;
                         }
 
-                        this.requestSink.emitNext(t, Sinks.EmitFailureHandler.FAIL_FAST);
+                        this.requestSink.emitNext(t, EMIT_BUSY_LOOP);
                     }, e -> this.requestSink.emitError(e, Sinks.EmitFailureHandler.FAIL_FAST), () -> {
 
                         if (!isConnected()) {
@@ -656,18 +669,6 @@ public final class ReactorNettyClient implements Client {
                 logger.error("Exchange cancelled while exchange is active. This is likely a bug leading to unpredictable outcome.");
             }
         });
-    }
-
-    private Mono<Void> send(Publisher<? extends ClientMessage> requests) {
-        return Flux.from(requests).concatMap(message -> {
-            NettyOutbound nettyOutbound = this.connection.outbound().sendObject(encodeForSend(message));
-
-            if (message instanceof Attention && this.outstandingRequests.longValue() != 0) {
-                return Mono.from(nettyOutbound).doOnSuccess(v -> this.attentionPropagation.incrementAndGet());
-            }
-
-            return nettyOutbound;
-        }).then();
     }
 
     private void handleClose() {

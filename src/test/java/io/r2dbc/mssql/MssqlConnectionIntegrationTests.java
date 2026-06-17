@@ -352,7 +352,10 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
     @Test
     void cancelShouldTerminateOngoingDirectQuery() throws Exception {
 
+        int sessionId = currentSessionId();
+
         CompletableFuture<Void> future = connection.createStatement("WAITFOR DELAY '10:00'").fetchSize(0).execute().flatMap(Result::getRowsUpdated).then().toFuture();
+        awaitWaitForExecuting(sessionId);
         connection.cancel().as(StepVerifier::create).verifyComplete();
 
         try {
@@ -367,7 +370,10 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
     @Test
     void cancelShouldTerminateOngoingCursoredQuery() throws Exception {
 
+        int sessionId = currentSessionId();
+
         CompletableFuture<Void> future = connection.createStatement("WAITFOR DELAY '10:00'").fetchSize(10).execute().flatMap(Result::getRowsUpdated).then().toFuture();
+        awaitWaitForExecuting(sessionId);
         connection.cancel().as(StepVerifier::create).verifyComplete();
 
         try {
@@ -382,7 +388,10 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
     @Test
     void shouldResumeOperationsAfterCancellationOfPendingRequest() throws Exception {
 
+        int sessionId = currentSessionId();
+
         CompletableFuture<Void> future = connection.createStatement("WAITFOR DELAY '10:00'").execute().flatMap(Result::getRowsUpdated).then().toFuture();
+        awaitWaitForExecuting(sessionId);
         connection.cancel().as(StepVerifier::create).verifyComplete();
 
         try {
@@ -411,6 +420,34 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
         prepared.flatMap(MssqlResult::getRowsUpdated)
             .as(StepVerifier::create)
             .verifyError(IllegalStateException.class);
+    }
+
+    private static int currentSessionId() {
+        return connection.createStatement("SELECT @@SPID").execute()
+            .flatMap(it -> it.map((row, metadata) -> row.get(0, Integer.class))).blockFirst();
+    }
+
+    /**
+     * Wait until the server reports {@code sessionId} executing a {@code WAITFOR} statement. Cancelling a statement
+     * before the server has begun executing it leaves nothing to cancel, so the cancellation tests must gate on the
+     * statement actually running rather than firing the attention immediately after {@code execute()}.
+     */
+    private static void awaitWaitForExecuting(int sessionId) throws InterruptedException {
+
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (System.nanoTime() < deadline) {
+
+            Integer running = SERVER.getJdbcOperations().queryForObject(
+                "SELECT COUNT(*) FROM sys.dm_exec_requests WHERE session_id = ? AND command = 'WAITFOR'", Integer.class, sessionId);
+
+            if (running != null && running > 0) {
+                return;
+            }
+
+            TimeUnit.MILLISECONDS.sleep(10);
+        }
+
+        throw new AssertionError("Server did not start executing WAITFOR for session " + sessionId + " within 5s");
     }
 
     private void createTable(MssqlConnection connection) {
