@@ -216,6 +216,7 @@ final class DefaultMssqlResult implements MssqlResult {
                     MssqlRowMetadata rowMetadata = this.rowMetadata;
 
                     if (rowMetadata == null) {
+                        ReferenceCountUtil.release(message);
                         sink.error(new IllegalStateException("No MssqlRowMetadata available"));
                         return;
                     }

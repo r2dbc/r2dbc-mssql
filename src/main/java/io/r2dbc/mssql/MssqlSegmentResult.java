@@ -155,6 +155,7 @@ final class MssqlSegmentResult implements MssqlResult {
                 MssqlRowMetadata rowMetadata = metadataRef.get();
 
                 if (rowMetadata == null) {
+                    ReferenceCountUtil.release(message);
                     return;
                 }
 
