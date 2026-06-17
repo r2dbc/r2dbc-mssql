@@ -19,9 +19,11 @@ package io.r2dbc.mssql.message.header;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.r2dbc.mssql.message.tds.ProtocolException;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * @author Mark Paluch
@@ -68,5 +70,14 @@ final class HeaderUnitTests {
         ByteBuf buffer = Unpooled.buffer(7);
 
         assertThat(Header.canDecode(buffer)).isFalse();
+    }
+
+    @Test
+    void shouldRejectPacketLengthBelowHeaderSize() {
+
+        ByteBuf buffer = Unpooled.buffer(8);
+        Header.encode(buffer, Type.PRE_LOGIN, Status.of(Status.StatusBit.EOM), 4, (short) 0, (byte) 1, (byte) 0);
+
+        assertThatThrownBy(() -> Header.decode(buffer)).isInstanceOf(ProtocolException.class);
     }
 }

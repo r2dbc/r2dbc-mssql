@@ -17,6 +17,7 @@
 package io.r2dbc.mssql.message.header;
 
 import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.util.Assert;
 
 import java.util.Objects;
@@ -215,6 +216,11 @@ public class Header implements HeaderOptions {
         Type type = Type.valueOf(buffer.readByte());
         Status status = Status.fromBitmask(buffer.readByte());
         short length = buffer.readShort();
+
+        if (length < LENGTH) {
+            throw ProtocolException.invalidTds(String.format("Invalid packet length: %d. Length must be at least %d bytes", length, LENGTH));
+        }
+
         short spid = buffer.readShort();
         byte packetId = buffer.readByte();
         byte window = buffer.readByte();
