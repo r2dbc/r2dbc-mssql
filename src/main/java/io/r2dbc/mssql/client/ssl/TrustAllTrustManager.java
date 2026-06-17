@@ -18,25 +18,50 @@ package io.r2dbc.mssql.client.ssl;
 
 import io.r2dbc.mssql.message.token.Login7;
 
-import javax.net.ssl.X509TrustManager;
+import java.net.Socket;
 import java.security.cert.X509Certificate;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.X509ExtendedTrustManager;
 
 /**
  * Accepts all {@link X509Certificate}s. Used when SSL is not enabled on the client side to allow SSL during {@link Login7} exchange.
  *
  * @author Mark Paluch
  */
-public enum TrustAllTrustManager implements X509TrustManager {
+public class TrustAllTrustManager extends X509ExtendedTrustManager {
 
-    INSTANCE;
+    public static final TrustAllTrustManager INSTANCE = new TrustAllTrustManager();
 
+    private TrustAllTrustManager() {
+    }
+
+    @Override
+    public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket) {
+    }
+
+    @Override
+    public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket) {
+    }
+
+    @Override
+    public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine) {
+    }
+
+    @Override
+    public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine) {
+    }
+
+    @Override
     public void checkClientTrusted(X509Certificate[] chain, String authType) {
     }
 
+    @Override
     public void checkServerTrusted(X509Certificate[] chain, String authType) {
     }
 
     public X509Certificate[] getAcceptedIssuers() {
         return new X509Certificate[0];
     }
+
 }
