@@ -83,6 +83,13 @@ final class LoginFlow {
 
                         Prelogin.Encryption encryption = response.getRequiredToken(Prelogin.Encryption.class);
 
+                        if (login.useSsl() && !encryption.requiresConnectionSslHandshake()) {
+                            sink.error(new ProtocolException(String.format("SSL encryption was requested but the server does not support encryption (%s) of the entire connection. Closing connection.",
+                                encryption.getEncryptionFlagName())));
+                            client.close().subscribe();
+                            return;
+                        }
+
                         if (!encryption.requiresSslHandshake()) {
                             requests.emitNext(createLoginMessage(login, response), Sinks.EmitFailureHandler.FAIL_FAST);
                         }

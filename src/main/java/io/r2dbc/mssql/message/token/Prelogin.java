@@ -820,6 +820,21 @@ public final class Prelogin implements TokenStream, ClientMessage {
             return getEncryption() == Encryption.ENCRYPT_ON || getEncryption() == Encryption.ENCRYPT_REQ;
         }
 
+        /**
+         * Returns the encryption flag as text.
+         *
+         * @return the encryption flag as text.
+         */
+        public String getEncryptionFlagName() {
+            switch (getEncryption()){
+                case ENCRYPT_OFF: return "ENCRYPT_OFF";
+                case ENCRYPT_ON: return "ENCRYPT_ON";
+                case ENCRYPT_REQ: return "ENCRYPT_REQ";
+                case ENCRYPT_NOT_SUP: return "ENCRYPT_NOT_SUP";
+                default: return "UNKNOWN";
+            }
+        }
+
         @Override
         public String toString() {
             final StringBuffer sb = new StringBuffer();

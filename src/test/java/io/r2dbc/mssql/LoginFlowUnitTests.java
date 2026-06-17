@@ -17,6 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.TestClient;
+import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.Prelogin;
@@ -72,6 +73,30 @@ class LoginFlowUnitTests {
             .as(StepVerifier::create)
             .expectNext(DoneToken.create(0))
             .verifyComplete();
+    }
+
+    @Test
+    void shouldFailWhenServerDoesNotSupportRequestedEncryption() {
+
+        List<Prelogin.Token> tokens = new ArrayList<>();
+
+        tokens.add(new Prelogin.Version(14, 0));
+        tokens.add(new Prelogin.Encryption(Prelogin.Encryption.ENCRYPT_NOT_SUP));
+        tokens.add(Prelogin.Terminator.INSTANCE);
+        Prelogin response = new Prelogin(tokens);
+
+        TestClient client = TestClient.builder()
+            .assertNextRequestWith(actual -> assertThat(actual).isInstanceOf(Prelogin.class))
+            .thenRespond(response)
+            .expectClose()
+            .build();
+
+        LoginConfiguration login = new LoginConfiguration("app", null, "db", "host", "bar", "server", true, "foo");
+
+        LoginFlow.exchange(client, login)
+            .as(StepVerifier::create)
+            .expectError(ProtocolException.class)
+            .verify();
     }
 
     @Test
