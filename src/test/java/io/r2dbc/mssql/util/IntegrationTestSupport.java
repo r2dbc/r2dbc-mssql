@@ -74,8 +74,6 @@ public abstract class IntegrationTestSupport {
 
     @AfterAll
     static void afterAll() {
-
-        System.out.println("close");
         if (connection != null) {
             connection.close().subscribe();
         }
