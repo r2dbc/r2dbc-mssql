@@ -38,6 +38,7 @@ import reactor.util.Loggers;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -148,28 +149,32 @@ final class DefaultMssqlResult implements MssqlResult {
 
         Flux<T> mappedReturnValues = Flux.empty();
         Flux<io.r2dbc.mssql.message.Message> messages = this.messages;
+        List<ReturnValue> returnValues = new ArrayList<>();
+        AtomicBoolean returnValuesHandedOff = new AtomicBoolean();
 
         if (this.expectReturnValues && outparameters) {
-
-            List<ReturnValue> returnValues = new ArrayList<>();
 
             messages = messages.doOnNext(message -> {
 
                 if (message instanceof ReturnValue) {
-                    returnValues.add((ReturnValue) message);
+                    synchronized (returnValues) {
+                        returnValues.add((ReturnValue) message);
+                    }
                 }
             }).filter(it -> !(it instanceof ReturnValue));
 
             mappedReturnValues = Flux.defer(() -> {
 
-                if (returnValues.size() != 0) {
+                synchronized (returnValues) {
+                    if (!returnValues.isEmpty() && returnValuesHandedOff.compareAndSet(false, true)) {
 
-                    MssqlReturnValues mssqlReturnValues = MssqlReturnValues.toReturnValues(this.codecs, returnValues);
+                        MssqlReturnValues mssqlReturnValues = MssqlReturnValues.toReturnValues(this.codecs, returnValues);
 
-                    try {
-                        return Flux.just(mappingFunction.apply(mssqlReturnValues));
-                    } finally {
-                        mssqlReturnValues.release();
+                        try {
+                            return Flux.just(mappingFunction.apply(mssqlReturnValues));
+                        } finally {
+                            mssqlReturnValues.release();
+                        }
                     }
                 }
 
@@ -238,7 +243,17 @@ final class DefaultMssqlResult implements MssqlResult {
             });
 
         if (this.expectReturnValues) {
-            mapped = mapped.concatWith(mappedReturnValues);
+            mapped = mapped.concatWith(mappedReturnValues).doFinally(signalType -> {
+
+                // release buffered return values that were never handed off (e.g. on cancellation
+                // or upstream error before the out parameters are emitted)
+                if (returnValuesHandedOff.compareAndSet(false, true)) {
+                    synchronized (returnValues) {
+                        returnValues.forEach(ReferenceCountUtil::release);
+                        returnValues.clear();
+                    }
+                }
+            });
         }
 
         return mapped;

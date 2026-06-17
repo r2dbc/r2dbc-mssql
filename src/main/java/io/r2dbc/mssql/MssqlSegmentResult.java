@@ -43,6 +43,7 @@ import reactor.util.Loggers;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -101,22 +102,26 @@ final class MssqlSegmentResult implements MssqlResult {
 
         Flux<Segment> returnValueStream = Flux.empty();
         Flux<io.r2dbc.mssql.message.Message> messageStream = messages;
+        List<ReturnValue> returnValues = new ArrayList<>();
+        AtomicBoolean returnValuesHandedOff = new AtomicBoolean();
 
         if (expectReturnValues) {
-
-            List<ReturnValue> returnValues = new ArrayList<>();
 
             messageStream = messageStream.doOnNext(message -> {
 
                 if (message instanceof ReturnValue) {
-                    returnValues.add((ReturnValue) message);
+                    synchronized (returnValues) {
+                        returnValues.add((ReturnValue) message);
+                    }
                 }
             }).filter(it -> !(it instanceof ReturnValue));
 
             returnValueStream = Flux.defer(() -> {
 
-                if (returnValues.size() != 0) {
-                    return Flux.just(new MsqlOutSegment(codecs, returnValues));
+                synchronized (returnValues) {
+                    if (!returnValues.isEmpty() && returnValuesHandedOff.compareAndSet(false, true)) {
+                        return Flux.just(new MsqlOutSegment(codecs, returnValues));
+                    }
                 }
 
                 return Flux.empty();
@@ -174,7 +179,17 @@ final class MssqlSegmentResult implements MssqlResult {
         });
 
         if (expectReturnValues) {
-            segments = segments.concatWith(returnValueStream);
+            segments = segments.concatWith(returnValueStream).doFinally(signalType -> {
+
+                // release buffered return values that were never handed off to an out-parameter segment
+                // (e.g. on cancellation or upstream error before the out segment is emitted)
+                if (returnValuesHandedOff.compareAndSet(false, true)) {
+                    synchronized (returnValues) {
+                        returnValues.forEach(ReferenceCountUtil::release);
+                        returnValues.clear();
+                    }
+                }
+            });
         }
 
         return segments;
