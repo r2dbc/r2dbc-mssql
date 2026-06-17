@@ -41,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  *
  * @author Mark Paluch
  */
-final class MssqlConnectionFactoryUnitTests {
+class MssqlConnectionFactoryUnitTests {
 
     MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder().host("initial").username("user").password("password").build();
 
