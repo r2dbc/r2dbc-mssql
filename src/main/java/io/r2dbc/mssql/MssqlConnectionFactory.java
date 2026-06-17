@@ -24,6 +24,7 @@ import io.r2dbc.mssql.message.tds.Redirect;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.ConnectionFactory;
 import io.r2dbc.spi.R2dbcNonTransientResourceException;
+import io.r2dbc.spi.R2dbcPermissionDeniedException;
 import io.r2dbc.spi.Row;
 import reactor.core.publisher.Mono;
 
@@ -125,9 +126,21 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
                 }
 
                 return connectionMono.onErrorResume(throwable -> {
-                    return it.close().then(Mono.error(new R2dbcNonTransientResourceException("Cannot connect to " + this.configuration.getHost() + ":" + this.configuration.getPort(), throwable)));
+                    return it.close().then(Mono.error(throwable));
                 });
-            });
+            }).onErrorMap(it -> {
+                    Throwable cause = it;
+                    if (it instanceof ReactorNettyClient.MssqlConnectionException) {
+                        cause = it.getCause();
+                    }
+                    if (cause instanceof R2dbcPermissionDeniedException) {
+                        return cause;
+                    }
+                    if (cause instanceof MssqlRoutingException) {
+                        return cause;
+                    }
+                    return new ReactorNettyClient.MssqlConnectionException("Cannot connect to " + this.configuration.getHost() + ":" + this.configuration.getPort(), cause);
+                });
     }
 
     private static MssqlConnectionMetadata toConnectionMetadata(String version, Row row) {

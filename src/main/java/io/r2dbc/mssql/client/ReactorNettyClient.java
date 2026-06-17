@@ -117,6 +117,10 @@ public final class ReactorNettyClient implements Client {
 
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
+    // Latches the first terminal error delivered to the response processor so the actual failure cannot be
+    // masked by a later, generic close signal and we don't re-emit into an already terminated sink.
+    private final AtomicBoolean drained = new AtomicBoolean(false);
+
     private final AtomicLong attentionPropagation = new AtomicLong();
 
     private final AtomicLong outstandingRequests = new AtomicLong();
@@ -375,6 +379,12 @@ public final class ReactorNettyClient implements Client {
 
         logger.error(this.context.getMessage("Error: {}"), throwable.getMessage(), throwable);
 
+        // Drain the actual cause into the response processor first. Completing the request sink below
+        // synchronously triggers the outbound termination hook (handleClose) on this same thread, which
+        // would otherwise win the race and terminate the response processor with a generic "closed"
+        // error, masking this cause.
+        handleConnectionError(throwable);
+
         this.requestSink.emitComplete((signalType, emitResult) -> {
 
             if (emitResult.isFailure()) {
@@ -384,7 +394,6 @@ public final class ReactorNettyClient implements Client {
             return false;
         });
 
-        handleConnectionError(throwable);
         return (Mono<T>) close();
     }
 
@@ -673,18 +682,37 @@ public final class ReactorNettyClient implements Client {
 
     private void handleClose() {
         if (this.isClosed.compareAndSet(false, true)) {
-            logger.warn(ReactorNettyClient.this.context.getMessage("Connection has been closed by peer"));
-            drainError(UNEXPECTED);
+            if (drainError(UNEXPECTED)) {
+                logger.warn(this.context.getMessage("Connection has been closed by peer"));
+            }
         } else {
             drainError(EXPECTED);
         }
     }
 
     private void handleConnectionError(Throwable error) {
-        drainError(() -> new MssqlConnectionException(error));
+        drainError(() -> {
+            if(this.state == ConnectionState.POST_LOGIN) {
+                return new MssqlConnectionException(error);
+            }
+            return new MssqlConnectionException("Cannot connect to server", error);
+        });
     }
 
-    private void drainError(Supplier<? extends Throwable> supplier) {
+    /**
+     * Drain pending exchange requests and terminate the response processor with the supplied error.
+     * <p>The first terminal reason wins: once drained, subsequent calls are ignored so an early, generic
+     * close signal cannot mask the actual failure and we don't re-emit into an already terminated sink
+     * (which would otherwise surface as {@code onErrorDropped} noise).
+     *
+     * @param supplier supplies the terminal error to propagate.
+     * @return {@code true} if this call delivered the terminal error, {@code false} if already drained.
+     */
+    private boolean drainError(Supplier<? extends Throwable> supplier) {
+
+        if (!this.drained.compareAndSet(false, true)) {
+            return false;
+        }
 
         Sinkable receiver;
         while ((receiver = this.requestQueue.poll()) != null) {
@@ -692,6 +720,7 @@ public final class ReactorNettyClient implements Client {
         }
 
         this.responseProcessor.emitError(supplier.get(), Sinks.EmitFailureHandler.FAIL_FAST);
+        return true;
     }
 
     /**
@@ -928,10 +957,14 @@ public final class ReactorNettyClient implements Client {
 
     }
 
-    static class MssqlConnectionException extends R2dbcNonTransientResourceException {
+    public static class MssqlConnectionException extends R2dbcNonTransientResourceException {
 
         public MssqlConnectionException(Throwable cause) {
             super(cause);
+        }
+
+        public MssqlConnectionException(String reason, Throwable cause) {
+            super(reason, cause);
         }
 
     }

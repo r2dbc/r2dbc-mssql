@@ -17,14 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.util.IntegrationTestSupport;
-import io.r2dbc.spi.ColumnMetadata;
-import io.r2dbc.spi.ConnectionFactories;
-import io.r2dbc.spi.ConnectionFactoryOptions;
-import io.r2dbc.spi.IsolationLevel;
-import io.r2dbc.spi.R2dbcPermissionDeniedException;
-import io.r2dbc.spi.R2dbcTimeoutException;
-import io.r2dbc.spi.R2dbcTransientException;
-import io.r2dbc.spi.Result;
+import io.r2dbc.spi.*;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -74,7 +67,7 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
 
         connectionFactory.create()
             .as(StepVerifier::create)
-            .expectError(ConnectException.class)
+            .expectError(R2dbcNonTransientException.class)
             .verify();
     }
 
