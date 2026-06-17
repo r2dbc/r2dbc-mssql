@@ -78,7 +78,15 @@ public final class EnvChangeToken extends AbstractDataToken {
 
         // The routing message contains structured data, while the other environment change tokens contain old/new value pairs prefixed with data length.
 
-        if (envChangeType == EnvChangeType.Routing) {
+        if (envChangeType == EnvChangeType.Unknown) {
+
+            // Forward-compatibility: skip unrecognized environment change types using the length field instead of failing the connection.
+            buffer.skipBytes(length - 1);
+
+            newValue = new byte[0];
+            oldValue = null;
+
+        } else if (envChangeType == EnvChangeType.Routing) {
 
             newValue = new byte[length - 1];
             buffer.readBytes(newValue);
@@ -210,7 +218,10 @@ public final class EnvChangeToken extends AbstractDataToken {
             }
         },
         // Routing is used for redirections to a different server
-        Routing(20);
+        Routing(20),
+
+        // Catch-all for environment change types that are not (yet) recognized; their payload is skipped.
+        Unknown(-1);
 
         private final byte type;
 
@@ -223,21 +234,20 @@ public final class EnvChangeToken extends AbstractDataToken {
         }
 
         /**
-         * Lookup {@link EnvChangeType} by its by {@code value}.
+         * Lookup {@link EnvChangeType} by its {@code value}.
          *
          * @param value the env change type byte value.
-         * @return the resolved {@link EnvChangeType}.
-         * @throws IllegalArgumentException if the {@code value} cannot be resolved to a {@link EnvChangeType}.
+         * @return the resolved {@link EnvChangeType}, or {@link #Unknown} if the {@code value} is not recognized.
          */
         public static EnvChangeType valueOf(int value) {
 
             for (EnvChangeType envChangeType : values()) {
-                if (envChangeType.getType() == (byte) value) {
+                if (envChangeType != Unknown && envChangeType.getType() == (byte) value) {
                     return envChangeType;
                 }
             }
 
-            throw new IllegalArgumentException(String.format("Invalid env change type 0x%01X", value));
+            return Unknown;
         }
 
         public int toByteLength(byte dataLength) {
