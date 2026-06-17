@@ -83,6 +83,9 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
     @Nullable
     private Chunk chunk;
 
+    @Nullable
+    private ByteBuf headerRemainder;
+
     /**
      * Creates a new {@link TdsSslHandler}.
      *
@@ -185,6 +188,11 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
             chunk.fullMessage.release();
             chunk.aggregator.release();
             this.chunk = null;
+        }
+
+        if (this.headerRemainder != null) {
+            this.headerRemainder.release();
+            this.headerRemainder = null;
         }
     }
 
@@ -317,6 +325,14 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
         if (isInHandshake()) {
             ByteBuf buffer = (ByteBuf) msg;
 
+            // a previous read delivered fewer bytes than a TDS header requires; prepend them
+            if (this.chunk == null && this.headerRemainder != null) {
+                this.headerRemainder.writeBytes(buffer);
+                buffer.release();
+                buffer = this.headerRemainder;
+                this.headerRemainder = null;
+            }
+
             Chunk chunk = this.chunk;
             if (chunk != null || Header.canDecode(buffer)) {
 
@@ -362,6 +378,14 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
                 if (header.is(Status.StatusBit.IGNORE)) {
                     return;
                 }
+            } else {
+
+                // fewer bytes than a TDS header arrived; retain them until the remainder shows up
+                ByteBuf remainder = buffer.alloc().buffer(Header.LENGTH);
+                remainder.writeBytes(buffer);
+                buffer.release();
+                this.headerRemainder = remainder;
+                ctx.read();
             }
             return;
         }
