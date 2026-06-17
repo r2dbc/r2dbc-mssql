@@ -26,6 +26,7 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.r2dbc.mssql.client.ssl.SslConfiguration;
@@ -277,6 +278,8 @@ public final class ReactorNettyClient implements Client {
                     if (DEBUG_ENABLED) {
                         logger.debug(ReactorNettyClient.this.context.getMessage("Discard message {}. Draining frames until attention acknowledgement."), message);
                     }
+                    // release reference-counted frames (e.g. rows) that are dropped while draining
+                    ReferenceCountUtil.release(message);
                     // update demand for dropped next signal
                     if (subscription != null) {
                         subscription.request(1);
