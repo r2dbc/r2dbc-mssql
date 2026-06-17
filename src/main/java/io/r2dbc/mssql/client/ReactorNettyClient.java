@@ -29,6 +29,7 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.r2dbc.mssql.client.ssl.SslConfiguration;
+import io.r2dbc.mssql.client.ssl.SslHandlerFactory;
 import io.r2dbc.mssql.client.ssl.TdsSslHandler;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
@@ -486,14 +487,13 @@ public final class ReactorNettyClient implements Client {
             .connect()
             .doOnNext(it -> {
 
-                SslConfiguration tunnel = configuration.getSslTunnelConfiguration();
+                SslHandlerFactory sslHandlerFactory = SslHandlerFactory.create(configuration, ClientConfiguration::getSslTunnelConfiguration);
                 ChannelPipeline pipeline = it.channel().pipeline();
 
-                if (tunnel.isSslEnabled()) {
+                if (sslHandlerFactory.isSslEnabled()) {
                     logger.debug(connectionContext.getMessage("Enabling SSL tunnel"));
                     try {
-                        pipeline.addFirst("sslTunnel", createSslTunnelHandler(it.channel().alloc(), tunnel,
-                            configuration.getHost(), configuration.getPort()));
+                        pipeline.addFirst("sslTunnel", sslHandlerFactory.createSslHandler(it.channel().alloc()));
                     } catch (GeneralSecurityException e) {
                         it.channel().close();
                         throw new IllegalStateException("Cannot configure SSL tunnel", e);
@@ -514,13 +514,6 @@ public final class ReactorNettyClient implements Client {
             });
 
         return connection.map(it -> new ReactorNettyClient(it, tdsEncoder, connectionContext.withChannelId(it.channel().toString())));
-    }
-
-    // Visible for testing.
-    static SslHandler createSslTunnelHandler(ByteBufAllocator allocator, SslConfiguration tunnel, String host, int port)
-        throws GeneralSecurityException {
-        SslContext sslContext = Assert.requireNonNull(tunnel.getSslContext(), "SslContext must not be null");
-        return new SslHandler(sslContext.newEngine(allocator, host, port));
     }
 
     @Override

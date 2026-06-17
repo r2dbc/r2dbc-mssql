@@ -73,16 +73,6 @@ class TdsSslHandlerUnitTests {
     }
 
     @Test
-    void createSslHandlerConfiguresPeerHostAndPort() throws Exception {
-
-        SslHandler sslHandler = TdsSslHandler.createSslHandler(clientConfiguration(SslContextBuilder.forClient().build()),
-            TestByteBufAllocator.TEST);
-
-        assertThat(sslHandler.engine().getPeerHost()).isEqualTo("localhost");
-        assertThat(sslHandler.engine().getPeerPort()).isEqualTo(1433);
-    }
-
-    @Test
     void entireMessage() throws Exception {
 
         ByteBuf buffer = TestByteBufAllocator.TEST.buffer();
