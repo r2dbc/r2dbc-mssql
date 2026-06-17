@@ -44,6 +44,27 @@ import java.nio.ByteBuffer;
 class RpcRequestUnitTests {
 
     @Test
+    void shouldEncodeOptionFlagsAsUnsignedShort() {
+
+        RpcRequest rpcRequest = RpcRequest.builder() //
+            .withProcId(RpcRequest.Sp_CursorOpen) //
+            .withTransactionDescriptor(TransactionDescriptor.empty())
+            .withOptionFlags(RpcRequest.OptionFlags.empty().disableMetadata())
+            .build();
+
+        ClientMessageAssert.assertThat(rpcRequest).encoded()
+            .hasHeader(HeaderOptions.create(Type.RPC, Status.empty()))
+            .isEncodedAs(expected -> {
+
+                AllHeaders.transactional(TransactionDescriptor.empty(), 1).encode(expected);
+
+                Encode.uShort(expected, 0xFFFF); // proc Id switch
+                Encode.uShort(expected, 0x02); // proc Id
+                Encode.uShort(expected, 0x02); // 2-byte OptionFlags, fNoMetaData in the least significant byte
+            });
+    }
+
+    @Test
     void shouldEncodeSpCursorOpen() {
 
         int SCROLLOPT_FAST_FORWARD = 16;
@@ -81,8 +102,7 @@ class RpcRequestUnitTests {
 
                 Encode.uShort(expected, 0xFFFF); // proc Id switch
                 Encode.uShort(expected, 0x02); // proc Id
-                Encode.asByte(expected, 0); // option flag
-                Encode.asByte(expected, 0); // status flag
+                Encode.uShort(expected, 0); // 2-byte OptionFlags
 
                 expected.writeBytes(HexUtils.decodeToByteBuf(hex)); // encoded parameters
             });
