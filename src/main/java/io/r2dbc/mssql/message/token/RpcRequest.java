@@ -142,17 +142,14 @@ public final class RpcRequest implements ClientMessage, TokenStream {
 
     private final OptionFlags optionFlags;
 
-    private final byte statusFlags;
-
     private final List<ParameterDescriptor> parameterDescriptors;
 
-    private RpcRequest(AllHeaders allHeaders, @Nullable String procName, @Nullable Integer procId, OptionFlags optionFlags, byte statusFlags, List<ParameterDescriptor> parameterDescriptors) {
+    private RpcRequest(AllHeaders allHeaders, @Nullable String procName, @Nullable Integer procId, OptionFlags optionFlags, List<ParameterDescriptor> parameterDescriptors) {
 
         this.allHeaders = Assert.requireNonNull(allHeaders, "AllHeaders must not be null");
         this.procName = procName;
         this.procId = procId;
         this.optionFlags = Assert.requireNonNull(optionFlags, "Option flags must not be null");
-        this.statusFlags = statusFlags;
         this.parameterDescriptors = parameterDescriptors;
     }
 
@@ -290,8 +287,8 @@ public final class RpcRequest implements ClientMessage, TokenStream {
             Encode.unicodeStream(buffer, this.procName);
         }
 
-        Encode.asByte(buffer, this.optionFlags.getValue());
-        Encode.asByte(buffer, this.statusFlags);
+        // OptionFlags is a 2-byte (USHORT) field;
+        Encode.uShort(buffer, this.optionFlags.getValue() & 0xFF);
     }
 
     @Nullable
@@ -317,8 +314,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
             return false;
         }
         RpcRequest that = (RpcRequest) o;
-        return this.statusFlags == that.statusFlags &&
-            Objects.equals(this.allHeaders, that.allHeaders) &&
+        return Objects.equals(this.allHeaders, that.allHeaders) &&
             Objects.equals(this.procName, that.procName) &&
             Objects.equals(this.procId, that.procId) &&
             Objects.equals(this.optionFlags, that.optionFlags) &&
@@ -327,7 +323,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.allHeaders, this.procName, this.procId, this.optionFlags, this.statusFlags, this.parameterDescriptors);
+        return Objects.hash(this.allHeaders, this.procName, this.procId, this.optionFlags, this.parameterDescriptors);
     }
 
     @Override
@@ -337,7 +333,6 @@ public final class RpcRequest implements ClientMessage, TokenStream {
         sb.append(" [procName='").append(this.procName).append('\'');
         sb.append(", procId=").append(this.procId);
         sb.append(", optionFlags=").append(this.optionFlags);
-        sb.append(", statusFlags=").append(this.statusFlags);
         sb.append(", parameterDescriptors=").append(this.parameterDescriptors);
         sb.append(']');
         return sb.toString();
@@ -354,8 +349,6 @@ public final class RpcRequest implements ClientMessage, TokenStream {
         private Integer procId;
 
         private OptionFlags optionFlags = OptionFlags.empty();
-
-        private byte statusFlags;
 
         private TransactionDescriptor transactionDescriptor;
 
@@ -544,7 +537,7 @@ public final class RpcRequest implements ClientMessage, TokenStream {
             Assert.state(this.transactionDescriptor != null, "TransactionDescriptor is not configured");
             Assert.state(this.procName != null || this.procId != null, "Either procedure name or procedure Id required");
 
-            return new RpcRequest(AllHeaders.transactional(this.transactionDescriptor.toBytes(), 1), this.procName, this.procId, this.optionFlags, this.statusFlags,
+            return new RpcRequest(AllHeaders.transactional(this.transactionDescriptor.toBytes(), 1), this.procName, this.procId, this.optionFlags,
                 new ArrayList<>(this.parameterDescriptors));
         }
 
