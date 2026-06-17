@@ -43,6 +43,7 @@ import reactor.util.annotation.Nullable;
 
 import javax.net.ssl.SSLEngine;
 import java.security.GeneralSecurityException;
+import java.util.function.Function;
 
 /**
  * SSL handling for TDS connections.
@@ -109,24 +110,6 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
     }
 
     /**
-     * Create the {@link SslHandler}.
-     *
-     * @param clientConfiguration the client configuration.
-     * @return the configured {@link SslHandler}.
-     * @throws GeneralSecurityException thrown on security API errors.
-     */
-    // Visible for testing.
-    static SslHandler createSslHandler(ClientConfiguration clientConfiguration, ByteBufAllocator allocator) throws GeneralSecurityException {
-
-        SslContext sslContext = Assert.requireNonNull(clientConfiguration.getSslContext(),
-            "SslContext must not be null");
-        SSLEngine sslEngine = sslContext
-            .newEngine(allocator, clientConfiguration.getHost(), clientConfiguration.getPort());
-
-        return new SslHandler(sslEngine);
-    }
-
-    /**
      * Lazily register {@link SslHandler} if needed.
      *
      * @param ctx the {@link ChannelHandlerContext} for which the event is made.
@@ -139,7 +122,8 @@ public final class TdsSslHandler extends ChannelDuplexHandler {
         if (evt == SslState.LOGIN_ONLY || evt == SslState.CONNECTION) {
 
             this.state = (SslState) evt;
-            this.sslHandler = createSslHandler(this.clientConfiguration, ctx.alloc());
+            SslHandlerFactory sslHandlerFactory = SslHandlerFactory.create(this.clientConfiguration, it -> it);
+            this.sslHandler = sslHandlerFactory.createSslHandler(ctx.alloc());
 
             LOGGER.debug(this.connectionContext.getMessage("Registering Context Proxy and SSL Event Handlers to propagate SSL events to channelRead()"));
             ctx.pipeline().addAfter(getClass().getName(), ContextProxy.class.getName(), new ContextProxy());

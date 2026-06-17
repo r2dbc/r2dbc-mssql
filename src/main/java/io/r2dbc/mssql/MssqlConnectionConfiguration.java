@@ -194,7 +194,7 @@ public final class MssqlConnectionConfiguration {
         );
     }
 
-    ClientConfiguration toClientConfiguration() {
+    public ClientConfiguration toClientConfiguration() {
         return new DefaultClientConfiguration(this.connectionProvider, this.connectTimeout, this.host, this.hostNameInCertificate, this.port, this.ssl, this.sslContextBuilderCustomizer,
                 this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustServerCertificate, this.trustStore, this.trustStoreType, this.trustStorePassword
         );
