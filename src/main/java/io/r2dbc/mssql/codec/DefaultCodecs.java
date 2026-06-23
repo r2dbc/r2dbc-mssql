@@ -72,7 +72,9 @@ public final class DefaultCodecs implements Codecs {
             OffsetDateTimeCodec.INSTANCE,
             ZonedDateTimeCodec.INSTANCE,
             BlobCodec.INSTANCE,
-            ClobCodec.INSTANCE
+            ClobCodec.INSTANCE,
+            GeographyCodec.INSTANCE,
+            GeometryCodec.INSTANCE
         ).toArray(new Codec[0]);
 
         this.codecPreferences.put(SqlServerType.BIT, BooleanCodec.INSTANCE);
@@ -85,6 +87,8 @@ public final class DefaultCodecs implements Codecs {
         this.codecPreferences.put(SqlServerType.GUID, UuidCodec.INSTANCE);
         this.codecPreferences.put(SqlServerType.NUMERIC, DecimalCodec.INSTANCE);
         this.codecPreferences.put(SqlServerType.DECIMAL, DecimalCodec.INSTANCE);
+        this.codecPreferences.put(SqlServerType.GEOGRAPHY, GeographyCodec.INSTANCE);
+        this.codecPreferences.put(SqlServerType.GEOMETRY, GeometryCodec.INSTANCE);
     }
 
     @SuppressWarnings({"unchecked", "rawtpes"})

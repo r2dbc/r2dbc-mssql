@@ -369,6 +369,28 @@ enum TypeBuilder {
 
     // TODO: UDT, XML
 
+    UDT(TdsDataType.UDT, new AbstractTypeDecoderStrategy(4) {
+        
+        @Override
+        public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
+
+            typeInfo.lengthStrategy = LengthStrategy.PARTLENTYPE;
+            typeInfo.maxLength = Decode.smallInt(buffer);
+            Decode.unicodeBString(buffer);
+            Decode.unicodeBString(buffer);
+            typeInfo.udtTypeName = Decode.unicodeBString(buffer);
+            Decode.unicodeUString(buffer);
+
+            if (typeInfo.udtTypeName.equals("geography")) {
+                typeInfo.serverType = SqlServerType.GEOGRAPHY;
+            } else if (typeInfo.udtTypeName.equals("geometry")) {
+                typeInfo.serverType = SqlServerType.GEOMETRY;
+            }
+
+            Assert.state(typeInfo.serverType != null, "UDT types other than Geography or Geometry not supported");
+        }
+    }),
+
     SQL_VARIANT(TdsDataType.SQL_VARIANT, new AbstractTypeDecoderStrategy(4) {
 
         @Override

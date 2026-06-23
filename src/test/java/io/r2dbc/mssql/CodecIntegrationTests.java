@@ -28,6 +28,11 @@ import io.r2dbc.spi.R2dbcType;
 import io.r2dbc.spi.Result;
 import io.r2dbc.spi.Type;
 import org.junit.jupiter.api.Test;
+
+import com.microsoft.sqlserver.jdbc.Geography;
+import com.microsoft.sqlserver.jdbc.Geometry;
+import com.microsoft.sqlserver.jdbc.SQLServerException;
+
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
@@ -312,6 +317,52 @@ class CodecIntegrationTests extends IntegrationTestSupport {
         testType(connection, "IMAGE", ByteBuffer.wrap("foobarbaz".getBytes()), ByteBuffer.class, actual -> {
             assertThat(actual).isInstanceOf(ByteBuffer.class).isEqualTo(ByteBuffer.wrap("foobarbaz".getBytes()));
         });
+    }
+
+    @Test
+    void shouldEncodeGeographyAsGeography() throws SQLServerException {
+        Geography geographyVal = Geography.STGeomFromText("POINT(-122.35 37.55)", 4326);
+        
+        testType(connection, "GEOGRAPHY", geographyVal, Geography.class, 
+        actual -> {Geography actualGeography = (Geography) actual;
+            try {
+                assertThat(actualGeography.STAsText()).isEqualTo(geographyVal.STAsText());
+            } catch (SQLServerException e) {
+                org.assertj.core.api.Fail.fail(e.getMessage());
+            }
+            assertThat(actualGeography.getSrid()).isEqualTo(geographyVal.getSrid());
+        },
+        actual -> {Geography actualGeography = (Geography) actual;
+            try {
+                assertThat(actualGeography.STAsText()).isEqualTo(geographyVal.STAsText());
+            } catch (SQLServerException e) {
+                org.assertj.core.api.Fail.fail(e.getMessage());
+            }
+            assertThat(actualGeography.getSrid()).isEqualTo(geographyVal.getSrid());
+        }, null);
+    }
+
+    @Test
+    void shouldEncodeGeometryAsGeometry() throws SQLServerException {
+        Geometry geometryVal = Geometry.STGeomFromText("POINT(30 10)", 0);
+        
+        testType(connection, "GEOMETRY", geometryVal, Geometry.class, 
+        actual -> {Geometry actualGeometry = (Geometry) actual;
+            try {
+                assertThat(actualGeometry.STAsText()).isEqualTo(geometryVal.STAsText());
+            } catch (SQLServerException e) {
+                org.assertj.core.api.Fail.fail(e.getMessage());
+            }
+            assertThat(actualGeometry.getSrid()).isEqualTo(geometryVal.getSrid());
+        },
+        actual -> {Geometry actualGeometry = (Geometry) actual;
+            try {
+                assertThat(actualGeometry.STAsText()).isEqualTo(geometryVal.STAsText());
+            } catch (SQLServerException e) {
+                org.assertj.core.api.Fail.fail(e.getMessage());
+            }
+            assertThat(actualGeometry.getSrid()).isEqualTo(geometryVal.getSrid());
+        }, null);
     }
 
     private void testType(MssqlConnection connection, String columnType, Object value) {
