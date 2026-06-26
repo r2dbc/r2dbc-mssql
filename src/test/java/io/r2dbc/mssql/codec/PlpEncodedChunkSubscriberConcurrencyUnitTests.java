@@ -38,13 +38,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Concurrency regression test for {@link PlpEncoded.ChunkSubscriber}. Incoming chunks are appended to a
- * {@code CompositeByteBuf} aggregator while {@code cancel}/{@code onError} release it. {@code onNext} hands its
- * buffer to a work-in-progress-serialised drain that exclusively owns the aggregator, so an append can never run
- * concurrently with a release. This test reproduces a &gt;5&nbsp;MB NVARCHAR(MAX)-sized stream fed on one thread
- * while the subscription is cancelled on another: every fed component must end up released exactly once, with no
- * {@code IllegalReferenceCountException} and no leak. Without the serialisation, a cancel that releases the
- * aggregator mid-{@code addComponent} fails with {@code refCnt: 0} or leaks the component.
+ * Concurrency regression tests for {@link PlpEncoded.ChunkSubscriber}. {@code onNext} hands its buffer to a
+ * work-in-progress-serialised drain that exclusively owns the {@code CompositeByteBuf} aggregator, so the
+ * aggregator is never mutated/released by two threads at once. Both downstream signals can race {@code onNext}
+ * (upstream delivery): {@code cancel} (which releases the aggregator) and {@code request} (which drives a second
+ * concurrent {@code drain()}). On the unserialised code each fails ~50% of runs — a {@code cancel} releasing the
+ * aggregator mid-{@code addComponent} throws {@code refCnt: 0}, and a concurrent {@code request}/{@code onNext}
+ * drain corrupts the aggregator's reader/writer indices ({@code IndexOutOfBoundsException}) — or leaks a chunk.
+ * Both must instead release every fed component exactly once with no exception.
  */
 class PlpEncodedChunkSubscriberConcurrencyUnitTests {
 
@@ -215,6 +216,90 @@ class PlpEncodedChunkSubscriberConcurrencyUnitTests {
                     buf.release();
                 }
             });
+        }
+    }
+
+    // No cancel: request() (downstream demand) races onNext() (upstream delivery), driving two concurrent
+    // drain()s over the non-thread-safe CompositeByteBuf. On the unserialised code this fails ~50% of runs
+    // (refCnt: 0 / reader-writer index corruption), proving the defect is not specific to cancellation.
+    @RepeatedTest(200)
+    void requestRacingOnNextNeitherCorruptsNorLeaks() throws Exception {
+
+        ByteBufAllocator allocator = PooledByteBufAllocator.DEFAULT;
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+
+        try {
+            List<ByteBuf> fed = new ArrayList<>(COMPONENTS);
+            for (int i = 0; i < COMPONENTS; i++) {
+                fed.add(allocator.buffer(COMPONENT_SIZE).writeZero(COMPONENT_SIZE));
+            }
+            AtomicReference<Throwable> failure = new AtomicReference<>();
+
+            CoreSubscriber<ByteBuf> wire = new CoreSubscriber<ByteBuf>() {
+                @Override
+                public Context currentContext() {
+                    return Context.empty();
+                }
+
+                @Override
+                public void onSubscribe(Subscription s) {
+                }
+
+                @Override
+                public void onNext(ByteBuf chunk) {
+                    chunk.release();
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    failure.compareAndSet(null, t);
+                }
+
+                @Override
+                public void onComplete() {
+                }
+            };
+
+            PlpEncoded.ChunkSubscriber subscriber = new PlpEncoded.ChunkSubscriber(wire, allocator, () -> COMPONENT_SIZE, false);
+            subscriber.onSubscribe(NOOP_UPSTREAM);
+
+            CyclicBarrier start = new CyclicBarrier(2);
+
+            Future<?> feeder = pool.submit(() -> {
+                awaitQuietly(start);
+                try {
+                    for (ByteBuf component : fed) {
+                        subscriber.onNext(component);
+                    }
+                } catch (Throwable t) {
+                    failure.compareAndSet(null, t);
+                }
+            });
+
+            Future<?> requester = pool.submit(() -> {
+                awaitQuietly(start);
+                try {
+                    for (int i = 0; i < COMPONENTS; i++) {
+                        subscriber.request(1);
+                    }
+                } catch (Throwable t) {
+                    failure.compareAndSet(null, t);
+                }
+            });
+
+            feeder.get(30, TimeUnit.SECONDS);
+            requester.get(30, TimeUnit.SECONDS);
+
+            // Drain any remainder and complete; every fed component must be released exactly once.
+            subscriber.request(Long.MAX_VALUE);
+            subscriber.onComplete();
+
+            assertThat(failure.get()).describedAs("request raced onNext on the aggregator (no cancel)").isNull();
+            for (ByteBuf component : fed) {
+                assertThat(component.refCnt()).describedAs("component leaked: request raced onNext").isZero();
+            }
+        } finally {
+            pool.shutdownNow();
         }
     }
 
