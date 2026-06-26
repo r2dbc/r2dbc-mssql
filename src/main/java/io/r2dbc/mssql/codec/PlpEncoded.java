@@ -35,9 +35,10 @@ import reactor.core.publisher.Operators;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import reactor.util.concurrent.Queues;
 import java.util.function.IntSupplier;
 
 /**
@@ -145,10 +146,6 @@ public class PlpEncoded extends Encoded {
 
     static class ChunkSubscriber extends AtomicLong implements CoreSubscriber<ByteBuf>, Subscription {
 
-        private static final int STATUS_WIP = 0;
-
-        private static final int STATUS_DONE = 1;
-
         private final CoreSubscriber<? super ByteBuf> actual;
 
         private final ByteBufAllocator allocator;
@@ -157,12 +154,21 @@ public class PlpEncoded extends Encoded {
 
         private final boolean withSizeHeaders;
 
+        // Incoming raw buffers are handed to the WIP-serialised drain() via this queue instead of being added
+        // to the aggregator directly from onNext. Together with the work-in-progress counter (this AtomicLong)
+        // this keeps every aggregator mutation/release on a single thread at a time, so a concurrent cancel()
+        // or onError() can never release the aggregator while onNext() is appending to it - without a lock.
+        private final Queue<ByteBuf> queue = Queues.<ByteBuf>unbounded().get();
+
         private boolean first = true;
 
         private volatile int nextChunkSize;
 
+        // Only accessed inside drain(), which the wip counter makes single-threaded at a time.
         @Nullable
-        private volatile CompositeByteBuf aggregator;
+        private CompositeByteBuf aggregator;
+
+        private boolean terminated;
 
         volatile long requested;
 
@@ -170,13 +176,12 @@ public class PlpEncoded extends Encoded {
         static final AtomicLongFieldUpdater<ChunkSubscriber> REQUESTED =
             AtomicLongFieldUpdater.newUpdater(ChunkSubscriber.class, "requested");
 
-        volatile int status;
+        private volatile boolean doneUpstream;
 
-        @SuppressWarnings("rawtypes")
-        static final AtomicIntegerFieldUpdater<ChunkSubscriber> STATUS =
-            AtomicIntegerFieldUpdater.newUpdater(ChunkSubscriber.class, "status");
+        @Nullable
+        private volatile Throwable error;
 
-        private boolean doneUpstream;
+        private volatile boolean cancelled;
 
         private Subscription s;
 
@@ -207,69 +212,112 @@ public class PlpEncoded extends Encoded {
 
             byteBuf.touch("PlpEncoded.onNext(…)");
 
-            if (STATUS.get(this) == STATUS_DONE) {
-
-                byteBuf.release();
-                Operators.onNextDropped(byteBuf, this.actual.currentContext());
-                return;
-            }
-
-            CompositeByteBuf aggregator = this.aggregator;
-            if (aggregator == null) {
-                this.aggregator = aggregator = this.allocator.compositeBuffer();
-            }
-
-            aggregator.addComponent(true, byteBuf);
+            // Hand the buffer to the serialised drain rather than mutating the aggregator here; drain()
+            // releases it if the subscription has already been cancelled or terminated.
+            this.queue.offer(byteBuf);
 
             drain();
 
-            if (!this.doneUpstream && REQUESTED.get(this) > 0) {
+            if (!this.doneUpstream && !this.cancelled && REQUESTED.get(this) > 0) {
                 this.s.request(1);
             }
         }
 
         private void drain() {
 
-            CompositeByteBuf aggregator = this.aggregator;
-
-            if (aggregator == null) {
-
-                if (this.doneUpstream && STATUS.compareAndSet(this, STATUS_WIP, STATUS_DONE)) {
-                    this.actual.onComplete();
-                }
-
+            if (getAndIncrement() != 0) {
                 return;
             }
 
-            while (STATUS.get(this) == STATUS_WIP && aggregator.readableBytes() >= this.nextChunkSize && REQUESTED.get(this) > 0) {
+            long missed = 1;
 
-                long demand = REQUESTED.get(this);
-                if (demand > 0) {
-                    if (REQUESTED.compareAndSet(this, demand, demand - 1)) {
-                        emitNext(aggregator, this.nextChunkSize);
-                        this.nextChunkSize = this.chunkSizeSupplier.getAsInt();
+            for (; ; ) {
+
+                if (this.cancelled) {
+                    discardAll();
+                } else if (this.error != null) {
+
+                    discardAll();
+                    if (!this.terminated) {
+                        this.terminated = true;
+                        this.actual.onError(this.error);
+                    }
+                } else {
+
+                    // Ingest queued raw buffers into the aggregator. This is the only place that appends,
+                    // and it runs single-threaded under the wip guard, so it never races a release below.
+                    ByteBuf next;
+                    while ((next = this.queue.poll()) != null) {
+
+                        CompositeByteBuf aggregator = this.aggregator;
+                        if (aggregator == null) {
+                            this.aggregator = aggregator = this.allocator.compositeBuffer();
+                        }
+                        aggregator.addComponent(true, next);
+                    }
+
+                    CompositeByteBuf aggregator = this.aggregator;
+
+                    if (aggregator != null) {
+
+                        while (!this.cancelled && aggregator.readableBytes() >= this.nextChunkSize && REQUESTED.get(this) > 0) {
+
+                            long demand = REQUESTED.get(this);
+                            if (demand > 0 && REQUESTED.compareAndSet(this, demand, demand - 1)) {
+                                emitNext(aggregator, this.nextChunkSize);
+                                this.nextChunkSize = this.chunkSizeSupplier.getAsInt();
+                            }
+                        }
+
+                        if (!this.cancelled && this.doneUpstream && aggregator.isReadable() && REQUESTED.get(this) > 0) {
+
+                            long demand = REQUESTED.get(this);
+                            if (demand > 0 && REQUESTED.compareAndSet(this, demand, demand - 1)) {
+                                emitNext(aggregator, aggregator.readableBytes());
+                            }
+                        }
+                    }
+
+                    // The !cancelled checks below are defensive: they preserve the "no onComplete after a
+                    // cancel" guarantee that the previous implementation got from a shared status CAS. Only a
+                    // tight concurrent interleaving (a cancel landing between the top-of-loop check and here)
+                    // could reach them, so they are not covered by a deterministic test.
+                    if (!this.cancelled && this.doneUpstream && this.queue.isEmpty() && (this.aggregator == null || !this.aggregator.isReadable())) {
+
+                        if (this.aggregator != null) {
+                            this.aggregator.release();
+                            this.aggregator = null;
+                        }
+
+                        if (!this.terminated) {
+                            this.terminated = true;
+                            this.actual.onComplete();
+                        }
+                    } else if (!this.cancelled && this.aggregator != null) {
+                        this.aggregator.discardReadComponents();
                     }
                 }
-            }
 
-            if (STATUS.get(this) == STATUS_WIP && this.doneUpstream && aggregator.isReadable() && REQUESTED.get(this) > 0) {
-
-                long demand = REQUESTED.get(this);
-                if (demand > 0) {
-                    if (REQUESTED.compareAndSet(this, demand, demand - 1)) {
-                        emitNext(aggregator, aggregator.readableBytes());
-                    }
+                missed = addAndGet(-missed);
+                if (missed == 0) {
+                    break;
                 }
             }
+        }
 
-            if (this.doneUpstream && !aggregator.isReadable() && STATUS.compareAndSet(this, STATUS_WIP, STATUS_DONE)) {
+        // Release everything we hold (queued-but-not-ingested buffers and the aggregator). Runs only inside
+        // the serialised drain, so it never races the ingest above.
+        private void discardAll() {
 
-                aggregator.release();
+            ByteBuf buf;
+            while ((buf = this.queue.poll()) != null) {
+                buf.release();
+            }
 
+            CompositeByteBuf aggregator = this.aggregator;
+            if (aggregator != null) {
                 this.aggregator = null;
-                this.actual.onComplete();
-            } else {
-                aggregator.discardReadComponents();
+                aggregator.release();
             }
         }
 
@@ -310,22 +358,9 @@ public class PlpEncoded extends Encoded {
         @Override
         public void onError(Throwable t) {
 
-            CompositeByteBuf aggregator = this.aggregator;
-
-            if (STATUS.compareAndSet(this, STATUS_WIP, STATUS_DONE)) {
-
-                this.doneUpstream = true;
-
-                this.actual.onError(t);
-
-                if (aggregator != null) {
-                    aggregator.release();
-                }
-
-                return;
-            }
-
-            Operators.onErrorDropped(t, this.actual.currentContext());
+            this.error = t;
+            this.doneUpstream = true;
+            drain();
         }
 
         @Override
@@ -345,7 +380,7 @@ public class PlpEncoded extends Encoded {
 
                 this.nextChunkSize = this.chunkSizeSupplier.getAsInt();
 
-                if (!this.doneUpstream && REQUESTED.get(this) > 0) {
+                if (!this.doneUpstream && !this.cancelled && REQUESTED.get(this) > 0) {
                     this.s.request(1);
                 }
             }
@@ -354,19 +389,13 @@ public class PlpEncoded extends Encoded {
         @Override
         public void cancel() {
 
-            if (!this.doneUpstream) {
-                this.doneUpstream = true;
+            this.cancelled = true;
+
+            if (this.s != null) {
                 this.s.cancel();
             }
 
-            if (STATUS.compareAndSet(this, STATUS_WIP, STATUS_DONE)) {
-
-                CompositeByteBuf aggregator = this.aggregator;
-
-                if (aggregator != null) {
-                    aggregator.release();
-                }
-            }
+            drain();
         }
 
     }
