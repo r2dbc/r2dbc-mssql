@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Login 7 message.
@@ -136,6 +137,18 @@ public final class Login7 implements TokenStream, ClientMessage {
         this.baseLength = baseLength + 4 /* AE */;
         this.estimatedPacketLength = this.baseLength + Header.LENGTH + 2 + passwordChange.length() + 1;
     }
+
+    /**
+     * Environment variable that, when set, overrides the base client library name (LOGIN7 CltIntName).
+     * The driver version is still appended. Defaults to the built-in driver name when unset/empty.
+     */
+    static final String CLIENT_LIBRARY_NAME_ENV = "R2DBC_MSSQL_CLIENT_LIBRARY_NAME";
+
+    /**
+     * Source for the optional client library name override. Reads {@link #CLIENT_LIBRARY_NAME_ENV} by default;
+     * package-private and mutable so tests can stub it (the JVM cannot set environment variables in-process).
+     */
+    static Supplier<String> clientLibraryNameOverride = () -> System.getenv(CLIENT_LIBRARY_NAME_ENV);
 
     /**
      * @return a builder for {@link Login7}.
@@ -347,8 +360,12 @@ public final class Login7 implements TokenStream, ClientMessage {
 
         private Builder() {
 
-            String clientLibraryName = "R2DBC Driver for Microsoft SQL Server v";
+            String base = clientLibraryNameOverride.get();
+            if (base == null || base.isEmpty()) {
+                base = "R2DBC Driver for Microsoft SQL Server v";
+            }
 
+            String clientLibraryName = base;
             if (this.clientLibraryVersion != null) {
                 clientLibraryName += this.clientLibraryVersion.toString();
             }

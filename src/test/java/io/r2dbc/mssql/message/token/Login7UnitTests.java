@@ -28,6 +28,9 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.nio.charset.StandardCharsets;
+import java.util.function.Supplier;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -87,5 +90,45 @@ final class Login7UnitTests {
                 assertThat(actual.getHeaderOptions().getType()).isEqualTo(Type.TDS7_LOGIN);
                 assertThat(actual.getHeaderOptions().getStatus().getValue()).isEqualTo((byte) 0);
             }).verifyComplete();
+    }
+
+    @Test
+    void clientLibraryNameDefaultsToDriverNameAndCanBeOverridden() {
+
+        Supplier<String> original = Login7.clientLibraryNameOverride;
+        try {
+            // No override: the client library name is the built-in driver name (the driver version is appended).
+            Login7.clientLibraryNameOverride = () -> null;
+            assertThat(encodedLogin()).contains(utf16Le("R2DBC Driver for Microsoft SQL Server v"));
+
+            // Override present: the environment value replaces the base name (version still appended).
+            Login7.clientLibraryNameOverride = () -> "ODBC-test-driver";
+            String overridden = encodedLogin();
+            assertThat(overridden).contains(utf16Le("ODBC-test-driver"));
+            assertThat(overridden).doesNotContain(utf16Le("R2DBC Driver for Microsoft SQL Server v"));
+        } finally {
+            Login7.clientLibraryNameOverride = original;
+        }
+    }
+
+    private static String encodedLogin() {
+
+        // clientLibraryName() intentionally not called, so the env-derived default name applies.
+        Login7 login7 = Login7.builder()
+            .serverName("localhost")
+            .hostName("host")
+            .username("sa")
+            .password("secret")
+            .database("master")
+            .tdsVersion(TDSVersion.VER_DENALI)
+            .build();
+
+        ByteBuf buffer = Unpooled.buffer(400);
+        login7.encode(buffer);
+        return ByteBufUtil.hexDump(buffer);
+    }
+
+    private static String utf16Le(String value) {
+        return ByteBufUtil.hexDump(value.getBytes(StandardCharsets.UTF_16LE));
     }
 }
