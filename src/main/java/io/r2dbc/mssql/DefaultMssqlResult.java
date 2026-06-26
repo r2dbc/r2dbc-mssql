@@ -237,6 +237,12 @@ final class DefaultMssqlResult implements MssqlResult {
                 }
 
                 if (this.expectReturnValues && message instanceof ReturnValue) {
+                    // The row-mapping path (outparameters = false) does not collect ReturnValues into
+                    // the returnValues list, so the doFinally cleanup below never sees them and a bare
+                    // return here would leak the retained ReturnValue. Release it. The outparameters =
+                    // true path filters ReturnValues out upstream (releasing them via
+                    // MssqlReturnValues#release), so they never reach this branch and are not freed twice.
+                    ReferenceCountUtil.release(message);
                     return;
                 }
 

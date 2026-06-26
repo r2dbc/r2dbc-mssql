@@ -16,11 +16,16 @@
 
 package io.r2dbc.mssql;
 
+import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
+import io.r2dbc.mssql.message.token.ReturnValue;
+import io.r2dbc.mssql.util.TestByteBufAllocator;
+import io.r2dbc.mssql.util.Types;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Flux;
@@ -28,6 +33,8 @@ import reactor.test.StepVerifier;
 
 import java.util.Arrays;
 import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link DefaultMssqlResult}.
@@ -89,6 +96,27 @@ class MssqlResultUnitTests {
 
         abstract MssqlResult create(Flux<Message> messages);
 
+    }
+
+    @Test
+    void mapReleasesUnconsumedReturnValues() {
+
+        ByteBuf data = TestByteBufAllocator.TEST.buffer();
+        data.writeBytes(new byte[]{(byte) 0x4, 0x42, 0, 0, 0});
+        ReturnValue returnValue = new ReturnValue(6, "@out", 0, Types.integer(), data);
+
+        // A result that expects return values but is consumed via map() (row mapping, i.e.
+        // outparameters = false) never collects the ReturnValue into the separate return-value
+        // stream. The ReturnValue therefore reaches the message handler, which must release it
+        // rather than dropping it with a bare return; otherwise its retained buffer leaks.
+        MssqlResult result = DefaultMssqlResult.toResult("", new ConnectionContext(), new DefaultCodecs(),
+            Flux.just(returnValue, DoneToken.create(0)), true);
+
+        result.map((row, metadata) -> row)
+            .as(StepVerifier::create)
+            .verifyComplete();
+
+        assertThat(returnValue.refCnt()).describedAs("ReturnValue released after an unconsumed map()").isZero();
     }
 
 }
