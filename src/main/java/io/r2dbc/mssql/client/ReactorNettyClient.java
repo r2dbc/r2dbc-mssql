@@ -329,11 +329,15 @@ public final class ReactorNettyClient implements Client {
 
                 @Override
                 public void onError(Throwable t) {
+                    // Release any message the decoder was still aggregating across reads before terminating.
+                    decoder.dispose();
                     sink.error(t);
                 }
 
                 @Override
                 public void onComplete() {
+                    // Release any message the decoder was still aggregating across reads before terminating.
+                    decoder.dispose();
                     handleClose();
                 }
             });
