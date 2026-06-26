@@ -152,6 +152,20 @@ final class StreamDecoder {
     }
 
     /**
+     * Release any retained decoder state. Invoked when the inbound stream terminates (connection close or
+     * error) so that a message still being aggregated across reads does not leak its retained direct buffers.
+     */
+    void dispose() {
+
+        DecoderState state = this.state;
+        this.state = null;
+
+        if (state != null) {
+            state.release();
+        }
+    }
+
+    /**
      * The current decoding state. Encapsulates the raw transport stream buffers ("remainder") and the aggregated (de-chunked) body along an optional {@link Header}.
      */
     static class DecoderState {

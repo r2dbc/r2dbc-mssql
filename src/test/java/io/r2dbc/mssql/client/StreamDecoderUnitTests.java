@@ -324,4 +324,34 @@ class StreamDecoderUnitTests {
 
         assertThat(decoder.decode(initialize, messageDecoder).get(0)).isInstanceOf(ColumnMetadataToken.class);
     }
+
+    @Test
+    void disposeReleasesRetainedDecoderState() {
+
+        StreamDecoder decoder = new StreamDecoder();
+
+        // Feed just the header type byte so the decoder retains a partial, not-yet-decodable message.
+        ByteBuf partial = Unpooled.wrappedBuffer(new byte[]{4});
+
+        List<Message> noMessage = decoder.decode(partial, ConnectionState.POST_LOGIN.decoder(CLIENT));
+        assertThat(noMessage).isEmpty();
+
+        StreamDecoder.DecoderState state = decoder.getDecoderState();
+        assertThat(state).isNotNull();
+
+        ByteBuf remainder = state.remainder;
+        ByteBuf aggregatedBody = state.aggregatedBody;
+        assertThat(remainder.refCnt()).isEqualTo(1);
+        assertThat(aggregatedBody.refCnt()).isEqualTo(1);
+
+        // On connection close the decoder may still hold a partial message; dispose() must release it.
+        decoder.dispose();
+
+        assertThat(decoder.getDecoderState()).isNull();
+        assertThat(remainder.refCnt()).isEqualTo(0);
+        assertThat(aggregatedBody.refCnt()).isEqualTo(0);
+
+        // Idempotent: a second dispose (e.g. onError following onComplete) must not throw.
+        decoder.dispose();
+    }
 }
