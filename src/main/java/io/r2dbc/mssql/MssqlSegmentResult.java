@@ -129,6 +129,8 @@ final class MssqlSegmentResult implements MssqlResult {
         }
 
         AtomicReference<MssqlRowMetadata> metadataRef = new AtomicReference<>();
+        // Full column metadata incl. the trailing cursor ROWSTAT column (used to skip deleted keyset rows).
+        AtomicReference<ColumnMetadataToken> columnMetadataRef = new AtomicReference<>();
         Flux<Segment> segments = messageStream.handle((message, sink) -> {
 
             if (message instanceof AbstractDoneToken) {
@@ -145,6 +147,7 @@ final class MssqlSegmentResult implements MssqlResult {
                 ColumnMetadataToken token = (ColumnMetadataToken) message;
 
                 if (token.hasColumns()) {
+                    columnMetadataRef.set(token);
                     metadataRef.set(MssqlRowMetadata.create(codecs, token));
                 }
                 return;
@@ -156,6 +159,14 @@ final class MssqlSegmentResult implements MssqlResult {
 
                 if (rowMetadata == null) {
                     ReferenceCountUtil.release(message);
+                    return;
+                }
+
+                // Skip deleted/missing keyset-cursor placeholder rows (ROWSTAT=2); surfacing them
+                // would yield a phantom all-null row that breaks non-null mapping.
+                ColumnMetadataToken columnMetadata = columnMetadataRef.get();
+                if (columnMetadata != null && RowToken.isDeletedCursorRow(columnMetadata, (RowToken) message)) {
+                    ((RowToken) message).release();
                     return;
                 }
 

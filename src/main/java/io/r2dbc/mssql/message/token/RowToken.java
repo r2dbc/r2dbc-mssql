@@ -23,6 +23,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.LengthStrategy;
 import io.r2dbc.mssql.message.type.PlpLength;
+import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
@@ -49,6 +50,45 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      */
     RowToken(ByteBuf[] data) {
         this.data = data;
+    }
+
+    private static final int ROWSTAT_DELETED = 2;
+
+    /**
+     * Determine whether a cursored fetch row is a placeholder for a row that is no longer in the result
+     * set (a keyset "hole": deleted/missing since the cursor was opened). SQL Server appends a trailing
+     * {@code ROWSTAT} column to cursor fetches; a value of {@code 2} means the row was deleted and the
+     * other columns are returned as NULL/default placeholders. Such rows must NOT be surfaced to the
+     * application — doing so yields a "phantom" all-null row. Returns {@code false} when the result has
+     * no trailing ROWSTAT column (non-cursored execution) or the row is valid.
+     *
+     * @param metadata the column metadata for the result (including the trailing ROWSTAT column).
+     * @param row      the decoded row.
+     * @return {@code true} if the row is a deleted/missing keyset placeholder and should be skipped.
+     */
+    public static boolean isDeletedCursorRow(ColumnMetadataToken metadata, RowToken row) {
+
+        Column[] columns = metadata.getColumns();
+        if (columns.length == 0) {
+            return false;
+        }
+
+        // The cursor row-status column is the synthesized trailing column named ROWSTAT, always an
+        // INT. Require both name AND integer type so a user column happening to be named ROWSTAT is
+        // never mistaken for it (which would wrongly drop a real row).
+        Column last = columns[columns.length - 1];
+        if (!"ROWSTAT".equals(last.getName()) || last.getType().getServerType() != SqlServerType.INTEGER) {
+            return false;
+        }
+
+        ByteBuf rowStat = row.getColumnData(columns.length - 1);
+        if (rowStat == null || rowStat.readableBytes() < 4) {
+            return false;
+        }
+
+        // ROWSTAT is a 4-byte little-endian int (the value is the last 4 bytes of the column data,
+        // whether or not a length prefix precedes it). 1 = row present; 2 = row deleted/missing.
+        return rowStat.getIntLE(rowStat.writerIndex() - 4) == ROWSTAT_DELETED;
     }
 
     /**
