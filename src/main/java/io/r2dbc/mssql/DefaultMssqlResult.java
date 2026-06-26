@@ -66,6 +66,9 @@ final class DefaultMssqlResult implements MssqlResult {
 
     private volatile MssqlRowMetadata rowMetadata;
 
+    // Full column metadata incl. the trailing cursor ROWSTAT column (used to skip deleted keyset rows).
+    private volatile ColumnMetadataToken columnMetadata;
+
     private DefaultMssqlResult(String sql, ConnectionContext context, Codecs codecs, Flux<io.r2dbc.mssql.message.Message> messages, boolean expectReturnValues) {
 
         this.sql = sql;
@@ -206,6 +209,7 @@ final class DefaultMssqlResult implements MssqlResult {
                         LOGGER.debug(this.context.getMessage("Result column definition: {}"), message);
                     }
 
+                    this.columnMetadata = token;
                     this.rowMetadata = MssqlRowMetadata.create(this.codecs, token);
 
                     return;
@@ -218,6 +222,13 @@ final class DefaultMssqlResult implements MssqlResult {
                     if (rowMetadata == null) {
                         ReferenceCountUtil.release(message);
                         sink.error(new IllegalStateException("No MssqlRowMetadata available"));
+                        return;
+                    }
+
+                    // Skip deleted/missing keyset-cursor placeholder rows (ROWSTAT=2); surfacing them
+                    // would yield a phantom all-null row that breaks non-null mapping.
+                    if (this.columnMetadata != null && RowToken.isDeletedCursorRow(this.columnMetadata, (RowToken) message)) {
+                        ((RowToken) message).release();
                         return;
                     }
 
