@@ -17,8 +17,10 @@
 package io.r2dbc.mssql.util;
 
 import org.junit.jupiter.api.Test;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
+import reactor.core.publisher.Sinks;
 import reactor.test.StepVerifier;
 
 import java.util.ArrayList;
@@ -136,6 +138,55 @@ class FluxDiscardOnCancelUnitTests {
             .verify();
 
         assertThat(items).toIterable().isEmpty();
+    }
+
+    @Test
+    void shouldPropagateErrorWithoutCancellation() {
+
+        List<Throwable> dropped = new ArrayList<>();
+        Hooks.onErrorDropped(dropped::add);
+
+        try {
+
+            Sinks.Many<Integer> messages = Sinks.many().multicast().onBackpressureBuffer();
+
+            messages.asFlux()
+                .as(Operators::discardOnCancel)
+                .as(StepVerifier::create)
+                .then(() -> messages.tryEmitError(new IllegalStateException("Connection closed")))
+                .verifyErrorMessage("Connection closed");
+
+            assertThat(dropped).isEmpty();
+        } finally {
+            Hooks.resetOnErrorDropped();
+        }
+    }
+
+    @Test
+    void shouldNotReportDroppedErrorAfterCancellation() {
+
+        List<Throwable> dropped = new ArrayList<>();
+        Hooks.onErrorDropped(dropped::add);
+
+        try {
+
+            Sinks.Many<Integer> messages = Sinks.many().multicast().onBackpressureBuffer();
+
+            Disposable subscription = messages.asFlux()
+                .as(Operators::discardOnCancel)
+                .take(1)
+                .subscribe();
+
+            messages.tryEmitNext(1);
+
+            messages.tryEmitError(new IllegalStateException("Connection closed"));
+
+            assertThat(dropped).isEmpty();
+
+            subscription.dispose();
+        } finally {
+            Hooks.resetOnErrorDropped();
+        }
     }
 
     static Iterator<Integer> createItems(int count) {

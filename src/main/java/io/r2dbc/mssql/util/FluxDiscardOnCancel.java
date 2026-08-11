@@ -97,7 +97,9 @@ class FluxDiscardOnCancel<T> extends FluxOperator<T, T> {
         @Override
         public void onError(Throwable t) {
             if (this.get()) {
-                Operators.onErrorDropped(t, this.ctx);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Discarding error signal after cancellation", t);
+                }
             } else {
                 this.actual.onError(t);
             }
