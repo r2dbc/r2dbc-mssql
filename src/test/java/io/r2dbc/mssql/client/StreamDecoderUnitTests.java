@@ -19,11 +19,7 @@ package io.r2dbc.mssql.client;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.message.Message;
-import io.r2dbc.mssql.message.header.Header;
-import io.r2dbc.mssql.message.header.HeaderOptions;
-import io.r2dbc.mssql.message.header.PacketIdProvider;
-import io.r2dbc.mssql.message.header.Status;
-import io.r2dbc.mssql.message.header.Type;
+import io.r2dbc.mssql.message.header.*;
 import io.r2dbc.mssql.message.token.ColumnMetadataToken;
 import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.util.HexUtils;
@@ -326,32 +322,31 @@ class StreamDecoderUnitTests {
     }
 
     @Test
-    void disposeReleasesRetainedDecoderState() {
+    void disposeShouldBeIdempotent() {
 
         StreamDecoder decoder = new StreamDecoder();
-
-        // Feed just the header type byte so the decoder retains a partial, not-yet-decodable message.
         ByteBuf partial = Unpooled.wrappedBuffer(new byte[]{4});
 
-        List<Message> noMessage = decoder.decode(partial, ConnectionState.POST_LOGIN.decoder(CLIENT));
-        assertThat(noMessage).isEmpty();
+        decoder.decode(partial, ConnectionState.POST_LOGIN.decoder(CLIENT));
 
         StreamDecoder.DecoderState state = decoder.getDecoderState();
-        assertThat(state).isNotNull();
 
         ByteBuf remainder = state.remainder;
         ByteBuf aggregatedBody = state.aggregatedBody;
         assertThat(remainder.refCnt()).isEqualTo(1);
         assertThat(aggregatedBody.refCnt()).isEqualTo(1);
 
-        // On connection close the decoder may still hold a partial message; dispose() must release it.
         decoder.dispose();
 
         assertThat(decoder.getDecoderState()).isNull();
         assertThat(remainder.refCnt()).isEqualTo(0);
         assertThat(aggregatedBody.refCnt()).isEqualTo(0);
 
-        // Idempotent: a second dispose (e.g. onError following onComplete) must not throw.
         decoder.dispose();
+
+        assertThat(decoder.getDecoderState()).isNull();
+        assertThat(remainder.refCnt()).isEqualTo(0);
+        assertThat(aggregatedBody.refCnt()).isEqualTo(0);
     }
+
 }
