@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2022 the original author or authors.
+ * Copyright 2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,10 @@ package io.r2dbc.mssql.client.ssl;
 
 import io.r2dbc.mssql.message.token.Login7;
 
-import java.net.Socket;
-import java.security.cert.X509Certificate;
-
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.X509ExtendedTrustManager;
+import java.net.Socket;
+import java.security.cert.X509Certificate;
 
 /**
  * Accepts all {@link X509Certificate}s. Used when SSL is not enabled on the client side to allow SSL during {@link Login7} exchange.

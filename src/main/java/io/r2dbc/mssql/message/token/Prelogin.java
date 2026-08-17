@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 the original author or authors.
+ * Copyright 2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,21 +25,12 @@ import io.r2dbc.mssql.message.header.HeaderOptions;
 import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Status.StatusBit;
 import io.r2dbc.mssql.message.header.Type;
-import io.r2dbc.mssql.message.tds.ContextualTdsFragment;
-import io.r2dbc.mssql.message.tds.Decode;
-import io.r2dbc.mssql.message.tds.Encode;
-import io.r2dbc.mssql.message.tds.ProtocolException;
-import io.r2dbc.mssql.message.tds.TdsFragment;
+import io.r2dbc.mssql.message.tds.*;
 import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Stream structure for {@code PRELOGIN}.

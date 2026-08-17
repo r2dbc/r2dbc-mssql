@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2022 the original author or authors.
+ * Copyright 2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.message.token.InfoToken;
-import io.r2dbc.spi.R2dbcBadGrammarException;
-import io.r2dbc.spi.R2dbcDataIntegrityViolationException;
-import io.r2dbc.spi.R2dbcException;
-import io.r2dbc.spi.R2dbcNonTransientException;
-import io.r2dbc.spi.R2dbcPermissionDeniedException;
-import io.r2dbc.spi.R2dbcRollbackException;
-import io.r2dbc.spi.R2dbcTransientException;
-import io.r2dbc.spi.R2dbcTransientResourceException;
+import io.r2dbc.spi.*;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

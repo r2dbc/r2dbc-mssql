@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2022 the original author or authors.
+ * Copyright 2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,16 +21,7 @@ import io.r2dbc.mssql.message.tds.ProtocolException;
 import io.r2dbc.mssql.message.token.AbstractInfoToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.InfoToken;
-import io.r2dbc.spi.R2dbcBadGrammarException;
-import io.r2dbc.spi.R2dbcDataIntegrityViolationException;
-import io.r2dbc.spi.R2dbcException;
-import io.r2dbc.spi.R2dbcNonTransientException;
-import io.r2dbc.spi.R2dbcNonTransientResourceException;
-import io.r2dbc.spi.R2dbcPermissionDeniedException;
-import io.r2dbc.spi.R2dbcRollbackException;
-import io.r2dbc.spi.R2dbcTimeoutException;
-import io.r2dbc.spi.R2dbcTransientException;
-import io.r2dbc.spi.R2dbcTransientResourceException;
+import io.r2dbc.spi.*;
 import reactor.core.publisher.SynchronousSink;
 
 import static io.r2dbc.mssql.message.token.AbstractInfoToken.Classification.GENERAL_ERROR;

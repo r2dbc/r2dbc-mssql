@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 the original author or authors.
+ * Copyright 2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,7 @@ import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.client.TransactionStatus;
 import io.r2dbc.mssql.util.Assert;
-import io.r2dbc.spi.Connection;
-import io.r2dbc.spi.IsolationLevel;
-import io.r2dbc.spi.Option;
-import io.r2dbc.spi.TransactionDefinition;
-import io.r2dbc.spi.ValidationDepth;
+import io.r2dbc.spi.*;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 the original author or authors.
+ * Copyright 2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,11 +24,7 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.header.Header;
 import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.tds.ProtocolException;
-import io.r2dbc.mssql.message.token.AbstractDoneToken;
-import io.r2dbc.mssql.message.token.DoneToken;
-import io.r2dbc.mssql.message.token.Login7;
-import io.r2dbc.mssql.message.token.Prelogin;
-import io.r2dbc.mssql.message.token.Tabular;
+import io.r2dbc.mssql.message.token.*;
 import io.r2dbc.mssql.util.Assert;
 import reactor.core.publisher.SynchronousSink;
 import reactor.netty.Connection;

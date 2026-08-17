@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 the original author or authors.
+ * Copyright 2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,27 +23,18 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.client.ConnectionState;
 import io.r2dbc.mssql.client.TdsEncoder;
-import io.r2dbc.mssql.message.header.Header;
-import io.r2dbc.mssql.message.header.HeaderOptions;
-import io.r2dbc.mssql.message.header.PacketIdProvider;
-import io.r2dbc.mssql.message.header.Status;
-import io.r2dbc.mssql.message.header.Type;
+import io.r2dbc.mssql.message.header.*;
 import io.r2dbc.mssql.message.tds.ContextualTdsFragment;
 import io.r2dbc.mssql.message.tds.TdsFragment;
 import io.r2dbc.mssql.util.Assert;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
-
-import javax.net.ssl.SSLEngine;
-import java.security.GeneralSecurityException;
-import java.util.function.Function;
 
 /**
  * SSL handling for TDS connections.

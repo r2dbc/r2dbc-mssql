@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2022 the original author or authors.
+ * Copyright 2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,24 +26,8 @@ import java.time.Duration;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.ALTERNATE_MSSQL_DRIVER;
-import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.MSSQL_DRIVER;
-import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.SSL_CONTEXT_BUILDER_CUSTOMIZER;
-import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.SSL_TUNNEL;
-import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TCP_KEEPALIVE;
-import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TCP_NODELAY;
-import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_SERVER_CERTIFICATE;
-import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE;
-import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE_PASSWORD;
-import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.TRUST_STORE_TYPE;
-import static io.r2dbc.spi.ConnectionFactoryOptions.DRIVER;
-import static io.r2dbc.spi.ConnectionFactoryOptions.HOST;
-import static io.r2dbc.spi.ConnectionFactoryOptions.LOCK_WAIT_TIMEOUT;
-import static io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD;
-import static io.r2dbc.spi.ConnectionFactoryOptions.PORT;
-import static io.r2dbc.spi.ConnectionFactoryOptions.SSL;
-import static io.r2dbc.spi.ConnectionFactoryOptions.USER;
-import static io.r2dbc.spi.ConnectionFactoryOptions.builder;
+import static io.r2dbc.mssql.MssqlConnectionFactoryProvider.*;
+import static io.r2dbc.spi.ConnectionFactoryOptions.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
