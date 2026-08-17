@@ -15,7 +15,7 @@
  */
 
 /**
- * The infrastructure for exchanging messages with the server.
+ * Reactive, netty-based SQL Server client infrastructure for exchanging messages with the server.
  */
 
 @NonNullApi

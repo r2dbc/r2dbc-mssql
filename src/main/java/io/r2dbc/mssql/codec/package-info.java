@@ -15,7 +15,7 @@
  */
 
 /**
- * Encoders and Decoders for the type that the service provider understands.
+ * Encoders and Decoders for SQL server types.
  */
 
 @NonNullApi

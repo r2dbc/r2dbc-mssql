@@ -15,7 +15,7 @@
  */
 
 /**
- * Classes to read and build type information.
+ * TDS type support classes to read and build type information.
  */
 
 @NonNullApi
