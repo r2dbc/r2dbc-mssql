@@ -152,8 +152,7 @@ final class StreamDecoder {
     }
 
     /**
-     * Release any retained decoder state. Invoked when the inbound stream terminates (connection close or
-     * error) so that a message still being aggregated across reads does not leak its retained direct buffers.
+     * Release any retained decoder state.
      */
     void dispose() {
 
