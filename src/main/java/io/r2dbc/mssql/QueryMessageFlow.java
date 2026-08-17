@@ -16,15 +16,13 @@
 
 package io.r2dbc.mssql;
 
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.client.Client;
+import io.r2dbc.mssql.client.Conversation;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.Assert;
-import io.r2dbc.mssql.util.Operators;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SynchronousSink;
@@ -53,10 +51,12 @@ final class QueryMessageFlow {
         Assert.requireNonNull(client, "Client must not be null");
         Assert.requireNonNull(query, "Query must not be null");
 
-        return client.exchange(Mono.fromSupplier(() -> SqlBatch.create(1, client.getTransactionDescriptor(), query)), DoneToken::isDone)
+        Conversation conversation = Conversation.until(DoneToken::isDone);
+
+        return client.exchange(Mono.fromSupplier(() -> SqlBatch.create(1, client.getTransactionDescriptor(), query)), conversation)
             .doOnSubscribe(ignore -> QueryLogger.logQuery(client.getContext(), query))
             .handle(DoneHandler.INSTANCE)
-            .transform(Operators::discardOnCancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release);
+                .transform(conversation::detach);
     }
 
     enum DoneHandler implements BiConsumer<Message, SynchronousSink<Message>> {

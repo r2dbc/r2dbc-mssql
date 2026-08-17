@@ -18,6 +18,7 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.ConnectionContext;
+import io.r2dbc.mssql.client.Conversation;
 import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.token.DoneInProcToken;
 import io.r2dbc.mssql.message.token.DoneProcToken;
@@ -27,8 +28,6 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
-
-import java.util.function.Predicate;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -53,7 +52,7 @@ class QueryMessageFlowUnitTests {
     @Test
     void shouldAwaitDoneProcTokenShouldNotCompleteFlow() {
 
-        when(this.client.exchange(any(Publisher.class), any(Predicate.class))).thenReturn(Flux.just(DoneToken.more(20), DoneProcToken.create(0), DoneInProcToken.create(0)));
+        when(this.client.exchange(any(Publisher.class), any(Conversation.class))).thenReturn(Flux.just(DoneToken.more(20), DoneProcToken.create(0), DoneInProcToken.create(0)));
 
         QueryMessageFlow.exchange(this.client, "foo")
             .as(StepVerifier::create)
@@ -65,7 +64,7 @@ class QueryMessageFlowUnitTests {
     @Test
     void shouldAwaitDoneToken() {
 
-        when(this.client.exchange(any(Publisher.class), any(Predicate.class))).thenReturn(Flux.just(DoneInProcToken.create(0), DoneToken.create(0)));
+        when(this.client.exchange(any(Publisher.class), any(Conversation.class))).thenReturn(Flux.just(DoneInProcToken.create(0), DoneToken.create(0)));
 
         QueryMessageFlow.exchange(this.client, "foo")
             .as(StepVerifier::create)

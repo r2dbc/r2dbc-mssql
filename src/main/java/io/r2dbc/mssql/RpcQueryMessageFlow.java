@@ -16,10 +16,9 @@
 
 package io.r2dbc.mssql;
 
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import io.r2dbc.mssql.RpcQueryMessageFlow.CursorState.Phase;
 import io.r2dbc.mssql.client.Client;
+import io.r2dbc.mssql.client.Conversation;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.message.ClientMessage;
@@ -28,7 +27,6 @@ import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.token.*;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.Assert;
-import io.r2dbc.mssql.util.Operators;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -123,7 +121,7 @@ final class RpcQueryMessageFlow {
         CursorState state = new CursorState();
         state.directMode = true;
 
-        Flux<Message> exchange = client.exchange(Mono.fromSupplier(() -> spExecuteSql(query, binding, client.getRequiredCollation(), client.getTransactionDescriptor())), DoneProcToken::isDone);
+        Flux<Message> exchange = client.exchange(Mono.fromSupplier(() -> spExecuteSql(query, binding, client.getRequiredCollation(), client.getTransactionDescriptor())), state.getConversation());
         OnCursorComplete cursorComplete = new OnCursorComplete();
 
         Flux<Message> messages = exchange //
@@ -139,7 +137,7 @@ final class RpcQueryMessageFlow {
         return messages.doOnSubscribe(subscription -> {
             QueryLogger.logQuery(client.getContext(), query);
         })
-            .transform(it -> Operators.discardOnCancel(it, state::cancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release)).takeUntilOther(cursorComplete.takeUntil());
+                .transform(state.getConversation()::detach).takeUntilOther(cursorComplete.takeUntil());
     }
 
     /**
@@ -163,7 +161,7 @@ final class RpcQueryMessageFlow {
         Flux<Message> exchange = client.exchange(Flux.defer(() -> {
             outbound.emitNext(spCursorOpen(query, client.getRequiredCollation(), client.getTransactionDescriptor()), Sinks.EmitFailureHandler.FAIL_FAST);
             return outbound.asFlux();
-        }), isFinalToken(state));
+        }), state.getConversation());
 
         OnCursorComplete cursorComplete = new OnCursorComplete();
 
@@ -196,7 +194,7 @@ final class RpcQueryMessageFlow {
         return messages.doOnSubscribe(subscription -> {
             QueryLogger.logQuery(client.getContext(), query);
         })
-            .transform(it -> Operators.discardOnCancel(it, state::cancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release)).takeUntilOther(cursorComplete.takeUntil());
+                .transform(state.getConversation()::detach).takeUntilOther(cursorComplete.takeUntil());
     }
 
     /**
@@ -241,7 +239,7 @@ final class RpcQueryMessageFlow {
         }
 
         CursorState state = new CursorState();
-        Flux<Message> exchange = client.exchange(messageProducer, isFinalToken(state));
+        Flux<Message> exchange = client.exchange(messageProducer, state.getConversation());
         OnCursorComplete cursorComplete = new OnCursorComplete();
 
         Flux<Message> messages = exchange //
@@ -272,7 +270,7 @@ final class RpcQueryMessageFlow {
                     emit = false;
                 }
 
-                if (DoneProcToken.isDone(message) && state.phase == Phase.PREPARE_RETRY) {
+                if (message instanceof DoneProcToken && DoneProcToken.isDone(message) && state.phase == Phase.PREPARE_RETRY) {
 
                     logger.debug("Attempting to re-prepare statement: {}", query);
                     needsPrepare.set(true);
@@ -289,7 +287,7 @@ final class RpcQueryMessageFlow {
         return messages.doOnSubscribe(subscription -> {
             QueryLogger.logQuery(client.getContext(), query);
         })
-            .transform(it -> Operators.discardOnCancel(it, state::cancel).doOnDiscard(ReferenceCounted.class, ReferenceCountUtil::release)).takeUntilOther(cursorComplete.takeUntil());
+                .transform(state.getConversation()::detach).takeUntilOther(cursorComplete.takeUntil());
     }
 
     /**
@@ -429,24 +427,11 @@ final class RpcQueryMessageFlow {
                 requests.accept(spCursorFetch(state.cursorId, FETCH_NEXT, fetchSize, client.getTransactionDescriptor()));
             } else {
                 state.update(Phase.CLOSING);
-                // TODO: spCursorClose should happen also if a subscriber cancels its subscription.
                 requests.accept(spCursorClose(state.cursorId, client.getTransactionDescriptor()));
             }
 
             state.hasSeenRows = false;
         }
-    }
-
-    private static Predicate<Message> isFinalToken(CursorState state) {
-
-        return message -> {
-
-            if (!DoneProcToken.isDone(message)) {
-                return false;
-            }
-
-            return isFinalState(state);
-        };
     }
 
     private static boolean isFinalState(CursorState state) {
@@ -640,9 +625,13 @@ final class RpcQueryMessageFlow {
     }
 
     /**
-     * Cursoring state.
+     * Cursor protocol state. Owns the {@link Conversation} of the underlying exchange because the cursor is what decides
+     * when the request/response window closes. The two are kept apart deliberately: {@code handleMessage} drives the
+     * phase from downstream, while the conversation is queried by the {@link Client} from upstream.
      */
     static class CursorState {
+
+        private final Conversation conversation = Conversation.until(this::isFinalToken);
 
         volatile int cursorId;
 
@@ -656,18 +645,46 @@ final class RpcQueryMessageFlow {
 
         volatile boolean directMode;
 
-        volatile boolean cancelRequested;
-
-        volatile ErrorToken errorToken;
-
         Phase phase = Phase.NONE;
 
-        boolean wantsMore() {
-            return !this.cancelRequested;
+        /**
+         * @return the {@link Conversation} of the exchange this cursor runs in.
+         */
+        Conversation getConversation() {
+            return this.conversation;
         }
 
-        void cancel() {
-            this.cancelRequested = true;
+        boolean isFinalToken(Message message) {
+
+            // The server acknowledged an Attention: nothing follows it. handleMessage moves the phase to CLOSED while
+            // processing this very token, which is too late for a completion decision taken before delivery.
+            if (AbstractDoneToken.isAttentionAck(message)) {
+                return true;
+            }
+
+            // DoneProcToken inherits the type-agnostic AbstractDoneToken.isDone(Message), which also accepts a DONE or
+            // DONEINPROC token whose DONE_MORE bit is clear. Only a DONEPROC ends an RPC, and only that is what
+            // handleMessage acts upon below.
+            if (!(message instanceof DoneProcToken) || !DoneProcToken.isDone(message)) {
+                return false;
+            }
+
+            // handleMessage re-issues sp_cursorprepexec on this token, so the window stays open for the re-prepared
+            // execution.
+            if (this.phase == Phase.PREPARE_RETRY) {
+                return false;
+            }
+
+            // An error seen earlier in the conversation makes the next DONEPROC final. handleMessage reaches the same
+            // conclusion by moving the phase to ERROR, but again only while processing this token.
+            return this.hasSeenError || isFinalState(this);
+        }
+
+        /**
+         * @return {@code true} as long as the subscriber is interested in further rows.
+         */
+        boolean wantsMore() {
+            return !this.conversation.isCancelled();
         }
 
         void update(Message it) {
@@ -676,19 +693,20 @@ final class RpcQueryMessageFlow {
             }
 
             if (it instanceof ErrorToken) {
-                this.errorToken = (ErrorToken) it;
                 this.hasSeenError = true;
             }
         }
 
         public void update(Phase newPhase) {
 
-            this.phase = newPhase;
-
-            if (newPhase == Phase.PREPARE_RETRY) {
-                errorToken = null;
-                hasSeenError = false;
+            // The re-prepared execution starts from a clean error slate. Clearing on the way out matters as much as on
+            // the way in: further errors of the failed attempt keep arriving while the retry is armed, and they must
+            // not decide the outcome of the retried execution.
+            if (newPhase == Phase.PREPARE_RETRY || this.phase == Phase.PREPARE_RETRY) {
+                this.hasSeenError = false;
             }
+
+            this.phase = newPhase;
         }
 
         enum Phase {
