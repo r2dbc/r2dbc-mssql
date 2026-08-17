@@ -39,9 +39,9 @@
         <junit.version>5.14.4</junit.version>
         <jmh.version>1.37</jmh.version>
         <mbr.version>0.6.0.RELEASE</mbr.version>
-        <logback.version>1.5.34</logback.version>
+        <logback.version>1.5.38</logback.version>
         <mockito.version>4.11.0</mockito.version>
-        <mssql-jdbc.version>13.5.0.jre8-preview</mssql-jdbc.version>
+        <mssql-jdbc.version>13.5.1.jre8-preview</mssql-jdbc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <r2dbc-spi.version>1.0.0.RELEASE</r2dbc-spi.version>
@@ -218,7 +218,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>3.5.1</version>
                 <configuration>
                     <archive>
                         <manifest>
@@ -335,7 +335,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
-                <version>1.7.3</version>
+                <version>1.8.0</version>
                 <executions>
                     <execution>
                         <id>flatten</id>
