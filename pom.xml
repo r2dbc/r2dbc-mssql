@@ -49,6 +49,8 @@
         <reactor.version>2022.0.22</reactor.version>
         <spring-framework.version>5.3.39</spring-framework.version>
         <testcontainers.version>1.21.4</testcontainers.version>
+        <javadoc.offline-links.directory>${project.build.directory}/javadoc-offline-links
+        </javadoc.offline-links.directory>
     </properties>
 
     <licenses>
@@ -208,6 +210,56 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>unpack-javadoc-offline-links</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <markersDirectory>
+                                ${project.build.directory}/javadoc-offline-links-markers
+                            </markersDirectory>
+                            <includes>element-list,package-list</includes>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>io.r2dbc</groupId>
+                                    <artifactId>r2dbc-spi</artifactId>
+                                    <version>${r2dbc-spi.version}</version>
+                                    <classifier>javadoc</classifier>
+                                    <type>jar</type>
+                                    <outputDirectory>
+                                        ${javadoc.offline-links.directory}/r2dbc-spi
+                                    </outputDirectory>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>io.projectreactor</groupId>
+                                    <artifactId>reactor-core</artifactId>
+                                    <classifier>javadoc</classifier>
+                                    <type>jar</type>
+                                    <outputDirectory>
+                                        ${javadoc.offline-links.directory}/reactor-core
+                                    </outputDirectory>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.reactivestreams</groupId>
+                                    <artifactId>reactive-streams</artifactId>
+                                    <version>1.0.4</version>
+                                    <classifier>javadoc</classifier>
+                                    <type>jar</type>
+                                    <outputDirectory>
+                                        ${javadoc.offline-links.directory}/reactive-streams
+                                    </outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.15.0</version>
                 <configuration>
@@ -263,14 +315,20 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.12.0</version>
                 <configuration>
-                    <excludePackageNames>
-                        io.r2dbc.mssql.authentication,io.r2dbc.mssql.client,io.r2dbc.mssql.codec,io.r2dbc.mssql.message,io.r2dbc.mssql.util
-                    </excludePackageNames>
-                    <links>
-                        <link>https://r2dbc.io/spec/${r2dbc-spi.version}/api/</link>
-                        <link>https://projectreactor.io/docs/core/release/api/</link>
-                        <link>https://www.reactive-streams.org/reactive-streams-1.0.4-javadoc/</link>
-                    </links>
+                    <offlineLinks>
+                        <offlineLink>
+                            <url>https://r2dbc.io/spec/${r2dbc-spi.version}/api/</url>
+                            <location>${javadoc.offline-links.directory}/r2dbc-spi</location>
+                        </offlineLink>
+                        <offlineLink>
+                            <url>https://projectreactor.io/docs/core/release/api/</url>
+                            <location>${javadoc.offline-links.directory}/reactor-core</location>
+                        </offlineLink>
+                        <offlineLink>
+                            <url>https://www.reactive-streams.org/reactive-streams-1.0.4-javadoc/</url>
+                            <location>${javadoc.offline-links.directory}/reactive-streams</location>
+                        </offlineLink>
+                    </offlineLinks>
                     <doclint>-missing</doclint>
                     <javadocVersion>1.8</javadocVersion>
                 </configuration>

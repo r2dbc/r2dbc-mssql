@@ -1,0 +1,49 @@
+<body>
+<a href="https://r2dbc.io">R2DBC</a> driver implementation for <a href="https://www.microsoft.com/sql-server">Microsoft
+    SQL Server</a> using the <a
+        href="https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-tds/b46a581a-39de-4745-b076-ec4dbb7d13ec">TDS
+    protocol</a>.
+
+<h2>Getting Started</h2>
+
+<p>Obtain a {@code ConnectionFactory} through URL connection factory discovery:</p>
+
+<pre class="code">
+ConnectionFactory connectionFactory = ConnectionFactories.get("r2dbc:mssql://&lt;host&gt;:1433/&lt;database&gt;");
+
+Publisher&lt;? extends Connection&gt; connectionPublisher = connectionFactory.create();
+</pre>
+
+<p>through programmatic discovery with {@code ConnectionFactoryOptions}:</p>
+
+<pre class="code">
+ConnectionFactoryOptions options = ConnectionFactoryOptions.builder()
+    .option(ConnectionFactoryOptions.DRIVER, "sqlserver")
+    .option(ConnectionFactoryOptions.HOST, "…")
+    .option(ConnectionFactoryOptions.USER, "…")
+    .option(ConnectionFactoryOptions.PASSWORD, "…")
+    .option(ConnectionFactoryOptions.DATABASE, "…")
+    .build();
+
+ConnectionFactory connectionFactory = ConnectionFactories.get(options);
+</pre>
+
+<p>or through {@link io.r2dbc.mssql.MssqlConnectionConfiguration} for programmatic configuration:</p>
+
+<pre class="code">
+MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+    .host("…")
+    .username("…")
+    .password("…")
+    .database("…")
+    .build();
+
+MssqlConnectionFactory connectionFactory = new MssqlConnectionFactory(configuration);
+
+Mono&lt;MssqlConnection&gt; connectionMono = connectionFactory.create();
+</pre>
+
+<p>See {@link io.r2dbc.mssql.MssqlConnection} for statement creation and transaction control, {@link
+    io.r2dbc.mssql.MssqlResult} for consuming rows and update counts, and
+    {@link io.r2dbc.mssql.MssqlException} for server error reporting.</p>
+</body>

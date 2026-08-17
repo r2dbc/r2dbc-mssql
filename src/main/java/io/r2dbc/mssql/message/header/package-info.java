@@ -15,10 +15,9 @@
  */
 
 /**
- * TDS message infrastructure. Messages that are both sent from a client to a server and from a server to a client.
+ * TDS message headers.
  */
-
 @NonNullApi
-package io.r2dbc.mssql.message;
+package io.r2dbc.mssql.message.header;
 
 import reactor.util.annotation.NonNullApi;
