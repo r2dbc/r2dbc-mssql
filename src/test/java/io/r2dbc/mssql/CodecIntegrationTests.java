@@ -100,6 +100,16 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     }
 
     @Test
+    void shouldEncodeBigDecimalAsMoney() {
+        testType(connection, "MONEY", new BigDecimal("7301494.4032"));
+    }
+
+    @Test
+    void shouldEncodeBigDecimalAsSmallMoney() {
+        testType(connection, "SMALLMONEY", new BigDecimal("214748.3647"));
+    }
+
+    @Test
     void shouldEncodeDoubleAsDecimal() {
         testType(connection, "DECIMAL(38,5)", new BigDecimal("12345.12345"));
     }

@@ -67,21 +67,26 @@ class MoneyCodecUnitTests {
         buffer.writeByte(8);
         Encode.money(buffer, new BigDecimal("7301494.4032").unscaledValue());
 
-        BigDecimal decoded = MoneyCodec.INSTANCE.decode(buffer, column, BigDecimal.class);
+        assertThat(MoneyCodec.INSTANCE.canDecode(column, BigDecimal.class)).isTrue();
 
+        BigDecimal decoded = MoneyCodec.INSTANCE.decode(buffer, column, BigDecimal.class);
         assertThat(decoded).isEqualTo("7301494.4032");
     }
 
     @Test
     void shouldDecodeSmallMoney() {
 
-        Column column =
-            createColumn(TypeInformation.builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withServerType(SqlServerType.SMALLMONEY).withMaxLength(4).build());
+        TypeInformation smallMoney =
+                TypeInformation.builder().withLengthStrategy(LengthStrategy.BYTELENTYPE).withServerType(SqlServerType.SMALLMONEY).withMaxLength(4).build();
+
+        Column column = createColumn(smallMoney);
 
         ByteBuf buffer = HexUtils.decodeToByteBuf("0420A10500");
 
-        BigDecimal decoded = MoneyCodec.INSTANCE.decode(buffer, column, BigDecimal.class);
+        assertThat(MoneyCodec.INSTANCE.canDecode(column, BigDecimal.class)).isTrue();
 
+        BigDecimal decoded = MoneyCodec.INSTANCE.decode(buffer, column, BigDecimal.class);
         assertThat(decoded).isEqualTo("36.8928");
     }
+
 }
