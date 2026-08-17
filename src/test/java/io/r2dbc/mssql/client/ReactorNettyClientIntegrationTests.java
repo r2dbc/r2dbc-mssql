@@ -19,6 +19,7 @@ package io.r2dbc.mssql.client;
 import io.r2dbc.mssql.MssqlConnection;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
+import io.r2dbc.mssql.message.token.AbstractDoneToken;
 import io.r2dbc.mssql.message.token.SqlBatch;
 import io.r2dbc.mssql.util.IntegrationTestSupport;
 import io.r2dbc.spi.R2dbcNonTransientResourceException;
@@ -33,6 +34,7 @@ import reactor.netty.Connection;
 import reactor.test.StepVerifier;
 
 import java.lang.reflect.Field;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -105,6 +107,22 @@ class ReactorNettyClientIntegrationTests extends IntegrationTestSupport {
         } catch (ExecutionException e) {
             assertThat(e).hasCauseInstanceOf(ReactorNettyClient.MssqlConnectionClosedException.class).hasMessageContaining("closed");
         }
+    }
+
+    @Test
+    void shouldCancelOutboundWhenConversationEnds() throws Exception {
+
+        CompletableFuture<Void> cancelled = new CompletableFuture<>();
+        SqlBatch batch = SqlBatch.create(0, this.client.getTransactionDescriptor(), "SELECT 1");
+
+        Flux<ClientMessage> requests = Flux.<ClientMessage>concat(Mono.just(batch), Flux.never())
+                .doOnCancel(() -> cancelled.complete(null));
+
+        this.client.exchange(requests, AbstractDoneToken::isDone)
+                .then()
+                .block(Duration.ofSeconds(10));
+
+        cancelled.get(10, TimeUnit.SECONDS);
     }
 
 }

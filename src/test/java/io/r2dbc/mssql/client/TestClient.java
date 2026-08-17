@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 /**
  * Test {@link Client} implementation.
@@ -109,16 +108,21 @@ public final class TestClient implements Client {
         return this.closed;
     }
 
-    public Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Predicate<Message> takeUntil) {
+    @Override
+    public Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Conversation conversation) {
 
         Assert.requireNonNull(requests, "requests must not be null");
+        Assert.requireNonNull(conversation, "conversation must not be null");
 
-        return this.responseProcessor.asFlux()
+        Flux<Message> response = this.responseProcessor.asFlux()
             .doOnSubscribe(s ->
                 Flux.from(requests)
                     .subscribe(this.requestProcessor::tryEmitNext, this.requestProcessor::tryEmitError))
             .next()
             .flatMapMany(Function.identity());
+
+        return conversation.attach(response, () -> {
+        });
     }
 
     @Override

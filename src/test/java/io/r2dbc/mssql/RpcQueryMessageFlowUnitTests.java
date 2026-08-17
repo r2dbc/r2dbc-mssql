@@ -28,8 +28,7 @@ import io.r2dbc.mssql.message.TransactionDescriptor;
 import io.r2dbc.mssql.message.header.HeaderOptions;
 import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
-import io.r2dbc.mssql.message.token.AllHeaders;
-import io.r2dbc.mssql.message.token.RpcRequest;
+import io.r2dbc.mssql.message.token.*;
 import io.r2dbc.mssql.message.type.Collation;
 import io.r2dbc.mssql.util.ClientMessageAssert;
 import io.r2dbc.mssql.util.HexUtils;
@@ -40,10 +39,7 @@ import reactor.core.publisher.Sinks;
 import reactor.core.publisher.SynchronousSink;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link RpcQueryMessageFlow}.
@@ -69,6 +65,72 @@ class RpcQueryMessageFlowUnitTests {
     @BeforeEach
     void setUp() {
         when(this.client.getTransactionDescriptor()).thenReturn(TransactionDescriptor.empty());
+    }
+
+    @Test
+    void attentionAckShouldCloseEstablishedCursor() {
+
+        CursorState state = new CursorState();
+        state.cursorId = 42;
+        state.update(CursorState.Phase.FETCHING);
+
+        assertThat(state.isFinalToken(attentionAck())).isTrue();
+    }
+
+    @Test
+    void errorShouldCloseEstablishedCursorOnDoneProc() {
+
+        CursorState state = new CursorState();
+        state.cursorId = 42;
+        state.update(CursorState.Phase.FETCHING);
+
+        assertThat(state.isFinalToken(DoneProcToken.create(0))).isFalse();
+
+        state.update(error(8179));
+
+        assertThat(state.isFinalToken(DoneProcToken.create(0))).isTrue();
+    }
+
+    @Test
+    void repreparingCursorShouldNotCloseOnFurtherErrors() {
+
+        CursorState state = new CursorState();
+        state.cursorId = 42;
+        state.update(error(8179));
+        state.update(CursorState.Phase.PREPARE_RETRY);
+
+        // a further error while the re-prepare is in flight must not close the window
+        state.update(error(4145));
+
+        assertThat(state.isFinalToken(DoneProcToken.create(0))).isFalse();
+    }
+
+    @Test
+    void repreparedCursorShouldNotInheritErrorsOfTheFailedAttempt() {
+
+        CursorState state = new CursorState();
+        state.cursorId = 42;
+        state.update(error(8179));
+        state.update(CursorState.Phase.PREPARE_RETRY);
+        state.update(error(4145));
+
+        // the re-prepare is dispatched: the retried execution starts over
+        state.update(CursorState.Phase.NONE);
+
+        assertThat(state.isFinalToken(DoneProcToken.create(0))).isFalse();
+    }
+
+    @Test
+    void onlyDoneProcShouldCloseEstablishedCursor() {
+
+        CursorState state = new CursorState();
+        state.cursorId = 42;
+        state.update(CursorState.Phase.FETCHING);
+        state.update(error(8134));
+
+        // DONEINPROC ends a statement within the RPC, not the RPC itself
+        assertThat(state.isFinalToken(DoneInProcToken.create(0))).isFalse();
+        assertThat(state.isFinalToken(DoneProcToken.create(0))).isTrue();
     }
 
     @Test
@@ -287,4 +349,14 @@ class RpcQueryMessageFlowUnitTests {
         verifyNoInteractions(this.requests);
         verify(this.completion).run();
     }
+
+    private static DoneToken attentionAck() {
+        // status DONE_ATTN, currentCommand 0, rowCount 0
+        return DoneToken.decode(HexUtils.decodeToByteBuf("2000 0000 0000000000000000"));
+    }
+
+    private static ErrorToken error(long number) {
+        return new ErrorToken(0, number, 0, 0, "boom", "server", "proc", 0);
+    }
+
 }

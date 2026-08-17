@@ -55,13 +55,38 @@ public interface Client {
 
     /**
      * Perform an exchange of messages. Calling this method while a previous exchange is active will return a deferred handle and queue the request until the previous exchange terminates.
+     * <p>The {@link Conversation} decides which response frame closes the request/response window and owns that window
+     * until it ends. Each conversation is single-use and claimed when the returned {@link Flux} is subscribed.
+     * The frame that closes the {@link Conversation} is emitted through the resulting {@link Flux} before it
+     * {@link Subscriber#onComplete() completes}.
+     * <p>Cancelling the resulting {@link Flux} abandons the window unless the caller applies
+     * {@link Conversation#detach(Flux)}, because the remainder of the response would otherwise surface within the next
+     * exchange. An abandoned window that already reached the wire closes the connection.
+     *
+     * @param requests the publisher of outbound messages
+     * @param conversation the single-use {@link Conversation} describing the request/response window.
+     * @return a {@link Flux} of incoming messages that ends with the end of the frame, or emits an
+     * {@link IllegalStateException} if {@code conversation} was already claimed.
+     * @since 1.1
+     */
+    Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Conversation conversation);
+
+    /**
+     * Perform an exchange of messages that ends with the first response frame matching {@code takeUntil}.
+     * <p>The caller does not obtain the {@link Conversation} and therefore cannot apply
+     * {@link Conversation#detach(Flux)}: cancelling the resulting {@link Flux} abandons the request/response window, and
+     * closes the connection if the exchange already reached the wire. Use {@link #exchange(Publisher, Conversation)} for
+     * exchanges that may be cancelled.
      *
      * @param requests  the publisher of outbound messages
-     * @param takeUntil {@link Predicate} determining the last response frame to {@link Subscriber#onComplete() complete} the stream and prevent multiple subscribers from consuming
-     *                  previous, active response streams. Note that the last frame that matches {@code takeUntil} is emitted through the resulting {@link Flux}.
+     * @param takeUntil {@link Predicate} determining the last response frame to {@link Subscriber#onComplete() complete} the stream. Note that the last frame that matches {@code takeUntil} is
+     *                  emitted through the resulting {@link Flux}.
      * @return a {@link Flux} of incoming messages that ends with the end of the frame.
+     * @see #exchange(Publisher, Conversation)
      */
-    Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Predicate<Message> takeUntil);
+    default Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Predicate<Message> takeUntil) {
+        return exchange(requests, Conversation.until(takeUntil));
+    }
 
     /**
      * Returns the {@link ByteBufAllocator}.

@@ -18,6 +18,7 @@ package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.ConnectionContext;
+import io.r2dbc.mssql.client.Conversation;
 import io.r2dbc.mssql.client.TestClient;
 import io.r2dbc.mssql.message.ClientMessage;
 import io.r2dbc.mssql.message.Message;
@@ -45,7 +46,6 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Predicate;
 
 import static io.r2dbc.mssql.message.type.TypeInformation.Builder;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -250,7 +250,7 @@ class SimpleMssqlStatementUnitTests {
 
         ArgumentCaptor<Publisher<Message>> captor = ArgumentCaptor.forClass(Publisher.class);
 
-        verify(client).exchange((Publisher) captor.capture(), any(Predicate.class));
+        verify(client).exchange((Publisher) captor.capture(), any(Conversation.class));
 
         StepVerifier.create(captor.getValue())
             .consumeNextWith(it -> assertThat(it)
@@ -272,7 +272,7 @@ class SimpleMssqlStatementUnitTests {
 
         ArgumentCaptor<Mono<ClientMessage>> captor = ArgumentCaptor.forClass(Mono.class);
 
-        verify(client).exchange(captor.capture(), any(Predicate.class));
+        verify(client).exchange(captor.capture(), any(Conversation.class));
         assertThat(captor.getValue().block()).isInstanceOf(SqlBatch.class);
     }
 
@@ -289,7 +289,7 @@ class SimpleMssqlStatementUnitTests {
 
         ArgumentCaptor<Mono<ClientMessage>> captor = ArgumentCaptor.forClass(Mono.class);
 
-        verify(client).exchange(captor.capture(), any(Predicate.class));
+        verify(client).exchange(captor.capture(), any(Conversation.class));
         assertThat(captor.getValue().block()).isInstanceOf(SqlBatch.class);
     }
 
@@ -306,7 +306,7 @@ class SimpleMssqlStatementUnitTests {
 
         ArgumentCaptor<Publisher<Message>> captor = ArgumentCaptor.forClass(Publisher.class);
 
-        verify(client).exchange((Publisher) captor.capture(), any(Predicate.class));
+        verify(client).exchange((Publisher) captor.capture(), any(Conversation.class));
 
         StepVerifier.create(captor.getValue())
             .consumeNextWith(it -> assertThat(it)
@@ -322,7 +322,7 @@ class SimpleMssqlStatementUnitTests {
 
         when(client.getRequiredCollation()).thenReturn(Collation.RAW);
         when(client.getTransactionDescriptor()).thenReturn(TransactionDescriptor.empty());
-        when(client.exchange(any(Publisher.class), any(Predicate.class))).thenReturn(Flux.empty());
+        when(client.exchange(any(Publisher.class), any(Conversation.class))).thenReturn(Flux.empty());
         when(client.getContext()).thenReturn(new ConnectionContext());
 
         return client;

@@ -25,11 +25,9 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslHandler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import io.r2dbc.mssql.client.ssl.SslConfiguration;
 import io.r2dbc.mssql.client.ssl.SslHandlerFactory;
 import io.r2dbc.mssql.client.ssl.TdsSslHandler;
 import io.r2dbc.mssql.message.ClientMessage;
@@ -47,6 +45,8 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
+import reactor.core.Disposable;
+import reactor.core.Disposables;
 import reactor.core.publisher.*;
 import reactor.netty.Connection;
 import reactor.netty.NettyOutbound;
@@ -63,17 +63,11 @@ import reactor.util.context.ContextView;
 import javax.annotation.Nullable;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
-import java.util.Collections;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.atomic.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
@@ -86,8 +80,6 @@ public final class ReactorNettyClient implements Client {
     private static final Logger logger = Loggers.getLogger(ReactorNettyClient.class);
 
     private static final boolean DEBUG_ENABLED = logger.isDebugEnabled();
-
-    private static final Sinks.EmitFailureHandler EMIT_BUSY_LOOP = Sinks.EmitFailureHandler.busyLooping(Duration.ofSeconds(5));
 
     private static final Supplier<MssqlConnectionClosedException> UNEXPECTED = () -> new MssqlConnectionClosedException("Connection unexpectedly closed");
 
@@ -115,17 +107,7 @@ public final class ReactorNettyClient implements Client {
         }
     };
 
-    private final AtomicBoolean isClosed = new AtomicBoolean(false);
-
-    // Latches the first terminal error delivered to the response processor so the actual failure cannot be
-    // masked by a later, generic close signal and we don't re-emit into an already terminated sink.
-    private final AtomicBoolean drained = new AtomicBoolean(false);
-
-    private final AtomicLong attentionPropagation = new AtomicLong();
-
-    private final AtomicLong outstandingRequests = new AtomicLong();
-
-    private final Sinks.Many<ClientMessage> requestSink = Sinks.many().unicast().onBackpressureBuffer();
+    private final RequestSink requestSink;
 
     private final Sinks.Many<Message> responseProcessor = Sinks.many().multicast().onBackpressureBuffer(512, false);
 
@@ -134,8 +116,6 @@ public final class ReactorNettyClient implements Client {
     private final CollationListener collationListener = new CollationListener();
 
     private final RedirectListener redirectListener = new RedirectListener();
-
-    private final RequestQueue requestQueue;
 
     // May change during initialization. Values remain the same after connection initialization.
 
@@ -163,7 +143,8 @@ public final class ReactorNettyClient implements Client {
      * @param connection        the TCP connection
      * @param connectionContext the connection context
      */
-    private ReactorNettyClient(Connection connection, TdsEncoder tdsEncoder, ConnectionContext connectionContext) {
+    ReactorNettyClient(Connection connection, TdsEncoder tdsEncoder, ConnectionContext connectionContext) {
+
         Assert.requireNonNull(connection, "Connection must not be null");
         Assert.state(this.responseProcessor.asFlux() instanceof Subscriber, () -> "Response processor " + this.responseProcessor + " is not a Subscriber. Cannot proceed.");
 
@@ -188,7 +169,6 @@ public final class ReactorNettyClient implements Client {
         this.byteBufAllocator = connection.outbound().alloc();
         this.connection = connection;
         this.tdsEncoder = tdsEncoder;
-        this.requestQueue = new RequestQueue(this.context);
 
         Consumer<Message> handleStateChange =
             (message) -> {
@@ -261,7 +241,7 @@ public final class ReactorNettyClient implements Client {
 
                     long current;
                     do {
-                        current = ReactorNettyClient.this.attentionPropagation.get();
+                        current = ReactorNettyClient.this.requestSink.getAttentionPropagation();
 
                         if (current == 0) {
                             if (DEBUG_ENABLED) {
@@ -275,10 +255,10 @@ public final class ReactorNettyClient implements Client {
                             return;
                         }
 
-                    } while (!ReactorNettyClient.this.attentionPropagation.compareAndSet(current, current - 1));
+                    } while (!ReactorNettyClient.this.requestSink.compareAndSetAttentionPropagation(current, current - 1));
                 }
 
-                long attentionPropagation = ReactorNettyClient.this.attentionPropagation.get();
+                long attentionPropagation = ReactorNettyClient.this.requestSink.getAttentionPropagation();
 
                 if (attentionPropagation > 0 && !AbstractDoneToken.isAttentionAck(message)) {
                     if (DEBUG_ENABLED) {
@@ -338,6 +318,7 @@ public final class ReactorNettyClient implements Client {
                 }
             });
 
+        this.requestSink = new RequestSink(connectionContext);
         this.requestSink
             .asFlux()
             .concatMap(
@@ -349,13 +330,9 @@ public final class ReactorNettyClient implements Client {
                         ? connection.outbound().sendObject((Publisher) encoded)
                         : connection.outbound().sendObject(encoded);
 
-                    // An Attention travels through the same writer as the request it cancels. concatMap subscribes
-                    // to the next write only after the previous one has been flushed, guaranteeing the Attention
-                    // reaches the wire after the request rather than racing it through a second outbound path.
-                    // attentionPropagation is incremented once the Attention has been flushed so that the
-                    // acknowledgement (and any frames preceding it) are discarded.
-                    if (message instanceof Attention && this.outstandingRequests.longValue() != 0) {
-                        return Mono.from(nettyOutbound).doOnSuccess(v -> this.attentionPropagation.incrementAndGet());
+                    // An Attention travels through the same writer as the request it cancels.
+                    if (message instanceof Attention && this.requestSink.getOutstandingRequests() != 0) {
+                        return Mono.from(nettyOutbound).doOnSuccess(v -> this.requestSink.incrementAttentionPropagation());
                     }
 
                     return nettyOutbound;
@@ -379,7 +356,7 @@ public final class ReactorNettyClient implements Client {
 
         logger.error(this.context.getMessage("Error: {}"), throwable.getMessage(), throwable);
 
-        // Drain the actual cause into the response processor first. Completing the request sink below
+        // Terminate with the actual cause first. Completing the request sink below
         // synchronously triggers the outbound termination hook (handleClose) on this same thread, which
         // would otherwise win the race and terminate the response processor with a generic "closed"
         // error, masking this cause.
@@ -541,9 +518,7 @@ public final class ReactorNettyClient implements Client {
 
     @Override
     public Mono<Void> attention() {
-        // Route the Attention through the same serialized writer as regular requests so it cannot overtake the
-        // in-flight request on the wire.
-        return Mono.fromRunnable(() -> this.requestSink.emitNext(Attention.create(1, getTransactionDescriptor()), EMIT_BUSY_LOOP));
+        return Mono.fromRunnable(() -> this.requestSink.emitNext(Attention.create(1, getTransactionDescriptor())));
     }
 
     @Override
@@ -555,7 +530,7 @@ public final class ReactorNettyClient implements Client {
 
             logger.debug(this.context.getMessage("close(subscribed)"));
 
-            if (this.isClosed.compareAndSet(false, true)) {
+            if (this.requestSink.close()) {
                 this.connection.dispose();
                 return this.connection.onDispose();
             }
@@ -607,7 +582,7 @@ public final class ReactorNettyClient implements Client {
     @Override
     public boolean isConnected() {
 
-        if (this.isClosed.get()) {
+        if (this.requestSink.isClosed()) {
             return false;
         }
 
@@ -616,83 +591,32 @@ public final class ReactorNettyClient implements Client {
     }
 
     @Override
-    public Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Predicate<Message> takeUntil) {
+    public Flux<Message> exchange(Publisher<? extends ClientMessage> requests, Conversation conversation) {
 
-        Assert.requireNonNull(takeUntil, "takeUntil must not be null");
+        Assert.requireNonNull(conversation, "Conversation must not be null");
         Assert.requireNonNull(requests, "Requests must not be null");
 
         if (DEBUG_ENABLED) {
             logger.debug(this.context.getMessage("exchange()"));
         }
 
-        ExchangeRequest exchangeRequest = new ExchangeRequest();
-
-        Flux<Message> handle = Mono.<Flux<Message>>create(sink -> {
-
-            if (DEBUG_ENABLED) {
-                logger.debug(this.context.getMessage("exchange(subscribed)"));
-            }
-
-            if (!isConnected()) {
-                sink.error(CLOSED.get());
-            }
-
-            Flux<Message> requestMessages = this.responseProcessor.asFlux()
-                .doOnSubscribe(ignore -> {
-                    this.outstandingRequests.incrementAndGet();
-                    Flux.from(requests).subscribe(t -> {
-
-                        if (!isConnected()) {
-                            sink.error(CLOSED.get());
-                            return;
-                        }
-
-                        this.requestSink.emitNext(t, EMIT_BUSY_LOOP);
-                    }, e -> this.requestSink.emitError(e, Sinks.EmitFailureHandler.FAIL_FAST), () -> {
-
-                        if (!isConnected()) {
-                            sink.error(CLOSED.get());
-                        }
-                    });
-                });
-
-            try {
-                exchangeRequest.submit(this.requestQueue, sink, requestMessages);
-            } catch (Exception e) {
-                sink.error(e);
-            }
-
-        }).flatMapMany(Function.identity()).handle((message, sink) -> {
-
-            sink.next(message);
-
-            if (takeUntil.test(message)) {
-                exchangeRequest.complete();
-                sink.complete();
-            }
-        });
-
-        return handle.doAfterTerminate(this.requestQueue).doFinally(it -> this.outstandingRequests.decrementAndGet()).doOnCancel(() -> {
-
-            if (!exchangeRequest.isComplete()) {
-                logger.error("Exchange cancelled while exchange is active. This is likely a bug leading to unpredictable outcome.");
-            }
-        });
+        return new ExchangeLifecycle(this, requests, conversation).exchange();
     }
 
+
     private void handleClose() {
-        if (this.isClosed.compareAndSet(false, true)) {
-            if (drainError(UNEXPECTED)) {
+        if (this.requestSink.close()) {
+            if (terminateConnection(UNEXPECTED)) {
                 logger.warn(this.context.getMessage("Connection has been closed by peer"));
             }
         } else {
-            drainError(EXPECTED);
+            terminateConnection(EXPECTED);
         }
     }
 
     private void handleConnectionError(Throwable error) {
-        drainError(() -> {
-            if(this.state == ConnectionState.POST_LOGIN) {
+        terminateConnection(() -> {
+            if (this.state == ConnectionState.POST_LOGIN) {
                 return new MssqlConnectionException(error);
             }
             return new MssqlConnectionException("Cannot connect to server", error);
@@ -700,55 +624,365 @@ public final class ReactorNettyClient implements Client {
     }
 
     /**
-     * Drain pending exchange requests and terminate the response processor with the supplied error.
-     * <p>The first terminal reason wins: once drained, subsequent calls are ignored so an early, generic
-     * close signal cannot mask the actual failure and we don't re-emit into an already terminated sink
-     * (which would otherwise surface as {@code onErrorDropped} noise).
+     * Terminate request admission and the response processor with the supplied error.
+     * <p>The first terminal reason wins.
      *
-     * @param supplier supplies the terminal error to propagate.
-     * @return {@code true} if this call delivered the terminal error, {@code false} if already drained.
+     * @return {@code true} if this call delivered the terminal error, {@code false} if already terminated.
      */
-    private boolean drainError(Supplier<? extends Throwable> supplier) {
+    private boolean terminateConnection(Supplier<? extends Throwable> supplier) {
 
-        if (!this.drained.compareAndSet(false, true)) {
+        Throwable failure = supplier.get();
+
+        if (!this.requestSink.terminate(failure)) {
             return false;
         }
 
-        Sinkable receiver;
-        while ((receiver = this.requestQueue.poll()) != null) {
-            receiver.onError(supplier.get());
-        }
-
-        this.responseProcessor.emitError(supplier.get(), Sinks.EmitFailureHandler.FAIL_FAST);
+        this.responseProcessor.emitError(failure, Sinks.EmitFailureHandler.FAIL_FAST);
         return true;
     }
 
     /**
-     * Request queue to collect incoming exchange requests.
-     * <p>Submission conditionally queues requests if an ongoing exchange was active by the time of subscription.
-     * Drains queued commands on exchange completion if there are queued commands or disable active flag.
+     * Request sink accepting queued {@link Sinkable} exchanges and direct {@link ClientMessage} emission.
      */
-    static class RequestQueue implements Runnable {
+    static class RequestSink {
 
-        private final Queue<Sinkable> requestQueue = Queues.<Sinkable>small().get();
+        private static final Sinks.EmitFailureHandler EMIT_BUSY_LOOP = Sinks.EmitFailureHandler.busyLooping(Duration.ofSeconds(5));
 
-        private final AtomicBoolean active = new AtomicBoolean();
+        private final Sinks.Many<ClientMessage> requestSink = Sinks.many().unicast().onBackpressureBuffer();
+
+        private final AtomicBoolean isClosed = new AtomicBoolean(false);
+
+        private final AtomicLong attentionPropagation = new AtomicLong();
+
+        private final AtomicLong outstandingRequests = new AtomicLong();
+
+        private final RequestQueue requestQueue;
+
+        public RequestSink(ConnectionContext context) {
+            this.requestQueue = new RequestQueue(context);
+        }
+
+        /**
+         * Queue.
+         */
+        public void submit(Sinkable exchange) {
+            this.requestQueue.submit(exchange);
+        }
+
+        public Flux<ClientMessage> asFlux() {
+            return this.requestSink.asFlux();
+        }
+
+        /**
+         * Emit a value to the request sink.
+         */
+        public void emitNext(ClientMessage message) {
+            this.requestSink.emitNext(message, EMIT_BUSY_LOOP);
+        }
+
+        /**
+         * Emit a completion to the request sink.
+         */
+        public void emitComplete(Sinks.EmitFailureHandler handler) {
+            this.requestSink.emitComplete(handler);
+        }
+
+        /**
+         * Emit an error to the request sink.
+         */
+        public void emitError(Throwable throwable) {
+            this.requestSink.emitError(throwable, Sinks.EmitFailureHandler.FAIL_FAST);
+        }
+
+        /**
+         * Close the sink and return {@code true} if the sink was closed with this call to prevent races.
+         */
+        public boolean close() {
+            return this.isClosed.compareAndSet(false, true);
+        }
+
+        /**
+         * Return {@code true} if the sink is closed.
+         */
+        public boolean isClosed() {
+            return this.isClosed.get();
+        }
+
+        public long getAttentionPropagation() {
+            return this.attentionPropagation.get();
+        }
+
+        public long incrementAttentionPropagation() {
+            return this.attentionPropagation.incrementAndGet();
+        }
+
+        public boolean compareAndSetAttentionPropagation(long expectedValue, long newValue) {
+            return this.attentionPropagation.compareAndSet(expectedValue, newValue);
+        }
+
+        public long getOutstandingRequests() {
+            return this.outstandingRequests.longValue();
+        }
+
+        public long incrementOutstandingRequests() {
+            return this.outstandingRequests.incrementAndGet();
+        }
+
+        public void decrementOutstandingRequests() {
+            this.outstandingRequests.decrementAndGet();
+        }
+
+        public boolean terminate(Throwable failure) {
+            return this.requestQueue.terminate(failure);
+        }
+
+    }
+
+    /**
+     * Admission, outbound request production, and wire release for one exchange.
+     * <p>Outbound emission is serialized with wire release through {@link #gate}: cancelling the outbound subscriber
+     * cannot stop a delivery that is already in flight, so {@link #terminate()} closes the gate instead of trusting
+     * the cancel alone.
+     */
+    private static class ExchangeLifecycle extends AtomicBoolean implements Sinkable {
+
+        private static final AtomicReferenceFieldUpdater<ExchangeLifecycle, RequestQueue.Lease> leaseUpdater = AtomicReferenceFieldUpdater.newUpdater(ExchangeLifecycle.class, RequestQueue.Lease.class, "lease");
+
+        private static final AtomicIntegerFieldUpdater<ExchangeLifecycle> gateUpdater = AtomicIntegerFieldUpdater.newUpdater(ExchangeLifecycle.class, "gate");
+
+        private static final int GATE_READY = 0;
+
+        private static final int GATE_EMITTING = 1;
+
+        private static final int GATE_TERMINATED = 2;
+
+        private final ReactorNettyClient client;
+
+        private final RequestSink requestSink;
+
+        private final ConnectionContext context;
+
+        private final Publisher<? extends ClientMessage> requests;
+
+        private final Conversation conversation;
+
+        private final Sinks.One<Flux<Message>> admission = Sinks.one();
+
+        private volatile RequestQueue.Lease lease;
+
+        private volatile int gate = GATE_READY;
+
+        private final Disposable.Swap outbound = Disposables.swap();
+
+        private ExchangeLifecycle(ReactorNettyClient client, Publisher<? extends ClientMessage> requests, Conversation conversation) {
+            this.client = client;
+            this.requestSink = client.requestSink;
+            this.context = client.context;
+            this.requests = requests;
+            this.conversation = conversation;
+        }
+
+        private Flux<Message> exchange() {
+
+            Flux<Message> response = Mono.defer(() -> {
+
+                if (DEBUG_ENABLED) {
+                    logger.debug(this.context.getMessage("exchange(subscribed)"));
+                }
+
+                if (!this.client.isConnected()) {
+                    return Mono.error(CLOSED.get());
+                }
+
+                try {
+                    this.requestSink.submit(this);
+                } catch (Exception e) {
+                    return Mono.error(e);
+                }
+
+                return this.admission.asMono();
+            }).flatMapMany(Function.identity());
+
+            return this.conversation.attach(response, this::terminate);
+        }
+
+        @Override
+        public void admit(RequestQueue.Lease granted) {
+
+            this.requestSink.incrementOutstandingRequests();
+            leaseUpdater.set(this, granted);
+
+            // The subscriber can be gone before the exchange is admitted, in which case the conversation has already
+            // run its termination callback and nobody else would give this window back.
+            if (this.conversation.isTerminated()) {
+                terminate();
+                return;
+            }
+
+            Flux<Message> response = this.client.responseProcessor.asFlux()
+                    .doOnSubscribe(ignore -> startOutbound());
+
+            this.admission.emitValue(response, Sinks.EmitFailureHandler.FAIL_FAST);
+        }
+
+        private void startOutbound() {
+
+            if (!compareAndSet(false, true)) {
+                // the conversation ended before this exchange got to the wire
+                return;
+            }
+
+            Flux.from(this.requests).subscribe(new BaseSubscriber<ClientMessage>() {
+
+                @Override
+                protected void hookOnSubscribe(Subscription subscription) {
+
+                    // Register before requesting so terminate() can cancel even a synchronous request publisher.
+                    if (ExchangeLifecycle.this.outbound.update(this)) {
+                        requestUnbounded();
+                    }
+                }
+
+                @Override
+                protected void hookOnNext(ClientMessage message) {
+
+                    if (!gateUpdater.compareAndSet(ExchangeLifecycle.this, GATE_READY, GATE_EMITTING)) {
+                        return;
+                    }
+
+                    try {
+                        if (ExchangeLifecycle.this.client.isConnected()) {
+                            ExchangeLifecycle.this.requestSink.emitNext(message);
+                        }
+                    } finally {
+                        leaveGate();
+                    }
+                }
+
+                @Override
+                protected void hookOnError(Throwable throwable) {
+
+                    // A late error belongs to an exchange that is already over; it must not end the shared sink.
+                    if (!gateUpdater.compareAndSet(ExchangeLifecycle.this, GATE_READY, GATE_EMITTING)) {
+                        Operators.onErrorDropped(throwable, currentContext());
+                        return;
+                    }
+
+                    try {
+                        ExchangeLifecycle.this.requestSink.emitError(throwable);
+                    } finally {
+                        leaveGate();
+                    }
+                }
+            });
+        }
+
+        private void leaveGate() {
+            if (!gateUpdater.compareAndSet(this, GATE_EMITTING, GATE_READY)) {
+                finishTermination(true);
+            }
+        }
+
+        @Override
+        public void fail(Throwable throwable) {
+            this.admission.emitError(throwable, Sinks.EmitFailureHandler.FAIL_FAST);
+        }
+
+        private void terminate() {
+
+            this.outbound.dispose();
+
+            int gate;
+            do {
+                gate = this.gate;
+
+                if (gate == GATE_TERMINATED) {
+                    break;
+                }
+            } while (!gateUpdater.compareAndSet(this, gate, GATE_TERMINATED));
+
+            if (gate == GATE_EMITTING) {
+                return;
+            }
+
+            finishTermination(false);
+        }
+
+        private void finishTermination(boolean deliveryCrossedTermination) {
+
+            RequestQueue.Lease granted = leaseUpdater.getAndSet(this, null);
+
+            if (granted == null) {
+                return;
+            }
+
+            this.requestSink.decrementOutstandingRequests();
+
+            // Claiming the wire here means this exchange never got to it: nothing was written, so the window is clean
+            // no matter how the conversation ended. Losing the claim means outbound production started and the response
+            // is ours.
+            boolean reachedWire = !compareAndSet(false, true);
+
+            if (reachedWire && (this.conversation.isAbandoned() || deliveryCrossedTermination)) {
+
+                logger.error(this.client.context.getMessage(deliveryCrossedTermination
+                        ? "An outbound message crossed the end of its conversation. Closing the connection because the response it provokes cannot be told apart from the next conversation."
+                        : "Conversation abandoned before its final response frame. Closing the connection because the remaining response cannot be discarded."));
+
+                this.client.close().subscribe(ignore -> {
+                }, e -> logger.debug(this.client.context.getMessage("Failed to close connection of an abandoned conversation"), e));
+
+                return;
+            }
+
+            granted.release();
+        }
+
+    }
+
+    /**
+     * Request queue to collect incoming exchange requests.
+     * <p>Submission, release, and termination serialize access to the queue and its active-owner flag so a concurrent
+     * submission is admitted, queued, or failed exactly once.
+     */
+    static class RequestQueue {
+
+        // Access to requestQueue, active, and terminalFailure is guarded by this.
+        private final Queue<Sinkable> requestQueue;
+
+        private boolean active;
+
+        @Nullable
+        private Throwable terminalFailure;
 
         private final ConnectionContext context;
 
         RequestQueue(ConnectionContext context) {
+            this(context, new ArrayBlockingQueue<>(Queues.SMALL_BUFFER_SIZE));
+        }
+
+        RequestQueue(ConnectionContext context, Queue<Sinkable> requestQueue) {
             this.context = context;
+            this.requestQueue = requestQueue;
         }
 
-        @Nullable
-        public Sinkable poll() {
-            return this.requestQueue.poll();
-        }
+        private void advance() {
 
-        @Override
-        public void run() {
+            Sinkable nextCommand;
 
-            Sinkable nextCommand = this.requestQueue.poll();
+            synchronized (this) {
+
+                if (this.terminalFailure != null) {
+                    this.active = false;
+                    return;
+                }
+
+                nextCommand = this.requestQueue.poll();
+
+                if (nextCommand == null) {
+                    this.active = false;
+                }
+            }
 
             if (nextCommand != null) {
 
@@ -756,102 +990,120 @@ public final class ReactorNettyClient implements Client {
                     logger.debug(this.context.getMessage("Initiating queued exchange"));
                 }
 
-                nextCommand.onSuccess();
+                // The callback can release its lease synchronously, so invoke it outside the monitor.
+                nextCommand.admit(new Lease(this));
                 return;
             }
 
             if (DEBUG_ENABLED) {
                 logger.debug(this.context.getMessage("Conversation complete"));
             }
-
-            this.active.compareAndSet(true, false);
         }
 
         /**
          * Submit a {@code exchangeRequest}. Requests are either executed directly (without an active exchange) or queued (if another exchange is currently active).
-         *
-         * @param exchangeRequest
          */
         void submit(Sinkable exchangeRequest) {
 
-            if (this.active.compareAndSet(false, true)) {
+            boolean admitted = false;
+            Throwable failure;
+
+            synchronized (this) {
+                failure = this.terminalFailure;
+
+                if (failure == null) {
+                    admitted = !this.active;
+
+                    if (admitted) {
+                        this.active = true;
+                    } else if (!this.requestQueue.offer(exchangeRequest)) {
+                        throw new IllegalStateException("Request queue is full");
+                    }
+                }
+            }
+
+            if (failure != null) {
+                exchangeRequest.fail(failure);
+            } else if (admitted) {
 
                 if (DEBUG_ENABLED) {
                     logger.debug(this.context.getMessage("Initiating exchange"));
                 }
 
-                exchangeRequest.onSuccess();
+                // The callback can release its lease synchronously, so invoke it outside the monitor.
+                exchangeRequest.admit(new Lease(this));
             } else {
 
                 if (DEBUG_ENABLED) {
                     logger.debug(this.context.getMessage("Queueing exchange"));
                 }
-
-                if (!this.requestQueue.offer(exchangeRequest)) {
-                    throw new IllegalStateException("Request queue is full");
-                }
-
-                drainRequestQueue();
             }
         }
 
-        void drainRequestQueue() {
+        /**
+         * Permanently terminate this queue and fail all pending and subsequent exchange requests. The first failure wins.
+         *
+         * @param failure the connection failure.
+         * @return {@code true} if this call terminated the queue.
+         */
+        boolean terminate(Throwable failure) {
 
-            if (this.active.compareAndSet(false, true)) {
+            Assert.requireNonNull(failure, "Failure must not be null");
 
-                Sinkable runnable = this.requestQueue.poll();
+            List<Sinkable> pending;
 
-                if (runnable != null) {
-                    runnable.onSuccess();
-                } else {
-                    this.active.compareAndSet(true, false);
+            synchronized (this) {
+
+                if (this.terminalFailure != null) {
+                    return false;
+                }
+
+                this.terminalFailure = failure;
+
+                pending = new ArrayList<>();
+                Sinkable request;
+                while ((request = this.requestQueue.poll()) != null) {
+                    pending.add(request);
                 }
             }
+
+            pending.forEach(request -> request.fail(failure));
+            return true;
         }
 
-    }
+        /**
+         * Exclusive, single-use right to occupy the connection's request/response window. Issued to an exchange when it
+         * is admitted and released once its conversation ends. Only the holder can advance the queue, so an exchange
+         * that was never admitted cannot hand the wire to the next one while the current conversation is still running.
+         */
+        static final class Lease {
 
-    /**
-     * Ensure a command request is submitted and subscribed to only once.
-     */
-    static class ExchangeRequest {
+            private static final AtomicIntegerFieldUpdater<Lease> RELEASED = AtomicIntegerFieldUpdater.newUpdater(Lease.class, "released");
 
-        private static final AtomicIntegerFieldUpdater<ExchangeRequest> COMPLETED = AtomicIntegerFieldUpdater.newUpdater(ExchangeRequest.class, "completed");
+            private final RequestQueue queue;
 
-        private static final AtomicIntegerFieldUpdater<ExchangeRequest> SUBMITTED = AtomicIntegerFieldUpdater.newUpdater(ExchangeRequest.class, "submitted");
+            // access via RELEASED
+            private volatile int released = 0;
 
-        // access via COMPLETED
-        private volatile int completed = 0;
-
-        // access via SUBMITTED
-        private volatile int submitted = 0;
-
-        public void complete() {
-            COMPLETED.set(this, 1);
-        }
-
-        public boolean isComplete() {
-            return COMPLETED.get(this) == 1;
-        }
-
-        void submit(RequestQueue queue, MonoSink<Flux<Message>> sink, Flux<Message> requestMessages) {
-
-            if (!SUBMITTED.compareAndSet(this, 0, 1)) {
-                throw new IllegalStateException("Client exchange can be subscribed only once");
+            private Lease(RequestQueue queue) {
+                this.queue = queue;
             }
 
-            queue.submit(new Sinkable() {
+            /**
+             * Give up the window and admit the next queued exchange. Idempotent.
+             *
+             * @return {@code true} if this call released the window.
+             */
+            boolean release() {
 
-                @Override
-                public void onSuccess() {
-                    sink.success(requestMessages);
+                if (!RELEASED.compareAndSet(this, 0, 1)) {
+                    return false;
                 }
 
-                @Override
-                public void onError(Throwable throwable) {
-                    sink.error(throwable);
-                }
-            });
+                this.queue.advance();
+                return true;
+            }
+
         }
 
     }
@@ -943,9 +1195,12 @@ public final class ReactorNettyClient implements Client {
 
     interface Sinkable {
 
-        void onSuccess();
+        /**
+         * Admitted to the wire, holding {@code lease} until the conversation ends.
+         */
+        void admit(RequestQueue.Lease lease);
 
-        void onError(Throwable throwable);
+        void fail(Throwable throwable);
 
     }
 
