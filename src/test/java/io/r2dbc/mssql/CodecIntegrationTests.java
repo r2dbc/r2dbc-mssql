@@ -19,14 +19,7 @@ package io.r2dbc.mssql;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.util.IntegrationTestSupport;
-import io.r2dbc.spi.Blob;
-import io.r2dbc.spi.Clob;
-import io.r2dbc.spi.ConnectionFactories;
-import io.r2dbc.spi.ConnectionFactoryOptions;
-import io.r2dbc.spi.Parameters;
-import io.r2dbc.spi.R2dbcType;
-import io.r2dbc.spi.Result;
-import io.r2dbc.spi.Type;
+import io.r2dbc.spi.*;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
@@ -37,11 +30,7 @@ import reactor.util.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -108,6 +97,16 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     @Test
     void shouldEncodeBigIntegerAsNumeric() {
         testType(connection, "NUMERIC(38,0)", new BigInteger("12345"), BigInteger.class, new BigDecimal("12345"));
+    }
+
+    @Test
+    void shouldEncodeBigDecimalAsMoney() {
+        testType(connection, "MONEY", new BigDecimal("7301494.4032"));
+    }
+
+    @Test
+    void shouldEncodeBigDecimalAsSmallMoney() {
+        testType(connection, "SMALLMONEY", new BigDecimal("214748.3647"));
     }
 
     @Test

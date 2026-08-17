@@ -84,7 +84,8 @@ final class MoneyCodec extends AbstractCodec<BigDecimal> {
 
     @Override
     boolean doCanDecode(TypeInformation typeInformation) {
-        return typeInformation.getServerType() == SqlServerType.MONEY;
+        SqlServerType serverType = typeInformation.getServerType();
+        return serverType == SqlServerType.MONEY || serverType == SqlServerType.SMALLMONEY;
     }
 
     @Override
