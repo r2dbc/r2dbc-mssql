@@ -18,6 +18,7 @@ package io.r2dbc.mssql.client;
 
 import io.r2dbc.mssql.client.ReactorNettyClient.RequestQueue;
 import io.r2dbc.mssql.client.ReactorNettyClient.Sinkable;
+import io.r2dbc.mssql.util.Concurrency;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
@@ -99,89 +100,79 @@ class RequestQueueUnitTests {
     }
 
     @Test
-    void shouldNotStrandSubmissionRacingIdleRelease() throws Exception {
+    void shouldNotStrandSubmissionRacingIdleRelease(@Concurrency(2) ExecutorService executor) throws Exception {
 
         BlockingPollQueue backingQueue = new BlockingPollQueue();
         RequestQueue queue = new RequestQueue(new ConnectionContext(), backingQueue);
         TestExchange first = new TestExchange();
         TestExchange second = new TestExchange();
         TestExchange third = new TestExchange();
-        ExecutorService executor = Executors.newFixedThreadPool(2);
 
-        try {
-            queue.submit(first);
-            backingQueue.blockNextEmptyPoll();
+        queue.submit(first);
+        backingQueue.blockNextEmptyPoll();
 
-            Future<Boolean> release = executor.submit(() -> first.getLease().release());
+        Future<Boolean> release = executor.submit(() -> first.getLease().release());
 
-            assertThat(backingQueue.awaitEmptyPoll()).isTrue();
+        assertThat(backingQueue.awaitEmptyPoll()).isTrue();
 
-            Future<?> submission = executor.submit(() -> queue.submit(second));
+        Future<?> submission = executor.submit(() -> queue.submit(second));
 
-            assertThat(release.get(5, TimeUnit.SECONDS)).isTrue();
-            submission.get(5, TimeUnit.SECONDS);
+        assertThat(release.get(5, TimeUnit.SECONDS)).isTrue();
+        submission.get(5, TimeUnit.SECONDS);
 
-            queue.submit(third);
+        queue.submit(third);
 
-            assertThat(second.isAdmitted()).isTrue();
-            assertThat(third.isAdmitted()).isFalse();
-        } finally {
-            executor.shutdownNow();
-        }
+        assertThat(second.isAdmitted()).isTrue();
+        assertThat(third.isAdmitted()).isFalse();
     }
 
     @Test
-    void shouldAdmitEveryConcurrentSubmission() throws Exception {
+    void shouldAdmitEveryConcurrentSubmission(@Concurrency(32) ExecutorService executor) throws Exception {
 
         int concurrency = 32;
-        ExecutorService executor = Executors.newFixedThreadPool(concurrency);
 
-        try {
-            for (int attempt = 0; attempt < 100; attempt++) {
+        for (int attempt = 0; attempt < 100; attempt++) {
 
-                RequestQueue queue = new RequestQueue(new ConnectionContext());
-                TestExchange first = new TestExchange();
-                CountDownLatch ready = new CountDownLatch(concurrency);
-                CountDownLatch start = new CountDownLatch(1);
-                AtomicInteger admitted = new AtomicInteger();
-                List<Future<?>> submissions = new ArrayList<>();
+            RequestQueue queue = new RequestQueue(new ConnectionContext());
+            TestExchange first = new TestExchange();
+            CountDownLatch ready = new CountDownLatch(concurrency);
+            CountDownLatch start = new CountDownLatch(1);
+            AtomicInteger admitted = new AtomicInteger();
+            List<Future<?>> submissions = new ArrayList<>();
 
-                queue.submit(first);
+            queue.submit(first);
 
-                for (int i = 0; i < concurrency; i++) {
-                    submissions.add(executor.submit(() -> {
-                        ready.countDown();
-                        start.await();
-                        queue.submit(new Sinkable() {
+            for (int i = 0; i < concurrency; i++) {
+                submissions.add(executor.submit(() -> {
+                    ready.countDown();
+                    start.await();
+                    queue.submit(new Sinkable() {
 
-                            @Override
-                            public void admit(RequestQueue.Lease lease) {
-                                admitted.incrementAndGet();
-                                lease.release();
-                            }
+                        @Override
+                        public void admit(RequestQueue.Lease lease) {
+                            admitted.incrementAndGet();
+                            lease.release();
+                        }
 
-                            @Override
-                            public void fail(Throwable throwable) {
-                                throw new AssertionError(throwable);
-                            }
-                        });
-                        return null;
-                    }));
-                }
-
-                assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
-                start.countDown();
-
-                for (Future<?> submission : submissions) {
-                    submission.get(5, TimeUnit.SECONDS);
-                }
-
-                first.getLease().release();
-
-                assertThat(admitted).hasValue(concurrency);
+                        @Override
+                        public void fail(Throwable throwable) {
+                            throw new AssertionError(throwable);
+                        }
+                    });
+                    return null;
+                }));
             }
-        } finally {
-            executor.shutdownNow();
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            for (Future<?> submission : submissions) {
+                submission.get(5, TimeUnit.SECONDS);
+            }
+
+            first.getLease().release();
+
+            assertThat(admitted).hasValue(concurrency);
         }
     }
 

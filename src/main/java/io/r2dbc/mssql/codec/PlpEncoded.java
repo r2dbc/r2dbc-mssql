@@ -33,17 +33,18 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxOperator;
 import reactor.core.publisher.Operators;
 import reactor.util.annotation.Nullable;
+import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
-import reactor.util.concurrent.Queues;
 import java.util.function.IntSupplier;
 
 /**
  * Partial-length-prefixed extension to {@link Encoded}. Consumes a upstream {@link Publisher}.
  *
+ * @author Mark Paluch
  * @author Mark Paluch
  */
 public class PlpEncoded extends Encoded {
@@ -146,6 +147,9 @@ public class PlpEncoded extends Encoded {
 
     static class ChunkSubscriber extends AtomicLong implements CoreSubscriber<ByteBuf>, Subscription {
 
+        static final AtomicLongFieldUpdater<ChunkSubscriber> REQUESTED =
+                AtomicLongFieldUpdater.newUpdater(ChunkSubscriber.class, "requested");
+
         private final CoreSubscriber<? super ByteBuf> actual;
 
         private final ByteBufAllocator allocator;
@@ -154,10 +158,6 @@ public class PlpEncoded extends Encoded {
 
         private final boolean withSizeHeaders;
 
-        // Incoming raw buffers are handed to the WIP-serialised drain() via this queue instead of being added
-        // to the aggregator directly from onNext. Together with the work-in-progress counter (this AtomicLong)
-        // this keeps every aggregator mutation/release on a single thread at a time, so a concurrent cancel()
-        // or onError() can never release the aggregator while onNext() is appending to it - without a lock.
         private final Queue<ByteBuf> queue = Queues.<ByteBuf>unbounded().get();
 
         private boolean first = true;
@@ -170,11 +170,7 @@ public class PlpEncoded extends Encoded {
 
         private boolean terminated;
 
-        volatile long requested;
-
-        @SuppressWarnings("rawtypes")
-        static final AtomicLongFieldUpdater<ChunkSubscriber> REQUESTED =
-            AtomicLongFieldUpdater.newUpdater(ChunkSubscriber.class, "requested");
+        private volatile long requested;
 
         private volatile boolean doneUpstream;
 
@@ -186,7 +182,6 @@ public class PlpEncoded extends Encoded {
         private Subscription s;
 
         ChunkSubscriber(CoreSubscriber<? super ByteBuf> actual, ByteBufAllocator allocator, IntSupplier chunkSizeSupplier, boolean withSizeHeaders) {
-
             this.actual = actual;
             this.allocator = allocator;
             this.chunkSizeSupplier = chunkSizeSupplier;
@@ -200,7 +195,6 @@ public class PlpEncoded extends Encoded {
 
         @Override
         public void onSubscribe(Subscription s) {
-
             if (Operators.validate(this.s, s)) {
                 this.s = s;
                 this.actual.onSubscribe(this);
@@ -212,10 +206,7 @@ public class PlpEncoded extends Encoded {
 
             byteBuf.touch("PlpEncoded.onNext(…)");
 
-            // Hand the buffer to the serialised drain rather than mutating the aggregator here; drain()
-            // releases it if the subscription has already been cancelled or terminated.
             this.queue.offer(byteBuf);
-
             drain();
 
             if (!this.doneUpstream && !this.cancelled && REQUESTED.get(this) > 0) {
@@ -278,10 +269,6 @@ public class PlpEncoded extends Encoded {
                         }
                     }
 
-                    // The !cancelled checks below are defensive: they preserve the "no onComplete after a
-                    // cancel" guarantee that the previous implementation got from a shared status CAS. Only a
-                    // tight concurrent interleaving (a cancel landing between the top-of-loop check and here)
-                    // could reach them, so they are not covered by a deterministic test.
                     if (!this.cancelled && this.doneUpstream && this.queue.isEmpty() && (this.aggregator == null || !this.aggregator.isReadable())) {
 
                         if (this.aggregator != null) {
@@ -305,8 +292,6 @@ public class PlpEncoded extends Encoded {
             }
         }
 
-        // Release everything we hold (queued-but-not-ingested buffers and the aggregator). Runs only inside
-        // the serialised drain, so it never races the ingest above.
         private void discardAll() {
 
             ByteBuf buf;
@@ -357,7 +342,6 @@ public class PlpEncoded extends Encoded {
 
         @Override
         public void onError(Throwable t) {
-
             this.error = t;
             this.doneUpstream = true;
             drain();
@@ -365,7 +349,6 @@ public class PlpEncoded extends Encoded {
 
         @Override
         public void onComplete() {
-
             this.doneUpstream = true;
             drain();
         }
@@ -388,13 +371,10 @@ public class PlpEncoded extends Encoded {
 
         @Override
         public void cancel() {
-
             this.cancelled = true;
-
             if (this.s != null) {
                 this.s.cancel();
             }
-
             drain();
         }
 
