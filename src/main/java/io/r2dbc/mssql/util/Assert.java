@@ -180,7 +180,7 @@ public final class Assert {
      * Assert that an object is not {@code null}.
      *
      * <pre class="code">
-     * Assert.notNull(clazz, () -&gt; "The class '" + clazz.getName() + "' must not be null");
+     * Assert.notNull(entity.getId(), () -&gt; "ID for entity " + entity.getName() + " must not be null");
      * </pre>
      *
      * @param object          the object to check
@@ -197,7 +197,7 @@ public final class Assert {
      * Assert that an object is not {@code null} and return the non-null instance.
      *
      * <pre class="code">
-     * Class&lt?&gt; nonNullObject = Assert.requireNonNull(clazz, "The class must not be null");
+     * Class&lt;?&gt; nonNullObject = Assert.requireNonNull(clazz, "The class must not be null");
      * </pre>
      *
      * @param object  the object to check
@@ -214,7 +214,7 @@ public final class Assert {
      * Assert that an object is not {@code null} and return the non-null instance.
      *
      * <pre class="code">
-     * Class&lt?&gt; nonNullObject = Assert.requireNonNull(clazz, () -&gt; "The class '" + clazz.getName() + "' must not be null");
+     * Long id = Assert.requireNonNull(entity.getId(), () -&gt; "ID for entity " + entity.getName() + " must not be null");
      * </pre>
      *
      * @param object          the object to check
