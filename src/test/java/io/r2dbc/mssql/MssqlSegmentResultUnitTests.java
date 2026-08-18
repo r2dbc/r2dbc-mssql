@@ -94,6 +94,26 @@ class MssqlSegmentResultUnitTests {
     }
 
     @Test
+    void shouldApplyOutParameterMappingThroughFilter() {
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("AC0000000100000000000026" +
+                "0404F3DEBC0A").skipBytes(1);
+
+        ReturnValue returnValue = ReturnValue.decode(buffer, false);
+        buffer.release();
+
+        MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(returnValue), true);
+
+        Flux.from(result.filter(it -> true).map(Function.identity()))
+                .as(StepVerifier::create)
+                .expectNextCount(1)
+                .verifyComplete();
+
+        assertThat(returnValue.refCnt()).isZero();
+        assertThat(buffer.refCnt()).isZero();
+    }
+
+    @Test
     void mapShouldIgnoreNotice() {
 
         MssqlSegmentResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(this.infoToken), false);
@@ -168,6 +188,27 @@ class MssqlSegmentResultUnitTests {
             .as(StepVerifier::create)
             .expectNextCount(1)
             .verifyComplete();
+    }
+
+    @Test
+    void filterShouldReleaseOutParametersWhenPredicateFails() {
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("AC0000000100000000000026" +
+                "0404F3DEBC0A").skipBytes(1);
+
+        ReturnValue returnValue = ReturnValue.decode(buffer, false);
+        buffer.release();
+
+        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(returnValue), true);
+
+        result.filter(it -> {
+                    throw new IllegalStateException("filter failure");
+                }).getRowsUpdated()
+                .as(StepVerifier::create)
+                .verifyErrorMessage("filter failure");
+
+        assertThat(returnValue.refCnt()).isZero();
+        assertThat(buffer.refCnt()).isZero();
     }
 
     @ValueSource(booleans = {true, false})
@@ -287,6 +328,27 @@ class MssqlSegmentResultUnitTests {
             .verifyComplete();
 
         assertThat(dataRow.refCnt()).isZero();
+    }
+
+    @Test
+    void flatMapShouldReleaseOutParametersWhenMapperFails() {
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf("AC0000000100000000000026" +
+                "0404F3DEBC0A").skipBytes(1);
+
+        ReturnValue returnValue = ReturnValue.decode(buffer, false);
+        buffer.release();
+
+        MssqlResult result = MssqlSegmentResult.toResult("", new ConnectionContext(), this.codecs, Flux.just(returnValue), true);
+
+        Flux.from(result.flatMap(it -> {
+                    throw new IllegalStateException("mapper failure");
+                }))
+                .as(StepVerifier::create)
+                .verifyErrorMessage("mapper failure");
+
+        assertThat(returnValue.refCnt()).isZero();
+        assertThat(buffer.refCnt()).isZero();
     }
 
     @Test
