@@ -21,6 +21,8 @@ import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 
+import java.util.function.IntFunction;
+
 /**
  * Descriptor for data length in row results.
  * Use {@link Length} to encode/decode length headers of a PLP chunk and {@link PlpLength} to
@@ -112,6 +114,16 @@ public final class Length {
         }
 
         return CACHE[length];
+    }
+
+    /**
+     * Create a {@link Length} from a {@link PlpLength}.
+     *
+     * @param plpLength the PLP length.
+     * @return a new {@link Length} for the given {@link PlpLength}.
+     */
+    public static Length of(PlpLength plpLength) {
+        return of(Math.toIntExact(plpLength.getLength()), plpLength.isNull());
     }
 
     /**
@@ -313,22 +325,47 @@ public final class Length {
         throw ProtocolException.invalidTds("Cannot encode value LengthDescriptor for " + lengthStrategy);
     }
 
-    public int getLength() {
-        return this.length;
-    }
-
+    /**
+     * Returns whether the length descriptor indicates a {@code NULL} value.
+     *
+     * @return {@code true} if the value is {@code NULL}; {@code false} otherwise.
+     */
     public boolean isNull() {
         return this.isNull;
     }
 
+    /**
+     * Returns whether the length is zero. A zero-length chunk terminates a PLP stream.
+     *
+     * @return {@code true} if the length is zero; {@code false} otherwise.
+     */
+    public boolean isEmpty() {
+        return this.length == 0;
+    }
+
+    /**
+     * Returns the value length in bytes. Zero if the value is {@code NULL} or empty.
+     *
+     * @return the value length in bytes.
+     */
+    public int getLength() {
+        return this.length;
+    }
+
+    /**
+     * Map the length in bytes using {@code mapper}, typically to read or skip the corresponding number of bytes.
+     *
+     * @param <T>    the result type.
+     * @param mapper the mapping function receiving the length in bytes.
+     * @return the mapped result.
+     */
+    public <T> T map(IntFunction<? extends T> mapper) {
+        return mapper.apply(this.length);
+    }
+
     @Override
     public String toString() {
-        final StringBuffer sb = new StringBuffer();
-        sb.append(getClass().getSimpleName());
-        sb.append(" [length=").append(this.length);
-        sb.append(", isNull=").append(this.isNull);
-        sb.append(']');
-        return sb.toString();
+        return this.isNull ? "null" : String.valueOf(this.length);
     }
 
 }

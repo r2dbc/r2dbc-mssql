@@ -17,10 +17,13 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.message.type.LengthStrategy;
 import io.r2dbc.mssql.message.type.SqlServerType;
+import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
+import io.r2dbc.mssql.util.TdsEncoded;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -62,5 +65,56 @@ class ReturnValueUnitTests {
         String data = "00000001000000000000260404F3DEBC0A";
 
         CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), buffer -> ReturnValue.canDecode(buffer, true));
+    }
+
+    @Test
+    void shouldDecodeSpatialPlpValue() {
+
+        ByteBuf buffer = spatialReturnValue("geometry");
+
+        ReturnValue returnValue = ReturnValue.decode(buffer, false);
+
+        assertThat(returnValue.getValueType().getServerType()).isEqualTo(SqlServerType.GEOMETRY);
+        assertThat(returnValue.getValue().readableBytes()).isEqualTo(22);
+        assertThat(buffer.readerIndex()).isEqualTo(buffer.writerIndex());
+
+        EncodedAssert.assertThat(returnValue.getValue()).isEncodedAs(expected -> {
+            expected.writeLongLE(2);
+            expected.writeIntLE(1);
+            expected.writeByte(0x11);
+            expected.writeIntLE(1);
+            expected.writeByte(0x22);
+            expected.writeIntLE(0);
+        });
+
+        returnValue.release();
+    }
+
+    @Test
+    void canDecodeShouldReportSpatialPlpDecodability() {
+        CanDecodeTestSupport.testCanDecode(spatialReturnValue("geography"), buffer -> ReturnValue.canDecode(buffer, true));
+    }
+
+    private static ByteBuf spatialReturnValue(String udtTypeName) {
+
+        ByteBuf buffer = Unpooled.buffer();
+        buffer.writeShortLE(0); // ordinal
+        TdsEncoded.encodeUnicodeBString(buffer, ""); // parameter name (empty)
+        buffer.writeByte(1); // status
+        buffer.writeInt(0); // user type
+        buffer.writeShortLE(0); // flags
+        buffer.writeByte(TdsDataType.UDT.getValue());
+        buffer.writeShortLE(0); // max byte size
+        TdsEncoded.encodeUnicodeBString(buffer, ""); // database name
+        TdsEncoded.encodeUnicodeBString(buffer, ""); // schema name
+        TdsEncoded.encodeUnicodeBString(buffer, udtTypeName);
+        buffer.writeShortLE(0); // assembly qualified name (empty)
+        buffer.writeLongLE(2); // PLP length
+        buffer.writeIntLE(1);
+        buffer.writeByte(0x11);
+        buffer.writeIntLE(1);
+        buffer.writeByte(0x22);
+        buffer.writeIntLE(0); // PLP terminator
+        return buffer;
     }
 }

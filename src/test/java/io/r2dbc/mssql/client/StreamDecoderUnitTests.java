@@ -22,7 +22,11 @@ import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.header.*;
 import io.r2dbc.mssql.message.token.ColumnMetadataToken;
 import io.r2dbc.mssql.message.token.DoneToken;
+import io.r2dbc.mssql.message.token.ReturnValue;
+import io.r2dbc.mssql.message.type.SqlServerType;
+import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.util.HexUtils;
+import io.r2dbc.mssql.util.TdsEncoded;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import org.junit.jupiter.api.Test;
 
@@ -319,6 +323,104 @@ class StreamDecoderUnitTests {
         initialize.writeBytes(colmetadata);
 
         assertThat(decoder.decode(initialize, messageDecoder).get(0)).isInstanceOf(ColumnMetadataToken.class);
+    }
+
+    @Test
+    void shouldAwaitColumnMetadataSplitInsideSpatialTypeInfo() {
+
+        StreamDecoder decoder = new StreamDecoder();
+        MessageDecoder messageDecoder = ConnectionState.POST_LOGIN.decoder(CLIENT);
+
+        ByteBuf tokenStream = TestByteBufAllocator.TEST.buffer();
+        tokenStream.writeByte(ColumnMetadataToken.TYPE);
+        tokenStream.writeShortLE(1); // column count
+        tokenStream.writeShortLE(0); // CEK table size
+        tokenStream.writeInt(0); // user type
+        tokenStream.writeShortLE(0); // flags
+        tokenStream.writeByte(TdsDataType.UDT.getValue());
+        tokenStream.writeShortLE(0); // max byte size
+        tokenStream.writeByte(0); // database name (empty)
+        tokenStream.writeByte(0); // schema name (empty)
+
+        int split = tokenStream.writerIndex(); // packet boundary inside UDT_INFO
+
+        TdsEncoded.encodeUnicodeBString(tokenStream, "geometry");
+        tokenStream.writeShortLE(0); // assembly qualified name (empty)
+        TdsEncoded.encodeUnicodeBString(tokenStream, "g"); // column name
+
+        ByteBuf firstChunk = chunk(tokenStream, 0, split, Status.empty());
+        ByteBuf lastChunk = chunk(tokenStream, split, tokenStream.writerIndex() - split, Status.of(Status.StatusBit.EOM));
+
+        assertThat(decoder.decode(firstChunk, messageDecoder)).isEmpty();
+        assertThat(decoder.getDecoderState()).isNotNull();
+
+        List<Message> messages = decoder.decode(lastChunk, messageDecoder);
+
+        assertThat(messages).hasSize(1);
+
+        ColumnMetadataToken metadata = (ColumnMetadataToken) messages.get(0);
+        assertThat(metadata.getColumns()).hasSize(1);
+        assertThat(metadata.getColumns()[0].getType().getServerType()).isEqualTo(SqlServerType.GEOMETRY);
+
+        firstChunk.release();
+        lastChunk.release();
+        tokenStream.release();
+    }
+
+    @Test
+    void shouldAwaitReturnValueSplitInsideSpatialTypeInfo() {
+
+        StreamDecoder decoder = new StreamDecoder();
+        MessageDecoder messageDecoder = ConnectionState.POST_LOGIN.decoder(CLIENT);
+
+        ByteBuf tokenStream = TestByteBufAllocator.TEST.buffer();
+        tokenStream.writeByte(ReturnValue.TYPE);
+        tokenStream.writeShortLE(0); // ordinal
+        tokenStream.writeByte(0); // parameter name (empty)
+        tokenStream.writeByte(1); // status
+        tokenStream.writeInt(0); // user type
+        tokenStream.writeShortLE(0); // flags
+        tokenStream.writeByte(TdsDataType.UDT.getValue());
+        tokenStream.writeShortLE(0); // max byte size
+        tokenStream.writeByte(0); // database name (empty)
+        tokenStream.writeByte(0); // schema name (empty)
+
+        int split = tokenStream.writerIndex(); // packet boundary inside UDT_INFO
+
+        TdsEncoded.encodeUnicodeBString(tokenStream, "geography");
+        tokenStream.writeShortLE(0); // assembly qualified name (empty)
+        tokenStream.writeLongLE(2); // PLP length
+        tokenStream.writeIntLE(1);
+        tokenStream.writeByte(0x11);
+        tokenStream.writeIntLE(1);
+        tokenStream.writeByte(0x22);
+        tokenStream.writeIntLE(0); // PLP terminator
+
+        ByteBuf firstChunk = chunk(tokenStream, 0, split, Status.empty());
+        ByteBuf lastChunk = chunk(tokenStream, split, tokenStream.writerIndex() - split, Status.of(Status.StatusBit.EOM));
+
+        assertThat(decoder.decode(firstChunk, messageDecoder)).isEmpty();
+        assertThat(decoder.getDecoderState()).isNotNull();
+
+        List<Message> messages = decoder.decode(lastChunk, messageDecoder);
+
+        assertThat(messages).hasSize(1);
+
+        ReturnValue returnValue = (ReturnValue) messages.get(0);
+        assertThat(returnValue.getValueType().getServerType()).isEqualTo(SqlServerType.GEOGRAPHY);
+        returnValue.release();
+
+        firstChunk.release();
+        lastChunk.release();
+        tokenStream.release();
+    }
+
+    private static ByteBuf chunk(ByteBuf tokenStream, int index, int length, Status status) {
+
+        ByteBuf chunk = TestByteBufAllocator.TEST.buffer();
+        Header.create(HeaderOptions.create(Type.TABULAR_RESULT, status), Header.LENGTH + length, PacketIdProvider.just(1)).encode(chunk);
+        chunk.writeBytes(tokenStream, index, length);
+        return chunk;
     }
 
     @Test

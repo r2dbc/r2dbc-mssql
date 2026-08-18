@@ -24,7 +24,9 @@ import io.r2dbc.mssql.codec.Decodable;
 import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.message.Message;
 import io.r2dbc.mssql.message.tds.Decode;
+import io.r2dbc.mssql.message.tds.PlpBuffer;
 import io.r2dbc.mssql.message.type.Length;
+import io.r2dbc.mssql.message.type.LengthStrategy;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.Assert;
 import reactor.util.annotation.Nullable;
@@ -106,14 +108,7 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
         byte status = Decode.asByte(buffer);
         TypeInformation type = TypeInformation.decode(buffer, true);
 
-        // Preserve length for Codecs
-        int beforeLengthDescriptor = buffer.readerIndex();
-        Length length = Length.decode(buffer, type);
-
-        int descriptorLength = buffer.readerIndex() - beforeLengthDescriptor;
-        buffer.readerIndex(beforeLengthDescriptor);
-
-        ByteBuf value = buffer.readRetainedSlice(descriptorLength + length.getLength());
+        ByteBuf value = type.getLengthStrategy() == LengthStrategy.PARTLENTYPE ? decodePlp(buffer, type) : decodeValue(buffer, type);
 
         return new ReturnValue(ordinal, name, status, type, value);
     }
@@ -151,21 +146,42 @@ public class ReturnValue extends AbstractReferenceCounted implements DataToken {
 
                 TypeInformation type = TypeInformation.decode(buffer, true);
 
-                if (!Length.canDecode(buffer, type)) {
-                    return false;
-                }
-
-                Length length = Length.decode(buffer, type);
-
-                if (buffer.readableBytes() >= length.getLength()) {
-                    return true;
-                }
+                return type.getLengthStrategy() == LengthStrategy.PARTLENTYPE ? canDecodePlp(buffer, type) : canDecodeValue(buffer, type);
             }
         } finally {
             buffer.readerIndex(readerIndex);
         }
 
         return false;
+    }
+
+    private static boolean canDecodeValue(ByteBuf buffer, TypeInformation type) {
+
+        if (!Length.canDecode(buffer, type)) {
+            return false;
+        }
+
+        Length length = Length.decode(buffer, type);
+        return buffer.readableBytes() >= length.getLength();
+    }
+
+    private static boolean canDecodePlp(ByteBuf buffer, TypeInformation type) {
+        return PlpBuffer.of(buffer, type).canDecode();
+    }
+
+    private static ByteBuf decodeValue(ByteBuf buffer, TypeInformation type) {
+
+        int beforeLengthDescriptor = buffer.readerIndex();
+        Length length = Length.decode(buffer, type);
+
+        int descriptorLength = buffer.readerIndex() - beforeLengthDescriptor;
+        buffer.readerIndex(beforeLengthDescriptor);
+
+        return buffer.readRetainedSlice(descriptorLength + length.getLength());
+    }
+
+    private static ByteBuf decodePlp(ByteBuf buffer, TypeInformation type) {
+        return PlpBuffer.of(buffer, type).readRetainedStream();
     }
 
     /**

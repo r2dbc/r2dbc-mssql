@@ -22,11 +22,11 @@ import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ServerCharset;
 import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.LengthStrategy;
-import io.r2dbc.mssql.message.type.PlpLength;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
+import io.r2dbc.mssql.util.TdsEncoded;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import io.r2dbc.spi.Clob;
 import org.junit.jupiter.api.Test;
@@ -126,17 +126,7 @@ class ClobCodecUnitTests {
         TypeInformation varchar =
             builder().withServerType(SqlServerType.VARCHAR).withLengthStrategy(LengthStrategy.PARTLENTYPE).withCharset(StandardCharsets.US_ASCII).build();
 
-        ByteBuf buffer = TestByteBufAllocator.TEST.heapBuffer(12 + 24);
-        PlpLength.of(24).encode(buffer);
-
-        Length.of(8).encode(buffer, varchar);
-        buffer.writeBytes("C1xxxxxx".getBytes());
-
-        Length.of(8).encode(buffer, varchar);
-        buffer.writeBytes("C2yyyyyy".getBytes());
-
-        Length.of(8).encode(buffer, varchar);
-        buffer.writeBytes("C3zzzzzz".getBytes());
+        ByteBuf buffer = TdsEncoded.plpStream(TestByteBufAllocator.TEST.heapBuffer(), varchar, "C1xxxxxx", "C2yyyyyy", "C3zzzzzz");
 
         Clob clob = ClobCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(varchar), Clob.class);
 
@@ -148,6 +138,23 @@ class ClobCodecUnitTests {
     }
 
     @Test
+    void shouldBeAbleToDecodePlpStreamWithTerminator() {
+
+        TypeInformation varchar =
+                builder().withServerType(SqlServerType.VARCHAR).withLengthStrategy(LengthStrategy.PARTLENTYPE).withCharset(StandardCharsets.US_ASCII).build();
+
+        ByteBuf buffer = TdsEncoded.plpStream(TestByteBufAllocator.TEST.heapBuffer(), varchar, "C1xxxxxx", "C2yyyyyy");
+        Length.of(0).encode(buffer, varchar);
+
+        Clob clob = ClobCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(varchar), Clob.class);
+
+        StepVerifier.create(clob.stream())
+                .expectNext("C1xxxxxx")
+                .expectNext("C2yyyyyy")
+                .verifyComplete();
+    }
+
+    @Test
     void shouldReleaseConsumedBuffers() {
 
         TypeInformation varchar =
@@ -155,11 +162,7 @@ class ClobCodecUnitTests {
 
         PooledByteBufAllocator alloc = PooledByteBufAllocator.DEFAULT;
 
-        ByteBuf buffer = alloc.buffer();
-        PlpLength.of(8).encode(buffer);
-
-        Length.of(8).encode(buffer, varchar);
-        buffer.writeBytes("C1xxxxxx".getBytes());
+        ByteBuf buffer = TdsEncoded.plpStream(alloc.buffer(), varchar, "C1xxxxxx");
 
         Clob clob = ClobCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(varchar), Clob.class);
         buffer.release();
@@ -241,17 +244,7 @@ class ClobCodecUnitTests {
         TypeInformation varchar =
             builder().withServerType(SqlServerType.VARCHAR).withLengthStrategy(LengthStrategy.PARTLENTYPE).withCharset(StandardCharsets.US_ASCII).build();
 
-        ByteBuf buffer = TestByteBufAllocator.TEST.buffer(12 + 24);
-        PlpLength.of(24).encode(buffer);
-
-        Length.of(8).encode(buffer, varchar);
-        buffer.writeBytes("C1xxxxxx".getBytes());
-
-        Length.of(8).encode(buffer, varchar);
-        buffer.writeBytes("C2yyyyyy".getBytes());
-
-        Length.of(8).encode(buffer, varchar);
-        buffer.writeBytes("C3zzzzzz".getBytes());
+        ByteBuf buffer = TdsEncoded.plpStream(varchar, "C1xxxxxx", "C2yyyyyy", "C3zzzzzz");
 
         Clob clob = ClobCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(varchar), Clob.class);
         buffer.release();
@@ -275,11 +268,7 @@ class ClobCodecUnitTests {
 
         PooledByteBufAllocator alloc = PooledByteBufAllocator.DEFAULT;
 
-        ByteBuf buffer = alloc.buffer();
-        PlpLength.of(8).encode(buffer);
-
-        Length.of(8).encode(buffer, varchar);
-        buffer.writeBytes("C1xxxxxx".getBytes());
+        ByteBuf buffer = TdsEncoded.plpStream(alloc.buffer(), varchar, "C1xxxxxx");
 
         Clob clob = ClobCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(varchar), Clob.class);
         buffer.release();

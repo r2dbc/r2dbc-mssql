@@ -17,7 +17,9 @@
 package io.r2dbc.mssql.message.type;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.util.HexUtils;
+import io.r2dbc.mssql.util.TdsEncoded;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,5 +50,48 @@ class TypeBuilderUnitTests {
         assertThat(buffer.readerIndex()).isEqualTo(0);
 
         assertThat(TypeBuilder.canDecode(HexUtils.decodeToByteBuf("000000000800"), true)).isFalse();
+    }
+
+    @Test
+    void shouldDecodeSpatialTypeInfo() {
+
+        ByteBuf buffer = spatialTypeInfo("geometry");
+
+        TypeInformation typeInformation = TypeBuilder.decode(buffer, true);
+
+        assertThat(typeInformation.getServerType()).isEqualTo(SqlServerType.GEOMETRY);
+        assertThat(typeInformation.getLengthStrategy()).isEqualTo(LengthStrategy.PARTLENTYPE);
+        assertThat(buffer.readableBytes()).isEqualTo(0);
+    }
+
+    @Test
+    void canDecodeShouldCheckSpatialTypeInfoDecodingAbility() {
+
+        ByteBuf buffer = spatialTypeInfo("geography");
+        int writerIndex = buffer.writerIndex();
+
+        assertThat(TypeBuilder.canDecode(buffer, true)).isTrue();
+        assertThat(buffer.readerIndex()).isEqualTo(0);
+
+        for (int i = 1; i < writerIndex; i++) {
+
+            buffer.writerIndex(writerIndex - i);
+            assertThat(TypeBuilder.canDecode(buffer, true)).describedAs("canDecode() with missing " + i + " bytes").isFalse();
+            assertThat(buffer.readerIndex()).isEqualTo(0);
+        }
+    }
+
+    private static ByteBuf spatialTypeInfo(String udtTypeName) {
+
+        ByteBuf buffer = Unpooled.buffer();
+        buffer.writeInt(0); // user type
+        buffer.writeShortLE(0); // flags
+        buffer.writeByte(TdsDataType.UDT.getValue());
+        buffer.writeShortLE(0); // max byte size
+        TdsEncoded.encodeUnicodeBString(buffer, ""); // database name
+        TdsEncoded.encodeUnicodeBString(buffer, ""); // schema name
+        TdsEncoded.encodeUnicodeBString(buffer, udtTypeName);
+        buffer.writeShortLE(0); // assembly qualified name (empty)
+        return buffer;
     }
 }

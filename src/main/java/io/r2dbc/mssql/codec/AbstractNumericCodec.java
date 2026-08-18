@@ -100,7 +100,7 @@ abstract class AbstractNumericCodec<T> extends AbstractCodec<T> {
             case SIZE_TINY_INT:
                 return this.converter.apply(Decode.tinyInt(buffer));
             default:
-                throw ProtocolException.invalidTds(String.format("Unexpected value length: %d", length.getLength()));
+                throw ProtocolException.invalidTds(String.format("Unexpected value length: %s", length));
         }
     }
 

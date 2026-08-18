@@ -18,6 +18,7 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
@@ -73,12 +74,7 @@ final class TimestampCodec extends AbstractCodec<byte[]> {
 
     @Override
     byte[] doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends byte[]> valueType) {
-
-        byte[] value = new byte[length.getLength()];
-
-        buffer.readBytes(value);
-
-        return value;
+        return Decode.readBytesOrPlp(buffer, length, type);
     }
 
 }

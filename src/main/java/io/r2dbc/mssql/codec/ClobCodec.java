@@ -111,7 +111,7 @@ public class ClobCodec extends AbstractCodec<Clob> {
         if (decodable.getType().getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
 
             PlpLength plpLength = buffer.isReadable() ? PlpLength.decode(buffer, decodable.getType()) : PlpLength.nullLength();
-            length = Length.of(Math.toIntExact(plpLength.getLength()), plpLength.isNull());
+            length = Length.of(plpLength);
         } else {
             length = Length.decode(buffer, decodable.getType());
         }
@@ -124,6 +124,7 @@ public class ClobCodec extends AbstractCodec<Clob> {
     }
 
     @Override
+    @Nullable
     Clob doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends Clob> valueType) {
 
         if (length.isNull()) {
@@ -136,7 +137,7 @@ public class ClobCodec extends AbstractCodec<Clob> {
             while (buffer.isReadable()) {
 
                 Length chunkLength = Length.decode(buffer, type);
-                buffer.skipBytes(chunkLength.getLength());
+                chunkLength.map(buffer::skipBytes);
             }
 
             int endIndex = buffer.readerIndex();
@@ -144,7 +145,7 @@ public class ClobCodec extends AbstractCodec<Clob> {
             return new ScalarClob(type, length, buffer.readRetainedSlice(endIndex - startIndex));
         }
 
-        return new ScalarClob(type, length, buffer.readRetainedSlice(length.getLength()));
+        return new ScalarClob(type, length, length.map(buffer::readRetainedSlice));
     }
 
     /**
@@ -254,12 +255,18 @@ public class ClobCodec extends AbstractCodec<Clob> {
 
                     Length length;
                     if (type.getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
+
                         length = Length.decode(plpStream, type);
+
+                        if (length.isEmpty()) {
+                            sink.complete();
+                            return;
+                        }
                     } else {
                         length = valueLength;
                     }
 
-                    sink.next(plpStream.readRetainedSlice(length.getLength()));
+                    sink.next(length.map(plpStream::readRetainedSlice));
                 } catch (Exception e) {
                     sink.error(e);
                 }

@@ -20,11 +20,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.LengthStrategy;
-import io.r2dbc.mssql.message.type.PlpLength;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
+import io.r2dbc.mssql.util.TdsEncoded;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import io.r2dbc.spi.Blob;
 import org.junit.jupiter.api.Test;
@@ -112,17 +112,7 @@ class BlobCodecUnitTests {
         TypeInformation varbinary =
             builder().withServerType(SqlServerType.VARBINARY).withLengthStrategy(LengthStrategy.PARTLENTYPE).build();
 
-        ByteBuf buffer = TestByteBufAllocator.TEST.buffer(12 + 24);
-        PlpLength.of(24).encode(buffer);
-
-        Length.of(8).encode(buffer, varbinary);
-        buffer.writeBytes("C1xxxxxx".getBytes());
-
-        Length.of(8).encode(buffer, varbinary);
-        buffer.writeBytes("C2yyyyyy".getBytes());
-
-        Length.of(8).encode(buffer, varbinary);
-        buffer.writeBytes("C3zzzzzz".getBytes());
+        ByteBuf buffer = TdsEncoded.plpStream(varbinary, "C1xxxxxx", "C2yyyyyy", "C3zzzzzz");
 
         Blob blob = BlobCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(varbinary), Blob.class);
 
@@ -134,6 +124,23 @@ class BlobCodecUnitTests {
     }
 
     @Test
+    void shouldBeAbleToDecodePlpStreamWithTerminator() {
+
+        TypeInformation varbinary =
+                builder().withServerType(SqlServerType.VARBINARY).withLengthStrategy(LengthStrategy.PARTLENTYPE).build();
+
+        ByteBuf buffer = TdsEncoded.plpStream(varbinary, "C1xxxxxx", "C2yyyyyy");
+        Length.of(0).encode(buffer, varbinary);
+
+        Blob blob = BlobCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(varbinary), Blob.class);
+
+        StepVerifier.create(blob.stream())
+                .expectNext(ByteBuffer.wrap("C1xxxxxx".getBytes()))
+                .expectNext(ByteBuffer.wrap("C2yyyyyy".getBytes()))
+                .verifyComplete();
+    }
+
+    @Test
     void shouldReleaseConsumedBuffers() {
 
         TypeInformation varbinary =
@@ -141,11 +148,7 @@ class BlobCodecUnitTests {
 
         PooledByteBufAllocator alloc = PooledByteBufAllocator.DEFAULT;
 
-        ByteBuf buffer = alloc.buffer();
-        PlpLength.of(8).encode(buffer);
-
-        Length.of(8).encode(buffer, varbinary);
-        buffer.writeBytes("C1xxxxxx".getBytes());
+        ByteBuf buffer = TdsEncoded.plpStream(alloc.buffer(), varbinary, "C1xxxxxx");
 
         Blob blob = BlobCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(varbinary), Blob.class);
         buffer.release();
@@ -163,17 +166,7 @@ class BlobCodecUnitTests {
         TypeInformation varbinary =
             builder().withServerType(SqlServerType.VARBINARY).withLengthStrategy(LengthStrategy.PARTLENTYPE).build();
 
-        ByteBuf buffer = TestByteBufAllocator.TEST.buffer(12 + 24);
-        PlpLength.of(24).encode(buffer);
-
-        Length.of(8).encode(buffer, varbinary);
-        buffer.writeBytes("C1xxxxxx".getBytes());
-
-        Length.of(8).encode(buffer, varbinary);
-        buffer.writeBytes("C2yyyyyy".getBytes());
-
-        Length.of(8).encode(buffer, varbinary);
-        buffer.writeBytes("C3zzzzzz".getBytes());
+        ByteBuf buffer = TdsEncoded.plpStream(varbinary, "C1xxxxxx", "C2yyyyyy", "C3zzzzzz");
 
         Blob blob = BlobCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(varbinary), Blob.class);
         buffer.release();
@@ -197,11 +190,7 @@ class BlobCodecUnitTests {
 
         PooledByteBufAllocator alloc = PooledByteBufAllocator.DEFAULT;
 
-        ByteBuf buffer = alloc.buffer();
-        PlpLength.of(8).encode(buffer);
-
-        Length.of(8).encode(buffer, varbinary);
-        buffer.writeBytes("C1xxxxxx".getBytes());
+        ByteBuf buffer = TdsEncoded.plpStream(alloc.buffer(), varbinary, "C1xxxxxx");
 
         Blob blob = BlobCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(varbinary), Blob.class);
         buffer.release();
