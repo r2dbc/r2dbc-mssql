@@ -178,44 +178,44 @@ See also: https://docs.microsoft.com/en-us/sql/t-sql/language-elements/begin-tra
 
 This reference table shows the type mapping between [Microsoft SQL Server][m] and Java data types:
 
-| Microsoft SQL Server Type                 | Java Data Type                                                                                                                           | 
-|:------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------|
-| [`bit`][sql-bit-ref]                      | [**`Boolean`**][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref], [`BigDecimal`][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] |
-| [`tinyint`][sql-all-int-ref]              | [**`Byte`**][java-byte-ref], [`Boolean`][java-boolean-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref], [`BigDecimal`][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] |
-| [`smallint`][sql-all-int-ref]             | [**`Short`**][java-short-ref], [`Boolean`][java-boolean-ref], [`Byte`][java-byte-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref], [`BigDecimal`][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] |
-| [`int`][sql-all-int-ref]                  | [**`Integer`**][java-integer-ref], [`Boolean`][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Long`][java-long-ref], [`BigDecimal`][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] |
-| [`bigint`][sql-all-int-ref]               | [**`Long`**][java-long-ref], [`Boolean`][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref], [`BigDecimal`][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] |
-| [`real`][sql-float-real-ref]              | [**`Float`**][java-float-ref], [`Double`][java-double-ref]   
-| [`float`][sql-float-real-ref]             | [**`Double`**][java-double-ref], [`Float`][java-float-ref] 
-| [`decimal`][sql-decimal-ref]              | [**`BigDecimal`**][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] 
-| [`numeric`][sql-decimal-ref]              | [**`BigDecimal`**][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref]
-| [`uniqueidentifier`][sql-uid-ref]         | [**`UUID`**][java-uuid-ref], [`String`][java-string-ref]   
-| [`smalldatetime`][sql-smalldatetime-ref]  | [`LocalDateTime`][java-ldt-ref] 
-| [`datetime`][sql-datetime-ref]            | [`LocalDateTime`][java-ldt-ref] 
-| [`datetime2`][sql-datetime2-ref]          | [`LocalDateTime`][java-ldt-ref] 
-| [`date`][sql-date-ref]                    | [`LocalDate`][java-ld-ref] 
-| [`time`][sql-time-ref]                    | [`LocalTime`][java-lt-ref] 
-| [`datetimeoffset`][sql-dtof-ref]          | [**`OffsetDateTime`**][java-odt-ref], [`ZonedDateTime`][java-zdt-ref]  
-| [`timestamp`][sql-timestamp-ref]          | [`byte[]`][java-byte-ref]
-| [`smallmoney`][sql-money-ref]             | [`BigDecimal`][java-bigdecimal-ref]
-| [`money`][sql-money-ref]                  | [`BigDecimal`][java-bigdecimal-ref]
-| [`char`][sql-(var)char-ref]               | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
-| [`varchar`][sql-(var)char-ref]            | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
-| [`varcharmax`][sql-(var)char-ref]         | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
-| [`nchar`][sql-n(var)char-ref]             | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
-| [`nvarchar`][sql-n(var)char-ref]          | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
-| [`nvarcharmax`][sql-n(var)char-ref]       | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
-| [`text`][sql-(n)text-ref]                 | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
-| [`ntext`][sql-(n)text-ref]                | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]
-| [`image`][sql-(n)text-ref]                | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], [`Blob`][r2dbc-blob-ref]
-| [`binary`][sql-binary-ref]                | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], [`Blob`][r2dbc-blob-ref]
-| [`varbinary`][sql-binary-ref]             | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], [`Blob`][r2dbc-blob-ref]
-| [`varbinarymax`][sql-binary-ref]          | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], [`Blob`][r2dbc-blob-ref]
-| [`sql_variant`][sql-sql-variant-ref]      | Not yet supported.
-| [`xml`][sql-xml-ref]                      | Not yet supported.
-| [`udt`][sql-udt-ref]                      | Not yet supported.
-| [`geometry`][sql-geometry-ref]            | Not yet supported.
-| [`geography`][sql-geography-ref]          | Not yet supported.
+| Microsoft SQL Server Type                | Java Data Type                                                                                                                                                                                                          | 
+|:-----------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`bit`][sql-bit-ref]                     | [**`Boolean`**][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref], [`BigDecimal`][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] |
+| [`tinyint`][sql-all-int-ref]             | [**`Byte`**][java-byte-ref], [`Boolean`][java-boolean-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref], [`BigDecimal`][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] |
+| [`smallint`][sql-all-int-ref]            | [**`Short`**][java-short-ref], [`Boolean`][java-boolean-ref], [`Byte`][java-byte-ref], [`Integer`][java-integer-ref], [`Long`][java-long-ref], [`BigDecimal`][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] |
+| [`int`][sql-all-int-ref]                 | [**`Integer`**][java-integer-ref], [`Boolean`][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Long`][java-long-ref], [`BigDecimal`][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] |
+| [`bigint`][sql-all-int-ref]              | [**`Long`**][java-long-ref], [`Boolean`][java-boolean-ref], [`Byte`][java-byte-ref], [`Short`][java-short-ref], [`Integer`][java-integer-ref], [`BigDecimal`][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref] |
+| [`real`][sql-float-real-ref]             | [**`Float`**][java-float-ref], [`Double`][java-double-ref]                                                                                                                                                              
+| [`float`][sql-float-real-ref]            | [**`Double`**][java-double-ref], [`Float`][java-float-ref]                                                                                                                                                              
+| [`decimal`][sql-decimal-ref]             | [**`BigDecimal`**][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref]                                                                                                                                            
+| [`numeric`][sql-decimal-ref]             | [**`BigDecimal`**][java-bigdecimal-ref], [`BigInteger`][java-biginteger-ref]                                                                                                                                            
+| [`uniqueidentifier`][sql-uid-ref]        | [**`UUID`**][java-uuid-ref], [`String`][java-string-ref]                                                                                                                                                                
+| [`smalldatetime`][sql-smalldatetime-ref] | [`LocalDateTime`][java-ldt-ref]                                                                                                                                                                                         
+| [`datetime`][sql-datetime-ref]           | [`LocalDateTime`][java-ldt-ref]                                                                                                                                                                                         
+| [`datetime2`][sql-datetime2-ref]         | [`LocalDateTime`][java-ldt-ref]                                                                                                                                                                                         
+| [`date`][sql-date-ref]                   | [`LocalDate`][java-ld-ref]                                                                                                                                                                                              
+| [`time`][sql-time-ref]                   | [`LocalTime`][java-lt-ref]                                                                                                                                                                                              
+| [`datetimeoffset`][sql-dtof-ref]         | [**`OffsetDateTime`**][java-odt-ref], [`ZonedDateTime`][java-zdt-ref]                                                                                                                                                   
+| [`timestamp`][sql-timestamp-ref]         | [`byte[]`][java-byte-ref]                                                                                                                                                                                               
+| [`smallmoney`][sql-money-ref]            | [`BigDecimal`][java-bigdecimal-ref]                                                                                                                                                                                     
+| [`money`][sql-money-ref]                 | [`BigDecimal`][java-bigdecimal-ref]                                                                                                                                                                                     
+| [`char`][sql-(var)char-ref]              | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]                                                                                                                                                                   
+| [`varchar`][sql-(var)char-ref]           | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]                                                                                                                                                                   
+| [`varcharmax`][sql-(var)char-ref]        | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]                                                                                                                                                                   
+| [`nchar`][sql-n(var)char-ref]            | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]                                                                                                                                                                   
+| [`nvarchar`][sql-n(var)char-ref]         | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]                                                                                                                                                                   
+| [`nvarcharmax`][sql-n(var)char-ref]      | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]                                                                                                                                                                   
+| [`text`][sql-(n)text-ref]                | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]                                                                                                                                                                   
+| [`ntext`][sql-(n)text-ref]               | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]                                                                                                                                                                   
+| [`image`][sql-(n)text-ref]               | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], [`Blob`][r2dbc-blob-ref]                                                                                                                            
+| [`binary`][sql-binary-ref]               | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], [`Blob`][r2dbc-blob-ref]                                                                                                                            
+| [`varbinary`][sql-binary-ref]            | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], [`Blob`][r2dbc-blob-ref]                                                                                                                            
+| [`varbinarymax`][sql-binary-ref]         | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], [`Blob`][r2dbc-blob-ref]                                                                                                                            
+| [`sql_variant`][sql-sql-variant-ref]     | Not yet supported.                                                                                                                                                                                                      
+| [`xml`][sql-xml-ref]                     | Not yet supported.                                                                                                                                                                                                      
+| [`udt`][sql-udt-ref]                     | Not yet supported.                                                                                                                                                                                                      
+| [`geometry`][sql-geometry-ref]           | Experimental since v1.0.6 through `com.microsoft.sqlserver.jdbc.Geometry` (JDBC driver type)                                                                                                                            
+| [`geography`][sql-geography-ref]         | Experimental since v1.0.6 through `com.microsoft.sqlserver.jdbc.Geography` (JDBC driver type)                                                                                                                           
 
 Types in **bold** indicate the native (default) Java type.
 

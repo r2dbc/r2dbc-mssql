@@ -16,16 +16,15 @@
 
 package io.r2dbc.mssql;
 
+import com.microsoft.sqlserver.jdbc.Geography;
+import com.microsoft.sqlserver.jdbc.Geometry;
+import com.microsoft.sqlserver.jdbc.SQLServerException;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.util.IntegrationTestSupport;
 import io.r2dbc.spi.*;
+import org.assertj.core.api.ThrowingConsumer;
 import org.junit.jupiter.api.Test;
-
-import com.microsoft.sqlserver.jdbc.Geography;
-import com.microsoft.sqlserver.jdbc.Geometry;
-import com.microsoft.sqlserver.jdbc.SQLServerException;
-
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
@@ -38,7 +37,6 @@ import java.nio.ByteBuffer;
 import java.time.*;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -321,47 +319,88 @@ class CodecIntegrationTests extends IntegrationTestSupport {
     @Test
     void shouldEncodeGeographyAsGeography() throws SQLServerException {
         Geography geographyVal = Geography.STGeomFromText("POINT(-122.35 37.55)", 4326);
-        
-        testType(connection, "GEOGRAPHY", geographyVal, Geography.class, 
-        actual -> {Geography actualGeography = (Geography) actual;
-            try {
-                assertThat(actualGeography.STAsText()).isEqualTo(geographyVal.STAsText());
-            } catch (SQLServerException e) {
-                org.assertj.core.api.Fail.fail(e.getMessage());
-            }
-            assertThat(actualGeography.getSrid()).isEqualTo(geographyVal.getSrid());
-        },
-        actual -> {Geography actualGeography = (Geography) actual;
-            try {
-                assertThat(actualGeography.STAsText()).isEqualTo(geographyVal.STAsText());
-            } catch (SQLServerException e) {
-                org.assertj.core.api.Fail.fail(e.getMessage());
-            }
-            assertThat(actualGeography.getSrid()).isEqualTo(geographyVal.getSrid());
-        }, null);
+
+        testType(connection, "GEOGRAPHY", geographyVal, Geography.class,
+                actual -> {
+                    Geography actualGeography = (Geography) actual;
+                    assertThat(actualGeography.STAsText()).isEqualTo(geographyVal.STAsText());
+                    assertThat(actualGeography.getSrid()).isEqualTo(geographyVal.getSrid());
+                },
+                actual -> {
+                    Geography actualGeography = (Geography) actual;
+                    assertThat(actualGeography.STAsText()).isEqualTo(geographyVal.STAsText());
+                    assertThat(actualGeography.getSrid()).isEqualTo(geographyVal.getSrid());
+                }, null);
     }
 
     @Test
     void shouldEncodeGeometryAsGeometry() throws SQLServerException {
         Geometry geometryVal = Geometry.STGeomFromText("POINT(30 10)", 0);
-        
-        testType(connection, "GEOMETRY", geometryVal, Geometry.class, 
-        actual -> {Geometry actualGeometry = (Geometry) actual;
-            try {
-                assertThat(actualGeometry.STAsText()).isEqualTo(geometryVal.STAsText());
-            } catch (SQLServerException e) {
-                org.assertj.core.api.Fail.fail(e.getMessage());
+
+        testType(connection, "GEOMETRY", geometryVal, Geometry.class,
+                actual -> {
+                    Geometry actualGeometry = (Geometry) actual;
+                    assertThat(actualGeometry.STAsText()).isEqualTo(geometryVal.STAsText());
+                    assertThat(actualGeometry.getSrid()).isEqualTo(geometryVal.getSrid());
+                },
+                actual -> {
+                    Geometry actualGeometry = (Geometry) actual;
+                    assertThat(actualGeometry.STAsText()).isEqualTo(geometryVal.STAsText());
+                    assertThat(actualGeometry.getSrid()).isEqualTo(geometryVal.getSrid());
+                }, null);
+    }
+
+    @Test
+    void shouldEncodeLargeGeographyAsPlpStream() throws SQLServerException {
+
+        Geography geographyVal = Geography.STGeomFromText(largeLineString(600, 0.1), 4326);
+        assertThat(geographyVal.serialize().length).isGreaterThan(8000);
+
+        testType(connection, "GEOGRAPHY", geographyVal, Geography.class,
+                actual -> {
+                    Geography actualGeography = (Geography) actual;
+                    assertThat(actualGeography.STAsText()).isEqualTo(geographyVal.STAsText());
+                    assertThat(actualGeography.getSrid()).isEqualTo(geographyVal.getSrid());
+                },
+                actual -> {
+                    Geography actualGeography = (Geography) actual;
+                    assertThat(actualGeography.STAsText()).isEqualTo(geographyVal.STAsText());
+                    assertThat(actualGeography.getSrid()).isEqualTo(geographyVal.getSrid());
+                }, null);
+    }
+
+    @Test
+    void shouldEncodeLargeGeometryAsPlpStream() throws SQLServerException {
+
+        Geometry geometryVal = Geometry.STGeomFromText(largeLineString(600, 1), 0);
+        assertThat(geometryVal.serialize().length).isGreaterThan(8000);
+
+        testType(connection, "GEOMETRY", geometryVal, Geometry.class,
+                actual -> {
+                    Geometry actualGeometry = (Geometry) actual;
+                    assertThat(actualGeometry.STAsText()).isEqualTo(geometryVal.STAsText());
+                    assertThat(actualGeometry.getSrid()).isEqualTo(geometryVal.getSrid());
+                },
+                actual -> {
+                    Geometry actualGeometry = (Geometry) actual;
+                    assertThat(actualGeometry.STAsText()).isEqualTo(geometryVal.STAsText());
+                    assertThat(actualGeometry.getSrid()).isEqualTo(geometryVal.getSrid());
+                }, null);
+    }
+
+    private static String largeLineString(int points, double scale) {
+
+        StringBuilder wkt = new StringBuilder("LINESTRING(");
+
+        for (int i = 0; i < points; i++) {
+
+            if (i > 0) {
+                wkt.append(", ");
             }
-            assertThat(actualGeometry.getSrid()).isEqualTo(geometryVal.getSrid());
-        },
-        actual -> {Geometry actualGeometry = (Geometry) actual;
-            try {
-                assertThat(actualGeometry.STAsText()).isEqualTo(geometryVal.STAsText());
-            } catch (SQLServerException e) {
-                org.assertj.core.api.Fail.fail(e.getMessage());
-            }
-            assertThat(actualGeometry.getSrid()).isEqualTo(geometryVal.getSrid());
-        }, null);
+            wkt.append(i * scale).append(" ").append(i % 80 * scale);
+        }
+
+        return wkt.append(")").toString();
     }
 
     private void testType(MssqlConnection connection, String columnType, Object value) {
@@ -380,31 +419,31 @@ class CodecIntegrationTests extends IntegrationTestSupport {
         testType(connection, columnType, value, valueClass, actual -> assertThat(actual).isEqualTo(value), actual -> assertThat(actual).isEqualTo(expectedGetObjectValue), parameterValueType);
     }
 
-    private void testType(MssqlConnection connection, String columnType, Object value, Class<?> valueClass, Consumer<Object> nativeValueConsumer) {
+    private void testType(MssqlConnection connection, String columnType, Object value, Class<?> valueClass, ThrowingConsumer<Object> nativeValueConsumer) {
         testType(connection, columnType, value, valueClass, actual -> assertThat(actual).isEqualTo(value), nativeValueConsumer, null);
     }
 
-    private void testType(MssqlConnection connection, String columnType, Object value, Class<?> valueClass, Consumer<Object> expectedValueConsumer, Consumer<Object> nativeValueConsumer,
+    private void testType(MssqlConnection connection, String columnType, Object value, Class<?> valueClass, ThrowingConsumer<Object> expectedValueConsumer, ThrowingConsumer<Object> nativeValueConsumer,
                           @Nullable Type parameterValueType) {
 
         createTable(connection, columnType);
 
         if (parameterValueType == null) {
             Flux.from(connection.createStatement("INSERT INTO codec_test values(@P0)")
-                    .bind("P0", value)
-                    .execute())
-                .flatMap(Result::getRowsUpdated)
-                .as(StepVerifier::create)
-                .expectNext(1L)
-                .verifyComplete();
+                            .bind("P0", value)
+                            .execute())
+                    .flatMap(Result::getRowsUpdated)
+                    .as(StepVerifier::create)
+                    .expectNext(1L)
+                    .verifyComplete();
         } else {
             Flux.from(connection.createStatement("INSERT INTO codec_test values(@P0)")
-                    .bind("P0", Parameters.in(parameterValueType, value))
-                    .execute())
-                .flatMap(Result::getRowsUpdated)
-                .as(StepVerifier::create)
-                .expectNext(1L)
-                .verifyComplete();
+                            .bind("P0", Parameters.in(parameterValueType, value))
+                            .execute())
+                    .flatMap(Result::getRowsUpdated)
+                    .as(StepVerifier::create)
+                    .expectNext(1L)
+                    .verifyComplete();
         }
 
         if (value instanceof ByteBuffer) {
@@ -412,77 +451,77 @@ class CodecIntegrationTests extends IntegrationTestSupport {
         }
 
         connection.createStatement("SELECT my_col FROM codec_test")
-            .execute()
-            .flatMap(it -> it.map((row, rowMetadata) -> (Object) row.get("my_col", valueClass)))
-            .as(StepVerifier::create)
-            .consumeNextWith(expectedValueConsumer)
-            .verifyComplete();
+                .execute()
+                .flatMap(it -> it.map((row, rowMetadata) -> (Object) row.get("my_col", valueClass)))
+                .as(StepVerifier::create)
+                .consumeNextWith(expectedValueConsumer)
+                .verifyComplete();
 
         connection.createStatement("SELECT my_col FROM codec_test")
-            .execute()
-            .flatMap(it -> it.map((row, rowMetadata) -> row.get("my_col")))
-            .as(StepVerifier::create)
-            .consumeNextWith(nativeValueConsumer)
-            .verifyComplete();
+                .execute()
+                .flatMap(it -> it.map((row, rowMetadata) -> row.get("my_col")))
+                .as(StepVerifier::create)
+                .consumeNextWith(nativeValueConsumer)
+                .verifyComplete();
 
         if (parameterValueType == null) {
             Flux.from(connection.createStatement("UPDATE codec_test SET my_col = @P0")
-                    .bindNull("P0", value.getClass())
-                    .execute())
-                .flatMap(Result::getRowsUpdated)
-                .as(StepVerifier::create)
-                .expectNext(1L)
-                .verifyComplete();
+                            .bindNull("P0", value.getClass())
+                            .execute())
+                    .flatMap(Result::getRowsUpdated)
+                    .as(StepVerifier::create)
+                    .expectNext(1L)
+                    .verifyComplete();
 
             connection.createStatement("SELECT my_col FROM codec_test")
-                .execute()
-                .flatMap(it -> it.map((row, rowMetadata) -> Optional.ofNullable((Object) row.get("my_col", valueClass))))
-                .as(StepVerifier::create)
-                .expectNext(Optional.empty())
-                .verifyComplete();
+                    .execute()
+                    .flatMap(it -> it.map((row, rowMetadata) -> Optional.ofNullable((Object) row.get("my_col", valueClass))))
+                    .as(StepVerifier::create)
+                    .expectNext(Optional.empty())
+                    .verifyComplete();
 
             Flux.from(connection.createStatement("UPDATE codec_test SET my_col = @P0")
-                    .bind("P0", Parameters.in(value.getClass()))
-                    .execute())
-                .flatMap(Result::getRowsUpdated)
-                .as(StepVerifier::create)
-                .expectNext(1L)
-                .verifyComplete();
+                            .bind("P0", Parameters.in(value.getClass()))
+                            .execute())
+                    .flatMap(Result::getRowsUpdated)
+                    .as(StepVerifier::create)
+                    .expectNext(1L)
+                    .verifyComplete();
 
             connection.createStatement("SELECT my_col FROM codec_test")
-                .execute()
-                .flatMap(it -> it.map((row, rowMetadata) -> Optional.ofNullable((Object) row.get("my_col", valueClass))))
-                .as(StepVerifier::create)
-                .expectNext(Optional.empty())
-                .verifyComplete();
+                    .execute()
+                    .flatMap(it -> it.map((row, rowMetadata) -> Optional.ofNullable((Object) row.get("my_col", valueClass))))
+                    .as(StepVerifier::create)
+                    .expectNext(Optional.empty())
+                    .verifyComplete();
         } else {
 
             Flux.from(connection.createStatement("UPDATE codec_test SET my_col = @P0")
-                    .bind("P0", Parameters.in(parameterValueType))
-                    .execute())
-                .flatMap(Result::getRowsUpdated)
-                .as(StepVerifier::create)
-                .expectNext(1L)
-                .verifyComplete();
+                            .bind("P0", Parameters.in(parameterValueType))
+                            .execute())
+                    .flatMap(Result::getRowsUpdated)
+                    .as(StepVerifier::create)
+                    .expectNext(1L)
+                    .verifyComplete();
 
             connection.createStatement("SELECT my_col FROM codec_test")
-                .execute()
-                .flatMap(it -> it.map((row, rowMetadata) -> Optional.ofNullable((Object) row.get("my_col", valueClass))))
-                .as(StepVerifier::create)
-                .expectNext(Optional.empty())
-                .verifyComplete();
+                    .execute()
+                    .flatMap(it -> it.map((row, rowMetadata) -> Optional.ofNullable((Object) row.get("my_col", valueClass))))
+                    .as(StepVerifier::create)
+                    .expectNext(Optional.empty())
+                    .verifyComplete();
         }
     }
 
     private void createTable(MssqlConnection connection, String columnType) {
 
         connection.createStatement("DROP TABLE codec_test").execute()
-            .flatMap(MssqlResult::getRowsUpdated)
-            .onErrorResume(e -> Mono.empty())
-            .thenMany(connection.createStatement("CREATE TABLE codec_test (my_col " + columnType + ")")
-                .execute().flatMap(MssqlResult::getRowsUpdated))
-            .as(StepVerifier::create)
-            .verifyComplete();
+                .flatMap(MssqlResult::getRowsUpdated)
+                .onErrorResume(e -> Mono.empty())
+                .thenMany(connection.createStatement("CREATE TABLE codec_test (my_col " + columnType + ")")
+                        .execute().flatMap(MssqlResult::getRowsUpdated))
+                .as(StepVerifier::create)
+                .verifyComplete();
     }
 
 }
