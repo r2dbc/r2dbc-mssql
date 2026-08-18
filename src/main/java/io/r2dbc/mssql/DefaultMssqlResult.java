@@ -19,12 +19,7 @@ package io.r2dbc.mssql;
 import io.netty.util.ReferenceCountUtil;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.codec.Codecs;
-import io.r2dbc.mssql.message.token.AbstractDoneToken;
-import io.r2dbc.mssql.message.token.ColumnMetadataToken;
-import io.r2dbc.mssql.message.token.ErrorToken;
-import io.r2dbc.mssql.message.token.NbcRowToken;
-import io.r2dbc.mssql.message.token.ReturnValue;
-import io.r2dbc.mssql.message.token.RowToken;
+import io.r2dbc.mssql.message.token.*;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Readable;
 import io.r2dbc.spi.Result;
@@ -237,11 +232,6 @@ final class DefaultMssqlResult implements MssqlResult {
                 }
 
                 if (this.expectReturnValues && message instanceof ReturnValue) {
-                    // The row-mapping path (outparameters = false) does not collect ReturnValues into
-                    // the returnValues list, so the doFinally cleanup below never sees them and a bare
-                    // return here would leak the retained ReturnValue. Release it. The outparameters =
-                    // true path filters ReturnValues out upstream (releasing them via
-                    // MssqlReturnValues#release), so they never reach this branch and are not freed twice.
                     ReferenceCountUtil.release(message);
                     return;
                 }

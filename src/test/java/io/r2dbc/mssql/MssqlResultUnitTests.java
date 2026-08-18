@@ -43,6 +43,23 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class MssqlResultUnitTests {
 
+    @Test
+    void mapReleasesUnconsumedReturnValues() {
+
+        ByteBuf data = TestByteBufAllocator.TEST.buffer();
+        data.writeBytes(new byte[]{(byte) 0x4, 0x42, 0, 0, 0});
+        ReturnValue returnValue = new ReturnValue(6, "@out", 0, Types.integer(), data);
+
+        MssqlResult result = DefaultMssqlResult.toResult("", new ConnectionContext(), new DefaultCodecs(),
+                Flux.just(returnValue, DoneToken.create(0)), true);
+
+        result.map((row, metadata) -> row)
+                .as(StepVerifier::create)
+                .verifyComplete();
+
+        assertThat(returnValue.refCnt()).isZero();
+    }
+
     @ParameterizedTest
     @MethodSource("factories")
     void shouldEmitErrorSignalInOrder(ResultFactory factory) {
@@ -96,27 +113,6 @@ class MssqlResultUnitTests {
 
         abstract MssqlResult create(Flux<Message> messages);
 
-    }
-
-    @Test
-    void mapReleasesUnconsumedReturnValues() {
-
-        ByteBuf data = TestByteBufAllocator.TEST.buffer();
-        data.writeBytes(new byte[]{(byte) 0x4, 0x42, 0, 0, 0});
-        ReturnValue returnValue = new ReturnValue(6, "@out", 0, Types.integer(), data);
-
-        // A result that expects return values but is consumed via map() (row mapping, i.e.
-        // outparameters = false) never collects the ReturnValue into the separate return-value
-        // stream. The ReturnValue therefore reaches the message handler, which must release it
-        // rather than dropping it with a bare return; otherwise its retained buffer leaks.
-        MssqlResult result = DefaultMssqlResult.toResult("", new ConnectionContext(), new DefaultCodecs(),
-            Flux.just(returnValue, DoneToken.create(0)), true);
-
-        result.map((row, metadata) -> row)
-            .as(StepVerifier::create)
-            .verifyComplete();
-
-        assertThat(returnValue.refCnt()).describedAs("ReturnValue released after an unconsumed map()").isZero();
     }
 
 }

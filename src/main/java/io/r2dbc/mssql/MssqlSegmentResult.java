@@ -276,14 +276,17 @@ final class MssqlSegmentResult implements MssqlResult {
 
         Assert.requireNonNull(filter, "filter must not be null");
 
-        Flux<Segment> filteredSegments = this.segments.filter(message -> {
+        Flux<Segment> filteredSegments = this.segments.filter(segment -> {
 
-            if (filter.test(message)) {
-                return true;
+            boolean retained = false;
+
+            try {
+                return retained = filter.test(segment);
+            } finally {
+                if (!retained) {
+                    ReferenceCountUtil.release(segment);
+                }
             }
-
-            ReferenceCountUtil.release(message);
-            return false;
         });
 
         return new MssqlSegmentResult(this.sql, this.context, this.codecs, filteredSegments);
@@ -296,21 +299,20 @@ final class MssqlSegmentResult implements MssqlResult {
         Assert.requireNonNull(mappingFunction, "mappingFunction must not be null");
 
         return this.segments
-            .concatMap(segment -> {
+                .map(SegmentHolder::new)
+                .concatMap(holder -> {
 
-                Publisher<? extends T> result = mappingFunction.apply(segment);
+                    Publisher<? extends T> publisher = mappingFunction.apply(holder.segment);
 
-                if (result == null) {
-                    return Mono.error(new IllegalStateException("The mapper returned a null Publisher"));
-                }
+                    if (publisher == null) {
+                        return Mono.<T>error(new IllegalStateException("The mapper returned a null Publisher"))
+                                .doFinally(signal -> holder.release());
+                    }
 
-                // doAfterTerminate to not release resources before they had a chance to get emitted
-                if (result instanceof Mono) {
-                    return ((Mono<T>) result).doFinally(s -> ReferenceCountUtil.release(segment));
-                }
-
-                return Flux.from(result).doFinally(s -> ReferenceCountUtil.release(segment));
-            });
+                    return Flux.from(publisher)
+                            .doFinally(signal -> holder.release());
+                })
+                .doOnDiscard(SegmentHolder.class, SegmentHolder::release);
     }
 
     private boolean isError(Segment segment) {
@@ -415,6 +417,19 @@ final class MssqlSegmentResult implements MssqlResult {
             this.returnValues.release();
         }
 
+    }
+
+    private static final class SegmentHolder {
+
+        private final Segment segment;
+
+        SegmentHolder(Segment segment) {
+            this.segment = segment;
+        }
+
+        void release() {
+            ReferenceCountUtil.release(this.segment);
+        }
     }
 
 }
