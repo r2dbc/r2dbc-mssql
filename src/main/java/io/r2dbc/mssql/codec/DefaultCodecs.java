@@ -26,15 +26,17 @@ import io.r2dbc.spi.R2dbcType;
 import io.r2dbc.spi.Type;
 import reactor.util.annotation.Nullable;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The default {@link Codec} implementation.  Delegates to type-specific codec implementations.
+ * The default {@link Codec} implementation. Delegates to type-specific codec implementations.
  */
 public final class DefaultCodecs implements Codecs {
+
+    private static final boolean GEOGRAPHY_PRESENT = isPresent("com.microsoft.sqlserver.jdbc.Geography", DefaultCodecs.class.getClassLoader());
+
+    private static final boolean GEOMETRY_PRESENT = isPresent("com.microsoft.sqlserver.jdbc.Geometry", DefaultCodecs.class.getClassLoader());
 
     private final Codec<?>[] codecs;
 
@@ -45,37 +47,46 @@ public final class DefaultCodecs implements Codecs {
     /**
      * Creates a new instance of {@link DefaultCodecs}.
      */
-    @SuppressWarnings("rawtypes")
     public DefaultCodecs() {
 
-        this.codecs = Arrays.asList(
+        List<Codec<?>> codecs = new ArrayList<>(Arrays.asList(
 
-            // Prioritized Codecs
-            StringCodec.INSTANCE,
-            BinaryCodec.INSTANCE,
+                // Prioritized Codecs
+                StringCodec.INSTANCE,
+                BinaryCodec.INSTANCE,
 
-            BooleanCodec.INSTANCE,
-            ByteCodec.INSTANCE,
-            ShortCodec.INSTANCE,
-            FloatCodec.INSTANCE,
-            DoubleCodec.INSTANCE,
-            IntegerCodec.INSTANCE,
-            LongCodec.INSTANCE,
-            BigIntegerCodec.INSTANCE,
-            LocalTimeCodec.INSTANCE,
-            LocalDateCodec.INSTANCE,
-            LocalDateTimeCodec.INSTANCE,
-            UuidCodec.INSTANCE,
-            DecimalCodec.INSTANCE,
-            MoneyCodec.INSTANCE,
-            TimestampCodec.INSTANCE,
-            OffsetDateTimeCodec.INSTANCE,
-            ZonedDateTimeCodec.INSTANCE,
-            BlobCodec.INSTANCE,
-            ClobCodec.INSTANCE,
-            GeographyCodec.INSTANCE,
-            GeometryCodec.INSTANCE
-        ).toArray(new Codec[0]);
+                BooleanCodec.INSTANCE,
+                ByteCodec.INSTANCE,
+                ShortCodec.INSTANCE,
+                FloatCodec.INSTANCE,
+                DoubleCodec.INSTANCE,
+                IntegerCodec.INSTANCE,
+                LongCodec.INSTANCE,
+                BigIntegerCodec.INSTANCE,
+                LocalTimeCodec.INSTANCE,
+                LocalDateCodec.INSTANCE,
+                LocalDateTimeCodec.INSTANCE,
+                UuidCodec.INSTANCE,
+                DecimalCodec.INSTANCE,
+                MoneyCodec.INSTANCE,
+                TimestampCodec.INSTANCE,
+                OffsetDateTimeCodec.INSTANCE,
+                ZonedDateTimeCodec.INSTANCE,
+                BlobCodec.INSTANCE,
+                ClobCodec.INSTANCE
+        ));
+
+        if (GEOGRAPHY_PRESENT) {
+            codecs.add(GeographyCodec.INSTANCE);
+            this.codecPreferences.put(SqlServerType.GEOGRAPHY, GeographyCodec.INSTANCE);
+        }
+
+        if (GEOMETRY_PRESENT) {
+            codecs.add(GeometryCodec.INSTANCE);
+            this.codecPreferences.put(SqlServerType.GEOMETRY, GeometryCodec.INSTANCE);
+        }
+
+        this.codecs = codecs.toArray(new Codec[0]);
 
         this.codecPreferences.put(SqlServerType.BIT, BooleanCodec.INSTANCE);
         this.codecPreferences.put(SqlServerType.TINYINT, ByteCodec.INSTANCE);
@@ -87,8 +98,6 @@ public final class DefaultCodecs implements Codecs {
         this.codecPreferences.put(SqlServerType.GUID, UuidCodec.INSTANCE);
         this.codecPreferences.put(SqlServerType.NUMERIC, DecimalCodec.INSTANCE);
         this.codecPreferences.put(SqlServerType.DECIMAL, DecimalCodec.INSTANCE);
-        this.codecPreferences.put(SqlServerType.GEOGRAPHY, GeographyCodec.INSTANCE);
-        this.codecPreferences.put(SqlServerType.GEOMETRY, GeometryCodec.INSTANCE);
     }
 
     @SuppressWarnings({"unchecked", "rawtpes"})
@@ -228,7 +237,46 @@ public final class DefaultCodecs implements Codecs {
         }
 
         throw new IllegalArgumentException(String.format("Cannot decode value of type [%s], name [%s] server type [%s]", requestedType.getName(), decodable.getName(),
-            decodable.getType().getServerType()));
+                decodable.getType().getServerType()));
+    }
+
+    /**
+     * Determine whether the {@link Class} identified by the supplied name is present
+     * and can be loaded. Will return {@code false} if either the class or
+     * one of its dependencies is not present or cannot be loaded.
+     *
+     * @param className   the name of the class to check.
+     * @param classLoader the class loader to use (can be {@code null} which indicates the default class loader)
+     * @return whether the specified class is present (including all of its superclasses and interfaces)
+     * @throws IllegalStateException if the corresponding class is resolvable but there was a readability mismatch
+     *                               in the inheritance hierarchy of the class (typically a missing dependency
+     *                               declaration in a Jigsaw module definition for a superclass or interface
+     *                               implemented by the class to be checked here).
+     */
+    public static boolean isPresent(String className, @Nullable ClassLoader classLoader) {
+        try {
+            Class.forName(className, false, classLoader);
+            return true;
+        } catch (ClassNotFoundException ex) {
+            int lastDotIndex = className.lastIndexOf('.');
+            if (lastDotIndex != -1) {
+                String nestedClassName =
+                        className.substring(0, lastDotIndex) + "$" + className.substring(lastDotIndex + 1);
+                try {
+                    Class.forName(nestedClassName, false, classLoader);
+                    return true;
+                } catch (ClassNotFoundException ex2) {
+                    // Swallow - let original exception get through
+                }
+            }
+            return false;
+        } catch (IllegalAccessError err) {
+            throw new IllegalStateException("Readability mismatch in inheritance hierarchy of class [" +
+                    className + "]: " + err.getMessage(), err);
+        } catch (Throwable ex) {
+            // Typically ClassNotFoundException or NoClassDefFoundError...
+            return false;
+        }
     }
 
     static class TypeInformationWrapper implements Decodable {

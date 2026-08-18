@@ -19,7 +19,9 @@ package io.r2dbc.mssql.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
+import io.r2dbc.mssql.message.tds.PlpBuffer;
 import io.r2dbc.mssql.message.type.*;
 import io.r2dbc.mssql.util.Assert;
 import io.r2dbc.spi.Blob;
@@ -173,41 +175,24 @@ class BinaryCodec implements Codec<Object> {
         }
 
         Length length;
-
+        byte[] bytes;
         if (decodable.getType().getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
-
-            PlpLength plpLength = PlpLength.decode(buffer, decodable.getType());
-            length = Length.of(Math.toIntExact(plpLength.getLength()), plpLength.isNull());
+            PlpBuffer plpBuffer = PlpBuffer.of(buffer, decodable.getType());
+            PlpLength plpLength = plpBuffer.decodeLength();
+            if (plpLength.isNull()) {
+                return null;
+            }
+            bytes = plpBuffer.decodeByteArray();
         } else {
             length = Length.decode(buffer, decodable.getType());
-        }
-
-        if (length.isNull()) {
-            return null;
-        }
-
-        return doDecode(buffer, length, decodable.getType(), type);
-    }
-
-    Object doDecode(ByteBuf buffer, Length length, TypeInformation type, Class<? extends Object> valueType) {
-
-        byte[] bytes = new byte[length.getLength()];
-
-        if (type.getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
-
-            int index = 0;
-            while (buffer.isReadable()) {
-
-                Length chunkLength = Length.decode(buffer, type);
-                buffer.readBytes(bytes, index, chunkLength.getLength());
-                index += chunkLength.getLength();
+            if (length.isNull()) {
+                return null;
             }
-        } else {
-            buffer.readBytes(bytes);
+            bytes = Decode.readBytesOrPlp(buffer, length, decodable.getType());
         }
 
         // accept Object.class and ByteBuffer subclasses
-        if (valueType.isAssignableFrom(ByteBuffer.class) || ByteBuffer.class.isAssignableFrom(valueType)) {
+        if (type.isAssignableFrom(ByteBuffer.class) || ByteBuffer.class.isAssignableFrom(type)) {
             return ByteBuffer.wrap(bytes);
         }
 

@@ -367,10 +367,36 @@ enum TypeBuilder {
         }
     }),
 
-    // TODO: UDT, XML
+    // TODO: XML
 
-    UDT(TdsDataType.UDT, new AbstractTypeDecoderStrategy(4) {
-        
+    UDT(TdsDataType.UDT, new TypeDecoderStrategy() {
+
+        @Override
+        public boolean canDecode(ByteBuf buffer) {
+
+            // UDT_INFO is variable-length: MAX_BYTE_SIZE, database/schema/type name (B_VARCHAR), assembly qualified name (US_VARCHAR).
+            int readerIndex = buffer.readerIndex();
+            int readableBytes = buffer.readableBytes();
+            int offset = 2; // MAX_BYTE_SIZE
+
+            for (int i = 0; i < 3; i++) {
+
+                if (readableBytes < offset + 1) {
+                    return false;
+                }
+
+                offset += 1 + buffer.getUnsignedByte(readerIndex + offset) * 2;
+            }
+
+            if (readableBytes < offset + 2) {
+                return false;
+            }
+
+            offset += 2 + buffer.getUnsignedShortLE(readerIndex + offset) * 2;
+
+            return readableBytes >= offset;
+        }
+
         @Override
         public void decode(MutableTypeInformation typeInfo, ByteBuf buffer) {
 

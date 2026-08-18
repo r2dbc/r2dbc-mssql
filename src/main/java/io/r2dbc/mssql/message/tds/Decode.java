@@ -17,6 +17,9 @@
 package io.r2dbc.mssql.message.tds;
 
 import io.netty.buffer.ByteBuf;
+import io.r2dbc.mssql.message.type.Length;
+import io.r2dbc.mssql.message.type.LengthStrategy;
+import io.r2dbc.mssql.message.type.TypeInformation;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -223,6 +226,26 @@ public final class Decode {
         buffer.skipBytes(length);
 
         return result;
+    }
+
+    /**
+     * Read the bytes from the {@link ByteBuf} into a byte array considering {@link Length} and {@link LengthStrategy}.
+     * <p>Will use {@link PlpBuffer} to read the contents if the type strategy uses {@link LengthStrategy#PARTLENTYPE PLP}.
+     *
+     * @param buffer the buffer to read.
+     * @param length the length of the data to read.
+     * @param type   the type information.
+     * @return the byte array containing the read data.
+     */
+    public static byte[] readBytesOrPlp(ByteBuf buffer, Length length, TypeInformation type) {
+
+        if (type.getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
+            return PlpBuffer.of(buffer, type).decodeByteArray();
+        }
+
+        byte[] bytes = new byte[length.getLength()];
+        buffer.readBytes(bytes);
+        return bytes;
     }
 
 }

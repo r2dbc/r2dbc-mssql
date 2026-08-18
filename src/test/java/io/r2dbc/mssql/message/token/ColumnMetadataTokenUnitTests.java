@@ -17,9 +17,12 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.message.type.LengthStrategy;
 import io.r2dbc.mssql.message.type.SqlServerType;
+import io.r2dbc.mssql.message.type.TdsDataType;
 import io.r2dbc.mssql.util.HexUtils;
+import io.r2dbc.mssql.util.TdsEncoded;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -120,5 +123,40 @@ class ColumnMetadataTokenUnitTests {
             "72007900";
         ColumnMetadataToken metadata = ColumnMetadataToken.decode(HexUtils.decodeToByteBuf(data), true);
         CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(data), buffer -> ColumnMetadataToken.canDecode(buffer, true));
+    }
+
+    @Test
+    void shouldDecodeSpatialColumn() {
+
+        ColumnMetadataToken metadata = ColumnMetadataToken.decode(spatialColumns(), true);
+
+        assertThat(metadata.getColumns()).hasSize(1);
+
+        Column column = metadata.getColumns()[0];
+        assertThat(column.getName()).isEqualTo("g");
+        assertThat(column.getType().getServerType()).isEqualTo(SqlServerType.GEOMETRY);
+        assertThat(column.getType().getLengthStrategy()).isEqualTo(LengthStrategy.PARTLENTYPE);
+    }
+
+    @Test
+    void canDecodeShouldReportSpatialColumnDecodability() {
+        CanDecodeTestSupport.testCanDecode(spatialColumns(), buffer -> ColumnMetadataToken.canDecode(buffer, true));
+    }
+
+    private static ByteBuf spatialColumns() {
+
+        ByteBuf buffer = Unpooled.buffer();
+        buffer.writeShortLE(1); // column count
+        buffer.writeShortLE(0); // CEK table size
+        buffer.writeInt(0); // user type
+        buffer.writeShortLE(0); // flags
+        buffer.writeByte(TdsDataType.UDT.getValue());
+        buffer.writeShortLE(0); // max byte size
+        TdsEncoded.encodeUnicodeBString(buffer, ""); // database name
+        TdsEncoded.encodeUnicodeBString(buffer, ""); // schema name
+        TdsEncoded.encodeUnicodeBString(buffer, "geometry");
+        buffer.writeShortLE(0); // assembly qualified name (empty)
+        TdsEncoded.encodeUnicodeBString(buffer, "g"); // column name
+        return buffer;
     }
 }

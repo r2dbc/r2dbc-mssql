@@ -17,9 +17,9 @@
 package io.r2dbc.mssql.message.token;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
+import io.r2dbc.mssql.message.tds.PlpBuffer;
 import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.LengthStrategy;
 import io.r2dbc.mssql.message.type.PlpLength;
@@ -142,35 +142,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
      * @see LengthStrategy#PARTLENTYPE
      */
     private static boolean canDecodePlp(ByteBuf buffer, Column column) {
-
-        if (!PlpLength.canDecode(buffer, column.getType())) {
-            return false;
-        }
-
-        PlpLength totalLength = PlpLength.decode(buffer, column.getType());
-
-        if (totalLength.isNull()) {
-            return true;
-        }
-
-        while (true) {
-
-            if (!Length.canDecode(buffer, column.getType())) {
-                return false;
-            }
-
-            Length chunkLength = Length.decode(buffer, column.getType());
-
-            if (chunkLength.getLength() == 0) {
-                return true;
-            }
-
-            if (buffer.readableBytes() >= chunkLength.getLength()) {
-                buffer.skipBytes(chunkLength.getLength());
-            } else {
-                return false;
-            }
-        }
+        return PlpBuffer.of(buffer, column.getType()).canDecode();
     }
 
     private static RowToken doDecode(ByteBuf buffer, Column[] columns) {
@@ -195,11 +167,10 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
     static ByteBuf decodeColumnData(ByteBuf buffer, Column column) {
 
         if (column.getType().getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
-            buffer.markReaderIndex();
             return doDecodePlp(buffer, column);
-        } else {
-            return doDecode(buffer, column);
         }
+
+        return doDecode(buffer, column);
     }
 
     /**
@@ -227,43 +198,24 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
     }
 
     /**
-     * Decode a PLP stream value. Returns {@code null} if {@link Length#isNull()}. The decoded value contains an entire PLP token stream with chunk headers.
+     * Decode a PLP stream value. Returns {@code null} if {@link PlpLength#isNull()}. The decoded value contains the entire framed PLP stream including chunk headers.
      *
      * @param buffer the data buffer.
      * @param column the column.
-     * @return
+     * @return the framed PLP stream or {@code null} if the value is {@code NULL}.
      */
     @Nullable
     private static ByteBuf doDecodePlp(ByteBuf buffer, Column column) {
 
-        PlpLength totalLength = PlpLength.decode(buffer, column.getType());
+        PlpBuffer plpBuffer = PlpBuffer.of(buffer, column.getType());
 
-        if (totalLength.isNull()) {
+        int readerIndex = buffer.readerIndex();
+        if (plpBuffer.decodeLength().isNull()) {
             return null;
         }
 
-        CompositeByteBuf plpData = buffer.alloc().compositeBuffer();
-        ByteBuf length = buffer.alloc().buffer(8);
-        totalLength.encode(length);
-
-        plpData.addComponent(true, length);
-
-        while (true) {
-
-            Length chunkLength = Length.decode(buffer, column.getType());
-
-            if (chunkLength.getLength() == 0) {
-                break;
-            }
-
-            length = buffer.alloc().buffer(4);
-            chunkLength.encode(length, column.getType());
-
-            plpData.addComponent(true, length);
-            plpData.addComponent(true, buffer.readRetainedSlice(chunkLength.getLength()));
-        }
-
-        return plpData;
+        buffer.readerIndex(readerIndex);
+        return plpBuffer.readRetainedStream();
     }
 
     /**

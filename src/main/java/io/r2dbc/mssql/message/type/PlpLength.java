@@ -21,11 +21,13 @@ import io.r2dbc.mssql.message.tds.Decode;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ProtocolException;
 
+import java.util.function.LongFunction;
+
 /**
  * Descriptor for PLP data length in row results.
- * This class encapsulates the total length of a value using a 8 byte unsigned long counter.
+ * This class encapsulates the total length of a value using an 8 byte {@code unsigned long} counter.
  * Use {@link Length} to encode/decode length headers of a PLP chunk and {@link PlpLength} to
- * encode/decode the the total PLP stream length
+ * encode/decode the total PLP stream length
  *
  * @author Mark Paluch
  * @see Length
@@ -142,26 +144,63 @@ public final class PlpLength {
         throw ProtocolException.invalidTds("Cannot parse value LengthDescriptor");
     }
 
-    public long getLength() {
-        return this.length;
-    }
-
-    public boolean isNull() {
-        return this.isNull;
-    }
-
+    /**
+     * Returns whether the total stream length is reported as unknown. The actual length is determined by reading chunks until the zero-length terminator.
+     *
+     * @return {@code true} if the total stream length is unknown; {@code false} otherwise.
+     */
     public boolean isUnknown() {
         return this.length == UNKNOWN_PLP_LEN;
     }
 
+    /**
+     * Returns whether the length header indicates a {@code NULL} value.
+     *
+     * @return {@code true} if the value is {@code NULL}.
+     */
+    public boolean isNull() {
+        return this.isNull;
+    }
+
+    /**
+     * Returns whether the total stream length is zero.
+     *
+     * @return {@code true} if the total stream length is zero.
+     */
+    public boolean isEmpty() {
+        return this.length == 0;
+    }
+
+    /**
+     * Returns the total stream length in bytes, not including chunk headers. Zero if the value is {@code NULL}.
+     * Return {@link #UNKNOWN_PLP_LEN} if the length is {@link #isUnknown() unknown}.
+     *
+     * @return the total stream length in bytes.
+     */
+    public long getLength() {
+        return this.length;
+    }
+
+    /**
+     * Map the total stream length in bytes using {@code mapper}.
+     *
+     * @param <T>    the result type.
+     * @param mapper the mapping function receiving the total stream length in bytes.
+     * @return the mapped result.
+     */
+    public <T> T map(LongFunction<? extends T> mapper) {
+        return mapper.apply(this.length);
+    }
+
     @Override
     public String toString() {
-        final StringBuffer sb = new StringBuffer();
-        sb.append(getClass().getSimpleName());
-        sb.append(" [length=").append(this.length);
-        sb.append(", isNull=").append(this.isNull);
-        sb.append(']');
-        return sb.toString();
+        if (isNull()) {
+            return "null";
+        }
+        if (isUnknown()) {
+            return "unknown";
+        }
+        return String.valueOf(this.length);
     }
 
 }

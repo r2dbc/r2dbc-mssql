@@ -22,6 +22,7 @@ import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
 
+import javax.annotation.Nullable;
 import java.util.UUID;
 
 /**
@@ -74,6 +75,7 @@ final class UuidCodec extends AbstractCodec<UUID> {
     }
 
     @Override
+    @Nullable
     UUID doDecode(ByteBuf buffer, Length length, TypeInformation typeInformation, Class<? extends UUID> valueType) {
 
         if (length.isNull()) {
@@ -91,9 +93,6 @@ final class UuidCodec extends AbstractCodec<UUID> {
 
     /**
      * Swap bytes. MSB is represented in order 3,2,1,0 and 5,4,7,6
-     *
-     * @param memory
-     * @return
      */
     private static long swapForRead(byte[] memory) {
         return ((long) memory[3] & 0xff) << 56 |
@@ -108,9 +107,6 @@ final class UuidCodec extends AbstractCodec<UUID> {
 
     /**
      * Swap bytes. MSB is represented in order 3,2,1,0 and 5,4,7,6
-     *
-     * @param msb
-     * @return
      */
     private byte[] swapForWrite(long msb) {
 

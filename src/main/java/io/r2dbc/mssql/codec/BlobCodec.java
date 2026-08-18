@@ -96,7 +96,7 @@ public class BlobCodec extends AbstractCodec<Blob> {
         if (decodable.getType().getLengthStrategy() == LengthStrategy.PARTLENTYPE) {
 
             PlpLength plpLength = PlpLength.decode(buffer, decodable.getType());
-            length = Length.of(Math.toIntExact(plpLength.getLength()), plpLength.isNull());
+            length = Length.of(plpLength);
         } else {
             length = Length.decode(buffer, decodable.getType());
         }
@@ -121,13 +121,18 @@ public class BlobCodec extends AbstractCodec<Blob> {
             while (buffer.isReadable()) {
 
                 Length chunkLength = Length.decode(buffer, type);
-                chunks.add(buffer.readRetainedSlice(chunkLength.getLength()));
+
+                if (chunkLength.isEmpty()) {
+                    break;
+                }
+
+                chunks.add(chunkLength.map(buffer::readRetainedSlice));
             }
 
             return new ScalarBlob(chunks);
         }
 
-        return new ScalarBlob(Collections.singletonList(buffer.readRetainedSlice(length.getLength())));
+        return new ScalarBlob(Collections.singletonList(length.map(buffer::readRetainedSlice)));
     }
 
     /**
