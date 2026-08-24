@@ -11,6 +11,7 @@ jobs:
   build:
     if: github.repository == 'r2dbc/r2dbc-mssql'
     runs-on: ${{ matrix.os }}
+    environment: ci
     strategy:
         matrix:
             include:

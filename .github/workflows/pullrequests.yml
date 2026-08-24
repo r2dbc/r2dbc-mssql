@@ -8,6 +8,7 @@ on: [pull_request]
 jobs:
   pr-build:
     runs-on: ${{ matrix.os }}
+    environment: ci
     strategy:
         matrix:
             include:
