@@ -1,6 +1,19 @@
 R2DBC MSSQL Changelog
 =============================
 
+1.0.6.RELEASE
+------------------
+* Introduce `Conversation` #345
+* Add support for geometry/geography data types #65
+* Added support for Geometry and Geography data types #311
+* Reduce log-level for error drain after cancellation #344
+* `PlpEncoded.ChunkSubscriber` corrupts its aggregator under concurrent access #341
+* Serialise `PlpEncoded.ChunkSubscriber` aggregator access via the wip drain #342
+* Release unconsumed return values when mapping rows #336
+* Release retained decoder state on connection close #338
+* smallmoney data type is not supported #307
+* ByteBuf leak: ReturnValue dropped without release when a result with output parameters is consumed via map() #335
+
 1.0.4.RELEASE
 ------------------
 * Isolate prepared statement caching #303
