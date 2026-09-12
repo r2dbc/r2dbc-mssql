@@ -17,6 +17,7 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.client.ClientConfiguration;
+import io.r2dbc.spi.ConnectionFactories;
 import io.r2dbc.spi.ConnectionFactoryOptions;
 import io.r2dbc.spi.Option;
 import org.junit.jupiter.api.Test;
@@ -109,6 +110,95 @@ final class MssqlConnectionFactoryProviderTest {
             .option(PASSWORD, "test-password")
             .option(USER, "test-user")
             .build())).isTrue();
+    }
+
+    @Test
+    void shouldDefaultServerNameToHost() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "physical-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .build());
+
+        MssqlConnectionConfiguration configuration = factory.getConfiguration();
+
+        assertThat(configuration)
+            .hasFieldOrPropertyWithValue("serverName", "physical-host");
+        assertThat(configuration.getLoginConfiguration())
+            .hasFieldOrPropertyWithValue("serverName", "physical-host");
+    }
+
+    @Test
+    void shouldConfigureLogicalServerNameIndependentlyFromHost() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "localhost")
+            .option(PORT, 15433)
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(Option.valueOf("serverName"), "sql.example.com")
+            .build());
+
+        MssqlConnectionConfiguration configuration = factory.getConfiguration();
+
+        assertThat(configuration)
+            .hasFieldOrPropertyWithValue("host", "localhost")
+            .hasFieldOrPropertyWithValue("port", 15433)
+            .hasFieldOrPropertyWithValue("serverName", "sql.example.com");
+        assertThat(configuration.getLoginConfiguration())
+            .hasFieldOrPropertyWithValue("serverName", "sql.example.com");
+    }
+
+    @Test
+    void shouldDefaultHostNameInCertificateToServerName() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "localhost")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(Option.valueOf("serverName"), "sql.example.com")
+            .build());
+
+        MssqlConnectionConfiguration configuration = factory.getConfiguration();
+
+        assertThat(configuration.getHostNameInCertificate()).isEqualTo("sql.example.com");
+    }
+
+    @Test
+    void shouldKeepExplicitHostNameInCertificateWhenServerNameIsConfigured() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "localhost")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(Option.valueOf("serverName"), "sql.example.com")
+            .option(HOSTNAME_IN_CERTIFICATE, "*.database.windows.net")
+            .build());
+
+        MssqlConnectionConfiguration configuration = factory.getConfiguration();
+
+        assertThat(configuration.getHostNameInCertificate()).isEqualTo("*.database.windows.net");
+    }
+
+    @Test
+    void shouldConfigureServerNameFromUrl() {
+
+        MssqlConnectionFactory factory = (MssqlConnectionFactory) ConnectionFactories.get(
+            "r2dbc:mssql://test-user:test-password@localhost:15433/testdb?serverName=sql.example.com");
+
+        MssqlConnectionConfiguration configuration = factory.getConfiguration();
+
+        assertThat(configuration)
+            .hasFieldOrPropertyWithValue("host", "localhost")
+            .hasFieldOrPropertyWithValue("port", 15433)
+            .hasFieldOrPropertyWithValue("database", "testdb")
+            .hasFieldOrPropertyWithValue("serverName", "sql.example.com")
+            .hasFieldOrPropertyWithValue("hostNameInCertificate", "sql.example.com");
     }
 
     @Test

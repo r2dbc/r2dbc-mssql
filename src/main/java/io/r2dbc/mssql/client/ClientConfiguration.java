@@ -29,9 +29,16 @@ import java.time.Duration;
 public interface ClientConfiguration extends SslConfiguration {
 
     /**
-     * @return server hostname.
+     * @return server hostname used as the physical connection endpoint.
      */
     String getHost();
+
+    /**
+     * @return logical SQL Server name used for TLS/SNI. Defaults to {@link #getHost()}.
+     */
+    default String getServerName() {
+        return getHost();
+    }
 
     /**
      * @return server port.
