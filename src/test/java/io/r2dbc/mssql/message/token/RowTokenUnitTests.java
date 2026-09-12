@@ -176,6 +176,51 @@ class RowTokenUnitTests {
         assertThat(contentData.refCnt()).isZero();
     }
 
+    @Test
+    void canDecodeShouldReportDecodabilityOfPlpFollowedByPlp() {
+
+        TypeInformation plpType = TypeInformation.builder().withServerType(SqlServerType.VARCHARMAX).withLengthStrategy(LengthStrategy.PARTLENTYPE).withCharset(ServerCharset.CP1252.charset()).build();
+        Column[] columns = {new Column(0, "first", plpType), new Column(1, "second", plpType)};
+
+        ByteBuf rowData = HexUtils.decodeToByteBuf("0400000000000000 04000000 61626364 00000000 0400000000000000 04000000 65666768 00000000");
+
+        CanDecodeTestSupport.testCanDecode(rowData, buffer -> RowToken.canDecode(buffer, columns));
+        rowData.release();
+    }
+
+    @Test
+    void canDecodeShouldReportDecodabilityOfPlpFollowedByInt() {
+
+        TypeInformation integerType = TypeInformation.builder().withServerType(SqlServerType.INTEGER).withLengthStrategy(LengthStrategy.BYTELENTYPE).build();
+        TypeInformation plpType = TypeInformation.builder().withServerType(SqlServerType.VARCHARMAX).withLengthStrategy(LengthStrategy.PARTLENTYPE).withCharset(ServerCharset.CP1252.charset()).build();
+        Column[] columns = {new Column(0, "content", plpType), new Column(1, "id", integerType)};
+
+        ByteBuf rowData = HexUtils.decodeToByteBuf("0400000000000000 04000000 61626364 00000000 04 01000000");
+
+        CanDecodeTestSupport.testCanDecode(rowData, buffer -> RowToken.canDecode(buffer, columns));
+        rowData.release();
+    }
+
+    @Test
+    void canDecodeShouldReportDecodabilityOfPlpNullFollowedByInt() {
+
+        TypeInformation integerType = TypeInformation.builder().withServerType(SqlServerType.INTEGER).withLengthStrategy(LengthStrategy.BYTELENTYPE).build();
+        TypeInformation plpType = TypeInformation.builder().withServerType(SqlServerType.VARCHARMAX).withLengthStrategy(LengthStrategy.PARTLENTYPE).withCharset(ServerCharset.CP1252.charset()).build();
+        Column[] columns = {new Column(0, "content", plpType), new Column(1, "id", integerType)};
+
+        String rowData = "FFFFFFFFFFFFFFFF 04 01000000";
+
+        CanDecodeTestSupport.testCanDecode(HexUtils.decodeToByteBuf(rowData), buffer -> RowToken.canDecode(buffer, columns));
+
+        ByteBuf buffer = HexUtils.decodeToByteBuf(rowData);
+        RowToken row = RowToken.decode(buffer, columns);
+        assertThat(row.getColumnData(0)).isNull();
+        assertThat(row.getColumnData(1).readableBytes()).isEqualTo(5);
+
+        buffer.release();
+        row.release();
+    }
+
     private static ByteBuf loadRowData(String resource) throws IOException {
 
         StringBuffer buffer = new StringBuffer();

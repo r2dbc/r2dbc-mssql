@@ -134,15 +134,24 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
     }
 
     /**
-     * Returns whether a PLP stream can be decoded where can be decoded means that we have received at least the PLP length header.
+     * Returns whether a PLP stream can be decoded, i.e. whether the buffer contains the complete PLP stream including the terminator. Advances the buffer past the PLP stream
+     * if it can be decoded so that subsequent columns are checked from their correct position.
      *
      * @param buffer data buffer.
      * @param column the related column.
-     * @return {@code true} if the PLP sream can be decoded.
+     * @return {@code true} if the PLP stream can be decoded.
      * @see LengthStrategy#PARTLENTYPE
      */
     private static boolean canDecodePlp(ByteBuf buffer, Column column) {
-        return PlpBuffer.of(buffer, column.getType()).canDecode();
+
+        PlpBuffer plpBuffer = PlpBuffer.of(buffer, column.getType());
+
+        if (!plpBuffer.canDecode()) {
+            return false;
+        }
+
+        plpBuffer.skipStream();
+        return true;
     }
 
     private static RowToken doDecode(ByteBuf buffer, Column[] columns) {
