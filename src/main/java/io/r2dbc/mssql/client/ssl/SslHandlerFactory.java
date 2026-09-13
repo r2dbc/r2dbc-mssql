@@ -77,7 +77,7 @@ public class SslHandlerFactory {
     public SslHandler createSslHandler(ByteBufAllocator allocator)
             throws GeneralSecurityException {
         SslContext sslContext = this.sslConfiguration.getSslContext();
-        return new SslHandler(sslContext.newEngine(allocator, this.configuration.getHost(), this.configuration.getPort()));
+        return new SslHandler(sslContext.newEngine(allocator, this.configuration.getServerName(), this.configuration.getPort()));
     }
 
 }

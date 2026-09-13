@@ -38,6 +38,13 @@ ConnectionFactory connectionFactory = ConnectionFactories.get("r2dbc:mssql://<ho
 Publisher<? extends Connection> connectionPublisher = connectionFactory.create();
 ```
 
+When connecting through a tunnel or proxy, `serverName` can specify the logical SQL Server name independently from the physical connection endpoint:
+
+```java
+ConnectionFactory connectionFactory = ConnectionFactories.get(
+    "r2dbc:mssql://localhost:15433/<database>?serverName=server.database.windows.net");
+```
+
 **Programmatic Connection Factory Discovery**
 
 ```java
@@ -49,6 +56,7 @@ ConnectionFactoryOptions options = builder()
     .option(PASSWORD, "…")
     .option(DATABASE, "…") // optional
     .option(SSL, true) // optional, defaults to false
+    .option(Option.valueOf("serverName"), "…") // optional, defaults to host
     .option(Option.valueOf("applicationName"), "…") // optional
     .option(Option.valueOf("preferCursoredExecution"), true/false) // optional
     .option(Option.valueOf("connectionId"), new UUID(…)) // optional
@@ -96,6 +104,7 @@ Mono<Connection> connectionMono = Mono.from(connectionFactory.create());
 ```java
 MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
     .host("…")
+    .serverName("…") // optional, defaults to host
     .username("…")
     .password("…")
     .database("…")

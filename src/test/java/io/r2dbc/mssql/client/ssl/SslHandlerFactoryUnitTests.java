@@ -47,4 +47,24 @@ class SslHandlerFactoryUnitTests {
         assertThat(sslHandler.engine().getPeerPort()).isEqualTo(1234);
     }
 
+    @Test
+    void createSniSslHandlerUsesLogicalServerName() throws Exception {
+
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+                .host("localhost")
+                .serverName("sql.example.com")
+                .port(15433)
+                .enableSsl()
+                .username("sa")
+                .password("sa")
+                .build();
+        ClientConfiguration clientConfiguration = configuration.toClientConfiguration();
+
+        SslHandlerFactory sslHandlerFactory = SslHandlerFactory.create(clientConfiguration, it -> it);
+        SslHandler sslHandler = sslHandlerFactory.createSslHandler(TestByteBufAllocator.TEST);
+
+        assertThat(sslHandler.engine().getPeerHost()).isEqualTo("sql.example.com");
+        assertThat(sslHandler.engine().getPeerPort()).isEqualTo(15433);
+    }
+
 }
