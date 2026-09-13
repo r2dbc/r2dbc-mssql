@@ -144,6 +144,40 @@ final class MssqlConnectionFactoryProviderTest {
     }
 
     @Test
+    void shouldConfigureNamedInstance() {
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(INSTANCE_NAME, "SQLEXPRESS")
+            .build());
+
+        MssqlConnectionConfiguration configuration = factory.getConfiguration();
+
+        assertThat(configuration.getInstanceName()).contains("SQLEXPRESS");
+        assertThat(configuration.isPortConfigured()).isFalse();
+    }
+
+    @Test
+    void shouldConfigureNamedInstanceWithExplicitPort() {
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(INSTANCE_NAME, "SQLEXPRESS")
+            .option(PORT, 51432)
+            .build());
+
+        MssqlConnectionConfiguration configuration = factory.getConfiguration();
+
+        assertThat(configuration.getInstanceName()).contains("SQLEXPRESS");
+        assertThat(configuration.getPort()).isEqualTo(51432);
+        assertThat(configuration.isPortConfigured()).isTrue();
+    }
+
+    @Test
     void shouldConfigureWithStringAsUnicode() {
 
         MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()

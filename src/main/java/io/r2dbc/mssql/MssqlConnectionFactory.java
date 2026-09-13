@@ -19,6 +19,7 @@ package io.r2dbc.mssql;
 import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.ClientConfiguration;
 import io.r2dbc.mssql.client.ReactorNettyClient;
+import io.r2dbc.mssql.client.SqlServerBrowserClient;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.tds.Redirect;
 import io.r2dbc.mssql.util.Assert;
@@ -28,6 +29,7 @@ import io.r2dbc.spi.R2dbcPermissionDeniedException;
 import io.r2dbc.spi.Row;
 import reactor.core.publisher.Mono;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -43,6 +45,7 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         "CAST(@@VERSION AS VARCHAR(255)) as VersionString";
 
     private final Function<MssqlConnectionConfiguration, Mono<Client>> clientFactory;
+    private final BiFunction<String, String, Mono<Integer>> instancePortResolver;
 
     private final MssqlConnectionConfiguration configuration;
 
@@ -55,16 +58,28 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
      * @throws IllegalArgumentException when {@link MssqlConnectionConfiguration} is {@code null}.
      */
     public MssqlConnectionFactory(MssqlConnectionConfiguration configuration) {
-        this(MssqlConnectionFactory::connect, configuration);
+        this(MssqlConnectionFactory::connect, MssqlConnectionFactory::resolveInstancePort, configuration);
     }
 
     MssqlConnectionFactory(Function<MssqlConnectionConfiguration, Mono<Client>> clientFactory,
                            MssqlConnectionConfiguration configuration) {
 
+        this(clientFactory, MssqlConnectionFactory::resolveInstancePort, configuration);
+
+    }
+
+    MssqlConnectionFactory(Function<MssqlConnectionConfiguration, Mono<Client>> clientFactory,
+                           BiFunction<String, String, Mono<Integer>> instancePortResolver,
+                           MssqlConnectionConfiguration configuration) {
+
         this.clientFactory = Assert.requireNonNull(clientFactory, "clientFactory must not be null");
+        this.instancePortResolver = Assert.requireNonNull(instancePortResolver, "instancePortResolver must not be null");
         this.configuration = Assert.requireNonNull(configuration, "configuration must not be null");
     }
 
+    private static Mono<Integer> resolveInstancePort(String host, String instanceName) {
+        return new SqlServerBrowserClient().resolvePort(host, instanceName);
+    }
     private static Mono<Client> connect(MssqlConnectionConfiguration configuration) {
 
         return Mono.defer(() -> {
@@ -75,24 +90,38 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         });
     }
 
+    Mono<MssqlConnectionConfiguration> resolveConfiguration(MssqlConnectionConfiguration configuration) {
+
+        Assert.requireNonNull(configuration, "configuration must not be null");
+
+        if (configuration.isPortConfigured() || !configuration.getInstanceName().isPresent()) {
+            return Mono.just(configuration);
+        }
+
+        String instanceName = configuration.getInstanceName().get();
+
+        return Mono.defer(() -> this.instancePortResolver.apply(configuration.getHost(), instanceName))
+            .map(configuration::withResolvedPort);
+    }
     private Mono<Client> initializeClient(MssqlConnectionConfiguration configuration, boolean allowReroute) {
 
-        LoginConfiguration loginConfiguration = configuration.getLoginConfiguration();
+        return resolveConfiguration(configuration).flatMap(resolvedConfiguration -> {
+            LoginConfiguration loginConfiguration = resolvedConfiguration.getLoginConfiguration();
 
-        return this.clientFactory.apply(configuration)
-            .delayUntil(client -> LoginFlow.exchange(client, loginConfiguration)
-                .onErrorResume(e -> propagateError(client.close(), e)))
-            .flatMap(client -> {
-                return client.getRedirect().map(redirect -> {
-                    if (allowReroute) {
-                        return redirectClient(client, redirect);
-                    } else {
-                        return this.<Client>propagateError(client.close(), new MssqlRoutingException("Client was redirected more than once"));
-                    }
-                }).orElse(Mono.just(client));
-            });
+            return this.clientFactory.apply(resolvedConfiguration)
+                .delayUntil(client -> LoginFlow.exchange(client, loginConfiguration)
+                    .onErrorResume(e -> propagateError(client.close(), e)))
+                .flatMap(client -> {
+                    return client.getRedirect().map(redirect -> {
+                        if (allowReroute) {
+                            return redirectClient(client, redirect);
+                        } else {
+                            return this.<Client>propagateError(client.close(), new MssqlRoutingException("Client was redirected more than once"));
+                        }
+                    }).orElse(Mono.just(client));
+                });
+        });
     }
-
     private Mono<Client> redirectClient(Client client, Redirect redirect) {
 
         MssqlConnectionConfiguration routeConfiguration = this.configuration.withRedirect(redirect);

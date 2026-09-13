@@ -64,6 +64,12 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
      * Expected Hostname in SSL certificate. Supports wildcards.
      */
     public static final Option<String> HOSTNAME_IN_CERTIFICATE = Option.valueOf("hostNameInCertificate");
+    /**
+     * SQL Server named instance.
+     *
+     * @since 1.1
+     */
+    public static final Option<String> INSTANCE_NAME = Option.valueOf("instanceName");
 
     /**
      * Configure whether to prefer cursored execution on a statement-by-statement basis. Value can be {@link Boolean}, a {@link Predicate}, or a {@link Class class name}. The {@link Predicate}
@@ -161,6 +167,7 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         mapper.from(CONNECT_TIMEOUT).map(OptionMapper::toDuration).to(builder::connectTimeout);
         mapper.fromTyped(DATABASE).to(builder::database);
         mapper.fromTyped(HOSTNAME_IN_CERTIFICATE).to(builder::hostNameInCertificate);
+        mapper.fromTyped(INSTANCE_NAME).to(builder::instanceName);
         mapper.from(LOCK_WAIT_TIMEOUT).map(OptionMapper::toDuration).to(builder::lockWaitTimeout);
         mapper.from(PORT).map(OptionMapper::toInteger).to(builder::port);
         mapper.from(PREFER_CURSORED_EXECUTION).map(OptionMapper::toStringPredicate).to(builder::preferCursoredExecution);

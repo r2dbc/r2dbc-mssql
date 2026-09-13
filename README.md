@@ -11,6 +11,7 @@ This driver provides the following features:
 * Complies with R2DBC 1.0
 * Login with username/password with temporary SSL encryption
 * Full SSL encryption support (for e.g. Azure usage).
+* SQL Server named instance discovery through SQL Server Browser (SSRP)
 * Transaction Control
 * Simple execution of SQL batches (direct and cursored execution)
 * Execution of parametrized statements (direct and cursored execution)
@@ -38,6 +39,10 @@ ConnectionFactory connectionFactory = ConnectionFactories.get("r2dbc:mssql://<ho
 Publisher<? extends Connection> connectionPublisher = connectionFactory.create();
 ```
 
+To discover the TCP port of a named SQL Server instance, specify `instanceName`
+and omit the port:
+`r2dbc:mssql://<host>/<database>?instanceName=SQLEXPRESS`.
+
 **Programmatic Connection Factory Discovery**
 
 ```java
@@ -45,6 +50,7 @@ ConnectionFactoryOptions options = builder()
     .option(DRIVER, "sqlserver")
     .option(HOST, "…")
     .option(PORT, …)  // optional, defaults to 1433
+    .option(MssqlConnectionFactoryProvider.INSTANCE_NAME, "SQLEXPRESS") // optional
     .option(USER, "…")
     .option(PASSWORD, "…")
     .option(DATABASE, "…") // optional
@@ -69,7 +75,8 @@ Mono<Connection> connectionMono = Mono.from(connectionFactory.create());
 | `ssl`                           | Whether to use transport-level encryption for the entire SQL server traffic.                                                                                                                                                                                              
 | `driver`                        | Must be `sqlserver`.                                                                                                                                                                                                                                                      
 | `host`                          | Server hostname to connect to.                                                                                                                                                                                                                                            
-| `port`                          | Server port to connect to. Defaults to `1433`. _(Optional)_                                                                                                                                                                                                               
+| `port`                          | Server port to connect to. Defaults to `1433` when no named instance is configured. If both `port` and `instanceName` are specified, the explicit port takes precedence. _(Optional)_
+| `instanceName`                  | SQL Server named instance. If no explicit port is configured, the driver resolves the TCP port through SQL Server Browser using SSRP over UDP port `1434`. _(Optional)_
 | `username`                      | Login username.                                                                                                                                                                                                                                                           
 | `password`                      | Login password.                                                                                                                                                                                                                                                           
 | `database`                      | Initial database to select. Defaults to SQL Server user profile settings. _(Optional)_                                                                                                                                                                                    
@@ -96,6 +103,7 @@ Mono<Connection> connectionMono = Mono.from(connectionFactory.create());
 ```java
 MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
     .host("…")
+    .instanceName("SQLEXPRESS") // optional
     .username("…")
     .password("…")
     .database("…")
@@ -106,6 +114,26 @@ MssqlConnectionFactory factory = new MssqlConnectionFactory(configuration);
 
 Mono<MssqlConnection> connectionMono = factory.create();
 ```
+
+### Named SQL Server Instances
+
+Named instances can use dynamic TCP ports. Configure the instance name with the
+`instanceName` option and omit `port` to let the driver discover the current TCP
+port through SQL Server Browser using the SQL Server Resolution Protocol (SSRP).
+
+The SQL Server Browser service must be running on the target host and UDP port
+`1434` must be reachable from the client.
+
+Connection target precedence is:
+
+* Host only: connect to the default TCP port `1433`.
+* Host and explicit `port`: connect to the configured port.
+* Host and `instanceName`: resolve the TCP port through SQL Server Browser.
+* Host, `instanceName`, and explicit `port`: the explicit port takes precedence
+  and SQL Server Browser discovery is skipped.
+
+SQL Server routing redirects use the server-provided host and port directly and
+do not trigger another named-instance lookup.
 
 Microsoft SQL Server uses named parameters that are prefixed with `@`. The following SQL statement makes use of parameters:
 
