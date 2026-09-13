@@ -34,6 +34,7 @@ import reactor.core.publisher.Sinks;
 import reactor.core.publisher.SynchronousSink;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 
 import javax.annotation.processing.Completion;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -56,6 +57,7 @@ final class RpcQueryMessageFlow {
 
     private static final Predicate<Message> FILTER_PREDICATE = or(RowToken.class::isInstance,
         ColumnMetadataToken.class::isInstance,
+        CursorColumnLayout.class::isInstance,
         ReturnValue.class::isInstance,
         DoneInProcToken.class::isInstance,
         IntermediateCount.class::isInstance,
@@ -350,10 +352,30 @@ final class RpcQueryMessageFlow {
         handleMessage(client, fetchSize, t -> requests.emitNext(t, Sinks.EmitFailureHandler.FAIL_FAST), state, message, sink, onCursorComplete, emit);
     }
 
-    private static void handleMessage(Client client, int fetchSize, Consumer<ClientMessage> requests, CursorState state, Message message, SynchronousSink<Message> sink,
+    static void handleMessage(Client client, int fetchSize, Consumer<ClientMessage> requests, CursorState state, Message message, SynchronousSink<Message> sink,
                                       Runnable onCursorComplete, boolean emit) {
 
         if (message instanceof ColumnMetadataToken && !((ColumnMetadataToken) message).hasColumns()) {
+            return;
+        }
+
+        if (message instanceof ColumnMetadataToken) {
+            state.onColumnMetadata((ColumnMetadataToken) message);
+        }
+
+        if (message instanceof ColInfoToken) {
+
+            CursorColumnLayout layout = state.onColumnInfo((ColInfoToken) message);
+
+            if (layout != null && emit) {
+                sink.next(layout);
+            }
+            return;
+        }
+
+        // Missing rows (deleted after opening a keyset cursor) are placeholders without the original row data.
+        if (message instanceof RowToken && state.isMissing((RowToken) message)) {
+            ((RowToken) message).release();
             return;
         }
 
@@ -645,6 +667,14 @@ final class RpcQueryMessageFlow {
 
         volatile boolean directMode;
 
+        // column metadata of the current cursor result, awaiting COLINFO to verify the row status column
+        @Nullable
+        ColumnMetadataToken columns;
+
+        // verified layout of the current cursor result
+        @Nullable
+        CursorColumnLayout layout;
+
         Phase phase = Phase.NONE;
 
         /**
@@ -695,6 +725,46 @@ final class RpcQueryMessageFlow {
             if (it instanceof ErrorToken) {
                 this.hasSeenError = true;
             }
+        }
+
+        /**
+         * Retain column metadata of a cursor result. Resets a previously verified {@link CursorColumnLayout}.
+         *
+         * @param columns the column metadata.
+         */
+        void onColumnMetadata(ColumnMetadataToken columns) {
+            this.columns = columns;
+            this.layout = null;
+        }
+
+        /**
+         * Verify the row status column of the current cursor result using {@link ColInfoToken COLINFO}. Results executed directly (without a cursor) do not
+         * carry a row status column.
+         *
+         * @param colInfo the column info.
+         * @return the verified {@link CursorColumnLayout} or {@code null} if the result does not contain a hidden row status column.
+         */
+        @Nullable
+        CursorColumnLayout onColumnInfo(ColInfoToken colInfo) {
+
+            ColumnMetadataToken columns = this.columns;
+            this.columns = null;
+
+            if (this.directMode || columns == null) {
+                return null;
+            }
+
+            this.layout = CursorColumnLayout.from(columns, colInfo);
+            return this.layout;
+        }
+
+        /**
+         * @param row the row.
+         * @return {@code true} if the row is a placeholder for a row that was deleted after opening the cursor.
+         */
+        boolean isMissing(RowToken row) {
+            CursorColumnLayout layout = this.layout;
+            return layout != null && layout.isMissing(row);
         }
 
         public void update(Phase newPhase) {

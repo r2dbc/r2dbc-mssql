@@ -30,9 +30,13 @@ import io.r2dbc.mssql.message.header.Status;
 import io.r2dbc.mssql.message.header.Type;
 import io.r2dbc.mssql.message.token.*;
 import io.r2dbc.mssql.message.type.Collation;
+import io.r2dbc.mssql.message.type.LengthStrategy;
+import io.r2dbc.mssql.message.type.SqlServerType;
+import io.r2dbc.mssql.message.type.TypeInformation;
 import io.r2dbc.mssql.util.ClientMessageAssert;
 import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
+import io.r2dbc.mssql.util.Types;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Sinks;
@@ -348,6 +352,72 @@ class RpcQueryMessageFlowUnitTests {
         assertThat(state.phase).isEqualTo(CursorState.Phase.CLOSED);
         verifyNoInteractions(this.requests);
         verify(this.completion).run();
+    }
+
+    @Test
+    void shouldSuppressMissingRowsOfVerifiedCursorLayout() {
+
+        CursorState state = new CursorState();
+        Column[] columns = {new Column(0, "id", Types.integer()), new Column(1, "ROWSTAT", fixedInteger())};
+        ColumnMetadataToken metadata = ColumnMetadataToken.create(columns);
+
+        handleMessage(state, metadata);
+        verify(this.sink).next(metadata);
+
+        handleMessage(state, ColInfoToken.decode(HexUtils.decodeToByteBuf("06 00 01 01 08 02 00 14")));
+        verify(this.sink).next(any(CursorColumnLayout.class));
+
+        RowToken present = RowToken.decode(HexUtils.decodeToByteBuf("04 2A 00 00 00 01 00 00 00"), columns);
+        RowToken missing = RowToken.decode(HexUtils.decodeToByteBuf("04 2B 00 00 00 02 00 00 00"), columns);
+
+        handleMessage(state, present);
+        handleMessage(state, missing);
+
+        verify(this.sink).next(present);
+        verify(this.sink, never()).next(missing);
+        assertThat(missing.refCnt()).isZero();
+        verifyNoMoreInteractions(this.sink);
+    }
+
+    @Test
+    void shouldNotSuppressRowsWithoutVerifiedCursorLayout() {
+
+        // SELECT CAST(2 AS int) AS ROWSTAT
+        CursorState state = new CursorState();
+        Column[] columns = {new Column(0, "ROWSTAT", fixedInteger())};
+        RowToken row = RowToken.decode(HexUtils.decodeToByteBuf("02 00 00 00"), columns);
+
+        handleMessage(state, ColumnMetadataToken.create(columns));
+        handleMessage(state, row);
+
+        verify(this.sink).next(row);
+        verify(this.sink, never()).next(any(CursorColumnLayout.class));
+        assertThat(row.refCnt()).isOne();
+    }
+
+    @Test
+    void shouldNotVerifyCursorLayoutInDirectMode() {
+
+        CursorState state = new CursorState();
+        state.directMode = true;
+        Column[] columns = {new Column(0, "id", Types.integer()), new Column(1, "ROWSTAT", fixedInteger())};
+        RowToken row = RowToken.decode(HexUtils.decodeToByteBuf("04 2B 00 00 00 02 00 00 00"), columns);
+
+        handleMessage(state, ColumnMetadataToken.create(columns));
+        handleMessage(state, ColInfoToken.decode(HexUtils.decodeToByteBuf("06 00 01 01 08 02 00 14")));
+        handleMessage(state, row);
+
+        verify(this.sink, never()).next(any(CursorColumnLayout.class));
+        verify(this.sink).next(row);
+    }
+
+    private void handleMessage(CursorState state, Message message) {
+        state.update(message);
+        RpcQueryMessageFlow.handleMessage(this.client, 128, this.requests::tryEmitNext, state, message, this.sink, this.completion, true);
+    }
+
+    private static TypeInformation fixedInteger() {
+        return TypeInformation.builder().withMaxLength(4).withLengthStrategy(LengthStrategy.FIXEDLENTYPE).withServerType(SqlServerType.INTEGER).build();
     }
 
     private static DoneToken attentionAck() {

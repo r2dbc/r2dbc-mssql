@@ -20,10 +20,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.DefaultCodecs;
+import io.r2dbc.mssql.message.token.ColInfoToken;
 import io.r2dbc.mssql.message.token.Column;
+import io.r2dbc.mssql.message.token.ColumnMetadataToken;
 import io.r2dbc.mssql.message.type.LengthStrategy;
 import io.r2dbc.mssql.message.type.SqlServerType;
 import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.spi.Nullability;
 import org.junit.jupiter.api.Test;
 
@@ -68,19 +71,31 @@ class MssqlRowMetadataUnitTests {
     }
 
     @Test
-    void shouldRemoveRowstatIfLastColumn() {
+    void retainsRowstatIfLastColumn() {
 
-        Column rowstat = new Column(0, "ROWSTAT", this.integer, null);
+        Column rowstat = new Column(1, "ROWSTAT", this.integer, null);
+        Map<String, Column> nameKeyedColumns = new HashMap<>();
+        nameKeyedColumns.put("foo", this.column);
+        nameKeyedColumns.put("ROWSTAT", rowstat);
 
-        MssqlRowMetadata rowMetadata1 = new MssqlRowMetadata(this.codecs, new Column[]{this.column, rowstat}, new HashMap<>());
+        MssqlRowMetadata rowMetadata = new MssqlRowMetadata(this.codecs, new Column[]{this.column, rowstat}, nameKeyedColumns);
 
-        assertThat(rowMetadata1.getCount()).isOne();
-        assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(() -> rowMetadata1.getColumnMetadata("ROWSTAT"));
+        assertThat(rowMetadata.getCount()).isEqualTo(2);
+        assertThat(rowMetadata.getColumnMetadata("ROWSTAT").getName()).isEqualTo("ROWSTAT");
+    }
 
-        MssqlRowMetadata rowMetadata2 = new MssqlRowMetadata(this.codecs, new Column[]{rowstat}, new HashMap<>());
+    @Test
+    void shouldRemoveVerifiedCursorRowStatusColumn() {
 
-        assertThat(rowMetadata2.getCount()).isZero();
-        assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(() -> rowMetadata2.getColumnMetadata("ROWSTAT"));
+        Column rowstat = new Column(1, "ROWSTAT", this.integer, null);
+        ColumnMetadataToken metadata = ColumnMetadataToken.create(new Column[]{this.column, rowstat});
+        CursorColumnLayout layout = CursorColumnLayout.from(metadata, ColInfoToken.decode(HexUtils.decodeToByteBuf("06 00 01 01 08 02 00 14")));
+
+        MssqlRowMetadata rowMetadata = MssqlRowMetadata.create(this.codecs, layout);
+
+        assertThat(rowMetadata.getCount()).isOne();
+        assertThat(rowMetadata.getColumnMetadata("foo").getName()).isEqualTo("foo");
+        assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(() -> rowMetadata.getColumnMetadata("ROWSTAT"));
     }
 
     @Test

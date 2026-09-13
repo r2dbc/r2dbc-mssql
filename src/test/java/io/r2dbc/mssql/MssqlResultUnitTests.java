@@ -20,9 +20,14 @@ import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.codec.DefaultCodecs;
 import io.r2dbc.mssql.message.Message;
+import io.r2dbc.mssql.message.token.ColInfoToken;
+import io.r2dbc.mssql.message.token.Column;
+import io.r2dbc.mssql.message.token.ColumnMetadataToken;
 import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.ReturnValue;
+import io.r2dbc.mssql.message.token.RowToken;
+import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
 import io.r2dbc.mssql.util.Types;
 import org.junit.jupiter.api.Test;
@@ -113,6 +118,39 @@ class MssqlResultUnitTests {
 
         abstract MssqlResult create(Flux<Message> messages);
 
+    }
+
+    @ParameterizedTest
+    @MethodSource("factories")
+    void shouldRetainUserColumnNamedRowstat(ResultFactory factory) {
+
+        // SELECT CAST(2 AS int) AS ROWSTAT: no cursor layout, the column is user data.
+        Column[] columns = {new Column(0, "ROWSTAT", Types.integer())};
+        RowToken row = RowToken.decode(HexUtils.decodeToByteBuf("04 02 00 00 00"), columns);
+
+        MssqlResult result = factory.create(Flux.just(ColumnMetadataToken.create(columns), row, DoneToken.create(1)));
+
+        Flux.from(result.map((r, metadata) -> metadata.getColumnMetadatas().size() + ":" + r.get("ROWSTAT", Integer.class)))
+            .as(StepVerifier::create)
+            .expectNext("1:2")
+            .verifyComplete();
+    }
+
+    @ParameterizedTest
+    @MethodSource("factories")
+    void shouldHideVerifiedCursorRowStatusColumn(ResultFactory factory) {
+
+        Column[] columns = {new Column(0, "id", Types.integer()), new Column(1, "ROWSTAT", Types.integer())};
+        ColumnMetadataToken metadata = ColumnMetadataToken.create(columns);
+        CursorColumnLayout layout = CursorColumnLayout.from(metadata, ColInfoToken.decode(HexUtils.decodeToByteBuf("06 00 01 01 08 02 00 14")));
+        RowToken row = RowToken.decode(HexUtils.decodeToByteBuf("04 2A 00 00 00 04 01 00 00 00"), columns);
+
+        MssqlResult result = factory.create(Flux.just(metadata, layout, row, DoneToken.create(1)));
+
+        Flux.from(result.map((r, rowMetadata) -> rowMetadata.getColumnMetadatas().size() + ":" + rowMetadata.contains("ROWSTAT") + ":" + r.get("id", Integer.class)))
+            .as(StepVerifier::create)
+            .expectNext("1:false:42")
+            .verifyComplete();
     }
 
 }

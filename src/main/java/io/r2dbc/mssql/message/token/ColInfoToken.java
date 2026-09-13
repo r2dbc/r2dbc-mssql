@@ -130,7 +130,7 @@ public class ColInfoToken extends AbstractDataToken {
     /**
      * Column info for a column returned by a sp_cursor operation.
      */
-    static final class ColInfo {
+    public static final class ColInfo {
 
         /**
          * The column number in the result set.
@@ -177,6 +177,20 @@ public class ColInfoToken extends AbstractDataToken {
         @Nullable
         public String getName() {
             return this.name;
+        }
+
+        /**
+         * @return {@code true} if the column was not requested but added by the server (e.g. a cursor row status column or a browse-mode key column).
+         */
+        public boolean isHidden() {
+            return (this.status & STATUS_HIDDEN) != 0;
+        }
+
+        /**
+         * @return {@code true} if the column is the result of an expression and not derived from a base table column.
+         */
+        public boolean isExpression() {
+            return (this.status & STATUS_EXPRESSION) != 0;
         }
 
         @Override

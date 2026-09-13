@@ -140,6 +140,11 @@ final class MssqlSegmentResult implements MssqlResult {
                 return;
             }
 
+            if (message.getClass() == CursorColumnLayout.class) {
+                metadataRef.set(MssqlRowMetadata.create(codecs, (CursorColumnLayout) message));
+                return;
+            }
+
             if (message.getClass() == RowToken.class || message.getClass() == NbcRowToken.class) {
 
                 MssqlRowMetadata rowMetadata = metadataRef.get();

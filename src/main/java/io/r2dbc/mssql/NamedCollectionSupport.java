@@ -40,23 +40,12 @@ abstract class NamedCollectionSupport<N> implements Collection<String> {
 
     private final String itemName;
 
-    @SuppressWarnings("unchecked")
     NamedCollectionSupport(N[] items, Map<String, N> nameKeyed, Function<N, String> nameMapper, String itemName) {
 
         this.nameMapper = nameMapper;
         this.itemName = itemName;
-
-        if (shouldStripROWSTAT(items)) {
-
-            this.items = (N[]) Array.newInstance(items.getClass().getComponentType(), items.length - 1);
-            System.arraycopy(items, 0, this.items, 0, this.items.length);
-
-            this.nameKeyed = toMap(this.items, nameMapper);
-        } else {
-
-            this.items = items;
-            this.nameKeyed = nameKeyed;
-        }
+        this.items = items;
+        this.nameKeyed = nameKeyed;
     }
 
     static <N> Map<String, N> toMap(N[] named, Function<N, String> nameMapper) {
@@ -71,11 +60,6 @@ abstract class NamedCollectionSupport<N> implements Collection<String> {
             }
         }
         return nameKeyed;
-    }
-
-    // Hide ROWSTAT column from metatada if it's the last column. Typically synthesized in cursored fetch.
-    private boolean shouldStripROWSTAT(N[] columns) {
-        return columns.length > 0 && "ROWSTAT".equals(this.nameMapper.apply(columns[columns.length - 1]));
     }
 
     /**
