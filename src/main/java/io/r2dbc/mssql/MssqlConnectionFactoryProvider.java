@@ -66,6 +66,11 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
     public static final Option<String> HOSTNAME_IN_CERTIFICATE = Option.valueOf("hostNameInCertificate");
 
     /**
+     * Enable Windows Integrated Security using the credentials of the current Windows process.
+     */
+    public static final Option<Boolean> INTEGRATED_SECURITY = Option.valueOf("integratedSecurity");
+
+    /**
      * Configure whether to prefer cursored execution on a statement-by-statement basis. Value can be {@link Boolean}, a {@link Predicate}, or a {@link Class class name}. The {@link Predicate}
      * accepts the SQL query string and returns a boolean flag indicating preference.
      * {@code true} prefers cursors, {@code false} prefers direct execution.
@@ -155,6 +160,11 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
 
         OptionMapper mapper = OptionMapper.create(connectionFactoryOptions);
 
+        boolean integratedSecurity = connectionFactoryOptions.hasOption(INTEGRATED_SECURITY) &&
+            OptionMapper.toBoolean(connectionFactoryOptions.getRequiredValue(INTEGRATED_SECURITY));
+
+        builder.integratedSecurity(integratedSecurity);
+
         mapper.fromTyped(APPLICATION_NAME).to(builder::applicationName);
         mapper.from(CONNECTION_ID).map(OptionMapper::toUuid).to(builder::connectionId);
         mapper.fromTyped(CONNECTION_PROVIDER).to(builder::connectionProvider);
@@ -198,8 +208,11 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         mapper.from(TRUST_STORE_PASSWORD).map(it -> it instanceof String ? ((String) it).toCharArray() : (char[]) it).to(builder::trustStorePassword);
 
         builder.host(connectionFactoryOptions.getRequiredValue(HOST).toString());
-        builder.password((CharSequence) connectionFactoryOptions.getRequiredValue(PASSWORD));
-        builder.username(connectionFactoryOptions.getRequiredValue(USER).toString());
+
+        if (!integratedSecurity) {
+            builder.password((CharSequence) connectionFactoryOptions.getRequiredValue(PASSWORD));
+            builder.username(connectionFactoryOptions.getRequiredValue(USER).toString());
+        }
 
         MssqlConnectionConfiguration configuration = builder.build();
         if (this.logger.isDebugEnabled()) {
@@ -220,6 +233,16 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
 
         if (!connectionFactoryOptions.hasOption(HOST)) {
             return false;
+        }
+
+        if (connectionFactoryOptions.hasOption(INTEGRATED_SECURITY)) {
+            try {
+                if (OptionMapper.toBoolean(connectionFactoryOptions.getRequiredValue(INTEGRATED_SECURITY))) {
+                    return true;
+                }
+            } catch (IllegalArgumentException e) {
+                return false;
+            }
         }
 
         if (!connectionFactoryOptions.hasOption(PASSWORD)) {

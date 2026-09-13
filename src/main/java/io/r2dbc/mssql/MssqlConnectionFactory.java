@@ -44,6 +44,8 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
 
     private final Function<MssqlConnectionConfiguration, Mono<Client>> clientFactory;
 
+    private final Function<MssqlConnectionConfiguration, IntegratedAuthentication> integratedAuthenticationFactory;
+
     private final MssqlConnectionConfiguration configuration;
 
     private final DefaultCodecs codecs = new DefaultCodecs();
@@ -61,7 +63,16 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
     MssqlConnectionFactory(Function<MssqlConnectionConfiguration, Mono<Client>> clientFactory,
                            MssqlConnectionConfiguration configuration) {
 
+        this(clientFactory, it -> new WindowsSspiAuthentication(it.getServicePrincipalName()), configuration);
+    }
+
+    MssqlConnectionFactory(Function<MssqlConnectionConfiguration, Mono<Client>> clientFactory,
+                           Function<MssqlConnectionConfiguration, IntegratedAuthentication> integratedAuthenticationFactory,
+                           MssqlConnectionConfiguration configuration) {
+
         this.clientFactory = Assert.requireNonNull(clientFactory, "clientFactory must not be null");
+        this.integratedAuthenticationFactory = Assert.requireNonNull(integratedAuthenticationFactory,
+            "integratedAuthenticationFactory must not be null");
         this.configuration = Assert.requireNonNull(configuration, "configuration must not be null");
     }
 
@@ -77,10 +88,8 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
 
     private Mono<Client> initializeClient(MssqlConnectionConfiguration configuration, boolean allowReroute) {
 
-        LoginConfiguration loginConfiguration = configuration.getLoginConfiguration();
-
         return this.clientFactory.apply(configuration)
-            .delayUntil(client -> LoginFlow.exchange(client, loginConfiguration)
+            .delayUntil(client -> login(client, configuration)
                 .onErrorResume(e -> propagateError(client.close(), e)))
             .flatMap(client -> {
                 return client.getRedirect().map(redirect -> {
@@ -98,6 +107,21 @@ public final class MssqlConnectionFactory implements ConnectionFactory {
         MssqlConnectionConfiguration routeConfiguration = this.configuration.withRedirect(redirect);
 
         return client.close().then(this.initializeClient(routeConfiguration, false));
+    }
+
+    private Mono<Void> login(Client client, MssqlConnectionConfiguration configuration) {
+
+        LoginConfiguration loginConfiguration = configuration.getLoginConfiguration();
+
+        return Mono.defer(() -> {
+
+            if (configuration.isIntegratedSecurity()) {
+                IntegratedAuthentication authentication = this.integratedAuthenticationFactory.apply(configuration);
+                return LoginFlow.exchange(client, loginConfiguration, authentication).then();
+            }
+
+            return LoginFlow.exchange(client, loginConfiguration).then();
+        });
     }
 
     private <T> Mono<T> propagateError(Mono<?> action, Throwable e) {

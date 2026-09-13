@@ -26,9 +26,13 @@ import io.r2dbc.mssql.message.token.DoneToken;
 import io.r2dbc.mssql.message.token.ErrorToken;
 import io.r2dbc.mssql.message.token.Login7;
 import io.r2dbc.mssql.message.token.Prelogin;
+import io.r2dbc.mssql.message.token.SspiMessage;
+import io.r2dbc.mssql.message.token.SspiToken;
 import io.r2dbc.mssql.util.Assert;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.util.annotation.Nullable;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -54,6 +58,30 @@ final class LoginFlow {
         Assert.requireNonNull(client, "client must not be null");
         Assert.requireNonNull(login, "Login must not be null");
 
+        return exchange0(client, login, null);
+    }
+
+    /**
+     * Exchange login messages using integrated authentication.
+     *
+     * @param client         the {@link Client} to exchange messages with
+     * @param login          the login configuration for login negotiation
+     * @param authentication the integrated authentication provider
+     * @return the messages received after authentication is complete, in response to this exchange
+     */
+    static Flux<Message> exchange(Client client, LoginConfiguration login, IntegratedAuthentication authentication) {
+
+        Assert.requireNonNull(client, "client must not be null");
+        Assert.requireNonNull(login, "Login must not be null");
+        Assert.requireNonNull(authentication, "Integrated authentication must not be null");
+
+        return Flux.usingWhen(Mono.just(authentication),
+            it -> exchange0(client, login, it),
+            IntegratedAuthentication::close);
+    }
+
+    private static Flux<Message> exchange0(Client client, LoginConfiguration login,
+                                           @Nullable IntegratedAuthentication authentication) {
 
         Prelogin.Builder builder = Prelogin.builder();
         if (login.getConnectionId() != null) {
@@ -65,13 +93,16 @@ final class LoginFlow {
         }
 
         AtomicReference<Prelogin> preloginResponse = new AtomicReference<>();
-        Sinks.Many<ClientMessage> requests = Sinks.many().unicast().onBackpressureBuffer();
+        Sinks.Many<Mono<? extends ClientMessage>> requests = Sinks.many().unicast().onBackpressureBuffer();
 
         Prelogin request = builder.build();
-        requests.emitNext(request, Sinks.EmitFailureHandler.FAIL_FAST);
+        requests.emitNext(Mono.just(request), Sinks.EmitFailureHandler.FAIL_FAST);
 
-        return client.exchange(requests.asFlux(), DoneToken::isDone) //
-            .filter(or(Prelogin.class::isInstance, SslState.class::isInstance, DoneToken.class::isInstance, ErrorToken.class::isInstance)) //
+        Flux<ClientMessage> requestMessages = requests.asFlux().concatMap(it -> it);
+
+        return client.exchange(requestMessages, DoneToken::isDone) //
+            .filter(or(Prelogin.class::isInstance, SslState.class::isInstance, SspiToken.class::isInstance,
+                DoneToken.class::isInstance, ErrorToken.class::isInstance)) //
             .handle((message, sink) -> {
 
                 try {
@@ -91,7 +122,7 @@ final class LoginFlow {
                         }
 
                         if (!encryption.requiresSslHandshake()) {
-                            requests.emitNext(createLoginMessage(login, response), Sinks.EmitFailureHandler.FAIL_FAST);
+                            emitLoginRequest(requests, login, response, authentication);
                         }
 
                         return;
@@ -100,7 +131,23 @@ final class LoginFlow {
                     if (message instanceof SslState && message == SslState.NEGOTIATED) {
 
                         Prelogin prelogin = preloginResponse.get();
-                        requests.emitNext(createLoginMessage(login, prelogin), Sinks.EmitFailureHandler.FAIL_FAST);
+                        emitLoginRequest(requests, login, prelogin, authentication);
+                        return;
+                    }
+
+                    if (message instanceof SspiToken) {
+
+                        if (authentication == null) {
+                            throw ProtocolException.unsupported("Received an SSPI challenge without integrated authentication");
+                        }
+
+                        SspiToken token = (SspiToken) message;
+
+                        Mono<? extends ClientMessage> response = Mono.defer(() ->
+                                authentication.nextToken(token.getSspiBuffer()))
+                            .map(SspiMessage::create);
+
+                        requests.emitNext(response, Sinks.EmitFailureHandler.FAIL_FAST);
                         return;
                     }
 
@@ -125,12 +172,37 @@ final class LoginFlow {
             });
     }
 
+    private static void emitLoginRequest(Sinks.Many<Mono<? extends ClientMessage>> requests,
+                                         LoginConfiguration login, Prelogin prelogin,
+                                         @Nullable IntegratedAuthentication authentication) {
+
+        if (authentication == null) {
+            requests.emitNext(Mono.just(createLoginMessage(login, prelogin)), Sinks.EmitFailureHandler.FAIL_FAST);
+            return;
+        }
+
+        Mono<? extends ClientMessage> request = Mono.defer(authentication::initialToken)
+            .switchIfEmpty(Mono.error(new IllegalStateException(
+                "Integrated authentication did not produce an initial SSPI token")))
+            .map(sspiBuffer -> createLoginMessage(login, prelogin, sspiBuffer));
+
+        requests.emitNext(request, Sinks.EmitFailureHandler.FAIL_FAST);
+    }
+
     private static Login7 createLoginMessage(LoginConfiguration login, Prelogin prelogin) {
 
         Prelogin.Version serverVersion = prelogin.getRequiredToken(Prelogin.Version.class);
         TDSVersion tdsVersion = getTdsVersion(serverVersion.getVersion());
 
         return login.asBuilder().tdsVersion(tdsVersion).build();
+    }
+
+    private static Login7 createLoginMessage(LoginConfiguration login, Prelogin prelogin, byte[] sspiBuffer) {
+
+        Prelogin.Version serverVersion = prelogin.getRequiredToken(Prelogin.Version.class);
+        TDSVersion tdsVersion = getTdsVersion(serverVersion.getVersion());
+
+        return login.asBuilder().tdsVersion(tdsVersion).integratedSecurity(sspiBuffer).build();
     }
 
     private static TDSVersion getTdsVersion(int serverVersion) {

@@ -102,6 +102,40 @@ final class MssqlConnectionFactoryProviderTest {
     }
 
     @Test
+    void supportsIntegratedSecurityWithoutCredentials() {
+        assertThat(this.provider.supports(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(INTEGRATED_SECURITY, true)
+            .build())).isTrue();
+    }
+
+    @Test
+    void doesNotSupportWithoutCredentialsWhenIntegratedSecurityIsDisabled() {
+        assertThat(this.provider.supports(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(INTEGRATED_SECURITY, false)
+            .build())).isFalse();
+    }
+
+    @Test
+    void shouldConfigureIntegratedSecurity() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "sql.example.com")
+            .option(PORT, 1444)
+            .option(INTEGRATED_SECURITY, true)
+            .build());
+
+        MssqlConnectionConfiguration configuration = factory.getConfiguration();
+
+        assertThat(configuration.isIntegratedSecurity()).isTrue();
+        assertThat(configuration.getServicePrincipalName()).isEqualTo("MSSQLSvc/sql.example.com:1444");
+    }
+
+    @Test
     void supportsAlternateDriverId() {
         assertThat(this.provider.supports(ConnectionFactoryOptions.builder()
             .option(DRIVER, ALTERNATE_MSSQL_DRIVER)

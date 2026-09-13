@@ -35,6 +35,7 @@
         <assertj.version>3.27.7</assertj.version>
         <hikari-cp.version>7.1.0</hikari-cp.version>
         <java.version>1.8</java.version>
+        <jna.version>5.17.0</jna.version>
         <jsr305.version>3.0.2</jsr305.version>
         <junit.version>5.14.4</junit.version>
         <jmh.version>1.37</jmh.version>
@@ -127,6 +128,12 @@
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
             <version>${mssql-jdbc.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna-platform</artifactId>
+            <version>${jna.version}</version>
             <optional>true</optional>
         </dependency>
 

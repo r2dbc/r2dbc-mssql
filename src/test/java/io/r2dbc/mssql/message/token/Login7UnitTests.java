@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 final class Login7UnitTests {
 
     @Test
-    void shouldRenderSimpleLoginPacket() {
+    void shouldKeepSqlAuthenticationLoginPacketUnchanged() {
 
         Login7 login7 = Login7.builder()
             .serverName("localhost")
@@ -64,6 +64,71 @@ final class Login7UnitTests {
 
         assertThat(ByteBufUtil.prettyHexDump(buffer))
             .isEqualTo(ByteBufUtil.prettyHexDump(Unpooled.wrappedBuffer(expected)));
+    }
+
+
+    @Test
+    void shouldEncodeIntegratedSecurityLoginPacket() {
+
+        byte[] initialSspiToken = new byte[]{(byte) 0x60, (byte) 0x82, 0x01, 0x23};
+
+        Login7 login7 = Login7.builder()
+            .serverName("localhost")
+            .hostName("some-fancy-hostname")
+            .database("master")
+            .clientLibraryName("MyDriver")
+            .applicationName("MyApp")
+            .clientLibraryVersion(Version.parse("6.4"))
+            .tdsVersion(TDSVersion.VER_DENALI)
+            .integratedSecurity(initialSspiToken)
+            .build();
+
+        ByteBuf buffer = Unpooled.buffer(400);
+        login7.encode(buffer);
+
+        assertThat(buffer.getIntLE(0)).isEqualTo(buffer.readableBytes());
+
+        // OptionFlags2.fIntSecurity
+        assertThat(buffer.getUnsignedByte(25) & 0x80).isEqualTo(0x80);
+
+        // Username and password are omitted from integrated-security LOGIN7.
+        assertThat(buffer.getUnsignedShortLE(42)).isZero();
+        assertThat(buffer.getUnsignedShortLE(46)).isZero();
+
+        int sspiOffset = buffer.getUnsignedShortLE(78);
+        int sspiLength = buffer.getUnsignedShortLE(80);
+
+        assertThat(sspiOffset).isGreaterThanOrEqualTo(94);
+        assertThat(sspiLength).isEqualTo(initialSspiToken.length);
+        assertThat(ByteBufUtil.getBytes(buffer, sspiOffset, sspiLength)).containsExactly(initialSspiToken);
+
+        // cbSSPILong is not used for a short SSPI token.
+        assertThat(buffer.getIntLE(90)).isZero();
+    }
+
+    @Test
+    void shouldEncodeLongSspiLength() {
+
+        byte[] initialSspiToken = new byte[0x10000];
+        initialSspiToken[0] = 0x60;
+        initialSspiToken[initialSspiToken.length - 1] = 0x01;
+
+        Login7 login7 = Login7.builder()
+            .serverName("localhost")
+            .hostName("some-fancy-hostname")
+            .database("master")
+            .clientLibraryName("MyDriver")
+            .applicationName("MyApp")
+            .clientLibraryVersion(Version.parse("6.4"))
+            .tdsVersion(TDSVersion.VER_DENALI)
+            .integratedSecurity(initialSspiToken)
+            .build();
+
+        ByteBuf buffer = Unpooled.buffer(0x11000);
+        login7.encode(buffer);
+
+        assertThat(buffer.getUnsignedShortLE(80)).isEqualTo(0xFFFF);
+        assertThat(buffer.getIntLE(90)).isEqualTo(initialSspiToken.length);
     }
 
     @Test

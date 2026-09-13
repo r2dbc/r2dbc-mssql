@@ -10,6 +10,7 @@ This driver provides the following features:
 
 * Complies with R2DBC 1.0
 * Login with username/password with temporary SSL encryption
+* Windows Integrated Security using the credentials of the current Windows process
 * Full SSL encryption support (for e.g. Azure usage).
 * Transaction Control
 * Simple execution of SQL batches (direct and cursored execution)
@@ -70,6 +71,7 @@ Mono<Connection> connectionMono = Mono.from(connectionFactory.create());
 | `driver`                        | Must be `sqlserver`.                                                                                                                                                                                                                                                      
 | `host`                          | Server hostname to connect to.                                                                                                                                                                                                                                            
 | `port`                          | Server port to connect to. Defaults to `1433`. _(Optional)_                                                                                                                                                                                                               
+| `integratedSecurity`            | Use Windows Integrated Security with the credentials of the current Windows process. When enabled, `username` and `password` are not required. Windows only. Defaults to `false`. _(Optional)_
 | `username`                      | Login username.                                                                                                                                                                                                                                                           
 | `password`                      | Login password.                                                                                                                                                                                                                                                           
 | `database`                      | Initial database to select. Defaults to SQL Server user profile settings. _(Optional)_                                                                                                                                                                                    
@@ -106,6 +108,85 @@ MssqlConnectionFactory factory = new MssqlConnectionFactory(configuration);
 
 Mono<MssqlConnection> connectionMono = factory.create();
 ```
+
+### Windows Integrated Security
+
+Windows Integrated Security uses the credentials of the current Windows process through
+Windows SSPI with the `Negotiate` security package. SQL Server authentication with
+username/password remains unchanged.
+
+URL-based configuration:
+
+```java
+ConnectionFactory connectionFactory = ConnectionFactories.get(
+    "r2dbc:mssql://sql.example.com:1433/database?integratedSecurity=true");
+```
+
+Programmatic discovery:
+
+```java
+ConnectionFactoryOptions options = ConnectionFactoryOptions.builder()
+    .option(DRIVER, "sqlserver")
+    .option(HOST, "sql.example.com")
+    .option(PORT, 1433)
+    .option(DATABASE, "database")
+    .option(Option.valueOf("integratedSecurity"), true)
+    .build();
+
+ConnectionFactory connectionFactory = ConnectionFactories.get(options);
+```
+
+Direct configuration:
+
+```java
+MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+    .host("sql.example.com")
+    .port(1433)
+    .database("database")
+    .integratedSecurity()
+    .build();
+
+MssqlConnectionFactory connectionFactory = new MssqlConnectionFactory(configuration);
+```
+
+Integrated Security is currently supported on Windows only. It uses the identity of the
+process running the JVM; explicit Windows username/password credentials are not part of
+this authentication mode. The SQL Server instance must permit Windows authentication and
+the current process identity must have a SQL Server login or otherwise be granted access.
+
+The driver constructs the SQL Server service principal name (SPN) from the connection
+endpoint as `MSSQLSvc/<host>:<port>`. Use the SQL Server DNS/FQDN as the host when Kerberos
+authentication is required. Windows `Negotiate` determines whether Kerberos or NTLM is
+used according to the Windows environment and security policy.
+
+Windows Integrated Security uses JNA to access Windows SSPI. JNA is an optional driver
+dependency, so applications using Integrated Security must include `jna-platform`:
+
+```xml
+<dependency>
+  <groupId>net.java.dev.jna</groupId>
+  <artifactId>jna-platform</artifactId>
+  <version>5.17.0</version>
+</dependency>
+```
+
+The Windows Integrated Security integration test is intentionally not backed by the
+regular SQL Server Testcontainers setup because it requires a real Windows identity and
+an SQL Server configured to accept that identity. On Windows, configure at least
+`R2DBC_MSSQL_INTEGRATED_HOST`; the other variables are optional:
+
+```powershell
+$env:R2DBC_MSSQL_INTEGRATED_HOST = "sql.example.com"
+$env:R2DBC_MSSQL_INTEGRATED_PORT = "1433"
+$env:R2DBC_MSSQL_INTEGRATED_DATABASE = "master"
+$env:R2DBC_MSSQL_INTEGRATED_EXPECTED_USER = "DOMAIN\user"
+$env:R2DBC_MSSQL_INTEGRATED_SSL = "false"
+$env:R2DBC_MSSQL_INTEGRATED_TRUST_SERVER_CERTIFICATE = "false"
+
+.\mvnw.cmd "-Dtest=WindowsIntegratedSecurityIntegrationTests" test
+```
+
+If `R2DBC_MSSQL_INTEGRATED_HOST` is not set, the integration test is skipped.
 
 Microsoft SQL Server uses named parameters that are prefixed with `@`. The following SQL statement makes use of parameters:
 

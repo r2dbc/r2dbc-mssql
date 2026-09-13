@@ -131,7 +131,38 @@ final class MssqlConnectionConfigurationUnitTests {
                 .hasFieldOrPropertyWithValue("password", "test-password")
                 .hasFieldOrPropertyWithValue("port", 1433)
                 .hasFieldOrPropertyWithValue("username", "test-username")
+                .hasFieldOrPropertyWithValue("integratedSecurity", false)
                 .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true);
+    }
+
+    @Test
+    void integratedSecurityDoesNotRequireCredentials() {
+
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+                .host("sql.example.com")
+                .integratedSecurity()
+                .build();
+
+        assertThat(configuration)
+                .hasFieldOrPropertyWithValue("host", "sql.example.com")
+                .hasFieldOrPropertyWithValue("port", 1433)
+                .hasFieldOrPropertyWithValue("username", "")
+                .hasFieldOrPropertyWithValue("password", "")
+                .hasFieldOrPropertyWithValue("integratedSecurity", true);
+
+        assertThat(configuration.getServicePrincipalName()).isEqualTo("MSSQLSvc/sql.example.com:1433");
+    }
+
+    @Test
+    void integratedSecurityUsesConfiguredPortInServicePrincipalName() {
+
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+                .host("sql.example.com")
+                .port(1444)
+                .integratedSecurity()
+                .build();
+
+        assertThat(configuration.getServicePrincipalName()).isEqualTo("MSSQLSvc/sql.example.com:1444");
     }
 
     @Test
@@ -188,8 +219,27 @@ final class MssqlConnectionConfigurationUnitTests {
                 .hasFieldOrPropertyWithValue("password", "test-password")
                 .hasFieldOrPropertyWithValue("port", 1234)
                 .hasFieldOrPropertyWithValue("username", "test-username")
+                .hasFieldOrPropertyWithValue("integratedSecurity", false)
                 .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true)
                 .hasFieldOrPropertyWithValue("hostNameInCertificate", "test-host");
+    }
+
+    @Test
+    void redirectPreservesIntegratedSecurityAndUpdatesServicePrincipalName() {
+
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+                .host("initial.example.com")
+                .integratedSecurity()
+                .build();
+
+        MssqlConnectionConfiguration target = configuration.withRedirect(Redirect.create("redirect.example.com", 1444));
+
+        assertThat(target)
+                .hasFieldOrPropertyWithValue("host", "redirect.example.com")
+                .hasFieldOrPropertyWithValue("port", 1444)
+                .hasFieldOrPropertyWithValue("integratedSecurity", true);
+
+        assertThat(target.getServicePrincipalName()).isEqualTo("MSSQLSvc/redirect.example.com:1444");
     }
 
     @Test
