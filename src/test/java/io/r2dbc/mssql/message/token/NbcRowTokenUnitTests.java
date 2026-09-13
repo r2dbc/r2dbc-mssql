@@ -91,4 +91,18 @@ class NbcRowTokenUnitTests {
         assertThat(row.getColumnData(0).readableBytes()).isEqualTo(5);
         assertThat(row.getColumnData(1)).isNull();
     }
+
+    @Test
+    void canDecodeShouldReportDecodabilityOfPlpFollowedByPlp() {
+
+        TypeInformation integerType = TypeInformation.builder().withServerType(SqlServerType.INTEGER).withLengthStrategy(LengthStrategy.BYTELENTYPE).build();
+        TypeInformation plpType = TypeInformation.builder().withServerType(SqlServerType.VARCHARMAX).withLengthStrategy(LengthStrategy.PARTLENTYPE).withCharset(ServerCharset.CP1252.charset()).build();
+        Column[] columns = {new Column(0, "first", plpType), new Column(1, "id", integerType), new Column(2, "second", plpType)};
+
+        // null bitmap: column 1 is null
+        ByteBuf rowData = HexUtils.decodeToByteBuf("02 0400000000000000 04000000 61626364 00000000 0400000000000000 04000000 65666768 00000000");
+
+        CanDecodeTestSupport.testCanDecode(rowData, buffer -> NbcRowToken.canDecode(buffer, columns));
+        rowData.release();
+    }
 }

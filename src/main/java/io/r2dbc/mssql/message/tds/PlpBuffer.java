@@ -123,24 +123,36 @@ public final class PlpBuffer {
     public ByteBuf readRetainedStream() {
 
         int startIndex = this.buffer.readerIndex();
-        PlpLength totalLength = decodeLength();
-
-        if (!totalLength.isNull()) {
-            while (true) {
-
-                Length chunkLength = Length.decode(this.buffer, this.type);
-
-                if (chunkLength.isEmpty()) {
-                    break;
-                }
-
-                chunkLength.map(this.buffer::skipBytes);
-            }
-        }
+        skipStream();
 
         int endIndex = this.buffer.readerIndex();
         this.buffer.readerIndex(startIndex);
         return this.buffer.readRetainedSlice(endIndex - startIndex);
+    }
+
+    /**
+     * Skip the complete framed PLP stream (PLP length header, chunk length headers, chunk data, and terminator), advancing the buffer past the stream.
+     * Use this method to skip over a PLP value within a token stream, e.g. when checking decodability of subsequent values.
+     * <p>The buffer must be positioned at the PLP length header and contain the complete stream, see {@link #canDecode()}.
+     */
+    public void skipStream() {
+
+        PlpLength totalLength = decodeLength();
+
+        if (totalLength.isNull()) {
+            return;
+        }
+
+        while (true) {
+
+            Length chunkLength = Length.decode(this.buffer, this.type);
+
+            if (chunkLength.isEmpty()) {
+                return;
+            }
+
+            chunkLength.map(this.buffer::skipBytes);
+        }
     }
 
     /**
