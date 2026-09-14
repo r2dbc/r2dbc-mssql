@@ -52,7 +52,7 @@ class LoginFlowUnitTests {
             .thenRespond(response)
             .build();
 
-        LoginConfiguration login = new LoginConfiguration("app", null, "db", "host", "bar", "server", false, "foo");
+        LoginConfiguration login = new LoginConfiguration("app", null, null, "db", "host", "bar", "server", false, "foo");
 
         LoginFlow.exchange(client, login)
             .as(StepVerifier::create)
@@ -67,7 +67,7 @@ class LoginFlowUnitTests {
             .thenRespond(DoneToken.create(0))
             .build();
 
-        LoginConfiguration login = new LoginConfiguration("app", null, "db", "host", "bar", "server", false, "foo");
+        LoginConfiguration login = new LoginConfiguration("app", null, null, "db", "host", "bar", "server", false, "foo");
 
         LoginFlow.exchange(client, login)
             .as(StepVerifier::create)
@@ -91,7 +91,7 @@ class LoginFlowUnitTests {
             .expectClose()
             .build();
 
-        LoginConfiguration login = new LoginConfiguration("app", null, "db", "host", "bar", "server", true, "foo");
+        LoginConfiguration login = new LoginConfiguration("app", null, null, "db", "host", "bar", "server", true, "foo");
 
         LoginFlow.exchange(client, login)
             .as(StepVerifier::create)
@@ -108,7 +108,7 @@ class LoginFlowUnitTests {
             .expectClose()
             .build();
 
-        LoginConfiguration login = new LoginConfiguration("app", null, "db", "host", "bar", "server", false, "foo");
+        LoginConfiguration login = new LoginConfiguration("app", null, null, "db", "host", "bar", "server", false, "foo");
 
         LoginFlow.exchange(client, login)
             .as(StepVerifier::create)

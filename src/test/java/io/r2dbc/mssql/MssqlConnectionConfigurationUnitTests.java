@@ -16,7 +16,12 @@
 
 package io.r2dbc.mssql;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.r2dbc.mssql.message.TDSVersion;
 import io.r2dbc.mssql.message.tds.Redirect;
+import io.r2dbc.mssql.message.token.Login7;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -33,6 +38,7 @@ import reactor.netty.resources.ConnectionProvider;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
@@ -58,6 +64,12 @@ final class MssqlConnectionConfigurationUnitTests {
     void builderNoApplicationName() {
         assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder().applicationName(null))
                 .withMessage("applicationName must not be null");
+    }
+
+    @Test
+    void builderNoClientLibraryName() {
+        assertThatIllegalArgumentException().isThrownBy(() -> MssqlConnectionConfiguration.builder().clientLibraryName(null))
+                .withMessage("clientLibraryName must not be null");
     }
 
     @Test
@@ -90,6 +102,7 @@ final class MssqlConnectionConfigurationUnitTests {
         Predicate<String> TRUE = s -> true;
         ConnectionProvider connectionProvider = ConnectionProvider.create("test");
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+                .clientLibraryName("my-driver")
                 .connectionId(connectionId)
                 .database("test-database")
                 .host("test-host")
@@ -102,6 +115,7 @@ final class MssqlConnectionConfigurationUnitTests {
                 .build();
 
         assertThat(configuration)
+                .hasFieldOrPropertyWithValue("clientLibraryName", "my-driver")
                 .hasFieldOrPropertyWithValue("connectionId", connectionId)
                 .hasFieldOrPropertyWithValue("connectionProvider", connectionProvider)
                 .hasFieldOrPropertyWithValue("database", "test-database")
@@ -132,6 +146,32 @@ final class MssqlConnectionConfigurationUnitTests {
                 .hasFieldOrPropertyWithValue("port", 1433)
                 .hasFieldOrPropertyWithValue("username", "test-username")
                 .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true);
+    }
+
+    @Test
+    void loginConfigurationUsesDefaultClientLibraryName() {
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+                .host("test-host")
+                .password("test-password")
+                .username("test-username")
+                .build();
+
+        assertThat(encodeLogin(configuration)).contains(utf16Le("R2DBC Driver for Microsoft SQL Server v"));
+    }
+
+    @Test
+    void loginConfigurationAppliesClientLibraryName() {
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+                .applicationName("my-app")
+                .clientLibraryName("ODBC-my-driver")
+                .host("test-host")
+                .password("test-password")
+                .username("test-username")
+                .build();
+
+        String login = encodeLogin(configuration);
+
+        assertThat(login).contains(utf16Le("ODBC-my-driver")).doesNotContain(utf16Le("R2DBC Driver for Microsoft SQL Server"));
     }
 
     @Test
@@ -173,6 +213,7 @@ final class MssqlConnectionConfigurationUnitTests {
     void redirect() {
         MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
                 .applicationName("r2dbc")
+                .clientLibraryName("my-driver")
                 .database("test-database")
                 .host("test-host")
                 .password("test-password")
@@ -183,6 +224,7 @@ final class MssqlConnectionConfigurationUnitTests {
 
         assertThat(target)
                 .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
+                .hasFieldOrPropertyWithValue("clientLibraryName", "my-driver")
                 .hasFieldOrPropertyWithValue("database", "test-database")
                 .hasFieldOrPropertyWithValue("host", "target")
                 .hasFieldOrPropertyWithValue("password", "test-password")
@@ -315,4 +357,20 @@ final class MssqlConnectionConfigurationUnitTests {
     void shouldRejectQueries(String query) {
         assertThat(MssqlConnectionConfiguration.DefaultCursorPreference.INSTANCE).rejects(query);
     }
+    private static String encodeLogin(MssqlConnectionConfiguration configuration) {
+
+        Login7 login7 = configuration.getLoginConfiguration().asBuilder().tdsVersion(TDSVersion.VER_DENALI).build();
+
+        ByteBuf buffer = login7.encode(UnpooledByteBufAllocator.DEFAULT, 8000).getByteBuf();
+        try {
+            return ByteBufUtil.hexDump(buffer);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    private static String utf16Le(String value) {
+        return ByteBufUtil.hexDump(value.getBytes(StandardCharsets.UTF_16LE));
+    }
+
 }

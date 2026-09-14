@@ -18,6 +18,7 @@ package io.r2dbc.mssql;
 
 import io.netty.handler.ssl.SslContextBuilder;
 import io.r2dbc.mssql.util.Assert;
+import io.r2dbc.mssql.util.StringUtils;
 import io.r2dbc.spi.ConnectionFactoryOptions;
 import io.r2dbc.spi.ConnectionFactoryProvider;
 import io.r2dbc.spi.Option;
@@ -47,6 +48,14 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
      * Application name.
      */
     public static final Option<String> APPLICATION_NAME = Option.valueOf("applicationName");
+
+    /**
+     * Client library name (TDS {@code LOGIN7} interface library name) reported to the server. Defaults to the driver name and version. Falls back to the
+     * {@code R2DBC_MSSQL_CLIENT_LIBRARY_NAME} environment variable if the option is not configured.
+     *
+     * @since 1.1
+     */
+    public static final Option<String> CLIENT_LIBRARY_NAME = Option.valueOf("clientLibraryName");
 
     /**
      * Connection Id
@@ -145,6 +154,21 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
      */
     public static final String ALTERNATE_MSSQL_DRIVER = "mssql";
 
+    /**
+     * Environment variable used as fallback for {@link #CLIENT_LIBRARY_NAME}.
+     */
+    static final String CLIENT_LIBRARY_NAME_ENV = "R2DBC_MSSQL_CLIENT_LIBRARY_NAME";
+
+    private final Function<String, String> environment;
+
+    public MssqlConnectionFactoryProvider() {
+        this(System::getenv);
+    }
+
+    MssqlConnectionFactoryProvider(Function<String, String> environment) {
+        this.environment = Assert.requireNonNull(environment, "environment must not be null");
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public MssqlConnectionFactory create(ConnectionFactoryOptions connectionFactoryOptions) {
@@ -156,6 +180,13 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
         OptionMapper mapper = OptionMapper.create(connectionFactoryOptions);
 
         mapper.fromTyped(APPLICATION_NAME).to(builder::applicationName);
+        mapper.fromTyped(CLIENT_LIBRARY_NAME).to(builder::clientLibraryName).otherwise(() -> {
+
+            String clientLibraryName = this.environment.apply(CLIENT_LIBRARY_NAME_ENV);
+            if (StringUtils.hasText(clientLibraryName)) {
+                builder.clientLibraryName(clientLibraryName);
+            }
+        });
         mapper.from(CONNECTION_ID).map(OptionMapper::toUuid).to(builder::connectionId);
         mapper.fromTyped(CONNECTION_PROVIDER).to(builder::connectionProvider);
         mapper.from(CONNECT_TIMEOUT).map(OptionMapper::toDuration).to(builder::connectTimeout);

@@ -112,6 +112,20 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
     }
 
     @Test
+    void shouldReportClientLibraryName() {
+
+        MssqlConnectionFactory connectionFactory = (MssqlConnectionFactory) ConnectionFactories.get(builder()
+            .option(MssqlConnectionFactoryProvider.CLIENT_LIBRARY_NAME, "ODBC-r2dbc-test")
+            .build());
+
+        Flux.usingWhen(connectionFactory.create(), conn -> conn.createStatement("SELECT client_interface_name FROM sys.dm_exec_sessions WHERE session_id = @@SPID").execute()
+            .flatMap(it -> it.map((row, rowMetadata) -> row.get(0, String.class))), MssqlConnection::close)
+            .as(StepVerifier::create)
+            .expectNext("ODBC-r2dbc-test")
+            .verifyComplete();
+    }
+
+    @Test
     void shouldReportMetadata() throws Exception {
 
         try (Connection connection = SERVER.getDataSource().getConnection()) {

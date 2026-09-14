@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -109,6 +110,60 @@ final class MssqlConnectionFactoryProviderTest {
             .option(PASSWORD, "test-password")
             .option(USER, "test-user")
             .build())).isTrue();
+    }
+
+    @Test
+    void shouldConfigureWithClientLibraryName() {
+
+        MssqlConnectionFactory factory = this.provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(CLIENT_LIBRARY_NAME, "my-driver")
+            .build());
+
+        assertThat(factory.getConfiguration().getClientLibraryName()).isEqualTo("my-driver");
+    }
+
+    @Test
+    void shouldFallBackToClientLibraryNameEnvironmentVariable() {
+
+        MssqlConnectionFactoryProvider provider = new MssqlConnectionFactoryProvider(Collections.singletonMap(CLIENT_LIBRARY_NAME_ENV, "env-driver")::get);
+
+        MssqlConnectionFactory factory = provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .build());
+
+        assertThat(factory.getConfiguration().getClientLibraryName()).isEqualTo("env-driver");
+
+        factory = provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .option(CLIENT_LIBRARY_NAME, "my-driver")
+            .build());
+
+        assertThat(factory.getConfiguration().getClientLibraryName()).isEqualTo("my-driver");
+    }
+
+    @Test
+    void shouldIgnoreEmptyClientLibraryNameEnvironmentVariable() {
+
+        MssqlConnectionFactoryProvider provider = new MssqlConnectionFactoryProvider(Collections.singletonMap(CLIENT_LIBRARY_NAME_ENV, " ")::get);
+
+        MssqlConnectionFactory factory = provider.create(ConnectionFactoryOptions.builder()
+            .option(DRIVER, MSSQL_DRIVER)
+            .option(HOST, "test-host")
+            .option(PASSWORD, "test-password")
+            .option(USER, "test-user")
+            .build());
+
+        assertThat(factory.getConfiguration().getClientLibraryName()).isNull();
     }
 
     @Test

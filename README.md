@@ -50,6 +50,7 @@ ConnectionFactoryOptions options = builder()
     .option(DATABASE, "…") // optional
     .option(SSL, true) // optional, defaults to false
     .option(Option.valueOf("applicationName"), "…") // optional
+    .option(Option.valueOf("clientLibraryName"), "…") // optional
     .option(Option.valueOf("preferCursoredExecution"), true/false) // optional
     .option(Option.valueOf("connectionId"), new UUID(…)) // optional
     .build();
@@ -74,6 +75,7 @@ Mono<Connection> connectionMono = Mono.from(connectionFactory.create());
 | `password`                      | Login password.                                                                                                                                                                                                                                                           
 | `database`                      | Initial database to select. Defaults to SQL Server user profile settings. _(Optional)_                                                                                                                                                                                    
 | `applicationName`               | Name of the application. Defaults to driver name and version. _(Optional)_                                                                                                                                                                                                
+| `clientLibraryName`             | Client library name (TDS `LOGIN7` interface library name) reported to the server. Defaults to driver name and version. Falls back to the `R2DBC_MSSQL_CLIENT_LIBRARY_NAME` environment variable if not set. _(Optional)_                                                  
 | `connectionId`                  | Connection Id for tracing purposes. Defaults to a random Id. _(Optional)_                                                                                                                                                                                                 
 | `connectionProvider`            | Set the `reactor.netty.resources.ConnectionProvider` to be used when creating the connection. Defaults to `ConnectionProvider.newConnection()`. _(Optional)_                                                                                                              
 | `connectTimeout`                | Connection Id for tracing purposes. Defaults to 30 seconds. _(Optional)_                                                                                                                                                                                                  

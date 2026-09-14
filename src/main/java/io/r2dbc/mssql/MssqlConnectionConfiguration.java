@@ -74,6 +74,9 @@ public final class MssqlConnectionConfiguration {
     @Nullable
     private final String applicationName;
 
+    @Nullable
+    private final String clientLibraryName;
+
     private final ConnectionProvider connectionProvider;
 
     @Nullable
@@ -122,7 +125,7 @@ public final class MssqlConnectionConfiguration {
 
     private final String username;
 
-    private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, ConnectionProvider connectionProvider,
+    private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable String clientLibraryName, @Nullable UUID connectionId, ConnectionProvider connectionProvider,
                                          Duration connectTimeout, @Nullable String database, String host, String hostNameInCertificate,
                                          @Nullable Duration lockWaitTimeout, CharSequence password, Predicate<String> preferCursoredExecution,
                                          int port, boolean sendStringParametersAsUnicode, boolean ssl,
@@ -132,6 +135,7 @@ public final class MssqlConnectionConfiguration {
                                          @Nullable String trustStoreType, @Nullable char[] trustStorePassword, String username) {
 
         this.applicationName = applicationName;
+        this.clientLibraryName = clientLibraryName;
         this.connectionId = connectionId;
         this.connectionProvider = connectionProvider;
         this.connectTimeout = Assert.requireNonNull(connectTimeout, "connect timeout must not be null");
@@ -187,7 +191,7 @@ public final class MssqlConnectionConfiguration {
             }
         }
 
-        return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectionProvider, this.connectTimeout, this.database, redirectServerName, hostNameInCertificate,
+        return new MssqlConnectionConfiguration(this.applicationName, this.clientLibraryName, this.connectionId, this.connectionProvider, this.connectTimeout, this.database, redirectServerName, hostNameInCertificate,
             this.lockWaitTimeout,
             this.password,
             this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer,
@@ -210,6 +214,7 @@ public final class MssqlConnectionConfiguration {
         final StringBuffer sb = new StringBuffer();
         sb.append(getClass().getSimpleName());
         sb.append(" [applicationName=\"").append(this.applicationName).append('\"');
+        sb.append(", clientLibraryName=\"").append(this.clientLibraryName).append('\"');
         sb.append(", connectionId=").append(this.connectionId);
         sb.append(", connectTimeout=\"").append(this.connectTimeout).append('\"');
         sb.append(", database=\"").append(this.database).append('\"');
@@ -237,6 +242,11 @@ public final class MssqlConnectionConfiguration {
     @Nullable
     String getApplicationName() {
         return this.applicationName;
+    }
+
+    @Nullable
+    String getClientLibraryName() {
+        return this.clientLibraryName;
     }
 
     @Nullable
@@ -298,7 +308,7 @@ public final class MssqlConnectionConfiguration {
     }
 
     LoginConfiguration getLoginConfiguration() {
-        return new LoginConfiguration(getApplicationName(), this.connectionId, getDatabase().orElse(""), lookupHostName(), getPassword(), getHost(), useSsl(), getUsername()
+        return new LoginConfiguration(getApplicationName(), getClientLibraryName(), this.connectionId, getDatabase().orElse(""), lookupHostName(), getPassword(), getHost(), useSsl(), getUsername()
         );
     }
 
@@ -349,6 +359,9 @@ public final class MssqlConnectionConfiguration {
 
         @Nullable
         private String applicationName;
+
+        @Nullable
+        private String clientLibraryName;
 
         private ConnectionProvider connectionProvider = ConnectionProvider.newConnection();
 
@@ -409,6 +422,19 @@ public final class MssqlConnectionConfiguration {
          */
         public Builder applicationName(String applicationName) {
             this.applicationName = Assert.requireNonNull(applicationName, "applicationName must not be null");
+            return this;
+        }
+
+        /**
+         * Configure the client library name (TDS {@code LOGIN7} interface library name) that is reported to the server. Defaults to the driver name and version.
+         *
+         * @param clientLibraryName the client library name
+         * @return this {@link Builder}
+         * @throws IllegalArgumentException if {@code clientLibraryName} is {@code null}
+         * @since 1.1
+         */
+        public Builder clientLibraryName(String clientLibraryName) {
+            this.clientLibraryName = Assert.requireNonNull(clientLibraryName, "clientLibraryName must not be null");
             return this;
         }
 
@@ -737,7 +763,7 @@ public final class MssqlConnectionConfiguration {
                 this.hostNameInCertificate = this.host;
             }
 
-            return new MssqlConnectionConfiguration(this.applicationName, this.connectionId,
+            return new MssqlConnectionConfiguration(this.applicationName, this.clientLibraryName, this.connectionId,
                 this.connectionProvider, this.connectTimeout, this.database, this.host, this.hostNameInCertificate,
                 this.lockWaitTimeout, this.password, this.preferCursoredExecution, this.port,
                 this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer,

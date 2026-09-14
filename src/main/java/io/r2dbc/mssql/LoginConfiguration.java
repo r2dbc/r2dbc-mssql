@@ -34,6 +34,9 @@ final class LoginConfiguration {
     private final String applicationName;
 
     @Nullable
+    private final String clientLibraryName;
+
+    @Nullable
     private final UUID connectionId;
 
     private final String database;
@@ -48,13 +51,15 @@ final class LoginConfiguration {
 
     private final String username;
 
-    LoginConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, String database, String hostname, CharSequence password, String serverName, boolean useSsl, String username) {
+    LoginConfiguration(@Nullable String applicationName, @Nullable String clientLibraryName, @Nullable UUID connectionId, String database, String hostname, CharSequence password,
+                       String serverName, boolean useSsl, String username) {
 
         this.username = Assert.requireNonNull(username, "Username must not be null");
         this.password = Assert.requireNonNull(password, "Password must not be null");
         this.database = Assert.requireNonNull(database, "Database must not be null");
         this.hostname = Assert.requireNonNull(hostname, "Hostname must not be null");
         this.applicationName = applicationName;
+        this.clientLibraryName = clientLibraryName;
         this.serverName = Assert.requireNonNull(serverName, "Server name must not be null");
         this.connectionId = connectionId;
         this.useSsl = useSsl;
@@ -76,6 +81,10 @@ final class LoginConfiguration {
 
         if (StringUtils.hasText(this.applicationName)) {
             builder.applicationName(this.applicationName);
+        }
+
+        if (StringUtils.hasText(this.clientLibraryName)) {
+            builder.clientLibraryName(this.clientLibraryName);
         }
         return builder;
     }
