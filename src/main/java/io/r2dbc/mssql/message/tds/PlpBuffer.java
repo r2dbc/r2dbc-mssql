@@ -17,11 +17,13 @@
 package io.r2dbc.mssql.message.tds;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
 import io.r2dbc.mssql.message.type.Length;
 import io.r2dbc.mssql.message.type.PlpLength;
 import io.r2dbc.mssql.message.type.TypeInformation;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -191,24 +193,34 @@ public final class PlpBuffer {
     }
 
     /**
-     * De-chunk the PLP payload into a composite of retained chunk slices, stopping at the zero-length terminator
-     * or buffer exhaustion.
+     * De-chunk the PLP payload.
      */
     private ByteBuf aggregatePayload() {
 
-        CompositeByteBuf result = this.buffer.alloc().compositeBuffer();
+        List<ByteBuf> parts = new ArrayList<>();
 
-        while (this.buffer.isReadable()) {
-
-            Length chunkLength = Length.decode(this.buffer, this.type);
-
-            if (chunkLength.isEmpty()) {
-                break;
+        try {
+            while (this.buffer.isReadable()) {
+                Length chunkLength = Length.decode(this.buffer, this.type);
+                if (chunkLength.isEmpty()) {
+                    break;
+                }
+                parts.add(this.buffer.readRetainedSlice(chunkLength.getLength()));
             }
-
-            result.addComponent(true, this.buffer.readRetainedSlice(chunkLength.getLength()));
+        } catch (RuntimeException e) {
+            parts.forEach(ByteBuf::release);
+            throw e;
         }
-        return result;
+
+        if (parts.isEmpty()) {
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        if (parts.size() == 1) {
+            return parts.get(0);
+        }
+
+        return this.buffer.alloc().compositeBuffer(parts.size()).addComponents(true, parts);
     }
 
 }
