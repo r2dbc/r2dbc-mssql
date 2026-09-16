@@ -32,6 +32,7 @@ import reactor.util.annotation.Nullable;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -106,6 +107,70 @@ class MssqlConnectionFactoryUnitTests {
 
         assertThat(initial.isClosed()).isTrue();
         assertThat(redirect.isClosed()).isFalse();
+    }
+
+    @Test
+    void shouldUseIntegratedAuthenticationProvider() {
+
+        Prelogin preloginResponse = new Prelogin(Arrays.asList(
+            new Prelogin.Version(14, 0),
+            new Prelogin.Encryption(Prelogin.Encryption.ENCRYPT_NOT_SUP),
+            Prelogin.Terminator.INSTANCE));
+
+        ColumnMetadataToken columns = ColumnMetadataToken.create(COLUMNS);
+        RowToken rowToken = RowTokenFactory.create(columns, buffer -> {
+            Encode.uString(buffer, "Edition", ServerCharset.UNICODE.charset());
+            Encode.uString(buffer, "1.2.3", ServerCharset.CP1252.charset());
+        });
+
+        TestClient client = TestClient.builder()
+            .window()
+            .assertNextRequestWith(actual -> assertThat(actual).isInstanceOf(Prelogin.class))
+            .thenRespond(preloginResponse)
+            .assertNextRequestWith(actual -> assertThat(actual).isInstanceOf(Login7.class))
+            .thenRespond(DoneToken.create(0))
+            .done()
+            .assertNextRequestWith(actual -> assertThat(actual).isInstanceOf(SqlBatch.class))
+            .thenRespond(columns, rowToken, DoneToken.create(1))
+            .build();
+
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+            .host("sql.example.com")
+            .port(1444)
+            .integratedSecurity()
+            .build();
+
+        AtomicBoolean authenticationCreated = new AtomicBoolean();
+        AtomicBoolean authenticationClosed = new AtomicBoolean();
+
+        MssqlConnectionFactory connectionFactory = new MssqlConnectionFactory(config -> Mono.just(client), config -> {
+
+            assertThat(config.getServicePrincipalName()).isEqualTo("MSSQLSvc/sql.example.com:1444");
+            authenticationCreated.set(true);
+
+            return new IntegratedAuthentication() {
+
+                @Override
+                public Mono<byte[]> initialToken() {
+                    return Mono.just(new byte[]{0x60, 0x01, 0x02});
+                }
+
+                @Override
+                public Mono<byte[]> nextToken(byte[] serverToken) {
+                    return Mono.error(new AssertionError("Unexpected SSPI challenge"));
+                }
+
+                @Override
+                public Mono<Void> close() {
+                    return Mono.fromRunnable(() -> authenticationClosed.set(true)).then();
+                }
+            };
+        }, configuration);
+
+        connectionFactory.create().as(StepVerifier::create).expectNextCount(1).verifyComplete();
+
+        assertThat(authenticationCreated).isTrue();
+        assertThat(authenticationClosed).isTrue();
     }
 
     @Test

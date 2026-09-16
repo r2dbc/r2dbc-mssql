@@ -115,6 +115,10 @@ public final class Tabular implements Message {
                 return LoginAckToken.decode(buffer);
             }
 
+            if (type == SspiToken.TYPE) {
+                return SspiToken.canDecode(buffer) ? SspiToken.decode(buffer) : DecodeFinished.UNABLE_TO_DECODE;
+            }
+
             if (type == ColumnMetadataToken.TYPE) {
 
                 if (!ColumnMetadataToken.canDecode(buffer, encryptionSupported)) {

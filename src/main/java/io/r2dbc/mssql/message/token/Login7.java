@@ -47,6 +47,8 @@ public final class Login7 implements TokenStream, ClientMessage {
 
     private static final short TDS_LOGIN_REQUEST_BASE_LEN = 94;
 
+    private static final int USHORT_MAX = 0xFFFF;
+
     private static final HeaderOptions header = HeaderOptions.create(Type.TDS7_LOGIN, Status.empty());
 
     private final int estimatedPacketLength;
@@ -95,11 +97,13 @@ public final class Login7 implements TokenStream, ClientMessage {
 
     private final byte[] clientId;
 
+    private final byte[] sspiBuffer;
+
     private final ConditionalProtocolSegment passwordChange;
 
     private Login7(TDSVersion tdsVersion, int packetSize, byte[] clientProgVer, int clientPid, int connectionId,
                    OptionFlags1 optionFlags1, OptionFlags2 optionFlags2, TypeFlags typeFlags, OptionFlags3 optionFlags3,
-                   Collection<LoginRequestToken> tokens, byte[] clientId) {
+                   Collection<LoginRequestToken> tokens, byte[] clientId, byte[] sspiBuffer) {
 
         this.tdsVersion = tdsVersion;
         this.packetSize = packetSize;
@@ -113,6 +117,12 @@ public final class Login7 implements TokenStream, ClientMessage {
         this.tokens = tokens;
         this.clientId = clientId;
 
+        Assert.requireNonNull(sspiBuffer, "SSPI buffer must not be null");
+        Assert.isTrue(sspiBuffer.length <= USHORT_MAX || tdsVersion.isGreateOrEqualsTo(TDSVersion.VER_YUKON),
+            "SSPI buffers larger than 65535 bytes require TDS 7.2 or later");
+
+        this.sspiBuffer = Arrays.copyOf(sspiBuffer, sspiBuffer.length);
+
         int baseLength = TDS_LOGIN_REQUEST_BASE_LEN;
 
         EnumSet<TokenType> lengthRelevant = EnumSet.of(TokenType.Hostname, TokenType.AppName, TokenType.Servername,
@@ -125,6 +135,7 @@ public final class Login7 implements TokenStream, ClientMessage {
         }
 
         baseLength += getToken(TokenType.Password).getEncrypted().length;
+        baseLength += this.sspiBuffer.length;
 
         ConditionalProtocolSegment passwordChange = Conditionals.DISABLED;
 
@@ -217,16 +228,21 @@ public final class Login7 implements TokenStream, ClientMessage {
 
         buffer.writeBytes(this.clientId);
 
-        // SSPI/Integrated security disabled.
-        buffer.writeShort(0);
-        buffer.writeShort(0);
+        if (this.sspiBuffer.length > 0) {
+            buffer.writeShortLE(TDS_LOGIN_REQUEST_BASE_LEN + dataLen);
+            buffer.writeShortLE(Math.min(this.sspiBuffer.length, USHORT_MAX));
+            dataLen += this.sspiBuffer.length;
+        } else {
+            buffer.writeShort(0);
+            buffer.writeShort(0);
+        }
 
         // Database to attach during connection process
         buffer.writeShort(0);
         buffer.writeShort(0);
 
-        // TDS 7.2: Password change
-        this.passwordChange.encode(buffer);
+        // TDS 7.2: Password change and cbSSPILong
+        this.passwordChange.encode(buffer, this.sspiBuffer.length);
 
         buffer.writeBytes(hostname.getValue());
         buffer.writeBytes(username.getValue());
@@ -239,6 +255,7 @@ public final class Login7 implements TokenStream, ClientMessage {
 
         buffer.writeBytes(intName.getValue());
         buffer.writeBytes(database.getValue());
+        buffer.writeBytes(this.sspiBuffer);
 
         // AE
         buffer.writeByte(4);
@@ -330,6 +347,9 @@ public final class Login7 implements TokenStream, ClientMessage {
 
         @Nullable
         private CharSequence password;
+
+        @Nullable
+        private byte[] sspiBuffer;
 
         @Nullable
         private CharSequence applicationName;
@@ -463,6 +483,23 @@ public final class Login7 implements TokenStream, ClientMessage {
         }
 
         /**
+         * Configure integrated security using the initial SSPI/SPNEGO token.
+         * Username and password fields are omitted from LOGIN7 when integrated security is configured.
+         *
+         * @param sspiBuffer the initial SSPI/SPNEGO token.
+         * @return {@code this} {@link Builder}.
+         * @throws IllegalArgumentException when {@code sspiBuffer} is {@code null} or empty.
+         */
+        public Builder integratedSecurity(byte[] sspiBuffer) {
+
+            Assert.requireNonNull(sspiBuffer, "SSPI buffer must not be null");
+            Assert.isTrue(sspiBuffer.length > 0, "SSPI buffer must not be empty");
+
+            this.sspiBuffer = Arrays.copyOf(sspiBuffer, sspiBuffer.length);
+            return this;
+        }
+
+        /**
          * Configure the application name. Must not exceed 128 chars.
          *
          * @param applicationName the application name.
@@ -588,18 +625,24 @@ public final class Login7 implements TokenStream, ClientMessage {
          * Build a new {@link Login7} message.
          *
          * @return a new {@link Login7} message.
-         * @throws IllegalStateException if {@code username}, {@code password}, or {@code databaseName} is {@code null} (unconfigured).
+         * @throws IllegalStateException if {@code databaseName} is {@code null}, or if {@code username} or {@code password}
+         * is {@code null} when integrated security is not configured.
          */
         public Login7 build() {
 
-            Assert.state(this.username != null, "Username must not be null");
-            Assert.state(this.password != null, "Password must not be null");
+            boolean integratedSecurity = this.sspiBuffer != null;
+
+            if (!integratedSecurity) {
+                Assert.state(this.username != null, "Username must not be null");
+                Assert.state(this.password != null, "Password must not be null");
+            }
+
             Assert.state(this.databaseName != null, "Database must not be null");
 
             List<LoginRequestToken> requestTokens = new ArrayList<>();
             requestTokens.add(new LoginRequestToken(TokenType.Hostname, this.hostname));
-            requestTokens.add(new LoginRequestToken(TokenType.Username, this.username));
-            requestTokens.add(new LoginRequestToken(TokenType.Password, this.password));
+            requestTokens.add(new LoginRequestToken(TokenType.Username, integratedSecurity ? null : this.username));
+            requestTokens.add(new LoginRequestToken(TokenType.Password, integratedSecurity ? null : this.password));
             requestTokens.add(new LoginRequestToken(TokenType.AppName, this.applicationName));
             requestTokens.add(new LoginRequestToken(TokenType.Servername, this.serverName));
             requestTokens.add(new LoginRequestToken(TokenType.IntName, this.clientLibraryName));
@@ -612,8 +655,15 @@ public final class Login7 implements TokenStream, ClientMessage {
                     (byte) this.clientLibraryVersion.getMinor(), (byte) this.clientLibraryVersion.getMajor()};
             }
 
+            OptionFlags2 optionFlags2 = integratedSecurity
+                ? this.optionFlags2.enableIntegratedSecurity()
+                : this.optionFlags2;
+
+            byte[] sspiBuffer = integratedSecurity ? this.sspiBuffer : new byte[0];
+
             return new Login7(this.tdsVersion, this.packetSize, interfaceLibVersion, this.clientPid, this.connectionId,
-                this.optionFlags1, this.optionFlags2, this.typeFlags, this.optionFlags3, requestTokens, this.clientId);
+                this.optionFlags1, optionFlags2, this.typeFlags, this.optionFlags3, requestTokens, this.clientId,
+                sspiBuffer);
 
         }
 
@@ -1289,9 +1339,10 @@ public final class Login7 implements TokenStream, ClientMessage {
         /**
          * Encode the segment onto the {@link ByteBuf}.
          *
-         * @param buffer the target {@link ByteBuf}.
+         * @param buffer     the target {@link ByteBuf}.
+         * @param sspiLength the SSPI payload length.
          */
-        void encode(ByteBuf buffer);
+        void encode(ByteBuf buffer, int sspiLength);
 
     }
 
@@ -1312,10 +1363,10 @@ public final class Login7 implements TokenStream, ClientMessage {
             }
 
             @Override
-            public void encode(ByteBuf buffer) {
+            public void encode(ByteBuf buffer, int sspiLength) {
                 buffer.writeShort((short) 0);
                 buffer.writeShort((short) 0);
-                buffer.writeInt((short) 0);
+                buffer.writeIntLE(sspiLength > USHORT_MAX ? sspiLength : 0);
             }
         };
 
@@ -1325,7 +1376,7 @@ public final class Login7 implements TokenStream, ClientMessage {
         }
 
         @Override
-        public void encode(ByteBuf buffer) {
+        public void encode(ByteBuf buffer, int sspiLength) {
         }
     }
 
