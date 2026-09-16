@@ -35,6 +35,10 @@ public final class Length {
 
     public static final int USHORT_NULL = 65535;
 
+    /**
+     * Length value indicating that the stream length is unknown, e.g. for a PLP stream announced with {@code UNKNOWN_PLP_LEN}.
+     * The actual length is determined by reading chunks until the terminator.
+     */
     public static final int UNKNOWN_STREAM_LENGTH = -1;
 
     private static final int CACHE_ENTRIES = 1024;
@@ -117,13 +121,19 @@ public final class Length {
     }
 
     /**
-     * Create a {@link Length} from a {@link PlpLength}.
+     * Create a {@link Length} from a {@link PlpLength}. The total PLP stream length is a hint only.
+     * An {@link PlpLength#isUnknown() unknown} length or a length exceeding the {@code int} range maps to {@link #UNKNOWN_STREAM_LENGTH}.
      *
      * @param plpLength the PLP length.
-     * @return a new {@link Length} for the given {@link PlpLength}.
+     * @return the {@link Length} for the given {@link PlpLength}.
      */
     public static Length of(PlpLength plpLength) {
-        return of(Math.toIntExact(plpLength.getLength()), plpLength.isNull());
+
+        if (plpLength.isUnknown() || plpLength.getLength() > Integer.MAX_VALUE) {
+            return of(UNKNOWN_STREAM_LENGTH, plpLength.isNull());
+        }
+
+        return of((int) plpLength.getLength(), plpLength.isNull());
     }
 
     /**
@@ -365,7 +375,16 @@ public final class Length {
 
     @Override
     public String toString() {
-        return this.isNull ? "null" : String.valueOf(this.length);
+
+        if (this.isNull) {
+            return "null";
+        }
+
+        if (this.length == UNKNOWN_STREAM_LENGTH) {
+            return "unknown";
+        }
+
+        return String.valueOf(this.length);
     }
 
 }

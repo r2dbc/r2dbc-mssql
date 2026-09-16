@@ -20,10 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.r2dbc.mssql.codec.RpcParameterContext.ValueContext;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ServerCharset;
-import io.r2dbc.mssql.message.type.Collation;
-import io.r2dbc.mssql.message.type.LengthStrategy;
-import io.r2dbc.mssql.message.type.SqlServerType;
-import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.message.type.*;
 import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TestByteBufAllocator;
@@ -217,5 +214,22 @@ class StringCodecUnitTests {
         String value = StringCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), String.class);
 
         assertThat(value).isEqualTo("mytextvalue");
+    }
+
+    @Test
+    void shouldDecodeVarcharMaxWithUnknownLength() {
+
+        TypeInformation type =
+                builder().withMaxLength(50).withLengthStrategy(LengthStrategy.PARTLENTYPE).withPrecision(50).withServerType(SqlServerType.VARCHAR).withCharset(ServerCharset.CP1252.charset()).build();
+
+        ByteBuf data = TestByteBufAllocator.TEST.buffer();
+        PlpLength.unknown().encode(data);
+        Encode.asInt(data, 6);
+        data.writeCharSequence("foobar", ServerCharset.CP1252.charset());
+        Encode.asInt(data, 0);
+
+        String value = StringCodec.INSTANCE.decode(data, ColumnUtil.createColumn(type), String.class);
+
+        assertThat(value).isEqualTo("foobar");
     }
 }
