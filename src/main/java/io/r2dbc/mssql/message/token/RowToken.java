@@ -158,11 +158,28 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
 
         ByteBuf[] data = new ByteBuf[columns.length];
 
-        for (int i = 0; i < columns.length; i++) {
-            data[i] = decodeColumnData(buffer, columns[i]);
+        try {
+            for (int i = 0; i < columns.length; i++) {
+                data[i] = decodeColumnData(buffer, columns[i]);
+            }
+        } catch (RuntimeException e) {
+            releaseAll(data);
+            throw e;
         }
 
         return new RowToken(data);
+    }
+
+    /**
+     * Release the column data buffers, skipping {@code null} entries.
+     *
+     * @param data the column data.
+     */
+    static void releaseAll(ByteBuf[] data) {
+
+        for (ByteBuf datum : data) {
+            ReferenceCountUtil.release(datum);
+        }
     }
 
     /**
@@ -255,10 +272,7 @@ public class RowToken extends AbstractReferenceCounted implements DataToken {
 
     @Override
     protected void deallocate() {
-
-        for (ByteBuf datum : this.data) {
-            ReferenceCountUtil.release(datum);
-        }
+        releaseAll(this.data);
     }
 
 }

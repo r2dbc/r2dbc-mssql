@@ -113,15 +113,20 @@ public final class NbcRowToken extends RowToken {
 
         boolean[] nullMarkers = getNullBitmap(buffer, columns);
 
-        for (int i = 0; i < columns.length; i++) {
+        try {
+            for (int i = 0; i < columns.length; i++) {
 
-            Column column = columns[i];
+                Column column = columns[i];
 
-            if (nullMarkers[i]) {
-                data[i] = Unpooled.EMPTY_BUFFER;
-            } else {
-                data[i] = decodeColumnData(buffer, column);
+                if (nullMarkers[i]) {
+                    data[i] = Unpooled.EMPTY_BUFFER;
+                } else {
+                    data[i] = decodeColumnData(buffer, column);
+                }
             }
+        } catch (RuntimeException e) {
+            releaseAll(data);
+            throw e;
         }
 
         return new NbcRowToken(data, nullMarkers);
