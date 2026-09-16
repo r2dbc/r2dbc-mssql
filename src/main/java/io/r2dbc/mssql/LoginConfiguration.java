@@ -69,6 +69,10 @@ final class LoginConfiguration {
         return this.useSsl;
     }
 
+    String getServerName() {
+        return this.serverName;
+    }
+
     Login7.Builder asBuilder() {
 
         Login7.Builder builder = Login7.builder().username(this.username).password(this.password).database(this.database)
