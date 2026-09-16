@@ -31,7 +31,15 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static io.r2dbc.spi.ConnectionFactoryOptions.*;
+import static io.r2dbc.spi.ConnectionFactoryOptions.CONNECT_TIMEOUT;
+import static io.r2dbc.spi.ConnectionFactoryOptions.DATABASE;
+import static io.r2dbc.spi.ConnectionFactoryOptions.DRIVER;
+import static io.r2dbc.spi.ConnectionFactoryOptions.HOST;
+import static io.r2dbc.spi.ConnectionFactoryOptions.LOCK_WAIT_TIMEOUT;
+import static io.r2dbc.spi.ConnectionFactoryOptions.PASSWORD;
+import static io.r2dbc.spi.ConnectionFactoryOptions.PORT;
+import static io.r2dbc.spi.ConnectionFactoryOptions.SSL;
+import static io.r2dbc.spi.ConnectionFactoryOptions.USER;
 
 /**
  * An implementation of {@link ConnectionFactoryProvider} for creating {@link MssqlConnectionFactory}s.
@@ -67,6 +75,7 @@ public final class MssqlConnectionFactoryProvider implements ConnectionFactoryPr
 
     /**
      * Logical SQL Server name used for authentication.
+     * @since 1.0.7
      */
     public static final Option<String> SERVER_NAME = Option.valueOf("serverName");
 

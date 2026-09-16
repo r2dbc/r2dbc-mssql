@@ -248,9 +248,7 @@ public final class Identifier {
          * @throws IllegalArgumentException when {@code objectName} is {@code null}.
          */
         public Builder objectName(String objectName) {
-
             this.objectName = Assert.requireNonNull(objectName, "Object name must not be null");
-
             return this;
         }
 
@@ -262,9 +260,7 @@ public final class Identifier {
          * @throws IllegalArgumentException when {@code schemaName} is {@code null}.
          */
         public Builder schemaName(String schemaName) {
-
             this.schemaName = Assert.requireNonNull(schemaName, "Schema name must not be null");
-
             return this;
         }
 
@@ -276,9 +272,7 @@ public final class Identifier {
          * @throws IllegalArgumentException when {@link ByteBuf} is {@code null}.
          */
         public Builder databaseName(String databaseName) {
-
             this.databaseName = Assert.requireNonNull(databaseName, "Database name must not be null");
-
             return this;
         }
 
@@ -290,9 +284,7 @@ public final class Identifier {
          * @throws IllegalArgumentException when {@code serverName} is {@code null}.
          */
         public Builder serverName(String serverName) {
-
             this.serverName = Assert.requireNonNull(serverName, "Server name must not be null");
-
             return this;
         }
 
@@ -302,12 +294,9 @@ public final class Identifier {
          * @return the {@link Identifier}
          */
         public Identifier build() {
-
             Assert.notNull(this.objectName, "Object name must not be null");
-
             Assert.state(StringUtils.isEmpty(this.serverName) || !StringUtils.isEmpty(this.databaseName), "Server name must be either null or both, server name and database name must " +
                 "be provided");
-
             return new Identifier(this.serverName, this.databaseName, this.schemaName, this.objectName);
         }
 
