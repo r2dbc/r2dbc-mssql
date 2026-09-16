@@ -18,10 +18,7 @@ package io.r2dbc.mssql.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.r2dbc.mssql.message.type.Length;
-import io.r2dbc.mssql.message.type.LengthStrategy;
-import io.r2dbc.mssql.message.type.SqlServerType;
-import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.message.type.*;
 import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TdsEncoded;
@@ -199,5 +196,24 @@ class BlobCodecUnitTests {
             .verifyComplete();
 
         assertThat(buffer.refCnt()).isZero();
+    }
+
+    @Test
+    void shouldBeAbleToDecodePlpStreamWithUnknownLength() {
+
+        TypeInformation varbinary =
+                builder().withServerType(SqlServerType.VARBINARY).withLengthStrategy(LengthStrategy.PARTLENTYPE).build();
+
+        ByteBuf buffer = TestByteBufAllocator.TEST.buffer();
+        PlpLength.unknown().encode(buffer);
+        Length.of(8).encode(buffer, varbinary);
+        buffer.writeBytes("C1xxxxxx".getBytes());
+        Length.of(0).encode(buffer, varbinary);
+
+        Blob blob = BlobCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(varbinary), Blob.class);
+
+        StepVerifier.create(blob.stream())
+                .expectNext(ByteBuffer.wrap("C1xxxxxx".getBytes()))
+                .verifyComplete();
     }
 }

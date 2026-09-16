@@ -91,6 +91,23 @@ public class GeographyCodecUnitTests {
     }
 
     @Test
+    void shouldBeAbleToDecodePlpStreamWithUnknownLength() throws SQLServerException {
+
+        Geography geographyVal = Geography.STGeomFromText("POINT(144.9631 -37.8136)", 4326);
+        byte[] serialized = geographyVal.serialize();
+
+        ByteBuf buffer = TestByteBufAllocator.TEST.buffer();
+        PlpLength.unknown().encode(buffer);
+        Length.of(serialized.length).encode(buffer, LengthStrategy.PARTLENTYPE);
+        buffer.writeBytes(serialized);
+        Length.of(0).encode(buffer, LengthStrategy.PARTLENTYPE);
+
+        Geography geographyData = GeographyCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(GEOGRAPHY), Geography.class);
+
+        assertThat(geographyData.STAsText()).isEqualTo(geographyVal.STAsText());
+    }
+
+    @Test
     void shouldRejectMalformedGeography() {
 
         ByteBuf buffer = TdsEncoded.plpStream(GEOGRAPHY, new byte[]{0});

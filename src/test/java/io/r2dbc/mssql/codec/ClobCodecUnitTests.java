@@ -20,10 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.r2dbc.mssql.message.tds.Encode;
 import io.r2dbc.mssql.message.tds.ServerCharset;
-import io.r2dbc.mssql.message.type.Length;
-import io.r2dbc.mssql.message.type.LengthStrategy;
-import io.r2dbc.mssql.message.type.SqlServerType;
-import io.r2dbc.mssql.message.type.TypeInformation;
+import io.r2dbc.mssql.message.type.*;
 import io.r2dbc.mssql.util.EncodedAssert;
 import io.r2dbc.mssql.util.HexUtils;
 import io.r2dbc.mssql.util.TdsEncoded;
@@ -277,5 +274,24 @@ class ClobCodecUnitTests {
             .verifyComplete();
 
         assertThat(buffer.refCnt()).isZero();
+    }
+
+    @Test
+    void shouldBeAbleToDecodePlpStreamWithUnknownLength() {
+
+        TypeInformation varchar =
+                builder().withServerType(SqlServerType.VARCHAR).withLengthStrategy(LengthStrategy.PARTLENTYPE).withCharset(StandardCharsets.US_ASCII).build();
+
+        ByteBuf buffer = TestByteBufAllocator.TEST.heapBuffer();
+        PlpLength.unknown().encode(buffer);
+        Length.of(8).encode(buffer, varchar);
+        buffer.writeCharSequence("C1xxxxxx", StandardCharsets.US_ASCII);
+        Length.of(0).encode(buffer, varchar);
+
+        Clob clob = ClobCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(varchar), Clob.class);
+
+        StepVerifier.create(clob.stream())
+                .expectNext("C1xxxxxx")
+                .verifyComplete();
     }
 }

@@ -91,6 +91,23 @@ public class GeometryCodecUnitTests {
     }
 
     @Test
+    void shouldBeAbleToDecodePlpStreamWithUnknownLength() throws SQLServerException {
+
+        Geometry geometryVal = Geometry.STGeomFromText("POINT(1 2)", 0);
+        byte[] serialized = geometryVal.serialize();
+
+        ByteBuf buffer = TestByteBufAllocator.TEST.buffer();
+        PlpLength.unknown().encode(buffer);
+        Length.of(serialized.length).encode(buffer, LengthStrategy.PARTLENTYPE);
+        buffer.writeBytes(serialized);
+        Length.of(0).encode(buffer, LengthStrategy.PARTLENTYPE);
+
+        Geometry geometryData = GeometryCodec.INSTANCE.decode(buffer, ColumnUtil.createColumn(GEOMETRY), Geometry.class);
+
+        assertThat(geometryData.STAsText()).isEqualTo(geometryVal.STAsText());
+    }
+
+    @Test
     void shouldRejectMalformedGeometry() {
 
         ByteBuf buffer = TdsEncoded.plpStream(GEOMETRY, new byte[]{0});
