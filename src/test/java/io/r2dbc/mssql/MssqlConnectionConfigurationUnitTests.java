@@ -185,12 +185,35 @@ final class MssqlConnectionConfigurationUnitTests {
                 .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
                 .hasFieldOrPropertyWithValue("database", "test-database")
                 .hasFieldOrPropertyWithValue("host", "target")
-                .hasFieldOrPropertyWithValue("serverName", "target")
                 .hasFieldOrPropertyWithValue("password", "test-password")
                 .hasFieldOrPropertyWithValue("port", 1234)
                 .hasFieldOrPropertyWithValue("username", "test-username")
                 .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true)
                 .hasFieldOrPropertyWithValue("hostNameInCertificate", "test-host");
+        assertThat(target.getServerName()).isEqualTo("target");
+    }
+
+    @Test
+    void redirectRetainsServerName() {
+        MssqlConnectionConfiguration configuration = MssqlConnectionConfiguration.builder()
+            .applicationName("r2dbc")
+            .database("test-database")
+            .host("localhost")
+            .port(15433)
+            .serverName("test-host.database.windows.net")
+            .password("test-password")
+            .username("test-username")
+            .build();
+
+        MssqlConnectionConfiguration target = configuration.withRedirect(Redirect.create("worker.database.windows.net", 1234));
+
+        assertThat(target)
+            .hasFieldOrPropertyWithValue("host", "worker.database.windows.net")
+            .hasFieldOrPropertyWithValue("port", 1234)
+            .hasFieldOrPropertyWithValue("hostNameInCertificate", "test-host.database.windows.net");
+        assertThat(target.getServerName()).isEqualTo("test-host.database.windows.net");
+        assertThat(target.toClientConfiguration().getServerName()).isEqualTo("test-host.database.windows.net");
+        assertThat(target.getLoginConfiguration()).hasFieldOrPropertyWithValue("serverName", "test-host.database.windows.net");
     }
 
     @Test
@@ -209,12 +232,12 @@ final class MssqlConnectionConfigurationUnitTests {
                 .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
                 .hasFieldOrPropertyWithValue("database", "test-database")
                 .hasFieldOrPropertyWithValue("host", "target.other.domain")
-                .hasFieldOrPropertyWithValue("serverName", "target.other.domain")
                 .hasFieldOrPropertyWithValue("password", "test-password")
                 .hasFieldOrPropertyWithValue("port", 1234)
                 .hasFieldOrPropertyWithValue("username", "test-username")
                 .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true)
                 .hasFieldOrPropertyWithValue("hostNameInCertificate", "test-host.windows.net");
+        assertThat(target.getServerName()).isEqualTo("target.other.domain");
     }
 
     @Test
@@ -234,12 +257,12 @@ final class MssqlConnectionConfigurationUnitTests {
                 .hasFieldOrPropertyWithValue("applicationName", "r2dbc")
                 .hasFieldOrPropertyWithValue("database", "test-database")
                 .hasFieldOrPropertyWithValue("host", "worker.target.windows.net")
-                .hasFieldOrPropertyWithValue("serverName", "worker.target.windows.net")
                 .hasFieldOrPropertyWithValue("password", "test-password")
                 .hasFieldOrPropertyWithValue("port", 1234)
                 .hasFieldOrPropertyWithValue("username", "test-username")
                 .hasFieldOrPropertyWithValue("sendStringParametersAsUnicode", true)
                 .hasFieldOrPropertyWithValue("hostNameInCertificate", "*.target.windows.net");
+        assertThat(target.getServerName()).isEqualTo("worker.target.windows.net");
     }
 
     @Test
@@ -318,4 +341,5 @@ final class MssqlConnectionConfigurationUnitTests {
     void shouldRejectQueries(String query) {
         assertThat(MssqlConnectionConfiguration.DefaultCursorPreference.INSTANCE).rejects(query);
     }
+
 }

@@ -17,28 +17,25 @@
 package io.r2dbc.mssql;
 
 import io.r2dbc.mssql.util.IntegrationTestSupport;
-import io.r2dbc.spi.*;
+import io.r2dbc.spi.ColumnMetadata;
+import io.r2dbc.spi.ConnectionFactories;
+import io.r2dbc.spi.ConnectionFactoryOptions;
+import io.r2dbc.spi.IsolationLevel;
+import io.r2dbc.spi.R2dbcNonTransientException;
+import io.r2dbc.spi.R2dbcPermissionDeniedException;
+import io.r2dbc.spi.R2dbcTimeoutException;
+import io.r2dbc.spi.R2dbcTransientException;
+import io.r2dbc.spi.Result;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.ConnectException;
-import java.nio.file.Path;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -466,16 +463,6 @@ class MssqlConnectionIntegrationTests extends IntegrationTestSupport {
                 .execute().flatMap(MssqlResult::getRowsUpdated).then())
             .as(StepVerifier::create)
             .verifyComplete();
-    }
-
-    private String writeKeyStoreToTempFile(Path tempDir, KeyStore keyStore, String password) {
-        final File file = new File(tempDir.toFile(), UUID.randomUUID() + ".jks");
-        try (OutputStream outputStream = new FileOutputStream(file)) {
-            keyStore.store(outputStream, password.toCharArray());
-            return file.getAbsolutePath();
-        } catch (final IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException e) {
-            throw new RuntimeException("Failed to write key store to file", e);
-        }
     }
 
     private void insertRecord(MssqlConnection connection, int id) {

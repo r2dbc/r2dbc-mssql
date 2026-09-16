@@ -85,8 +85,10 @@ public final class MssqlConnectionConfiguration {
 
     private final String host;
 
+    @Nullable
     private final String serverName;
 
+    @Nullable
     private final String hostNameInCertificate;
 
     private final CharSequence password;
@@ -125,7 +127,7 @@ public final class MssqlConnectionConfiguration {
     private final String username;
 
     private MssqlConnectionConfiguration(@Nullable String applicationName, @Nullable UUID connectionId, ConnectionProvider connectionProvider,
-                                         Duration connectTimeout, @Nullable String database, String host, String serverName, String hostNameInCertificate,
+                                         Duration connectTimeout, @Nullable String database, String host, @Nullable String serverName, @Nullable String hostNameInCertificate,
                                          @Nullable Duration lockWaitTimeout, CharSequence password, Predicate<String> preferCursoredExecution,
                                          int port, boolean sendStringParametersAsUnicode, boolean ssl,
                                          Function<SslContextBuilder, SslContextBuilder> sslContextBuilderCustomizer,
@@ -139,8 +141,8 @@ public final class MssqlConnectionConfiguration {
         this.connectTimeout = Assert.requireNonNull(connectTimeout, "connect timeout must not be null");
         this.database = database;
         this.host = Assert.requireNonNull(host, "host must not be null");
-        this.serverName = Assert.requireNonNull(serverName, "serverName must not be null");
-        this.hostNameInCertificate = Assert.requireNonNull(hostNameInCertificate, "hostNameInCertificate must not be null");
+        this.serverName = serverName;
+        this.hostNameInCertificate = hostNameInCertificate;
         this.lockWaitTimeout = lockWaitTimeout;
         this.password = Assert.requireNonNull(password, "password must not be null");
         this.preferCursoredExecution = Assert.requireNonNull(preferCursoredExecution, "preferCursoredExecution must not be null");
@@ -168,7 +170,7 @@ public final class MssqlConnectionConfiguration {
     }
 
     /**
-     * Create a new configuration instance targeting the redirect.
+     * Create a new configuration instance targeting the redirect. Host and port follow the redirect target while a configured logical {@link #getServerName() server name} is retained.
      *
      * @param redirect the redirect
      * @return a new configuration instance
@@ -177,10 +179,10 @@ public final class MssqlConnectionConfiguration {
     MssqlConnectionConfiguration withRedirect(Redirect redirect) {
 
         String redirectServerName = redirect.getServerName();
-        String hostNameInCertificate = this.hostNameInCertificate;
+        String hostNameInCertificate = getHostNameInCertificate();
 
         // Same behavior as mssql-jdbc
-        if (this.hostNameInCertificate.startsWith("*") && redirectServerName.indexOf('.') != -1) {
+        if (hostNameInCertificate.startsWith("*") && redirectServerName.indexOf('.') != -1) {
 
             // Check if redirectServerName and hostNameInCertificate are from same domain.
             boolean trustedDomain = redirectServerName.endsWith(hostNameInCertificate.substring(1));
@@ -190,16 +192,16 @@ public final class MssqlConnectionConfiguration {
             }
         }
 
-        return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectionProvider, this.connectTimeout, this.database, redirectServerName, redirectServerName, hostNameInCertificate,
-            this.lockWaitTimeout,
-            this.password,
-            this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl, this.sslContextBuilderCustomizer,
-            this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustServerCertificate, this.trustStore, this.trustStoreType, this.trustStorePassword, this.username
+        return new MssqlConnectionConfiguration(this.applicationName, this.connectionId, this.connectionProvider, this.connectTimeout, this.database, redirectServerName, this.serverName,
+            hostNameInCertificate, this.lockWaitTimeout, this.password, this.preferCursoredExecution, redirect.getPort(), this.sendStringParametersAsUnicode, this.ssl,
+            this.sslContextBuilderCustomizer, this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustServerCertificate, this.trustStore, this.trustStoreType,
+            this.trustStorePassword, this.username
         );
     }
 
     public ClientConfiguration toClientConfiguration() {
-        return new DefaultClientConfiguration(this.connectionProvider, this.connectTimeout, this.host, this.serverName, this.hostNameInCertificate, this.port, this.ssl, this.sslContextBuilderCustomizer,
+        return new DefaultClientConfiguration(this.connectionProvider, this.connectTimeout, this.host, getServerName(), getHostNameInCertificate(), this.port, this.ssl,
+            this.sslContextBuilderCustomizer,
             this.sslTunnelSslContextBuilderCustomizer, this.tcpKeepAlive, this.tcpNoDelay, this.trustServerCertificate, this.trustStore, this.trustStoreType, this.trustStorePassword
         );
     }
@@ -260,12 +262,18 @@ public final class MssqlConnectionConfiguration {
         return this.host;
     }
 
+    /**
+     * @return the logical server name if configured, otherwise the {@link #getHost() host}.
+     */
     String getServerName() {
-        return this.serverName;
+        return this.serverName != null ? this.serverName : this.host;
     }
 
+    /**
+     * @return the expected hostname in the SSL certificate if configured, otherwise the {@link #getServerName() server name}.
+     */
     String getHostNameInCertificate() {
-        return this.hostNameInCertificate;
+        return this.hostNameInCertificate != null ? this.hostNameInCertificate : getServerName();
     }
 
     @Nullable
@@ -368,8 +376,10 @@ public final class MssqlConnectionConfiguration {
 
         private String host;
 
+        @Nullable
         private String serverName;
 
+        @Nullable
         private String hostNameInCertificate;
 
         @Nullable
@@ -524,11 +534,13 @@ public final class MssqlConnectionConfiguration {
         }
 
         /**
-         * Configure the logical SQL Server name.
+         * Configure the logical SQL Server name used for login and TLS SNI. Useful when the physical {@link #host(String) host} differs from the SQL Server name, for example when
+         * connecting through a tunnel or proxy. Defaults to {@link #host(String)} if left unconfigured. A configured server name is retained across redirects.
          *
          * @param serverName the logical server name
          * @return this {@link Builder}
          * @throws IllegalArgumentException if {@code serverName} is {@code null}
+         * @since 1.0.7
          */
         public Builder serverName(String serverName) {
             this.serverName = Assert.requireNonNull(serverName, "serverName must not be null");
@@ -556,10 +568,7 @@ public final class MssqlConnectionConfiguration {
          * @since 0.9
          */
         public Builder lockWaitTimeout(Duration timeout) {
-
-            Assert.requireNonNull(timeout, "lock wait timeout must not be null");
-
-            this.lockWaitTimeout = timeout;
+            this.lockWaitTimeout = Assert.requireNonNull(timeout, "lock wait timeout must not be null");
             return this;
         }
 
@@ -755,15 +764,6 @@ public final class MssqlConnectionConfiguration {
          * @return a configured {@link MssqlConnectionConfiguration}.
          */
         public MssqlConnectionConfiguration build() {
-
-            if (this.serverName == null) {
-                this.serverName = this.host;
-            }
-
-            if (this.hostNameInCertificate == null) {
-                this.hostNameInCertificate = this.serverName;
-            }
-
             return new MssqlConnectionConfiguration(this.applicationName, this.connectionId,
                 this.connectionProvider, this.connectTimeout, this.database, this.host, this.serverName, this.hostNameInCertificate,
                 this.lockWaitTimeout, this.password, this.preferCursoredExecution, this.port,
