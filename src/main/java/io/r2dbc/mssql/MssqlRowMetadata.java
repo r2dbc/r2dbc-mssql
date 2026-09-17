@@ -66,6 +66,26 @@ final class MssqlRowMetadata extends NamedCollectionSupport<Column> implements R
         return new MssqlRowMetadata(codecs, columnMetadata.getColumns(), columnMetadata.toMap());
     }
 
+    /**
+     * Creates a new {@link MssqlColumnMetadata} for a cursored result. The verified row status column of the {@link CursorColumnLayout} is not exposed.
+     *
+     * @param codecs the codec registry.
+     * @param layout the cursor column layout.
+     */
+    static MssqlRowMetadata create(Codecs codecs, CursorColumnLayout layout) {
+
+        Assert.notNull(layout, "CursorColumnLayout must not be null");
+
+        Column[] columns = layout.getMetadata().getColumns();
+        int rowStatusIndex = layout.getRowStatusIndex();
+
+        Column[] visible = new Column[columns.length - 1];
+        System.arraycopy(columns, 0, visible, 0, rowStatusIndex);
+        System.arraycopy(columns, rowStatusIndex + 1, visible, rowStatusIndex, columns.length - rowStatusIndex - 1);
+
+        return new MssqlRowMetadata(codecs, visible, toMap(visible, Column::getName));
+    }
+
     @Override
     public MssqlColumnMetadata getColumnMetadata(int index) {
         if (this.metadataCache == null) {

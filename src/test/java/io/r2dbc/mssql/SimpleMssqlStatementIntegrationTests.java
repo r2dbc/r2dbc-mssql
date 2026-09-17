@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -75,6 +76,79 @@ class SimpleMssqlStatementIntegrationTests extends IntegrationTestSupport {
         connection.createStatement("SELECT 1").execute().flatMap(it -> it.map(row -> row.get(0))).as(StepVerifier::create).expectNext(1).expectComplete().verify(Duration.ofSeconds(5));
 
         connection.createStatement("DROP TABLE cursor_error").execute().flatMap(Result::getRowsUpdated).as(StepVerifier::create).verifyComplete();
+    }
+
+    @Test
+    void shouldNotEmitRowsDeletedAfterOpeningKeysetCursor() {
+
+        connection.createStatement("DROP TABLE IF EXISTS cursor_rowstat_deleted").execute().flatMap(Result::getRowsUpdated).as(StepVerifier::create).verifyComplete();
+        connection.createStatement("CREATE TABLE cursor_rowstat_deleted (id int PRIMARY KEY, name varchar(20) NOT NULL)").execute().flatMap(Result::getRowsUpdated).as(StepVerifier::create).verifyComplete();
+        connection.createStatement("INSERT INTO cursor_rowstat_deleted SELECT TOP 100 n, CONCAT('name-', 1000 - n) FROM (SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n FROM sys.all_columns) numbers")
+            .execute().flatMap(Result::getRowsUpdated).as(StepVerifier::create).expectNext(100L).verifyComplete();
+
+        MssqlConnection other = connectionFactory.create().block();
+        AtomicBoolean deleted = new AtomicBoolean();
+
+        try {
+
+            // ORDER BY a non-indexed column turns the cursor into a keyset cursor. id = 1 is fetched last, after it was deleted by the other connection.
+            connection.createStatement("SELECT id, name FROM cursor_rowstat_deleted ORDER BY name").fetchSize(1).execute()
+                .flatMap(it -> it.map((row, metadata) -> {
+
+                    if (deleted.compareAndSet(false, true)) {
+                        other.createStatement("DELETE FROM cursor_rowstat_deleted WHERE id = 1").execute().flatMap(Result::getRowsUpdated).subscribe();
+                    }
+
+                    assertThat(metadata.getColumnMetadatas()).hasSize(2);
+                    return row.get("name", String.class);
+                }))
+                .collectList()
+                .as(StepVerifier::create)
+                .assertNext(names -> assertThat(names).hasSize(99).doesNotContainNull().doesNotContain("name-999"))
+                .verifyComplete();
+        } finally {
+            other.close().block();
+        }
+
+        connection.createStatement("DROP TABLE cursor_rowstat_deleted").execute().flatMap(Result::getRowsUpdated).as(StepVerifier::create).verifyComplete();
+    }
+
+    @Test
+    void shouldRetainUserColumnNamedRowstat() {
+
+        for (int fetchSize : new int[]{0, 10}) {
+
+            connection.createStatement("SELECT CAST(2 AS int) AS ROWSTAT").fetchSize(fetchSize).execute()
+                .flatMap(it -> it.map((row, metadata) -> metadata.getColumnMetadata(0).getName() + "=" + row.get("ROWSTAT", Integer.class)))
+                .as(StepVerifier::create)
+                .expectNext("ROWSTAT=2")
+                .verifyComplete();
+        }
+
+        connection.createStatement("DROP TABLE IF EXISTS cursor_rowstat_user").execute().flatMap(Result::getRowsUpdated).as(StepVerifier::create).verifyComplete();
+        connection.createStatement("CREATE TABLE cursor_rowstat_user (id int PRIMARY KEY, ROWSTAT int)").execute().flatMap(Result::getRowsUpdated).as(StepVerifier::create).verifyComplete();
+        connection.createStatement("INSERT INTO cursor_rowstat_user VALUES (1, 2), (2, 1)").execute().flatMap(Result::getRowsUpdated).as(StepVerifier::create).expectNext(2L).verifyComplete();
+
+        for (int fetchSize : new int[]{0, 1}) {
+
+            connection.createStatement("SELECT id, ROWSTAT FROM cursor_rowstat_user ORDER BY ROWSTAT DESC").fetchSize(fetchSize).execute()
+                .flatMap(it -> it.map((row, metadata) -> metadata.getColumnMetadatas().size() + ":" + row.get("id", Integer.class) + "=" + row.get("ROWSTAT", Integer.class)))
+                .as(StepVerifier::create)
+                .expectNext("2:1=2", "2:2=1")
+                .verifyComplete();
+        }
+
+        // sp_cursorprepexec and sp_cursorexecute (cached prepared statement)
+        for (int i = 0; i < 2; i++) {
+
+            connection.createStatement("SELECT id, ROWSTAT FROM cursor_rowstat_user WHERE id > @id ORDER BY ROWSTAT DESC").bind("@id", 0).fetchSize(1).execute()
+                .flatMap(it -> it.map((row, metadata) -> metadata.getColumnMetadatas().size() + ":" + row.get("id", Integer.class) + "=" + row.get("ROWSTAT", Integer.class)))
+                .as(StepVerifier::create)
+                .expectNext("2:1=2", "2:2=1")
+                .verifyComplete();
+        }
+
+        connection.createStatement("DROP TABLE cursor_rowstat_user").execute().flatMap(Result::getRowsUpdated).as(StepVerifier::create).verifyComplete();
     }
 
 }

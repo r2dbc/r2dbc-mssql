@@ -206,6 +206,11 @@ final class DefaultMssqlResult implements MssqlResult {
                     return;
                 }
 
+                if (message.getClass() == CursorColumnLayout.class) {
+                    this.rowMetadata = MssqlRowMetadata.create(this.codecs, (CursorColumnLayout) message);
+                    return;
+                }
+
                 if (rows && (message.getClass() == RowToken.class || message.getClass() == NbcRowToken.class)) {
 
                     MssqlRowMetadata rowMetadata = this.rowMetadata;
