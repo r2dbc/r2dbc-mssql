@@ -1,6 +1,14 @@
 R2DBC MSSQL Changelog
 =============================
 
+1.0.7.RELEASE
+------------------
+* Azure SNI connection through tunnel #312
+* Add logical SQL Server name support #355
+* `IndexOutOfBoundsException` on `PlpBuffer` read #350
+* Advance past PLP columns when checking row decodability #354
+* `Length.of(…)` fails on unknown PLP lengths and integer overflows #358
+
 1.0.6.RELEASE
 ------------------
 * Introduce `Conversation` #345
