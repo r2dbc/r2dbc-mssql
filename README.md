@@ -1,4 +1,5 @@
-# Reactive Relational Database Connectivity Microsoft SQL Server Implementation [![Java CI with Maven](https://github.com/r2dbc/r2dbc-mssql/actions/workflows/ci.yml/badge.svg)](https://github.com/r2dbc/r2dbc-mssql/actions/workflows/ci.yml) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.r2dbc/r2dbc-mssql/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.r2dbc/r2dbc-mssql)
+# Reactive Relational Database Connectivity Microsoft SQL Server Implementation [![Java CI with Maven](https://github.com/r2dbc/r2dbc-mssql/actions/workflows/ci.yml/badge.svg)](https://github.com/r2dbc/r2dbc-mssql/actions/workflows/ci.yml) [![Maven Central](https://img.shields.io/maven-central/v/io.r2dbc/r2dbc-mssql)](https://central.sonatype.com/artifact/io.r2dbc/r2dbc-mssql)
+
  
 
 This project contains the [Microsoft SQL Server][m] implementation of the [R2DBC SPI][r]. This implementation is not intended to be used directly, but rather to be used as the backing implementation for a humane client library to delegate to
