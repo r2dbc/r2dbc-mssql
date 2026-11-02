@@ -20,6 +20,7 @@ import io.r2dbc.mssql.client.Client;
 import io.r2dbc.mssql.client.ConnectionContext;
 import io.r2dbc.mssql.codec.Codecs;
 import io.r2dbc.mssql.codec.Encoded;
+import io.r2dbc.mssql.codec.Json;
 import io.r2dbc.mssql.codec.RpcDirection;
 import io.r2dbc.mssql.codec.RpcParameterContext;
 import io.r2dbc.mssql.message.Message;
@@ -330,7 +331,7 @@ final class ParametrizedMssqlStatement extends MssqlStatementSupport implements 
     }
 
     private static boolean isTextual(@Nullable Object value) {
-        return value instanceof CharSequence || value instanceof Clob;
+        return value instanceof CharSequence || value instanceof Clob || value instanceof Json;
     }
 
     /**

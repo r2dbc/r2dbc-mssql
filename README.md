@@ -217,6 +217,7 @@ This reference table shows the type mapping between [Microsoft SQL Server][m] an
 | [`nvarcharmax`][sql-n(var)char-ref]      | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]                                                                                                                                                                   
 | [`text`][sql-(n)text-ref]                | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]                                                                                                                                                                   
 | [`ntext`][sql-(n)text-ref]               | [`String`][java-string-ref], [`Clob`][r2dbc-clob-ref]                                                                                                                                                                   
+| [`json`][sql-json-ref]                   | [**`String`**][java-string-ref], `io.r2dbc.mssql.codec.Json`                                                                                                                                                            |
 | [`image`][sql-(n)text-ref]               | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], [`Blob`][r2dbc-blob-ref]                                                                                                                            
 | [`binary`][sql-binary-ref]               | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], [`Blob`][r2dbc-blob-ref]                                                                                                                            
 | [`varbinary`][sql-binary-ref]            | [**`ByteBuffer`**][java-ByteBuffer-ref], [`byte[]`][java-byte-ref], [`Blob`][r2dbc-blob-ref]                                                                                                                            
@@ -231,6 +232,8 @@ Types in **bold** indicate the native (default) Java type.
 
 **Note:** BLOB (`image`, `binary`, `varbinary` and `varbinary(max)`) and CLOB (`text`, `ntext`, `varchar(max)` and `nvarchar(max)`)
 values are fully materialized in the client before decoding. Make sure to account for proper memory sizing.
+
+**Note:** The native `json` type (SQL Server 2025) is reported by the server as `nvarchar(max)` and can be read as `String` or as `Json` (`io.r2dbc.mssql.codec.Json`). `Json` values can also be bound as parameters. `Json` is selected by the requested Java type; `String` remains the default Java type for these columns.
 
 
 [sql-bit-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/bit-transact-sql?view=sql-server-2017
@@ -257,6 +260,8 @@ values are fully materialized in the client before decoding. Make sure to accoun
 [sql-sql-variant-ref]: https://docs.microsoft.com/en-us/sql/t-sql/data-types/sql-variant-transact-sql?view=sql-server-2017
 
 [sql-xml-ref]: https://docs.microsoft.com/en-us/sql/t-sql/xml/xml-transact-sql?view=sql-server-2017
+
+[sql-json-ref]: https://learn.microsoft.com/en-us/sql/t-sql/data-types/json-data-type
 
 [sql-udt-ref]: https://docs.microsoft.com/en-us/sql/relational-databases/clr-integration-database-objects-user-defined-types/clr-user-defined-types?view=sql-server-2017
 

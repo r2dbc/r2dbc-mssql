@@ -48,7 +48,7 @@ public final class DefaultCodecs implements Codecs {
      * Creates a new instance of {@link DefaultCodecs}.
      */
     public DefaultCodecs() {
-
+        
         List<Codec<?>> codecs = new ArrayList<>(Arrays.asList(
 
                 // Prioritized Codecs
@@ -73,7 +73,10 @@ public final class DefaultCodecs implements Codecs {
                 OffsetDateTimeCodec.INSTANCE,
                 ZonedDateTimeCodec.INSTANCE,
                 BlobCodec.INSTANCE,
-                ClobCodec.INSTANCE
+                ClobCodec.INSTANCE,
+                BlobCodec.INSTANCE,
+                ClobCodec.INSTANCE,
+                JsonCodec.INSTANCE
         ));
 
         if (GEOGRAPHY_PRESENT) {
